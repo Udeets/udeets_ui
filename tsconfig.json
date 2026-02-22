@@ -19,9 +19,7 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"],
-      "@udeets/ui": ["./packages/ui/src/index.ts"],
-      "@udeets/ui/*": ["./packages/ui/src/*"]
+      "@/*": ["./*"]
     }
   },
   "include": [
