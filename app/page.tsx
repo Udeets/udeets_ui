@@ -92,10 +92,16 @@ export default function Page() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Link href="/auth" className="px-4 py-2 text-white font-semibold hover:bg-white/10 rounded-lg">
+            <Link
+              href="/auth"
+              className="px-4 py-2 text-white font-semibold hover:bg-white/10 rounded-lg"
+            >
               Sign in
             </Link>
-            <Link href="/auth" className="bg-white text-teal-700 px-4 py-2 rounded-xl font-bold shadow-lg hover:bg-cyan-50">
+            <Link
+              href="/auth"
+              className="bg-white text-teal-700 px-4 py-2 rounded-xl font-bold shadow-lg hover:bg-cyan-50"
+            >
               Get started
             </Link>
           </div>
@@ -109,21 +115,31 @@ export default function Page() {
 
           <div className="relative mx-auto flex h-full max-w-7xl items-center px-6 lg:px-8">
             <div className="space-y-6 text-white max-w-3xl">
-              <div className="text-7xl font-extrabold tracking-tight">
-                uDeets
-              </div>
+              <div className="text-7xl font-extrabold tracking-tight">uDeets</div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold whitespace-nowrap">
                 Create. Subscribe. Stay Informed.
               </h1>
 
               <p className="text-xl sm:text-2xl text-cyan-100">
-                Create hubs to share updates, or subscribe to receive the details that matter to you.
+                Create hubs to share updates, or subscribe to receive the details
+                that matter to you.
               </p>
 
+              {/* Discover button added */}
               <div className="flex gap-4 pt-4">
-                <Link href="/auth" className="bg-white text-teal-700 px-8 py-4 rounded-xl font-semibold shadow-xl hover:bg-cyan-50">
+                <Link
+                  href="/auth"
+                  className="bg-white text-teal-700 px-8 py-4 rounded-xl font-semibold shadow-xl hover:bg-cyan-50"
+                >
                   Get Started Free
+                </Link>
+
+                <Link
+                  href="/discover"
+                  className="border-2 border-white text-white px-8 py-4 rounded-xl font-semibold shadow-xl hover:bg-white/10"
+                >
+                  Discover
                 </Link>
               </div>
             </div>
@@ -137,7 +153,9 @@ export default function Page() {
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto px-6">
             {steps.map((s) => (
               <div key={s.n}>
-                <div className={`mx-auto h-24 w-24 flex items-center justify-center rounded-full bg-gradient-to-br ${s.gradient} text-white text-4xl font-bold mb-6 shadow-xl`}>
+                <div
+                  className={`mx-auto h-24 w-24 flex items-center justify-center rounded-full bg-gradient-to-br ${s.gradient} text-white text-4xl font-bold mb-6 shadow-xl`}
+                >
                   {s.n}
                 </div>
                 <h3 className="text-2xl font-bold mb-3">{s.title}</h3>
@@ -158,9 +176,13 @@ export default function Page() {
                 href={`/hubs/${hub.category}/${hub.slug}`}
                 className="group flex flex-col rounded-2xl bg-gradient-to-br from-teal-600 via-cyan-700 to-blue-800 p-8 text-white shadow-lg hover:scale-105 transition"
               >
-                <div className="flex justify-between mb-4">
-                  <h3 className="font-bold">{hub.name}</h3>
-                  <span className="bg-white text-teal-700 px-3 py-1 rounded-full text-xs font-semibold">
+                {/* ✅ FIX: keep badge aligned like earlier by making header row items-start */}
+                <div className="flex items-start justify-between mb-4 gap-4">
+                  <h3 className="font-extrabold text-2xl tracking-wide leading-tight">
+                    {hub.name}
+                  </h3>
+
+                  <span className="shrink-0 bg-white text-teal-700 px-3 py-1 rounded-full text-xs font-semibold">
                     Public
                   </span>
                 </div>
