@@ -6,19 +6,19 @@ const steps = [
     n: 1,
     title: "Create Your Profile",
     desc: "Sign up and personalize your profile with your intersets and location.",
-    gradient: "from-teal-600 via-cyan-700 to-blue-800",
+    gradient: "from-teal-600 to-cyan-700",
   },
   {
     n: 2,
     title: "Subscribe or Create Hubs",
     desc: "Discover and Subscribe to existing communities or start your own hub around your passion.",
-    gradient: "from-teal-600 via-cyan-700 to-blue-800",
+    gradient: "from-teal-600 to-cyan-700",
   },
   {
     n: 3,
     title: "Engage or Stay Updated",
     desc: "Engage with members and stay updated with what matters most.",
-    gradient: "from-teal-600 via-cyan-700 to-blue-800",
+    gradient: "from-teal-600 to-cyan-700",
   },
 ];
 
@@ -76,7 +76,7 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* HEADER */}
-      <header className="sticky top-0 z-50 bg-gradient-to-br from-teal-600 via-cyan-700 to-blue-800 shadow-md">
+      <header className="sticky top-0 z-50 bg-gradient-to-br from-teal-600 to-cyan-700 shadow-md">
         <div className="flex h-16 items-center justify-between px-6 lg:px-10">
           <div className="flex items-center gap-3">
             <div className="relative h-10 w-10">
@@ -111,7 +111,7 @@ export default function Page() {
       <main>
         {/* HERO */}
         <section className="relative h-[600px] overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-teal-600 via-cyan-700 to-blue-800" />
+          <div className="absolute inset-0 bg-gradient-to-br from-teal-600 to-cyan-700" />
 
           <div className="relative mx-auto flex h-full max-w-7xl items-center px-6 lg:px-8">
             <div className="space-y-6 text-white max-w-3xl">
@@ -126,7 +126,6 @@ export default function Page() {
                 that matter to you.
               </p>
 
-              {/* Discover button added */}
               <div className="flex gap-4 pt-4">
                 <Link
                   href="/auth"
@@ -174,9 +173,8 @@ export default function Page() {
               <Link
                 key={hub.slug}
                 href={`/hubs/${hub.category}/${hub.slug}`}
-                className="group flex flex-col rounded-2xl bg-gradient-to-br from-teal-600 via-cyan-700 to-blue-800 p-8 text-white shadow-lg hover:scale-105 transition"
+                className="group flex flex-col rounded-2xl bg-gradient-to-br from-teal-600 to-cyan-700 p-8 text-white shadow-lg hover:scale-105 transition"
               >
-                {/* ✅ FIX: keep badge aligned like earlier by making header row items-start */}
                 <div className="flex items-start justify-between mb-4 gap-4">
                   <h3 className="font-extrabold text-2xl tracking-wide leading-tight">
                     {hub.name}
@@ -198,7 +196,7 @@ export default function Page() {
         </section>
 
         {/* FOOTER */}
-        <footer className="bg-gradient-to-br from-teal-600 via-cyan-700 to-blue-800">
+        <footer className="bg-gradient-to-br from-teal-600 to-cyan-700">
           <div className="flex h-16 items-center justify-between px-6 lg:px-10 text-white">
             <p>© uDeets. All rights reserved.</p>
             <div className="flex gap-5">

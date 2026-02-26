@@ -1,233 +1,203 @@
+// app/auth/page.tsx
 "use client";
 
-// app/auth/page.tsx
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 
-type Mode = "login" | "signup";
+type Mode = "signin" | "signup";
 
-const GRADIENT = "bg-gradient-to-br from-teal-600 via-cyan-700 to-blue-800";
+function cx(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
 
-export default function AuthPage() {
-  const router = useRouter();
-  const [mode, setMode] = useState<Mode>("login");
-
-  const ui = useMemo(() => {
-    const isLogin = mode === "login";
-    return {
-      title: isLogin ? "Log in" : "Create account",
-      toggleText: isLogin ? "Sign up" : "Log in",
-      submitText: isLogin ? "Log in" : "Sign up",
-    };
-  }, [mode]);
-
-  function onToggleMode() {
-    setMode((m) => (m === "login" ? "signup" : "login"));
-  }
-
-  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    // frontend-first v0: treat as success
-    router.push("/discover");
-  }
-
-  function onSocial() {
-    // frontend-first v0: treat as success
-    router.push("/discover");
-  }
-
+function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <main className="bg-white">
-      <div className="min-h-screen grid grid-cols-1 lg:grid-cols-[30%_70%]">
-        {/* ================= LEFT PANEL (30% GRADIENT) ================= */}
-        <section
-          className={`${GRADIENT} text-white p-8 lg:p-10 flex flex-col justify-between`}
-        >
-          <div>
-            <div className="flex items-center gap-3 mb-16">
-              <Image
-                src="/udeets-logo.png"
-                alt="uDeets Logo"
-                width={48}
-                height={48}
-                className="h-12 w-12 object-contain"
-                priority
-              />
-              <span className="text-2xl font-bold">uDeets</span>
-            </div>
-
-            <h1 className="text-3xl lg:text-4xl font-bold mb-5 leading-tight">
-              Discover what&apos;s happening near you.
-            </h1>
-
-            <p className="text-white/90 leading-relaxed">
-              Join local hubs, follow community updates, and explore what&apos;s
-              happening in your neighborhood. Connect with local businesses,
-              events, and people that matter to you.
-            </p>
-          </div>
-
-          <p className="text-sm text-white/80">© 2026 uDeets</p>
-        </section>
-
-        {/* ================= RIGHT PANEL (70% WHITE) ================= */}
-        <section className="bg-white relative p-8 lg:p-12 flex items-center justify-center">
-          {/* Home icon pinned to extreme top-right */}
-          <Link
-            href="/"
-            aria-label="Home"
-            className="absolute top-6 right-6 text-gray-600 hover:text-gray-900 transition"
-          >
-            <IconHome className="h-6 w-6" />
-          </Link>
-
-          <div className="w-full max-w-md">
-            {/* ================= AUTH CTA BLOCK (GRADIENT BG) ================= */}
-            <div
-              className={`${GRADIENT} rounded-3xl p-8 lg:p-10 shadow-xl border border-white/20`}
-            >
-              <header className="flex items-center justify-between mb-8">
-                <h2 className="text-3xl font-bold text-white">{ui.title}</h2>
-                <button
-                  type="button"
-                  onClick={onToggleMode}
-                  className="text-sm font-medium text-white/90 hover:text-white transition"
-                >
-                  {ui.toggleText}
-                </button>
-              </header>
-
-              {/* Social buttons (white fields with logos) */}
-              <div className="space-y-3 mb-6">
-                <button
-                  type="button"
-                  onClick={onSocial}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white rounded-lg hover:bg-gray-100 transition-colors shadow-sm"
-                >
-                  {/* Google logo SVG (same as earlier) */}
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      fill="#4285F4"
-                    />
-                    <path
-                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      fill="#34A853"
-                    />
-                    <path
-                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                      fill="#FBBC05"
-                    />
-                    <path
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                      fill="#EA4335"
-                    />
-                  </svg>
-
-                  <span className="text-gray-900 font-medium">
-                    Continue with Google
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onSocial}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white rounded-lg hover:bg-gray-100 transition-colors shadow-sm"
-                >
-                  {/* Facebook logo SVG (same as earlier) */}
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"
-                      fill="#1877F2"
-                    />
-                  </svg>
-
-                  <span className="text-gray-900 font-medium">
-                    Continue with Facebook
-                  </span>
-                </button>
-              </div>
-
-              {/* Divider */}
-              <div className="flex items-center gap-4 mb-6">
-                <div className="flex-1 h-px bg-white/40" />
-                <span className="text-sm text-white/90">or</span>
-                <div className="flex-1 h-px bg-white/40" />
-              </div>
-
-              {/* Form fields (white) */}
-              <form onSubmit={onSubmit} className="space-y-4 mb-6">
-                <input
-                  type="email"
-                  placeholder="Email address"
-                  required
-                  className="w-full px-4 py-3 bg-white border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5DBFC9]"
-                />
-                <input
-                  type="password"
-                  placeholder="Password"
-                  required
-                  className="w-full px-4 py-3 bg-white border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5DBFC9]"
-                />
-
-                {/* Submit button (white, since whole block is gradient) */}
-                <button
-                  type="submit"
-                  className="w-full bg-white text-gray-900 font-semibold py-3 rounded-lg hover:bg-gray-100 transition-colors shadow-md"
-                >
-                  {ui.submitText}
-                </button>
-              </form>
-
-              <p className="text-xs text-white/90 text-center leading-relaxed">
-                By continuing, you agree to our Terms and Privacy Policy.
-              </p>
-            </div>
-          </div>
-        </section>
-      </div>
-    </main>
+    <svg viewBox="0 0 24 24" {...props}>
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+    </svg>
   );
 }
 
-/* ================= ICON ================= */
-
-function IconHome({ className }: { className?: string }) {
+function AppleIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-      className={className}
-    >
-      <path
-        d="M3 10.5 12 3l9 7.5V21H3V10.5Z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M9.5 21v-6h5v6"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
     </svg>
+  );
+}
+
+export default function Page() {
+  const [mode, setMode] = useState<Mode>("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
+
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    alert(mode === "signin" ? "Sign in (mock)" : "Sign up (mock)");
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-teal-600 to-cyan-700">
+
+      {/* HEADER — EXACTLY LIKE HOMEPAGE */}
+      <header className="sticky top-0 z-50 bg-gradient-to-br from-teal-600 to-cyan-700 shadow-md">
+        <div className="flex h-16 items-center justify-between px-6 lg:px-10">
+          
+          {/* Left: Logo */}
+          <Link href="/" className="flex items-center gap-3">
+            <div className="relative h-10 w-10">
+              <Image
+                src="/udeets-logo.png"
+                alt="uDeets Logo"
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
+            <span className="text-2xl font-bold text-white">uDeets</span>
+          </Link>
+
+          {/* Right: Navigation */}
+          <nav className="flex items-center gap-6">
+            <Link
+              href="/discover"
+              className="text-white font-semibold hover:bg-white/10 px-4 py-2 rounded-lg transition"
+            >
+              Discover
+            </Link>
+            <Link
+              href="/"
+              className="text-white font-semibold hover:bg-white/10 px-4 py-2 rounded-lg transition"
+            >
+              Home
+            </Link>
+          </nav>
+        </div>
+      </header>
+
+      {/* MAIN */}
+      <main className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4">
+        <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 w-full max-w-md">
+          
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">uDeets</h1>
+            <p className="text-gray-600">Create. Subscribe. Stay Informed.</p>
+          </div>
+
+          {/* Toggle */}
+          <div className="mb-6">
+            <div className="flex bg-gray-100 rounded-xl p-1">
+              <button
+                type="button"
+                onClick={() => setMode("signin")}
+                className={cx(
+                  "flex-1 py-2 px-4 text-sm font-medium rounded-lg transition",
+                  mode === "signin"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                )}
+              >
+                Sign in
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("signup")}
+                className={cx(
+                  "flex-1 py-2 px-4 text-sm font-medium rounded-lg transition",
+                  mode === "signup"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                )}
+              >
+                Sign up
+              </button>
+            </div>
+          </div>
+
+          {/* Social */}
+          <div className="mb-6 space-y-3">
+            <button className="w-full flex items-center justify-center px-4 py-3 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 transition">
+              <GoogleIcon className="w-5 h-5 mr-3" />
+              Continue with Google
+            </button>
+            <button className="w-full flex items-center justify-center px-4 py-3 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 transition">
+              <AppleIcon className="w-5 h-5 mr-3 text-gray-900" />
+              Continue with Apple
+            </button>
+          </div>
+
+          {/* Divider */}
+          <div className="mb-6 relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">OR</span>
+            </div>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={onSubmit} className="space-y-4">
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email"
+              className="w-full px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500"
+            />
+
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="w-full px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500"
+            />
+
+            {mode === "signin" && (
+              <div className="flex items-center justify-between">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="h-4 w-4 text-teal-600 border-gray-300 rounded"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Remember me</span>
+                </label>
+                <button type="button" className="text-sm text-teal-600">
+                  Forgot password?
+                </button>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full bg-teal-600 text-white py-3 px-4 rounded-xl hover:bg-teal-700 transition font-medium"
+            >
+              {mode === "signin" ? "Sign In" : "Create Account"}
+            </button>
+
+            <p className="text-xs text-center text-gray-500 mt-4">
+              By continuing, I agree to the{" "}
+              <a href="#" className="text-teal-600">Terms & Conditions</a> and{" "}
+              <a href="#" className="text-teal-600">Privacy Policy</a>.
+            </p>
+          </form>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="fixed bottom-4 left-4">
+        <p className="text-white/80 text-xs">© uDeets. All rights reserved.</p>
+      </footer>
+    </div>
   );
 }
