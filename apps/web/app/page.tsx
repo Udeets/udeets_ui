@@ -1,313 +1,238 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import Image from "next/image";
 
-// ✅ Latest selected gradient system (from your Home page)
-// Header/Footer: 2-color
-const HEADER_FOOTER_GRADIENT = "bg-gradient-to-br from-teal-500 to-cyan-500";
-// Cards/hero accents: 3-color
-const CARD_GRADIENT = "bg-gradient-to-br from-teal-500 via-cyan-500 to-blue-500";
-
-export type HubFromApi = {
-  id: string;
-  name: string;
-  slug: string;
-  category: "religious" | "restaurants" | "communities";
-  city?: string;
-  state?: string;
-};
-
-type CommunityVM = {
-  title: string;
-  slugHref: string;
-  location: string;
-  visibility: "Public" | "Private";
-  typeLabel: "Community";
-  description: string;
-  emoji: string;
-  source: "api" | "mock";
-};
-
-function buildLocation(city?: string, state?: string) {
-  const c = (city || "").trim();
-  const s = (state || "").trim();
-  if (c && s) return `${c}, ${s}`;
-  if (c) return c;
-  if (s) return s;
-  return "Local";
-}
-
-const MOCK_HUBS: CommunityVM[] = [
+const steps = [
   {
-    title: "Richmond Kannada Sangha",
-    slugHref: "/hubs/communities/richmond-kannada-sangha",
-    location: "Richmond, VA",
-    visibility: "Public",
-    typeLabel: "Community",
-    description: "Events, announcements, and cultural programs for the Kannada community.",
-    emoji: "👥",
-    source: "mock",
+    n: 1,
+    title: "Create Your Profile",
+    desc: "Sign up and personalize your profile with your intersets and location.",
+    gradient: "from-teal-500 via-cyan-500 to-blue-500",
   },
   {
-    title: "Neighborhood Volunteers",
-    slugHref: "/auth",
-    location: "Glen Allen, VA",
-    visibility: "Public",
-    typeLabel: "Community",
-    description: "Volunteer opportunities, meetups, and neighborhood support updates.",
-    emoji: "🤝",
-    source: "mock",
+    n: 2,
+    title: "Subscribe or Create Hubs",
+    desc: "Discover and Subscribe to existing communities or start your own hub around your passion.",
+    gradient: "from-teal-500 via-cyan-500 to-blue-500",
   },
   {
-    title: "Local Sports Group",
-    slugHref: "/auth",
-    location: "Henrico, VA",
-    visibility: "Public",
-    typeLabel: "Community",
-    description: "Practice schedules, game updates, and community sports events.",
-    emoji: "🏀",
-    source: "mock",
+    n: 3,
+    title: "Engage or Stay Updated",
+    desc: "Engage with members and stay updated with what matters most.",
+    gradient: "from-teal-500 via-cyan-500 to-blue-500",
   },
 ];
 
-// ✅ DP image mapping (your exact requested filename)
-const HUB_IMAGE_BY_SLUG: Record<string, string> = {
-  "richmond-kannada-sangha": "/hub-images/richmond-kannada-sangha-dp.jpg",
-  // add more as you create them:
-  // "some-community": "/hub-images/some-community-dp.jpg",
-};
+const topHubs = [
+  {
+    category: "religious-places",
+    slug: "hindu-center-of-virginia",
+    name: "Hindu Center of Virginia",
+    intro:
+      "Temple updates, festivals, volunteer opportunities, and community announcements in one place.",
+  },
+  {
+    category: "communities",
+    slug: "richmond-kannada-sangha",
+    name: "Richmond Kannada Sangha",
+    intro:
+      "Cultural programs, meetups, youth activities, and local Kannada community updates.",
+  },
+  {
+    category: "restaurants",
+    slug: "desi-bites",
+    name: "Desi Bites",
+    intro:
+      "New menu drops, deals, catering info, and local foodie updates from your favorite spot.",
+  },
+];
 
-const DEFAULT_HUB_IMAGE = "/hub-images/default.jpg";
-
-function getHubImageFromHref(slugHref: string) {
-  const slug = slugHref.split("/").filter(Boolean).pop() || "";
-  return HUB_IMAGE_BY_SLUG[slug] ?? DEFAULT_HUB_IMAGE;
+function IconFacebook(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M13.5 22v-8h2.7l.4-3h-3.1V9.1c0-.9.3-1.5 1.6-1.5H16.7V5c-.3 0-1.3-.1-2.6-.1-2.6 0-4.3 1.6-4.3 4.5V11H7v3h2.8v8h3.7Z" />
+    </svg>
+  );
 }
 
-export default function CommunitiesView({ hubs = [] }: { hubs?: HubFromApi[] }) {
-  const [query, setQuery] = useState("");
-
-  const HUB_PREFIX = "/hubs/communities";
-
-  // ✅ hubs is now always an array
-  const apiVM: CommunityVM[] = useMemo(() => {
-    return hubs.map((h) => ({
-      title: h.name,
-      slugHref: `${HUB_PREFIX}/${h.slug}`,
-      location: buildLocation(h.city, h.state),
-      visibility: "Public",
-      typeLabel: "Community",
-      description: "Announcements, events, and updates from your communities.",
-      emoji: "👥",
-      source: "api" as const,
-    }));
-  }, [hubs]);
-
-  const all = useMemo(() => {
-    const seen = new Set(apiVM.map((h) => h.title.toLowerCase()));
-    const merged = [...apiVM];
-    for (const m of MOCK_HUBS) {
-      if (!seen.has(m.title.toLowerCase())) merged.push(m);
-    }
-    return merged;
-  }, [apiVM]);
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return all.filter((h) => {
-      if (!q) return true;
-      return (
-        h.title.toLowerCase().includes(q) ||
-        h.location.toLowerCase().includes(q) ||
-        h.description.toLowerCase().includes(q)
-      );
-    });
-  }, [query, all]);
-
-  const featured = all[0];
-
+function IconInstagram(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <main className="min-h-screen bg-white">
-      {/* TOP STRIP */}
-      <header className={HEADER_FOOTER_GRADIENT}>
-        <div className="w-full px-4 sm:px-6 lg:px-10 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-3">
-              <div className="relative h-10 w-10">
-                <Image src="/udeets-logo.png" alt="uDeets" fill className="object-contain" priority />
-              </div>
-              <span className="text-white font-extrabold text-2xl tracking-tight">uDeets</span>
-            </Link>
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9A5.5 5.5 0 0 1 16.5 22h-9A5.5 5.5 0 0 1 2 16.5v-9A5.5 5.5 0 0 1 7.5 2Zm9 2h-9A3.5 3.5 0 0 0 4 7.5v9A3.5 3.5 0 0 0 7.5 20h9a3.5 3.5 0 0 0 3.5-3.5v-9A3.5 3.5 0 0 0 16.5 4Z" />
+      <path d="M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" />
+      <path d="M17.6 6.4a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z" />
+    </svg>
+  );
+}
 
-            <div className="flex items-center gap-2">
-              <Link
-                href="/discover"
-                className="text-white font-semibold px-5 py-2.5 rounded-2xl hover:bg-white/10 transition-all"
-              >
-                Discover
-              </Link>
-              <Link
-                href="/"
-                className="text-white font-semibold px-5 py-2.5 rounded-2xl hover:bg-white/10 transition-all"
-              >
-                Home
-              </Link>
+function IconYouTube(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M21.6 7.2a3 3 0 0 0-2.1-2.1C17.9 4.6 12 4.6 12 4.6s-5.9 0-7.5.5A3 3 0 0 0 2.4 7.2 31.3 31.3 0 0 0 2 12c0 1.7.1 3.4.4 4.8a3 3 0 0 0 2.1 2.1c1.6.5 7.5.5 7.5.5s5.9 0 7.5-.5a3 3 0 0 0 2.1-2.1c.3-1.4.4-3.1.4-4.8s-.1-3.4-.4-4.8ZM10 15.5v-7l6 3.5-6 3.5Z" />
+    </svg>
+  );
+}
+
+export default function Page() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* HEADER */}
+      <header className="sticky top-0 z-50 bg-gradient-to-br from-teal-500 to-cyan-500 shadow-md">
+        <div className="flex h-16 items-center justify-between px-6 lg:px-10">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="relative h-10 w-10">
+              <Image
+                src="/udeets-logo.png"
+                alt="uDeets Logo"
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
+            <span className="text-2xl font-bold text-white">uDeets</span>
+          </Link>
+
+          <div className="flex items-center gap-3">
+            <Link
+              href="/auth"
+              className="px-4 py-2 text-white font-semibold hover:bg-white/10 rounded-lg"
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/auth"
+              className="bg-white text-teal-700 px-4 py-2 rounded-xl font-bold shadow-lg hover:bg-white/80"
+            >
+              Get started
+            </Link>
           </div>
         </div>
       </header>
 
-      {/* HERO */}
-      <section className={`relative overflow-hidden ${CARD_GRADIENT}`}>
-        <div className="absolute inset-0 opacity-10 pointer-events-none">
-          <div className="absolute -top-24 -left-24 w-[320px] h-[320px] bg-white rounded-full blur-3xl" />
-          <div className="absolute -bottom-32 -right-32 w-[420px] h-[420px] bg-white rounded-full blur-3xl" />
-        </div>
+      <main>
+        {/* HERO */}
+        <section className="relative h-[700px] overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-teal-500 via-cyan-500 to-blue-500" />
 
-        <div className="relative max-w-7xl mx-auto px-6 lg:px-8 pt-16 pb-12">
-          <div className="max-w-3xl">
-            <h1 className="text-white text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight">
-              Communities
-            </h1>
-            <p className="text-white/90 mt-4 text-base sm:text-lg max-w-2xl">
-              Join local groups and stay in the loop on events, announcements, and meetups.
-            </p>
+          <div className="relative grid h-full grid-cols-1 items-center gap-12 px-6 lg:grid-cols-2 lg:px-16">
+            {/* LEFT CONTENT */}
+            <div className="space-y-6 text-white max-w-3xl">
+              <div className="text-7xl font-extrabold tracking-tight">uDeets</div>
+
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold whitespace-nowrap">
+                Create. Subscribe. Stay Informed.
+              </h1>
+
+              <p className="text-xl sm:text-2xl text-white/90">
+                Create hubs to share updates, or subscribe to receive the details
+                that matter to you.
+              </p>
+
+              <div className="flex gap-4 pt-4">
+                <Link
+                  href="/auth"
+                  className="bg-white text-teal-700 px-8 py-4 rounded-xl font-semibold shadow-xl hover:bg-white/80"
+                >
+                  Get Started Free
+                </Link>
+
+                <Link
+                  href="/discover"
+                  className="border-2 border-white text-white px-8 py-4 rounded-xl font-semibold shadow-xl hover:bg-white/10"
+                >
+                  Discover
+                </Link>
+              </div>
+            </div>
+
+            {/* RIGHT IMAGE (Glossy border) */}
+            <div className="flex justify-center">
+              <div className="relative w-full max-w-2xl">
+                <div className="pointer-events-none absolute -inset-6 rounded-[2.5rem] bg-cyan-300/30 blur-3xl" />
+
+                <div className="relative rounded-[2.5rem] p-[3px] bg-gradient-to-br from-cyan-300/70 via-white/40 to-cyan-200/70 shadow-[0_0_70px_rgba(93,191,201,0.45)]">
+                  <div className="relative overflow-hidden rounded-[2.5rem] bg-white/5 backdrop-blur-sm">
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-white/30" />
+
+                    <div className="relative h-[540px] w-full">
+                      <Image
+                        src="/udeets-home.png"
+                        alt="Local business owner managing updates"
+                        fill
+                        priority
+                        className="object-cover rounded-[2.5rem]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
+        </section>
 
-          <div className="mt-10">
-            <div className="relative max-w-2xl">
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search communities, groups, or events…"
-                className="w-full px-6 py-4 rounded-2xl bg-white shadow-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-white/30 transition-all pr-[120px]"
-              />
-              <button
-                type="button"
-                className={`absolute right-3 top-1/2 -translate-y-1/2 ${CARD_GRADIENT} text-white px-5 py-2.5 rounded-xl font-extrabold shadow-xl hover:scale-105 transition-transform`}
+        {/* HOW IT WORKS */}
+        <section className="bg-white py-20 text-center">
+          <h2 className="text-4xl font-bold mb-12">How It Works</h2>
+
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto px-6">
+            {steps.map((s) => (
+              <div key={s.n}>
+                <div
+                  className={`mx-auto h-24 w-24 flex items-center justify-center rounded-full bg-gradient-to-br ${s.gradient} text-white text-4xl font-bold mb-6 shadow-xl`}
+                >
+                  {s.n}
+                </div>
+                <h3 className="text-2xl font-bold mb-3">{s.title}</h3>
+                <p className="text-gray-600">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* TOP HUBS */}
+        <section className="bg-white py-20">
+          <h2 className="text-4xl font-bold text-center mb-16">Our Top Hubs</h2>
+
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto px-6">
+            {topHubs.map((hub) => (
+              <Link
+                key={hub.slug}
+                href={`/hubs/${hub.category}/${hub.slug}`}
+                className="group flex flex-col rounded-2xl bg-gradient-to-br from-teal-500 via-cyan-500 to-blue-500 p-8 text-white shadow-lg hover:scale-105 transition"
               >
-                Search
-              </button>
+                <div className="flex items-start justify-between mb-4 gap-4">
+                  <h3 className="font-extrabold text-2xl tracking-wide leading-tight">
+                    {hub.name}
+                  </h3>
+
+                  <span className="shrink-0 bg-white text-teal-700 px-3 py-1 rounded-full text-xs font-semibold">
+                    Public
+                  </span>
+                </div>
+
+                <p className="text-white/90 mb-6">{hub.intro}</p>
+
+                <div className="mt-auto bg-white text-teal-700 py-2 rounded-xl text-center font-semibold">
+                  View Hub
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* FOOTER */}
+        <footer className="bg-gradient-to-br from-teal-500 to-cyan-500">
+          <div className="flex h-16 items-center justify-between px-6 lg:px-10 text-white">
+            <p>© uDeets. All rights reserved.</p>
+            <div className="flex gap-5">
+              <IconFacebook className="h-6 w-6 hover:text-white/80 cursor-pointer" />
+              <IconInstagram className="h-6 w-6 hover:text-white/80 cursor-pointer" />
+              <IconYouTube className="h-6 w-6 hover:text-white/80 cursor-pointer" />
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* CONTENT */}
-      <section className="bg-white">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-14">
-          <div className="flex items-end justify-between gap-6 mb-8">
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900">Featured Hub</h2>
-              <p className="text-gray-600 mt-2">A top community hub — subscribe for updates.</p>
-            </div>
-            <div className="text-sm text-gray-500">
-              Showing <span className="font-semibold text-gray-900">{filtered.length}</span> hubs
-            </div>
-          </div>
-
-          {featured ? <FeaturedCard hub={featured} /> : null}
-
-          <div className="mt-12">
-            <h3 className="text-xl sm:text-2xl font-extrabold text-gray-900 mb-6">Explore Hubs</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filtered.map((hub) => (
-                <Card key={`${hub.source}:${hub.title}`} hub={hub} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FOOTER */}
-      <footer className={HEADER_FOOTER_GRADIENT}>
-        <div className="w-full px-4 sm:px-6 lg:px-10">
-          <div className="h-16 flex items-center justify-center text-white/90 text-sm">
-            © 2026 uDeets. All rights reserved.
-          </div>
-        </div>
-      </footer>
-    </main>
-  );
-}
-
-function FeaturedCard({ hub }: { hub: CommunityVM }) {
-  const img = getHubImageFromHref(hub.slugHref);
-
-  return (
-    <Link
-      href={hub.slugHref}
-      className="group block rounded-3xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-xl transition-all"
-    >
-      <div className="grid grid-cols-1 lg:grid-cols-12">
-        {/* LEFT — DP/cover image */}
-        <div className="relative lg:col-span-5 min-h-[260px]">
-          <Image src={img} alt={`${hub.title} cover`} fill className="object-cover" priority />
-          <div className="absolute inset-0 bg-gradient-to-tr from-black/35 via-black/10 to-transparent" />
-          <div className="absolute left-6 top-6 inline-flex items-center gap-2 rounded-full bg-white/15 border border-white/25 px-4 py-2 text-sm font-semibold text-white backdrop-blur">
-            {hub.emoji} <span>{hub.visibility}</span>
-          </div>
-        </div>
-
-        {/* RIGHT — gradient + white text */}
-        <div className={`lg:col-span-7 p-8 sm:p-10 ${CARD_GRADIENT} text-white`}>
-          <div className="flex flex-wrap gap-2 mb-4">
-            <BadgeOnDark>{hub.location}</BadgeOnDark>
-            <BadgeOnDark>{hub.visibility}</BadgeOnDark>
-            <BadgeOnDark>{hub.typeLabel}</BadgeOnDark>
-          </div>
-
-          <h3 className="text-2xl sm:text-3xl font-extrabold text-white">{hub.title}</h3>
-          <p className="text-white/90 mt-3 max-w-2xl">{hub.description}</p>
-
-          <div className="mt-7 flex items-center gap-3">
-            <span className="ml-auto inline-flex items-center justify-center bg-white text-teal-700 px-6 py-3 rounded-2xl font-extrabold shadow-sm group-hover:shadow-lg transition-all">
-              Subscribe
-            </span>
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-function Card({ hub }: { hub: CommunityVM }) {
-  const img = getHubImageFromHref(hub.slugHref);
-
-  return (
-    <Link
-      href={hub.slugHref}
-      className={`group block ${CARD_GRADIENT} text-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all`}
-    >
-      <div className="p-7">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex flex-wrap gap-2 mb-3">
-              <BadgeOnDark>{hub.location}</BadgeOnDark>
-              <BadgeOnDark>{hub.visibility}</BadgeOnDark>
-              <BadgeOnDark>{hub.typeLabel}</BadgeOnDark>
-            </div>
-
-            <h4 className="text-lg font-extrabold text-white">{hub.title}</h4>
-            <p className="text-white/90 text-sm mt-2">{hub.description}</p>
-          </div>
-
-          <div className="relative w-14 h-14 rounded-2xl overflow-hidden shrink-0 border border-white/25">
-            <Image src={img} alt="" fill className="object-cover" />
-            <div className="absolute inset-0 bg-black/10" />
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-function BadgeOnDark({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1 rounded-full bg-white/15 text-white border border-white/25 backdrop-blur">
-      {children}
-    </span>
+        </footer>
+      </main>
+    </div>
   );
 }

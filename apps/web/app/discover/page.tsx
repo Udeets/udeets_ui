@@ -1,4 +1,3 @@
-// apps/web/app/discover/page.tsx
 "use client";
 
 import Link from "next/link";
@@ -14,13 +13,16 @@ type FilterCard = {
   href: string;
 };
 
+// ✅ Updated BG gradient as per Home page
+const BRAND_GRADIENT = "bg-gradient-to-br from-teal-500 via-cyan-500 to-blue-500";
+
 const FILTERS: FilterCard[] = [
   {
     title: "Religious Places",
     desc: "Discover temples, churches, and spiritual centers in your area",
     icon: "temple",
     iconBg: "bg-gradient-to-br from-orange-400 to-pink-500",
-    href: "/discover/religious",
+    href: "/discover/religious-places",
   },
   {
     title: "Communities",
@@ -187,10 +189,11 @@ export default function DiscoverPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* TOP STRIP — updated to new light brand gradient */}
-      <header className="bg-gradient-to-br from-teal-500 to-cyan-500">
+      {/* TOP STRIP */}
+      <header className={BRAND_GRADIENT}>
         <div className="w-full px-4 sm:px-6 lg:px-10 py-4">
           <div className="flex items-center justify-between">
+            {/* ✅ uDeets click goes to HOME */}
             <Link href="/" className="flex items-center gap-3">
               <div className="relative h-10 w-10">
                 <Image
@@ -206,6 +209,7 @@ export default function DiscoverPage() {
               </span>
             </Link>
 
+            {/* ✅ Home click goes to HOME */}
             <Link
               href="/"
               className="text-white font-semibold px-6 py-2.5 rounded-2xl hover:bg-white/10 transition-all duration-300"
@@ -216,8 +220,8 @@ export default function DiscoverPage() {
         </div>
       </header>
 
-      {/* HERO — updated to new light brand gradient */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-teal-500 via-cyan-500 to-blue-500">
+      {/* HERO */}
+      <section className={`relative overflow-hidden ${BRAND_GRADIENT}`}>
         <div className="absolute inset-0 opacity-10 pointer-events-none">
           <div className="absolute -top-24 -left-24 w-[320px] h-[320px] bg-white rounded-full blur-3xl" />
           <div className="absolute -bottom-32 -right-32 w-[420px] h-[420px] bg-white rounded-full blur-3xl" />
@@ -232,7 +236,7 @@ export default function DiscoverPage() {
             Explore temples, communities and restaurants near you.
           </p>
 
-          {/* Button INSIDE input — button gradient updated too */}
+          {/* Button INSIDE input */}
           <div className="max-w-2xl mx-auto">
             <div className="relative">
               <input
@@ -242,7 +246,7 @@ export default function DiscoverPage() {
               />
               <button
                 type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 bg-gradient-to-br from-teal-500 via-cyan-500 to-blue-500 text-white px-7 py-3.5 rounded-xl font-extrabold shadow-xl hover:scale-105 transition-transform duration-300"
+                className={`absolute right-3 top-1/2 -translate-y-1/2 ${BRAND_GRADIENT} text-white px-7 py-3.5 rounded-xl font-extrabold shadow-xl hover:scale-105 transition-transform duration-300`}
               >
                 Search
               </button>
@@ -322,10 +326,12 @@ export default function DiscoverPage() {
         </div>
       </section>
 
-      {/* CTA — updated to new light brand gradient */}
+      {/* CTA */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-blue-500 rounded-3xl p-12 sm:p-16 lg:p-20 text-center relative overflow-hidden">
+          <div
+            className={`${BRAND_GRADIENT} rounded-3xl p-12 sm:p-16 lg:p-20 text-center relative overflow-hidden`}
+          >
             <div className="absolute inset-0 opacity-10 pointer-events-none">
               <div className="absolute -top-24 -left-24 w-[320px] h-[320px] bg-white rounded-full blur-3xl" />
               <div className="absolute -bottom-32 -right-32 w-[420px] h-[420px] bg-white rounded-full blur-3xl" />
@@ -351,8 +357,8 @@ export default function DiscoverPage() {
         </div>
       </section>
 
-      {/* FOOTER — updated */}
-      <footer className="bg-gradient-to-br from-teal-500 to-cyan-500">
+      {/* FOOTER */}
+      <footer className={BRAND_GRADIENT}>
         <div className="w-full px-4 sm:px-6 lg:px-10">
           <div className="h-16 flex items-center justify-center text-white/90 text-sm">
             © uDeets. All rights reserved.
