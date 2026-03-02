@@ -3,48 +3,47 @@
 import Link from "next/link";
 import Image from "next/image";
 
+// ✅ One gradient system (2-color) for ALL strips/hero/cards/cta
+const GRADIENT_2 = "from-teal-500 to-cyan-500";
+
 const steps = [
   {
     n: 1,
     title: "Create Your Profile",
     desc: "Sign up and personalize your profile with your intersets and location.",
-    gradient: "from-teal-500 via-cyan-500 to-blue-500",
   },
   {
     n: 2,
     title: "Subscribe or Create Hubs",
     desc: "Discover and Subscribe to existing communities or start your own hub around your passion.",
-    gradient: "from-teal-500 via-cyan-500 to-blue-500",
   },
   {
     n: 3,
     title: "Engage or Stay Updated",
     desc: "Engage with members and stay updated with what matters most.",
-    gradient: "from-teal-500 via-cyan-500 to-blue-500",
   },
 ];
 
+// ✅ Use explicit href so you NEVER hit an older route by accident
 const topHubs = [
   {
-    category: "religious-places",
-    slug: "hindu-center-of-virginia",
     name: "Hindu Center of Virginia",
     intro:
       "Temple updates, festivals, volunteer opportunities, and community announcements in one place.",
+    href: "/hubs/religious-places/hindu-center-of-virginia",
   },
   {
-    category: "communities",
-    slug: "richmond-kannada-sangha",
     name: "Richmond Kannada Sangha",
     intro:
       "Cultural programs, meetups, youth activities, and local Kannada community updates.",
+    href: "/hubs/communities/richmond-kannada-sangha",
   },
   {
-    category: "restaurants",
-    slug: "desi-bites",
     name: "Desi Bites",
     intro:
       "New menu drops, deals, catering info, and local foodie updates from your favorite spot.",
+    // ✅ CHANGE THIS to your NEW Desi Bites route if different
+    href: "/hubs/restaurants/desi-bites",
   },
 ];
 
@@ -78,7 +77,7 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* HEADER */}
-      <header className="sticky top-0 z-50 bg-gradient-to-br from-teal-500 to-cyan-500 shadow-md">
+      <header className={`sticky top-0 z-50 bg-gradient-to-br ${GRADIENT_2} shadow-md`}>
         <div className="flex h-16 items-center justify-between px-6 lg:px-10">
           <Link href="/" className="flex items-center gap-3">
             <div className="relative h-10 w-10">
@@ -111,9 +110,9 @@ export default function Page() {
       </header>
 
       <main>
-        {/* HERO */}
+        {/* HERO (now 2-color) */}
         <section className="relative h-[700px] overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-teal-500 via-cyan-500 to-blue-500" />
+          <div className={`absolute inset-0 bg-gradient-to-br ${GRADIENT_2}`} />
 
           <div className="relative grid h-full grid-cols-1 items-center gap-12 px-6 lg:grid-cols-2 lg:px-16">
             {/* LEFT CONTENT */}
@@ -179,7 +178,7 @@ export default function Page() {
             {steps.map((s) => (
               <div key={s.n}>
                 <div
-                  className={`mx-auto h-24 w-24 flex items-center justify-center rounded-full bg-gradient-to-br ${s.gradient} text-white text-4xl font-bold mb-6 shadow-xl`}
+                  className={`mx-auto h-24 w-24 flex items-center justify-center rounded-full bg-gradient-to-br ${GRADIENT_2} text-white text-4xl font-bold mb-6 shadow-xl`}
                 >
                   {s.n}
                 </div>
@@ -190,16 +189,16 @@ export default function Page() {
           </div>
         </section>
 
-        {/* TOP HUBS */}
+        {/* TOP HUBS (now 2-color + explicit hrefs) */}
         <section className="bg-white py-20">
           <h2 className="text-4xl font-bold text-center mb-16">Our Top Hubs</h2>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto px-6">
             {topHubs.map((hub) => (
               <Link
-                key={hub.slug}
-                href={`/hubs/${hub.category}/${hub.slug}`}
-                className="group flex flex-col rounded-2xl bg-gradient-to-br from-teal-500 via-cyan-500 to-blue-500 p-8 text-white shadow-lg hover:scale-105 transition"
+                key={hub.name}
+                href={hub.href}
+                className={`group flex flex-col rounded-2xl bg-gradient-to-br ${GRADIENT_2} p-8 text-white shadow-lg hover:scale-105 transition`}
               >
                 <div className="flex items-start justify-between mb-4 gap-4">
                   <h3 className="font-extrabold text-2xl tracking-wide leading-tight">
@@ -222,7 +221,7 @@ export default function Page() {
         </section>
 
         {/* FOOTER */}
-        <footer className="bg-gradient-to-br from-teal-500 to-cyan-500">
+        <footer className={`bg-gradient-to-br ${GRADIENT_2}`}>
           <div className="flex h-16 items-center justify-between px-6 lg:px-10 text-white">
             <p>© uDeets. All rights reserved.</p>
             <div className="flex gap-5">
