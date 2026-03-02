@@ -4,8 +4,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-
-// ✅ Pull the real hub records (with local images + Public/Private)
+import { createPortal } from "react-dom";
 import { HUBS as HUBS_SOURCE } from "@/lib/hubs";
 
 const HEADER_FOOTER_GRADIENT = "bg-gradient-to-br from-teal-500 to-cyan-500";
@@ -57,20 +56,56 @@ type Hub = {
   locationLabel: string;
   distanceMi: number;
   membersLabel: string;
-
-  // ✅ Discover now supports both
   visibility: "Public" | "Private";
-
   description: string;
   href: string;
   image: string;
-
   tags: Array<"trending" | "popular" | "nearby">;
 };
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
+
+function toDiscoverCategory(category: string): Exclude<Category, "All"> {
+  switch (category) {
+    case "religious-places":
+      return "Religious Places";
+    case "communities":
+      return "Communities";
+    case "restaurants":
+      return "Restaurants";
+    case "fitness":
+      return "Fitness";
+    case "pet-clubs":
+      return "Pet Clubs";
+    case "hoas":
+      return "HOA’s";
+    default:
+      return "Communities";
+  }
+}
+
+function normalizePublicSrc(src: string) {
+  if (!src) return "";
+  if (src.startsWith("http://") || src.startsWith("https://")) return src;
+  if (src.startsWith("/")) return src;
+  return `/${src}`;
+}
+
+const HUBS: Hub[] = HUBS_SOURCE.map((h) => ({
+  id: h.id,
+  name: h.name,
+  category: toDiscoverCategory(h.category),
+  locationLabel: h.locationLabel,
+  distanceMi: h.distanceMi,
+  membersLabel: h.membersLabel,
+  visibility: (h.visibility as "Public" | "Private") ?? "Public",
+  description: h.description,
+  href: `/hubs/${h.category}/${h.slug}`,
+  image: normalizePublicSrc(h.heroImage),
+  tags: h.tags,
+}));
 
 function matchesNearMe(h: Hub, nearMe: NearMeOption) {
   if (nearMe === "Any") return true;
@@ -150,72 +185,12 @@ function LightArrowButton({
   );
 }
 
-/**
- * ✅ Convert lib category slugs → Discover labels
- */
-function toDiscoverCategory(category: string): Exclude<Category, "All"> {
-  switch (category) {
-    case "religious-places":
-      return "Religious Places";
-    case "communities":
-      return "Communities";
-    case "restaurants":
-      return "Restaurants";
-    case "fitness":
-      return "Fitness";
-    case "pet-clubs":
-      return "Pet Clubs";
-    case "hoas":
-      return "HOA’s";
-    default:
-      return "Communities";
-  }
-}
-
-/**
- * ✅ For now: force the 3 main hubs to use local hub-images (even if someone forgets)
- * If heroImage is already local, we keep it.
- */
-function ensureLocalForTop3(h: { id: string; heroImage: string }) {
-  if (h.heroImage?.startsWith("/hub-images/")) return h.heroImage;
-
-  if (h.id === "hcv") return "/hub-images/hindu-center-of-virginia1.jpg";
-  if (h.id === "desi") return "/hub-images/desi-bites1.jpg";
-  if (h.id === "rks") return "/hub-images/richmond-kannada-sangha-gh1.jpg";
-
-  return h.heroImage;
-}
-
-/**
- * ✅ Discover HUBS comes from hubs.ts (single source of truth)
- */
-const HUBS: Hub[] = HUBS_SOURCE.map((h) => ({
-  id: h.id,
-  name: h.name,
-  category: toDiscoverCategory(h.category),
-  locationLabel: h.locationLabel,
-  distanceMi: h.distanceMi,
-  membersLabel: h.membersLabel,
-
-  // ✅ show correct badge (RKS will be Private)
-  visibility: h.visibility,
-
-  description: h.description,
-
-  // ✅ route always goes to the hub intro page
-  href: `/hubs/${h.category}/${h.slug}`,
-
-  // ✅ hero image comes from hubs.ts, forced local for top3
-  image: ensureLocalForTop3({ id: h.id, heroImage: h.heroImage }),
-
-  tags: h.tags,
-}));
-
 function HubCard({ hub }: { hub: Hub }) {
   return (
     <Link
       href={hub.href}
-      className="bg-white rounded-3xl shadow-lg hover:shadow-xl transition overflow-hidden w-[280px] sm:w-[320px] flex-shrink-0"
+      // ✅ FIX: force identical card width + no flex expansion
+      className="flex-shrink-0 w-[320px] bg-white rounded-3xl shadow-lg hover:shadow-xl transition overflow-hidden"
     >
       <img src={hub.image} alt={hub.name} className="h-44 w-full object-cover" loading="lazy" />
       <div className="p-6">
@@ -258,11 +233,7 @@ function CarouselSection({ title, hubs }: { title: string; hubs: Hub[] }) {
         </div>
       </div>
 
-      <div
-        ref={rowRef}
-        className="flex gap-6 overflow-x-auto pb-2"
-        style={{ scrollbarWidth: "none" as any }}
-      >
+      <div ref={rowRef} className="flex gap-6 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" as any }}>
         {hubs.map((h) => (
           <HubCard key={h.id} hub={h} />
         ))}
@@ -280,6 +251,25 @@ export default function DiscoverPage() {
   const chipsRef = useRef<HTMLDivElement | null>(null);
   const [canChipLeft, setCanChipLeft] = useState(false);
   const [canChipRight, setCanChipRight] = useState(true);
+
+  // ✅ Portal positioning for dropdown
+  const [nearMePos, setNearMePos] = useState<{ left: number; top: number; width: number }>({
+    left: 0,
+    top: 0,
+    width: 176,
+  });
+
+  const updateNearMePos = () => {
+    if (typeof window === "undefined") return;
+    const trigger = document.getElementById("nearMeTriggerChip");
+    if (!trigger) return;
+    const r = trigger.getBoundingClientRect();
+    setNearMePos({
+      left: Math.round(r.left),
+      top: Math.round(r.bottom + 8),
+      width: Math.max(176, Math.round(r.width)),
+    });
+  };
 
   const updateChipArrows = () => {
     const el = chipsRef.current;
@@ -311,18 +301,52 @@ export default function DiscoverPage() {
     el.scrollBy({ left: delta, behavior: "smooth" });
   };
 
+  // close on outside click
   useEffect(() => {
-    const onDocClick = (e: MouseEvent) => {
+    const closeIfOutside = (e: Event) => {
       const target = e.target as HTMLElement | null;
       if (!target) return;
-      const dropdown = document.getElementById("nearMeDropdownChip");
+
       const trigger = document.getElementById("nearMeTriggerChip");
-      if (!dropdown || !trigger) return;
-      if (!dropdown.contains(target) && !trigger.contains(target)) setNearMeOpen(false);
+      const dropdown = document.getElementById("nearMeDropdownPortal");
+
+      if (trigger && trigger.contains(target)) return;
+      if (dropdown && dropdown.contains(target)) return;
+
+      setNearMeOpen(false);
     };
-    document.addEventListener("click", onDocClick);
-    return () => document.removeEventListener("click", onDocClick);
+
+    document.addEventListener("mousedown", closeIfOutside);
+    document.addEventListener("touchstart", closeIfOutside, { passive: true });
+
+    return () => {
+      document.removeEventListener("mousedown", closeIfOutside);
+      document.removeEventListener("touchstart", closeIfOutside);
+    };
   }, []);
+
+  // keep dropdown positioned correctly while open
+  useEffect(() => {
+    if (!nearMeOpen) return;
+
+    updateNearMePos();
+
+    const onWinScroll = () => updateNearMePos();
+    const onResize = () => updateNearMePos();
+
+    window.addEventListener("scroll", onWinScroll, true);
+    window.addEventListener("resize", onResize);
+
+    const chipsEl = chipsRef.current;
+    const onChipsScroll = () => updateNearMePos();
+    chipsEl?.addEventListener("scroll", onChipsScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", onWinScroll, true);
+      window.removeEventListener("resize", onResize);
+      chipsEl?.removeEventListener("scroll", onChipsScroll as any);
+    };
+  }, [nearMeOpen]);
 
   const baseFiltered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -359,9 +383,18 @@ export default function DiscoverPage() {
     return baseFiltered.filter((h) => h.tags.includes("nearby"));
   }, [activeCategory, baseFiltered]);
 
+  // ✅ RESULTS MODE:
+  // If user types OR selects near-me filter, show only one section "Results"
+  const isResultsMode = query.trim().length > 0 || nearMe !== "Any";
+
+  const resultsHubs = useMemo(() => {
+    if (activeCategory === "All") return baseFiltered;
+    return categoryHubs;
+  }, [activeCategory, baseFiltered, categoryHubs]);
+
   return (
     <div className={cn("min-h-screen", PAGE_BG)}>
-      <header className={cn("sticky top-0 z-50", HEADER_FOOTER_GRADIENT)}>
+      <header className={cn("sticky top-0 z-50 shadow-md", HEADER_FOOTER_GRADIENT)}>
         <div className="flex h-16 items-center justify-between px-6 lg:px-10">
           <Link href={ROUTE_HOME} className="flex items-center gap-3">
             <div className="relative h-10 w-10">
@@ -405,10 +438,14 @@ export default function DiscoverPage() {
         </div>
       </section>
 
-      <section className="bg-white py-6">
+      <section className="bg-white py-6 relative z-40">
         <div className="max-w-7xl mx-auto px-6 lg:px-10">
           <div className="flex items-center gap-3">
-            <div ref={chipsRef} className="flex items-center gap-3 overflow-x-auto pb-2 flex-1" style={{ scrollbarWidth: "none" as any }}>
+            <div
+              ref={chipsRef}
+              className="flex items-center gap-3 overflow-x-auto pb-2 flex-1"
+              style={{ scrollbarWidth: "none" as any }}
+            >
               <button
                 onClick={() => setActiveCategory("All")}
                 className={cn(
@@ -424,7 +461,10 @@ export default function DiscoverPage() {
               <div className="relative">
                 <button
                   id="nearMeTriggerChip"
-                  onClick={() => setNearMeOpen((v) => !v)}
+                  onClick={() => {
+                    updateNearMePos();
+                    setNearMeOpen((v) => !v);
+                  }}
                   className={cn(
                     "flex items-center gap-2 px-6 py-3 rounded-full border font-semibold transition whitespace-nowrap",
                     nearMe !== "Any"
@@ -441,23 +481,6 @@ export default function DiscoverPage() {
                     <path d="M6 9l6 6 6-6" />
                   </svg>
                 </button>
-
-                {nearMeOpen && (
-                  <div id="nearMeDropdownChip" className="absolute left-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
-                    {NEAR_ME_OPTIONS.map((opt) => (
-                      <button
-                        key={opt}
-                        onClick={() => {
-                          setNearMe(opt);
-                          setNearMeOpen(false);
-                        }}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
 
               {CATEGORIES.filter((c) => c !== "All").map((c) => (
@@ -484,8 +507,37 @@ export default function DiscoverPage() {
         </div>
       </section>
 
+      {nearMeOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            id="nearMeDropdownPortal"
+            className="fixed z-[999999] bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden"
+            style={{ left: nearMePos.left, top: nearMePos.top, width: nearMePos.width }}
+          >
+            {NEAR_ME_OPTIONS.map((opt) => (
+              <button
+                key={opt}
+                onClick={() => {
+                  setNearMe(opt);
+                  setNearMeOpen(false);
+                }}
+                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                {opt}
+              </button>
+            ))}
+          </div>,
+          document.body
+        )}
+
       <main className="max-w-7xl mx-auto px-6 lg:px-10 py-10">
-        {activeCategory !== "All" ? (
+        {isResultsMode ? (
+          <CarouselSection
+            title="Results"
+            hubs={resultsHubs}
+          />
+        ) : activeCategory !== "All" ? (
           <CarouselSection title={activeCategory} hubs={categoryHubs} />
         ) : (
           <>
