@@ -78,8 +78,8 @@ export default function Page() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* HEADER */}
       <header className={`sticky top-0 z-50 bg-gradient-to-br ${GRADIENT_2} shadow-md`}>
-        <div className="flex h-16 items-center justify-between px-6 lg:px-10">
-          <Link href="/" className="flex items-center gap-3">
+        <div className="flex min-h-16 w-full items-center justify-between px-4 py-2 sm:px-6 lg:px-10">
+          <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
             <div className="relative h-10 w-10">
               <Image
                 src="/udeets-logo.png"
@@ -89,19 +89,19 @@ export default function Page() {
                 priority
               />
             </div>
-            <span className="text-2xl font-bold text-white">uDeets</span>
+            <span className="truncate text-xl font-bold text-white sm:text-2xl">uDeets</span>
           </Link>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/auth"
-              className="px-4 py-2 text-white font-semibold hover:bg-white/10 rounded-lg"
+              className="rounded-lg px-3 py-2 text-sm font-semibold text-white hover:bg-white/10 sm:px-4 sm:text-base"
             >
               Sign in
             </Link>
             <Link
               href="/auth"
-              className="bg-white text-teal-700 px-4 py-2 rounded-xl font-bold shadow-lg hover:bg-white/80"
+              className="rounded-xl bg-white px-3 py-2 text-sm font-bold text-teal-700 shadow-lg hover:bg-white/80 sm:px-4 sm:text-base"
             >
               Get started
             </Link>
@@ -111,34 +111,34 @@ export default function Page() {
 
       <main>
         {/* HERO (now 2-color) */}
-        <section className="relative h-[700px] overflow-hidden">
+        <section className="relative overflow-hidden">
           <div className={`absolute inset-0 bg-gradient-to-br ${GRADIENT_2}`} />
 
-          <div className="relative grid h-full grid-cols-1 items-center gap-12 px-6 lg:grid-cols-2 lg:px-16">
+          <div className="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-2 lg:gap-12 lg:px-10">
             {/* LEFT CONTENT */}
-            <div className="space-y-6 text-white max-w-3xl">
-              <div className="text-7xl font-extrabold tracking-tight">uDeets</div>
+            <div className="max-w-3xl space-y-5 text-white sm:space-y-6">
+              <div className="text-5xl font-extrabold tracking-tight sm:text-6xl lg:text-7xl">uDeets</div>
 
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold whitespace-nowrap">
+              <h1 className="break-words text-3xl font-semibold sm:text-4xl lg:text-5xl">
                 Create. Subscribe. Stay Informed.
               </h1>
 
-              <p className="text-xl sm:text-2xl text-white/90">
+              <p className="text-lg text-white/90 sm:text-xl lg:text-2xl">
                 Create hubs to share updates, or subscribe to receive the details
                 that matter to you.
               </p>
 
-              <div className="flex gap-4 pt-4">
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:gap-4 sm:pt-4">
                 <Link
                   href="/auth"
-                  className="bg-white text-teal-700 px-8 py-4 rounded-xl font-semibold shadow-xl hover:bg-white/80"
+                  className="rounded-xl bg-white px-6 py-3 text-center font-semibold text-teal-700 shadow-xl hover:bg-white/80 sm:px-8 sm:py-4"
                 >
                   Get Started Free
                 </Link>
 
                 <Link
                   href="/discover"
-                  className="border-2 border-white text-white px-8 py-4 rounded-xl font-semibold shadow-xl hover:bg-white/10"
+                  className="rounded-xl border-2 border-white px-6 py-3 text-center font-semibold text-white shadow-xl hover:bg-white/10 sm:px-8 sm:py-4"
                 >
                   Discover
                 </Link>
@@ -154,7 +154,7 @@ export default function Page() {
                   <div className="relative overflow-hidden rounded-[2.5rem] bg-white/5 backdrop-blur-sm">
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-white/30" />
 
-                    <div className="relative h-[540px] w-full">
+                    <div className="relative h-[280px] w-full sm:h-[420px] lg:h-[540px]">
                       <Image
                         src="/udeets-home.png"
                         alt="Local business owner managing updates"
@@ -172,11 +172,11 @@ export default function Page() {
 
         {/* HOW IT WORKS */}
         <section className="bg-white py-20 text-center">
-          <h2 className="text-4xl font-bold mb-12">How It Works</h2>
+          <h2 className="mb-12 px-4 text-3xl font-bold sm:text-4xl">How It Works</h2>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto px-6">
+          <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-3 lg:px-10">
             {steps.map((s) => (
-              <div key={s.n}>
+              <div key={s.n} className="min-w-0">
                 <div
                   className={`mx-auto h-24 w-24 flex items-center justify-center rounded-full bg-gradient-to-br ${GRADIENT_2} text-white text-4xl font-bold mb-6 shadow-xl`}
                 >
@@ -191,17 +191,17 @@ export default function Page() {
 
         {/* TOP HUBS (now 2-color + explicit hrefs) */}
         <section className="bg-white py-20">
-          <h2 className="text-4xl font-bold text-center mb-16">Our Top Hubs</h2>
+          <h2 className="mb-16 px-4 text-center text-3xl font-bold sm:text-4xl">Our Top Hubs</h2>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto px-6">
+          <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-3 lg:px-10">
             {topHubs.map((hub) => (
               <Link
                 key={hub.name}
                 href={hub.href}
-                className={`group flex flex-col rounded-2xl bg-gradient-to-br ${GRADIENT_2} p-8 text-white shadow-lg hover:scale-105 transition`}
+                className={`group flex min-w-0 flex-col rounded-2xl bg-gradient-to-br ${GRADIENT_2} p-8 text-white shadow-lg transition hover:scale-105`}
               >
-                <div className="flex items-start justify-between mb-4 gap-4">
-                  <h3 className="font-extrabold text-2xl tracking-wide leading-tight">
+                <div className="mb-4 flex items-start justify-between gap-4">
+                  <h3 className="min-w-0 break-words text-2xl font-extrabold leading-tight tracking-wide">
                     {hub.name}
                   </h3>
 
@@ -210,7 +210,7 @@ export default function Page() {
                   </span>
                 </div>
 
-                <p className="text-white/90 mb-6">{hub.intro}</p>
+                <p className="mb-6 break-words text-white/90">{hub.intro}</p>
 
                 <div className="mt-auto bg-white text-teal-700 py-2 rounded-xl text-center font-semibold">
                   View Hub
@@ -222,8 +222,8 @@ export default function Page() {
 
         {/* FOOTER */}
         <footer className={`bg-gradient-to-br ${GRADIENT_2}`}>
-          <div className="flex h-16 items-center justify-between px-6 lg:px-10 text-white">
-            <p>© uDeets. All rights reserved.</p>
+          <div className="mx-auto flex min-h-16 max-w-7xl flex-col items-center justify-between gap-2 px-4 py-3 text-center text-white sm:flex-row sm:px-6 sm:text-left lg:px-10">
+            <p className="text-sm sm:text-base">© uDeets. All rights reserved.</p>
             <div className="flex gap-5">
               <IconFacebook className="h-6 w-6 hover:text-white/80 cursor-pointer" />
               <IconInstagram className="h-6 w-6 hover:text-white/80 cursor-pointer" />

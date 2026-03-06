@@ -165,20 +165,20 @@ export default function HubClient({
   // ✅ Header: extreme ends like Home page
   const Header = (
     <header className={cn("sticky top-0 z-50 shadow-md", `bg-gradient-to-br ${GRADIENT_2}`)}>
-      <div className="flex h-16 items-center justify-between px-6 lg:px-10">
-        <Link href={ROUTE_HOME} className="flex items-center gap-3">
+      <div className="flex min-h-16 w-full items-center justify-between px-4 py-2 sm:px-6 lg:px-10">
+        <Link href={ROUTE_HOME} className="flex min-w-0 items-center gap-2 sm:gap-3">
           <div className="relative h-10 w-10">
             <Image src="/udeets-logo.png" alt="uDeets Logo" fill className="object-contain" priority />
           </div>
-          <span className="text-2xl font-bold text-white">uDeets</span>
+          <span className="truncate text-xl font-bold text-white sm:text-2xl">uDeets</span>
         </Link>
 
         {/* No icons on Home/Discover */}
-        <div className="flex items-center gap-3">
-          <Link href={ROUTE_HOME} className="px-4 py-2 text-white font-semibold hover:bg-white/10 rounded-lg">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Link href={ROUTE_HOME} className="rounded-lg px-3 py-2 text-sm font-semibold text-white hover:bg-white/10 sm:px-4 sm:text-base">
             Home
           </Link>
-          <Link href={ROUTE_DISCOVER} className="px-4 py-2 text-white font-semibold hover:bg-white/10 rounded-lg">
+          <Link href={ROUTE_DISCOVER} className="rounded-lg px-3 py-2 text-sm font-semibold text-white hover:bg-white/10 sm:px-4 sm:text-base">
             Discover
           </Link>
         </div>
@@ -189,8 +189,8 @@ export default function HubClient({
   // ✅ Footer: compact like Home page
   const Footer = (
     <footer className={cn(`bg-gradient-to-br ${GRADIENT_2}`)}>
-      <div className="flex h-16 items-center justify-between px-6 lg:px-10 text-white">
-        <p>© uDeets. All rights reserved.</p>
+      <div className="mx-auto flex min-h-16 max-w-7xl flex-col items-center justify-between gap-2 px-4 py-3 text-center text-white sm:flex-row sm:px-6 sm:text-left lg:px-10">
+        <p className="text-sm sm:text-base">© uDeets. All rights reserved.</p>
         <div className="flex gap-5">
           <IconFacebook className="h-6 w-6 hover:text-white/80 cursor-pointer" />
           <IconInstagram className="h-6 w-6 hover:text-white/80 cursor-pointer" />
@@ -211,10 +211,10 @@ export default function HubClient({
         {/* HERO */}
         <section className="relative overflow-hidden">
           <div className={cn("absolute inset-0", `bg-gradient-to-br ${GRADIENT_2}`)} />
-          <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-10 items-center px-6 lg:px-16 py-14 lg:py-16">
+          <div className="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 py-12 sm:px-6 sm:py-14 lg:grid-cols-2 lg:px-10 lg:py-16">
             {/* LEFT */}
-            <div className="text-white max-w-3xl space-y-6">
-              <div className="flex items-center gap-4">
+            <div className="max-w-3xl space-y-6 text-white">
+              <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
                 {/* ✅ dpImage (local) */}
                 {dpImageSrc ? (
                   <img
@@ -227,8 +227,8 @@ export default function HubClient({
                   <div className="h-20 w-20 rounded-full bg-white/20 border-4 border-white/40" />
                 )}
 
-                <div>
-                  <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight">{hub.name}</h1>
+                <div className="min-w-0">
+                  <h1 className="break-words text-3xl font-extrabold leading-tight sm:text-4xl lg:text-5xl">{hub.name}</h1>
                   <div className="mt-1 text-white/90 text-lg">{hub.locationLabel}</div>
                 </div>
               </div>
@@ -243,11 +243,11 @@ export default function HubClient({
 
               <p className="text-lg sm:text-xl text-white/90 leading-relaxed">{hub.description}</p>
 
-              <div className="flex flex-wrap gap-4 pt-2">
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:flex-wrap sm:gap-4">
                 <button
                   type="button"
                   onClick={handleSubscribe}
-                  className="bg-white text-teal-700 px-8 py-4 rounded-xl font-semibold shadow-xl hover:bg-white/80"
+                  className="rounded-xl bg-white px-6 py-3 text-center font-semibold text-teal-700 shadow-xl hover:bg-white/80 sm:px-8 sm:py-4"
                 >
                   {subscribed ? "Subscribed" : isPublic ? "Subscribe" : "Request Access"}
                 </button>
@@ -256,7 +256,7 @@ export default function HubClient({
                 <button
                   type="button"
                   onClick={handleShare}
-                  className="border-2 border-white text-white px-8 py-4 rounded-xl font-semibold shadow-xl hover:bg-white/10"
+                  className="rounded-xl border-2 border-white px-6 py-3 text-center font-semibold text-white shadow-xl hover:bg-white/10 sm:px-8 sm:py-4"
                 >
                   Share
                 </button>
@@ -283,7 +283,7 @@ export default function HubClient({
                 <div className="relative rounded-[2.5rem] p-[3px] bg-gradient-to-br from-cyan-300/70 via-white/40 to-cyan-200/70 shadow-[0_0_70px_rgba(93,191,201,0.45)]">
                   <div className="relative overflow-hidden rounded-[2.5rem] bg-white/5 backdrop-blur-sm">
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-white/30" />
-                    <div className="relative h-[460px] w-full">
+                    <div className="relative h-[280px] w-full sm:h-[380px] lg:h-[460px]">
                       <img
                         src={heroImageSrc}
                         alt={`${hub.name} cover`}
@@ -299,7 +299,7 @@ export default function HubClient({
         </section>
 
         {/* ✅ CONTENT SECTION (RESTORED) */}
-        <main className="px-6 lg:px-10 py-12">
+        <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-10">
           {/* 4 cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             <PrettyCard title="Quick Info" subtitle="Know the basics" iconLabel="i">
@@ -354,10 +354,10 @@ export default function HubClient({
             </PrettyCard>
 
             <PrettyCard title="Contact" subtitle="Reach the hub" iconLabel="✉">
-              <div className="space-y-3">
+              <div className="space-y-3 min-w-0">
                 <div className="flex items-start gap-2">
                   <span className="text-gray-600">Email:</span>
-                  <span className="font-semibold text-gray-900">contact@{hub.slug}.com</span>
+                  <span className="break-all font-semibold text-gray-900">contact@{hub.slug}.com</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="text-gray-600">Phone:</span>
@@ -368,7 +368,7 @@ export default function HubClient({
           </div>
 
           {/* About block + checklist */}
-          <div className="bg-white rounded-3xl p-8 shadow-lg shadow-black/5 border border-gray-100">
+          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-lg shadow-black/5 sm:p-8">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <h2 className="text-2xl font-extrabold text-gray-900">About This Hub</h2>
 
@@ -416,10 +416,10 @@ export default function HubClient({
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {Header}
 
-      <main className="px-6 lg:px-10 py-12">
-        <div className="bg-white rounded-3xl p-10 shadow-lg shadow-black/5 border border-gray-100">
+      <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-10">
+        <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-lg shadow-black/5 sm:p-10">
           <div className="text-sm text-gray-500">FULL HUB (Managed Experience)</div>
-          <h1 className="text-3xl font-extrabold text-gray-900 mt-2">{hub.name}</h1>
+          <h1 className="mt-2 break-words text-2xl font-extrabold text-gray-900 sm:text-3xl">{hub.name}</h1>
           <p className="text-gray-700 mt-4">
             This is the post-subscribe detailed hub view. Next we’ll plug in the real managed tabs
             (About, Updates, Events, Gallery) and use your actual images from{" "}

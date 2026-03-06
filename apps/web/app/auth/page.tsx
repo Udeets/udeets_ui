@@ -3,6 +3,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 type Mode = "signin" | "signup";
@@ -43,14 +44,28 @@ function AppleIcon(props: React.SVGProps<SVGSVGElement>) {
 }
 
 export default function Page() {
+  const router = useRouter();
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
+  const [error, setError] = useState("");
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    alert(mode === "signin" ? "Sign in (mock)" : "Sign up (mock)");
+
+    if (mode !== "signin") {
+      alert("Sign up (mock)");
+      return;
+    }
+
+    if (email === "demo@udeets.com" && password === "Demo@123") {
+      setError("");
+      router.push("/dashboard");
+      return;
+    }
+
+    setError("Invalid demo credentials");
   }
 
   // ✅ New standard gradients (2-color)
@@ -60,8 +75,8 @@ export default function Page() {
     <div className={`min-h-screen ${BRAND_2}`}>
       {/* HEADER (2-color gradient) */}
       <header className={`sticky top-0 z-50 ${BRAND_2} shadow-md`}>
-        <div className="flex h-16 items-center justify-between px-6 lg:px-10">
-          <Link href="/" className="flex items-center gap-3">
+        <div className="flex min-h-16 w-full items-center justify-between px-4 py-2 sm:px-6 lg:px-10">
+          <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
             <div className="relative h-10 w-10">
               <Image
                 src="/udeets-logo.png"
@@ -71,19 +86,19 @@ export default function Page() {
                 priority
               />
             </div>
-            <span className="text-2xl font-bold text-white">uDeets</span>
+            <span className="truncate text-xl font-bold text-white sm:text-2xl">uDeets</span>
           </Link>
 
-          <nav className="flex items-center gap-6">
+          <nav className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/discover"
-              className="text-white font-semibold hover:bg-white/10 px-4 py-2 rounded-lg transition"
+              className="rounded-lg px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10 sm:px-4 sm:text-base"
             >
               Discover
             </Link>
             <Link
               href="/"
-              className="text-white font-semibold hover:bg-white/10 px-4 py-2 rounded-lg transition"
+              className="rounded-lg px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10 sm:px-4 sm:text-base"
             >
               Home
             </Link>
@@ -92,7 +107,7 @@ export default function Page() {
       </header>
 
       {/* MAIN */}
-      <main className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-10">
+      <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-7xl items-center justify-center px-4 py-10 sm:px-6 lg:px-10">
         <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 w-full max-w-md">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">uDeets</h1>
@@ -171,8 +186,10 @@ export default function Page() {
               className="w-full px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500"
             />
 
+            {error && <p className="text-sm text-red-600">{error}</p>}
+
             {mode === "signin" && (
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
                 <label className="flex items-center">
                   <input
                     type="checkbox"
@@ -212,8 +229,8 @@ export default function Page() {
 
       {/* FOOTER (2-color gradient) */}
       <footer className={BRAND_2}>
-        <div className="flex h-16 items-center justify-center px-6 lg:px-10 text-white">
-          <p>© uDeets. All rights reserved.</p>
+        <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-center px-4 py-3 text-center text-white sm:px-6 lg:px-10">
+          <p className="text-sm sm:text-base">© uDeets. All rights reserved.</p>
         </div>
       </footer>
     </div>

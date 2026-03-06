@@ -190,10 +190,10 @@ function HubCard({ hub }: { hub: Hub }) {
     <Link
       href={hub.href}
       // ✅ FIX: force identical card width + no flex expansion
-      className="flex-shrink-0 w-[320px] bg-white rounded-3xl shadow-lg hover:shadow-xl transition overflow-hidden"
+      className="w-[min(320px,calc(100vw-2rem))] flex-shrink-0 overflow-hidden rounded-3xl bg-white shadow-lg transition hover:shadow-xl sm:w-[320px]"
     >
       <img src={hub.image} alt={hub.name} className="h-44 w-full object-cover" loading="lazy" />
-      <div className="p-6">
+      <div className="min-w-0 p-6">
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs bg-teal-100 text-teal-700 px-3 py-1 rounded-full font-semibold">
             {hub.visibility}
@@ -201,11 +201,11 @@ function HubCard({ hub }: { hub: Hub }) {
           <span className="text-xs text-gray-500">{hub.membersLabel}</span>
         </div>
 
-        <h3 className="text-lg font-extrabold mt-3 text-gray-900">{hub.name}</h3>
-        <p className="text-gray-600 mt-2 text-sm">{hub.description}</p>
+        <h3 className="mt-3 break-words text-lg font-extrabold text-gray-900">{hub.name}</h3>
+        <p className="mt-2 break-words text-sm text-gray-600">{hub.description}</p>
 
         <div className="text-xs text-gray-500 mt-4 flex justify-between">
-          <span>{hub.locationLabel}</span>
+          <span className="min-w-0 break-words">{hub.locationLabel}</span>
           <span>{hub.distanceMi.toFixed(1)} mi</span>
         </div>
       </div>
@@ -224,10 +224,10 @@ function CarouselSection({ title, hubs }: { title: string; hubs: Hub[] }) {
 
   return (
     <section className="py-10">
-      <div className="flex items-end justify-between mb-6">
-        <h2 className="text-3xl font-extrabold text-gray-900">{title}</h2>
+      <div className="mb-6 flex items-end justify-between gap-3">
+        <h2 className="text-2xl font-extrabold text-gray-900 sm:text-3xl">{title}</h2>
 
-        <div className="flex items-center gap-2">
+        <div className="hidden items-center gap-2 sm:flex">
           <LightArrowButton dir="left" ariaLabel={`${title} scroll left`} onClick={() => scrollBy(-420)} />
           <LightArrowButton dir="right" ariaLabel={`${title} scroll right`} onClick={() => scrollBy(420)} />
         </div>
@@ -264,10 +264,12 @@ export default function DiscoverPage() {
     const trigger = document.getElementById("nearMeTriggerChip");
     if (!trigger) return;
     const r = trigger.getBoundingClientRect();
+    const width = Math.max(176, Math.round(r.width));
+    const left = Math.max(8, Math.min(Math.round(r.left), window.innerWidth - width - 8));
     setNearMePos({
-      left: Math.round(r.left),
+      left,
       top: Math.round(r.bottom + 8),
-      width: Math.max(176, Math.round(r.width)),
+      width,
     });
   };
 
@@ -395,51 +397,53 @@ export default function DiscoverPage() {
   return (
     <div className={cn("min-h-screen", PAGE_BG)}>
       <header className={cn("sticky top-0 z-50 shadow-md", HEADER_FOOTER_GRADIENT)}>
-        <div className="flex h-16 items-center justify-between px-6 lg:px-10">
-          <Link href={ROUTE_HOME} className="flex items-center gap-3">
+        <div className="flex min-h-16 w-full items-center justify-between px-4 py-2 sm:px-6 lg:px-10">
+          <Link href={ROUTE_HOME} className="flex min-w-0 items-center gap-2 sm:gap-3">
             <div className="relative h-10 w-10">
               <Image src="/udeets-logo.png" alt="uDeets Logo" fill className="object-contain" priority />
             </div>
-            <span className="text-white text-2xl font-extrabold">uDeets</span>
+            <span className="truncate text-xl font-extrabold text-white sm:text-2xl">uDeets</span>
           </Link>
 
-          <Link href={ROUTE_HOME} className="text-white font-semibold px-5 py-2.5 rounded-2xl hover:bg-white/10 transition">
+          <Link href={ROUTE_HOME} className="rounded-2xl px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10 sm:px-5 sm:py-2.5 sm:text-base">
             Home
           </Link>
         </div>
       </header>
 
-      <section className={cn(HEADER_FOOTER_GRADIENT, "text-center py-20 px-6")}>
-        <h1 className="text-white text-5xl sm:text-6xl font-extrabold">Discover Hubs</h1>
-        <p className="text-white/90 mt-4 text-lg sm:text-xl">Explore communities, business and places near you</p>
+      <section className={cn(HEADER_FOOTER_GRADIENT, "px-4 py-14 text-center sm:px-6 sm:py-20 lg:px-10")}>
+        <div className="mx-auto max-w-7xl">
+          <h1 className="text-3xl font-extrabold text-white sm:text-5xl lg:text-6xl">Discover Hubs</h1>
+          <p className="mt-4 text-base text-white/90 sm:text-lg lg:text-xl">Explore communities, business and places near you</p>
 
-        <div className="mt-10 max-w-3xl mx-auto bg-white rounded-2xl shadow-xl flex items-center px-4 py-3">
-          <div className="mr-2 text-gray-400">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 21l-4.3-4.3" />
-              <circle cx="11" cy="11" r="7" />
-            </svg>
+          <div className="mx-auto mt-10 flex w-full max-w-3xl items-center rounded-2xl bg-white px-3 py-3 shadow-xl sm:px-4">
+            <div className="mr-2 text-gray-400">
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 21l-4.3-4.3" />
+                <circle cx="11" cy="11" r="7" />
+              </svg>
+            </div>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search hubs, places, communities..."
+              className="min-w-0 flex-1 text-base text-gray-700 outline-none sm:text-lg"
+            />
           </div>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search hubs, places, communities..."
-            className="flex-1 outline-none text-gray-700 text-lg"
-          />
-        </div>
 
-        <div className="mt-8">
-          <Link
-            href={ROUTE_AUTH}
-            className="inline-block bg-white/20 border border-white/25 text-white px-7 py-3.5 rounded-xl font-extrabold text-lg hover:bg-white/30 transition"
-          >
-            Create Hub
-          </Link>
+          <div className="mt-8">
+            <Link
+              href={ROUTE_AUTH}
+              className="inline-block rounded-xl border border-white/25 bg-white/20 px-6 py-3 text-base font-extrabold text-white transition hover:bg-white/30 sm:px-7 sm:py-3.5 sm:text-lg"
+            >
+              Create Hub
+            </Link>
+          </div>
         </div>
       </section>
 
       <section className="bg-white py-6 relative z-40">
-        <div className="max-w-7xl mx-auto px-6 lg:px-10">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
           <div className="flex items-center gap-3">
             <div
               ref={chipsRef}
@@ -531,7 +535,7 @@ export default function DiscoverPage() {
           document.body
         )}
 
-      <main className="max-w-7xl mx-auto px-6 lg:px-10 py-10">
+      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-10">
         {isResultsMode ? (
           <CarouselSection
             title="Results"
@@ -549,7 +553,7 @@ export default function DiscoverPage() {
       </main>
 
       <footer className={cn(HEADER_FOOTER_GRADIENT, "py-6 text-center text-white")}>
-        © uDeets. All rights reserved.
+        <div className="mx-auto max-w-7xl px-4 text-sm sm:px-6 sm:text-base lg:px-10">© uDeets. All rights reserved.</div>
       </footer>
     </div>
   );
