@@ -7,8 +7,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { HUBS as HUBS_SOURCE } from "@/lib/hubs";
 
-const HEADER_FOOTER_GRADIENT = "bg-gradient-to-br from-teal-500 to-cyan-500";
-const PAGE_BG = "bg-gradient-to-br from-slate-50 to-blue-50";
+const HEADER_BG = "bg-white border-b border-slate-200/60";
+const FOOTER_BG = "bg-[#0C5C57]";
+const PAGE_BG = "bg-[#E3F1EF]";
+const SECTION_MINT_BG = "bg-[#E3F1EF]";
+const HERO_ACCENT_BG = SECTION_MINT_BG;
+const NAV_TEXT = "text-[#111111]";
+const LOGO_TEXT = "text-[#111111]";
+const BRAND_TEXT_STYLE = `truncate text-xl font-serif font-semibold tracking-tight ${LOGO_TEXT} sm:text-2xl`;
+const DISPLAY_HEADING = "font-serif font-semibold tracking-tight text-[#111111]";
+const FILTER_TEXT = "font-serif font-semibold tracking-tight";
+const ACTION_TEXT = "font-serif font-semibold tracking-tight text-[#111111]";
+const BUTTON_PRIMARY = "rounded-full bg-[#0C5C57] px-6 py-3 text-sm font-serif font-semibold tracking-tight text-white hover:bg-[#094a46]";
+const ACTIVE_CHIP = "bg-[#0C5C57] text-white border-transparent";
 
 const ROUTE_HOME = "/";
 const ROUTE_AUTH = "/auth";
@@ -170,8 +181,8 @@ function LightArrowButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "h-10 w-10 rounded-full border border-gray-200 bg-white/80 backdrop-blur",
-        "text-gray-400 hover:text-gray-600 hover:bg-white transition shadow-sm",
+        "h-10 w-10 rounded-full border border-slate-200 bg-white",
+        "text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition shadow-sm",
         "disabled:opacity-40 disabled:cursor-not-allowed",
         className
       )}
@@ -190,18 +201,18 @@ function HubCard({ hub }: { hub: Hub }) {
     <Link
       href={hub.href}
       // ✅ FIX: force identical card width + no flex expansion
-      className="w-[min(320px,calc(100vw-2rem))] flex-shrink-0 overflow-hidden rounded-3xl bg-white shadow-lg transition hover:shadow-xl sm:w-[320px]"
+      className="w-[min(320px,calc(100vw-2rem))] flex-shrink-0 overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition hover:border-slate-300 sm:w-[320px]"
     >
       <img src={hub.image} alt={hub.name} className="h-44 w-full object-cover" loading="lazy" />
       <div className="min-w-0 p-6">
         <div className="flex items-center justify-between gap-3">
-          <span className="text-xs bg-teal-100 text-teal-700 px-3 py-1 rounded-full font-semibold">
+          <span className="text-xs bg-[#E3F1EF] text-slate-700 px-3 py-1 rounded-full font-semibold">
             {hub.visibility}
           </span>
           <span className="text-xs text-gray-500">{hub.membersLabel}</span>
         </div>
 
-        <h3 className="mt-3 break-words text-lg font-extrabold text-gray-900">{hub.name}</h3>
+        <h3 className={cn("mt-3 break-words text-lg", DISPLAY_HEADING)}>{hub.name}</h3>
         <p className="mt-2 break-words text-sm text-gray-600">{hub.description}</p>
 
         <div className="text-xs text-gray-500 mt-4 flex justify-between">
@@ -225,7 +236,7 @@ function CarouselSection({ title, hubs }: { title: string; hubs: Hub[] }) {
   return (
     <section className="py-10">
       <div className="mb-6 flex items-end justify-between gap-3">
-        <h2 className="text-2xl font-extrabold text-gray-900 sm:text-3xl">{title}</h2>
+        <h2 className={cn("text-2xl sm:text-3xl", DISPLAY_HEADING)}>{title}</h2>
 
         <div className="hidden items-center gap-2 sm:flex">
           <LightArrowButton dir="left" ariaLabel={`${title} scroll left`} onClick={() => scrollBy(-420)} />
@@ -396,27 +407,27 @@ export default function DiscoverPage() {
 
   return (
     <div className={cn("min-h-screen", PAGE_BG)}>
-      <header className={cn("sticky top-0 z-50 shadow-md", HEADER_FOOTER_GRADIENT)}>
+      <header className={cn("sticky top-0 z-50", HEADER_BG)}>
         <div className="flex min-h-16 w-full items-center justify-between px-4 py-2 sm:px-6 lg:px-10">
           <Link href={ROUTE_HOME} className="flex min-w-0 items-center gap-2 sm:gap-3">
             <div className="relative h-10 w-10">
               <Image src="/udeets-logo.png" alt="uDeets Logo" fill className="object-contain" priority />
             </div>
-            <span className="truncate text-xl font-extrabold text-white sm:text-2xl">uDeets</span>
+            <span className={BRAND_TEXT_STYLE}>uDeets</span>
           </Link>
 
-          <Link href={ROUTE_HOME} className="rounded-2xl px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10 sm:px-5 sm:py-2.5 sm:text-base">
+          <Link href={ROUTE_HOME} className={cn("rounded-full px-4 py-2 text-sm transition hover:bg-slate-100 sm:px-5 sm:py-2.5", NAV_TEXT, ACTION_TEXT)}>
             Home
           </Link>
         </div>
       </header>
 
-      <section className={cn(HEADER_FOOTER_GRADIENT, "px-4 py-14 text-center sm:px-6 sm:py-20 lg:px-10")}>
+      <section className={cn("px-4 py-14 text-center sm:px-6 sm:py-20 lg:px-10", HERO_ACCENT_BG)}>
         <div className="mx-auto max-w-7xl">
-          <h1 className="text-3xl font-extrabold text-white sm:text-5xl lg:text-6xl">Discover Hubs</h1>
-          <p className="mt-4 text-base text-white/90 sm:text-lg lg:text-xl">Explore communities, business and places near you</p>
+          <h1 className={cn("text-3xl sm:text-5xl lg:text-6xl", DISPLAY_HEADING)}>Discover Hubs</h1>
+          <p className="mt-4 text-base text-slate-600 sm:text-lg lg:text-xl">Explore communities, business and places near you</p>
 
-          <div className="mx-auto mt-10 flex w-full max-w-3xl items-center rounded-2xl bg-white px-3 py-3 shadow-xl sm:px-4">
+          <div className="mx-auto mt-10 flex w-full max-w-3xl items-center rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm sm:px-4">
             <div className="mr-2 text-gray-400">
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 21l-4.3-4.3" />
@@ -434,7 +445,7 @@ export default function DiscoverPage() {
           <div className="mt-8">
             <Link
               href={ROUTE_AUTH}
-              className="inline-block rounded-xl border border-white/25 bg-white/20 px-6 py-3 text-base font-extrabold text-white transition hover:bg-white/30 sm:px-7 sm:py-3.5 sm:text-lg"
+              className={cn("inline-block transition", BUTTON_PRIMARY)}
             >
               Create Hub
             </Link>
@@ -442,7 +453,7 @@ export default function DiscoverPage() {
         </div>
       </section>
 
-      <section className="bg-white py-6 relative z-40">
+      <section className="py-6 relative z-40">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
           <div className="flex items-center gap-3">
             <div
@@ -453,10 +464,10 @@ export default function DiscoverPage() {
               <button
                 onClick={() => setActiveCategory("All")}
                 className={cn(
-                  "px-6 py-3 rounded-full border font-semibold transition whitespace-nowrap",
+                  `px-6 py-3 rounded-full border transition whitespace-nowrap ${FILTER_TEXT}`,
                   activeCategory === "All"
-                    ? cn("text-white border-transparent", HEADER_FOOTER_GRADIENT)
-                    : "bg-slate-50 text-gray-700 border-gray-200 hover:border-teal-400"
+                    ? ACTIVE_CHIP
+                    : "bg-slate-50 text-gray-700 border-gray-200 hover:border-slate-300"
                 )}
               >
                 All
@@ -470,10 +481,10 @@ export default function DiscoverPage() {
                     setNearMeOpen((v) => !v);
                   }}
                   className={cn(
-                    "flex items-center gap-2 px-6 py-3 rounded-full border font-semibold transition whitespace-nowrap",
+                    `flex items-center gap-2 px-6 py-3 rounded-full border transition whitespace-nowrap ${FILTER_TEXT}`,
                     nearMe !== "Any"
-                      ? cn("text-white border-transparent", HEADER_FOOTER_GRADIENT)
-                      : "bg-slate-50 text-gray-700 border-gray-200 hover:border-teal-400"
+                      ? ACTIVE_CHIP
+                      : "bg-slate-50 text-gray-700 border-gray-200 hover:border-slate-300"
                   )}
                 >
                   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
@@ -492,10 +503,10 @@ export default function DiscoverPage() {
                   key={c}
                   onClick={() => setActiveCategory(c)}
                   className={cn(
-                    "px-6 py-3 rounded-full border font-semibold transition whitespace-nowrap",
+                    `px-6 py-3 rounded-full border transition whitespace-nowrap ${FILTER_TEXT}`,
                     activeCategory === c
-                      ? cn("text-white border-transparent", HEADER_FOOTER_GRADIENT)
-                      : "bg-slate-50 text-gray-700 border-gray-200 hover:border-teal-400"
+                      ? ACTIVE_CHIP
+                      : "bg-slate-50 text-gray-700 border-gray-200 hover:border-slate-300"
                   )}
                 >
                   {c}
@@ -552,8 +563,10 @@ export default function DiscoverPage() {
         )}
       </main>
 
-      <footer className={cn(HEADER_FOOTER_GRADIENT, "py-6 text-center text-white")}>
-        <div className="mx-auto max-w-7xl px-4 text-sm sm:px-6 sm:text-base lg:px-10">© uDeets. All rights reserved.</div>
+      <footer className={cn(FOOTER_BG, "py-6 text-white")}>
+        <div className="flex w-full items-center justify-between px-4 text-sm sm:px-6 sm:text-base lg:px-10">
+          <p>© uDeets. All rights reserved.</p>
+        </div>
       </footer>
     </div>
   );

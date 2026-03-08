@@ -68,13 +68,21 @@ export default function Page() {
     setError("Invalid demo credentials");
   }
 
-  // ✅ New standard gradients (2-color)
-  const BRAND_2 = "bg-gradient-to-br from-teal-500 to-cyan-500";
+  const PAGE_BG = "bg-[#E3F1EF]";
+  const HEADER_BG = "bg-white border-b border-slate-200/60";
+  const FOOTER_BG = "bg-[#0C5C57]";
+  const TEXT_PRIMARY = "text-[#111111]";
+  const NAV_TEXT = "text-[#111111]";
+  const LOGO_TEXT = "text-[#111111]";
+  const BRAND_TEXT_STYLE = `truncate text-xl font-serif font-semibold tracking-tight ${LOGO_TEXT} sm:text-2xl`;
+  const DISPLAY_HEADING = `font-serif font-semibold tracking-tight ${TEXT_PRIMARY}`;
+  const BUTTON_PRIMARY = "rounded-full bg-[#0C5C57] px-6 py-3 text-sm font-medium text-white hover:bg-[#094a46]";
+  const SURFACE = "rounded-2xl border border-slate-100 bg-white shadow-sm";
 
   return (
-    <div className={`min-h-screen ${BRAND_2}`}>
-      {/* HEADER (2-color gradient) */}
-      <header className={`sticky top-0 z-50 ${BRAND_2} shadow-md`}>
+    <div className={cx("min-h-screen", PAGE_BG)}>
+      {/* HEADER */}
+      <header className={cx("sticky top-0 z-50", HEADER_BG)}>
         <div className="flex min-h-16 w-full items-center justify-between px-4 py-2 sm:px-6 lg:px-10">
           <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
             <div className="relative h-10 w-10">
@@ -86,19 +94,19 @@ export default function Page() {
                 priority
               />
             </div>
-            <span className="truncate text-xl font-bold text-white sm:text-2xl">uDeets</span>
+            <span className={BRAND_TEXT_STYLE}>uDeets</span>
           </Link>
 
           <nav className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/discover"
-              className="rounded-lg px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10 sm:px-4 sm:text-base"
+              className={`rounded-full px-4 py-2 text-sm font-medium ${NAV_TEXT} transition hover:bg-slate-100 sm:px-5 sm:py-2.5`}
             >
               Discover
             </Link>
             <Link
               href="/"
-              className="rounded-lg px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10 sm:px-4 sm:text-base"
+              className={`rounded-full px-4 py-2 text-sm font-medium ${NAV_TEXT} transition hover:bg-slate-100 sm:px-5 sm:py-2.5`}
             >
               Home
             </Link>
@@ -108,9 +116,9 @@ export default function Page() {
 
       {/* MAIN */}
       <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-7xl items-center justify-center px-4 py-10 sm:px-6 lg:px-10">
-        <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 w-full max-w-md">
+        <div className={cx(SURFACE, "w-full max-w-md p-6 sm:p-8")}>
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">uDeets</h1>
+            <h1 className={cx("mb-2 text-3xl", DISPLAY_HEADING)}>uDeets</h1>
             <p className="text-gray-600">Create. Subscribe. Stay Informed.</p>
           </div>
 
@@ -174,7 +182,7 @@ export default function Page() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email"
-              className="w-full px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500"
+              className="w-full rounded-xl border border-gray-300 px-3 py-3 focus:ring-2 focus:ring-[#A9D1CA]"
             />
 
             <input
@@ -183,7 +191,7 @@ export default function Page() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
-              className="w-full px-3 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500"
+              className="w-full rounded-xl border border-gray-300 px-3 py-3 focus:ring-2 focus:ring-[#A9D1CA]"
             />
 
             {error && <p className="text-sm text-red-600">{error}</p>}
@@ -195,11 +203,11 @@ export default function Page() {
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="h-4 w-4 text-teal-600 border-gray-300 rounded"
+                    className="h-4 w-4 rounded border-gray-300 text-[#0C5C57]"
                   />
                   <span className="ml-2 text-sm text-gray-700">Remember me</span>
                 </label>
-                <button type="button" className="text-sm text-teal-600">
+                <button type="button" className="text-sm text-[#0C5C57]">
                   Forgot password?
                 </button>
               </div>
@@ -207,18 +215,18 @@ export default function Page() {
 
             <button
               type="submit"
-              className={`${BRAND_2} text-white py-3 px-4 rounded-xl font-semibold hover:opacity-95 transition shadow-lg w-full`}
+              className={cx(BUTTON_PRIMARY, "w-full")}
             >
               {mode === "signin" ? "Sign In" : "Create Account"}
             </button>
 
             <p className="text-xs text-center text-gray-500 mt-4">
               By continuing, I agree to the{" "}
-              <a href="#" className="text-teal-600">
+              <a href="#" className="text-[#0C5C57]">
                 Terms & Conditions
               </a>{" "}
               and{" "}
-              <a href="#" className="text-teal-600">
+              <a href="#" className="text-[#0C5C57]">
                 Privacy Policy
               </a>
               .
@@ -227,9 +235,8 @@ export default function Page() {
         </div>
       </main>
 
-      {/* FOOTER (2-color gradient) */}
-      <footer className={BRAND_2}>
-        <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-center px-4 py-3 text-center text-white sm:px-6 lg:px-10">
+      <footer className={FOOTER_BG}>
+        <div className="flex min-h-16 w-full items-center justify-between px-4 py-3 text-white sm:px-6 lg:px-10">
           <p className="text-sm sm:text-base">© uDeets. All rights reserved.</p>
         </div>
       </footer>

@@ -2,9 +2,24 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
+import { HUBS as HUBS_SOURCE } from "@/lib/hubs";
 
-// ✅ One gradient system (2-color) for ALL strips/hero/cards/cta
-const GRADIENT_2 = "from-teal-500 to-cyan-500";
+const PAGE_BG = "bg-[#E3F1EF]";
+const HEADER_BG = "bg-white border-b border-slate-200/60";
+const FOOTER_BG = "bg-[#0C5C57]";
+const SECTION_MINT_BG = "bg-[#E3F1EF]";
+const ACCENT_MEDIUM_GREEN = "bg-[#A9D1CA]";
+const TEXT_PRIMARY = "text-[#111111]";
+const NAV_TEXT = "text-[#111111]";
+const LOGO_TEXT = "text-[#111111]";
+const BRAND_TEXT_STYLE = `truncate text-xl font-serif font-semibold tracking-tight ${LOGO_TEXT} sm:text-2xl`;
+const DISPLAY_HEADING = `font-serif font-semibold tracking-tight ${TEXT_PRIMARY}`;
+const SECTION_HEADING = `font-serif font-semibold tracking-tight ${TEXT_PRIMARY}`;
+const BODY_TEXT = "font-sans leading-relaxed text-slate-600";
+const BUTTON_PRIMARY = "rounded-full bg-[#0C5C57] px-6 py-3 text-sm font-medium text-white hover:bg-[#094a46]";
+const STEP_BADGE = `${ACCENT_MEDIUM_GREEN} text-[#111111]`;
+const HEADER_ACTION = `rounded-full px-4 py-2 text-sm font-medium ${NAV_TEXT} hover:bg-slate-100 sm:px-5 sm:py-2.5`;
 
 const steps = [
   {
@@ -24,28 +39,30 @@ const steps = [
   },
 ];
 
-// ✅ Use explicit href so you NEVER hit an older route by accident
-const topHubs = [
-  {
-    name: "Hindu Center of Virginia",
-    intro:
-      "Temple updates, festivals, volunteer opportunities, and community announcements in one place.",
-    href: "/hubs/religious-places/hindu-center-of-virginia",
-  },
-  {
-    name: "Richmond Kannada Sangha",
-    intro:
-      "Cultural programs, meetups, youth activities, and local Kannada community updates.",
-    href: "/hubs/communities/richmond-kannada-sangha",
-  },
-  {
-    name: "Desi Bites",
-    intro:
-      "New menu drops, deals, catering info, and local foodie updates from your favorite spot.",
-    // ✅ CHANGE THIS to your NEW Desi Bites route if different
-    href: "/hubs/restaurants/desi-bites",
-  },
-];
+type TopHub = {
+  id: string;
+  name: string;
+  intro: string;
+  href: string;
+  image: string;
+  visibility: "Public" | "Private";
+};
+
+function normalizePublicSrc(src?: string) {
+  if (!src) return "";
+  if (src.startsWith("http://") || src.startsWith("https://")) return src;
+  if (src.startsWith("/")) return src;
+  return `/${src}`;
+}
+
+const topHubs: TopHub[] = HUBS_SOURCE.map((hub) => ({
+  id: hub.id,
+  name: hub.name,
+  intro: hub.description,
+  href: `/hubs/${hub.category}/${hub.slug}`,
+  image: normalizePublicSrc(hub.heroImage),
+  visibility: hub.visibility,
+}));
 
 function IconFacebook(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -73,11 +90,57 @@ function IconYouTube(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-export default function Page() {
+function IconChevronLeft(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <path d="M12.5 15l-5-5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconChevronRight(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <path d="M7.5 15l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export default function Page() {
+  const hubsRowRef = useRef<HTMLDivElement | null>(null);
+  const [pauseAutoScroll, setPauseAutoScroll] = useState(false);
+
+  useEffect(() => {
+    const el = hubsRowRef.current;
+    if (!el) return;
+
+    const timer = window.setInterval(() => {
+      if (pauseAutoScroll) return;
+
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      if (maxScroll <= 0) return;
+
+      if (el.scrollLeft >= maxScroll - 2) {
+        el.scrollTo({ left: 0, behavior: "smooth" });
+        return;
+      }
+
+      el.scrollBy({ left: 1, behavior: "auto" });
+    }, 28);
+
+    return () => window.clearInterval(timer);
+  }, [pauseAutoScroll]);
+
+  const scrollHubsBy = (delta: number) => {
+    const el = hubsRowRef.current;
+    if (!el) return;
+    el.scrollBy({ left: delta, behavior: "smooth" });
+  };
+
+  return (
+    <div className={cn("min-h-screen", PAGE_BG)}>
       {/* HEADER */}
-      <header className={`sticky top-0 z-50 bg-gradient-to-br ${GRADIENT_2} shadow-md`}>
+      <header className={cn("sticky top-0 z-50", HEADER_BG)}>
         <div className="flex min-h-16 w-full items-center justify-between px-4 py-2 sm:px-6 lg:px-10">
           <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
             <div className="relative h-10 w-10">
@@ -89,19 +152,19 @@ export default function Page() {
                 priority
               />
             </div>
-            <span className="truncate text-xl font-bold text-white sm:text-2xl">uDeets</span>
+            <span className={BRAND_TEXT_STYLE}>uDeets</span>
           </Link>
 
           <div className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/auth"
-              className="rounded-lg px-3 py-2 text-sm font-semibold text-white hover:bg-white/10 sm:px-4 sm:text-base"
+              className={HEADER_ACTION}
             >
               Sign in
             </Link>
             <Link
               href="/auth"
-              className="rounded-xl bg-white px-3 py-2 text-sm font-bold text-teal-700 shadow-lg hover:bg-white/80 sm:px-4 sm:text-base"
+              className={BUTTON_PRIMARY}
             >
               Get started
             </Link>
@@ -109,21 +172,20 @@ export default function Page() {
         </div>
       </header>
 
-      <main>
-        {/* HERO (now 2-color) */}
+      <main className={PAGE_BG}>
+        {/* HERO */}
         <section className="relative overflow-hidden">
-          <div className={`absolute inset-0 bg-gradient-to-br ${GRADIENT_2}`} />
+          <div className="pointer-events-none absolute -top-20 right-0 h-72 w-72 rounded-full bg-emerald-100/70 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-20 left-0 h-60 w-60 rounded-full bg-cyan-100/50 blur-3xl" />
 
           <div className="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-2 lg:gap-12 lg:px-10">
             {/* LEFT CONTENT */}
-            <div className="max-w-3xl space-y-5 text-white sm:space-y-6">
-              <div className="text-5xl font-extrabold tracking-tight sm:text-6xl lg:text-7xl">uDeets</div>
-
-              <h1 className="break-words text-3xl font-semibold sm:text-4xl lg:text-5xl">
+            <div className="max-w-3xl space-y-6 text-slate-900 sm:space-y-7">
+              <h1 className={cn("break-words text-4xl leading-[0.95] sm:text-5xl lg:text-6xl", DISPLAY_HEADING)}>
                 Create. Subscribe. Stay Informed.
               </h1>
 
-              <p className="text-lg text-white/90 sm:text-xl lg:text-2xl">
+              <p className={cn("max-w-2xl text-lg sm:text-xl lg:text-2xl", BODY_TEXT)}>
                 Create hubs to share updates, or subscribe to receive the details
                 that matter to you.
               </p>
@@ -131,14 +193,14 @@ export default function Page() {
               <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:gap-4 sm:pt-4">
                 <Link
                   href="/auth"
-                  className="rounded-xl bg-white px-6 py-3 text-center font-semibold text-teal-700 shadow-xl hover:bg-white/80 sm:px-8 sm:py-4"
+                  className={cn(BUTTON_PRIMARY, "text-center")}
                 >
                   Get Started Free
                 </Link>
 
                 <Link
                   href="/discover"
-                  className="rounded-xl border-2 border-white px-6 py-3 text-center font-semibold text-white shadow-xl hover:bg-white/10 sm:px-8 sm:py-4"
+                  className="rounded-full border border-slate-300 px-6 py-3 text-center text-sm font-medium text-slate-700 hover:bg-slate-100"
                 >
                   Discover
                 </Link>
@@ -148,90 +210,121 @@ export default function Page() {
             {/* RIGHT IMAGE (Glossy border) */}
             <div className="flex justify-center">
               <div className="relative w-full max-w-2xl">
-                <div className="pointer-events-none absolute -inset-6 rounded-[2.5rem] bg-cyan-300/30 blur-3xl" />
+                <div className="pointer-events-none absolute -left-4 top-8 h-40 w-40 rounded-full bg-emerald-100/60 blur-3xl" />
+                <div className="pointer-events-none absolute -right-8 bottom-2 h-48 w-48 rounded-full bg-cyan-100/60 blur-3xl" />
 
-                <div className="relative rounded-[2.5rem] p-[3px] bg-gradient-to-br from-cyan-300/70 via-white/40 to-cyan-200/70 shadow-[0_0_70px_rgba(93,191,201,0.45)]">
-                  <div className="relative overflow-hidden rounded-[2.5rem] bg-white/5 backdrop-blur-sm">
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-white/30" />
-
+                <div className={cn("relative rounded-[2.5rem] border border-slate-100 p-3 shadow-[0_18px_46px_rgba(15,23,42,0.08)]", SECTION_MINT_BG)}>
+                  <div className="relative overflow-hidden rounded-[2rem] border border-slate-100 bg-white">
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/70 via-transparent to-emerald-100/45" />
                     <div className="relative h-[280px] w-full sm:h-[420px] lg:h-[540px]">
                       <Image
                         src="/udeets-home.png"
                         alt="Local business owner managing updates"
                         fill
                         priority
-                        className="object-cover rounded-[2.5rem]"
+                        className="object-cover rounded-[2rem]"
                       />
                     </div>
                   </div>
                 </div>
+
               </div>
             </div>
           </div>
         </section>
 
         {/* HOW IT WORKS */}
-        <section className="bg-white py-20 text-center">
-          <h2 className="mb-12 px-4 text-3xl font-bold sm:text-4xl">How It Works</h2>
+        <section className={cn("py-20 text-center", SECTION_MINT_BG)}>
+          <h2 className={cn("mb-12 px-4 text-3xl sm:text-4xl", SECTION_HEADING)}>How It Works</h2>
 
           <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-3 lg:px-10">
             {steps.map((s) => (
-              <div key={s.n} className="min-w-0">
+              <div key={s.n} className="min-w-0 rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
                 <div
-                  className={`mx-auto h-24 w-24 flex items-center justify-center rounded-full bg-gradient-to-br ${GRADIENT_2} text-white text-4xl font-bold mb-6 shadow-xl`}
+                  className={cn("mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full text-4xl font-bold", STEP_BADGE)}
                 >
                   {s.n}
                 </div>
-                <h3 className="text-2xl font-bold mb-3">{s.title}</h3>
-                <p className="text-gray-600">{s.desc}</p>
+                <h3 className={cn("mb-3 text-2xl", SECTION_HEADING)}>{s.title}</h3>
+                <p className="text-slate-600">{s.desc}</p>
               </div>
             ))}
           </div>
         </section>
 
-        {/* TOP HUBS (now 2-color + explicit hrefs) */}
-        <section className="bg-white py-20">
-          <h2 className="mb-16 px-4 text-center text-3xl font-bold sm:text-4xl">Our Top Hubs</h2>
+        {/* TOP HUBS */}
+        <section className="py-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
+            <div className="mb-10 flex items-center justify-between gap-4">
+              <h2 className={cn("text-3xl sm:text-4xl", SECTION_HEADING)}>Our Top Hubs</h2>
+              <div className="hidden items-center gap-2 sm:flex">
+                <button
+                  type="button"
+                  aria-label="Scroll hubs left"
+                  onClick={() => scrollHubsBy(-380)}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+                >
+                  <IconChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Scroll hubs right"
+                  onClick={() => scrollHubsBy(380)}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+                >
+                  <IconChevronRight className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
 
-          <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-3 lg:px-10">
-            {topHubs.map((hub) => (
-              <Link
-                key={hub.name}
-                href={hub.href}
-                className={`group flex min-w-0 flex-col rounded-2xl bg-gradient-to-br ${GRADIENT_2} p-8 text-white shadow-lg transition hover:scale-105`}
-              >
-                <div className="mb-4 flex items-start justify-between gap-4">
-                  <h3 className="min-w-0 break-words text-2xl font-extrabold leading-tight tracking-wide">
-                    {hub.name}
-                  </h3>
-
-                  <span className="shrink-0 bg-white text-teal-700 px-3 py-1 rounded-full text-xs font-semibold">
-                    Public
-                  </span>
-                </div>
-
-                <p className="mb-6 break-words text-white/90">{hub.intro}</p>
-
-                <div className="mt-auto bg-white text-teal-700 py-2 rounded-xl text-center font-semibold">
-                  View Hub
-                </div>
-              </Link>
-            ))}
+            <div
+              ref={hubsRowRef}
+              onMouseEnter={() => setPauseAutoScroll(true)}
+              onMouseLeave={() => setPauseAutoScroll(false)}
+              className="flex gap-6 overflow-x-auto pb-2"
+              style={{ scrollbarWidth: "none" as never }}
+            >
+              {[...topHubs, ...topHubs].map((hub, idx) => (
+                <Link
+                  key={`${hub.id}-${idx}`}
+                  href={hub.href}
+                  className="group relative flex h-[260px] w-[min(360px,calc(100vw-2rem))] flex-shrink-0 min-w-0 overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition hover:border-slate-300 sm:w-[360px]"
+                >
+                  <img src={hub.image} alt={hub.name} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/75 via-[#111111]/35 to-transparent" />
+                  <div className="relative mt-auto w-full p-6">
+                    <div className="mb-3 flex items-start justify-between gap-4">
+                      <h3 className={cn("min-w-0 break-words text-2xl leading-tight text-white", SECTION_HEADING)}>
+                        {hub.name}
+                      </h3>
+                      <span className="shrink-0 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-[#111111]">
+                        {hub.visibility}
+                      </span>
+                    </div>
+                    <p className="line-clamp-2 break-words text-sm text-white/90">{hub.intro}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
         </section>
 
         {/* FOOTER */}
-        <footer className={`bg-gradient-to-br ${GRADIENT_2}`}>
-          <div className="mx-auto flex min-h-16 max-w-7xl flex-col items-center justify-between gap-2 px-4 py-3 text-center text-white sm:flex-row sm:px-6 sm:text-left lg:px-10">
+        <footer className={FOOTER_BG}>
+          <div className="flex min-h-16 w-full flex-col items-center justify-between gap-2 px-4 py-3 text-center text-white sm:flex-row sm:px-6 sm:text-left lg:px-10">
             <p className="text-sm sm:text-base">© uDeets. All rights reserved.</p>
             <div className="flex gap-5">
-              <IconFacebook className="h-6 w-6 hover:text-white/80 cursor-pointer" />
-              <IconInstagram className="h-6 w-6 hover:text-white/80 cursor-pointer" />
-              <IconYouTube className="h-6 w-6 hover:text-white/80 cursor-pointer" />
+              <IconFacebook className="h-6 w-6 cursor-pointer text-white/90 hover:text-white" />
+              <IconInstagram className="h-6 w-6 cursor-pointer text-white/90 hover:text-white" />
+              <IconYouTube className="h-6 w-6 cursor-pointer text-white/90 hover:text-white" />
             </div>
           </div>
         </footer>
       </main>
     </div>
   );
+}
+
+function cn(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
 }

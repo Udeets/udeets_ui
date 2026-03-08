@@ -7,8 +7,19 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { HubRecord } from "@/lib/hubs";
 
-// ✅ uDeets standard gradient system (2-color)
-const GRADIENT_2 = "from-teal-500 to-cyan-500";
+const HEADER_BG = "bg-white border-b border-slate-200/60";
+const FOOTER_BG = "bg-[#0C5C57]";
+const PAGE_BG = "bg-[#E3F1EF]";
+const SECTION_MINT_BG = "bg-[#E3F1EF]";
+const HERO_ACCENT_BG = SECTION_MINT_BG;
+const NAV_TEXT = "text-[#111111]";
+const LOGO_TEXT = "text-[#111111]";
+const BRAND_TEXT_STYLE = `truncate text-xl font-serif font-semibold tracking-tight ${LOGO_TEXT} sm:text-2xl`;
+const DISPLAY_HEADING = "font-serif font-semibold tracking-tight text-[#111111]";
+const ACCENT_MEDIUM_GREEN = "bg-[#A9D1CA]";
+const ICON_GREEN = "text-[#0B6E78]";
+const BUTTON_PRIMARY =
+  "rounded-full bg-[#0C5C57] px-6 py-3 text-sm font-medium text-white hover:bg-[#094a46]";
 
 const ROUTE_HOME = "/";
 const ROUTE_DISCOVER = "/discover";
@@ -59,8 +70,9 @@ function MiniIcon({ label }: { label: string }) {
   return (
     <span
       className={cn(
-        "inline-flex h-10 w-10 items-center justify-center rounded-2xl text-white font-extrabold shadow-xl",
-        `bg-gradient-to-br ${GRADIENT_2}`
+        "inline-flex h-10 w-10 items-center justify-center rounded-2xl font-extrabold",
+        ICON_GREEN,
+        ACCENT_MEDIUM_GREEN
       )}
       aria-hidden="true"
     >
@@ -81,7 +93,7 @@ function PrettyCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="group bg-white rounded-3xl p-6 shadow-lg shadow-black/5 border border-gray-100 hover:shadow-xl hover:-translate-y-0.5 transition-all">
+    <div className="group bg-white rounded-xl p-6 shadow-sm border border-slate-100 transition-all">
       <div className="flex items-center gap-3 mb-4">
         <MiniIcon label={iconLabel} />
         <div className="min-w-0">
@@ -94,7 +106,7 @@ function PrettyCard({
 
       <div className="text-sm text-gray-700">{children}</div>
 
-      <div className="mt-5 h-1 w-0 group-hover:w-full transition-all rounded-full bg-gradient-to-r from-teal-200 to-cyan-200" />
+      <div className="mt-5 h-1 w-0 group-hover:w-full transition-all rounded-full bg-slate-300" />
     </div>
   );
 }
@@ -164,21 +176,21 @@ export default function HubClient({
 
   // ✅ Header: extreme ends like Home page
   const Header = (
-    <header className={cn("sticky top-0 z-50 shadow-md", `bg-gradient-to-br ${GRADIENT_2}`)}>
+    <header className={cn("sticky top-0 z-50", HEADER_BG)}>
       <div className="flex min-h-16 w-full items-center justify-between px-4 py-2 sm:px-6 lg:px-10">
         <Link href={ROUTE_HOME} className="flex min-w-0 items-center gap-2 sm:gap-3">
           <div className="relative h-10 w-10">
             <Image src="/udeets-logo.png" alt="uDeets Logo" fill className="object-contain" priority />
           </div>
-          <span className="truncate text-xl font-bold text-white sm:text-2xl">uDeets</span>
+          <span className={BRAND_TEXT_STYLE}>uDeets</span>
         </Link>
 
         {/* No icons on Home/Discover */}
         <div className="flex items-center gap-2 sm:gap-3">
-          <Link href={ROUTE_HOME} className="rounded-lg px-3 py-2 text-sm font-semibold text-white hover:bg-white/10 sm:px-4 sm:text-base">
+          <Link href={ROUTE_HOME} className={`rounded-full px-4 py-2 text-sm font-medium ${NAV_TEXT} hover:bg-slate-100 sm:px-5 sm:py-2.5`}>
             Home
           </Link>
-          <Link href={ROUTE_DISCOVER} className="rounded-lg px-3 py-2 text-sm font-semibold text-white hover:bg-white/10 sm:px-4 sm:text-base">
+          <Link href={ROUTE_DISCOVER} className={`rounded-full px-4 py-2 text-sm font-medium ${NAV_TEXT} hover:bg-slate-100 sm:px-5 sm:py-2.5`}>
             Discover
           </Link>
         </div>
@@ -188,13 +200,13 @@ export default function HubClient({
 
   // ✅ Footer: compact like Home page
   const Footer = (
-    <footer className={cn(`bg-gradient-to-br ${GRADIENT_2}`)}>
-      <div className="mx-auto flex min-h-16 max-w-7xl flex-col items-center justify-between gap-2 px-4 py-3 text-center text-white sm:flex-row sm:px-6 sm:text-left lg:px-10">
+    <footer className={FOOTER_BG}>
+      <div className="flex min-h-16 w-full flex-col items-center justify-between gap-2 px-4 py-3 text-center text-white sm:flex-row sm:px-6 sm:text-left lg:px-10">
         <p className="text-sm sm:text-base">© uDeets. All rights reserved.</p>
         <div className="flex gap-5">
-          <IconFacebook className="h-6 w-6 hover:text-white/80 cursor-pointer" />
-          <IconInstagram className="h-6 w-6 hover:text-white/80 cursor-pointer" />
-          <IconYouTube className="h-6 w-6 hover:text-white/80 cursor-pointer" />
+          <IconFacebook className="h-6 w-6 cursor-pointer text-white/90 hover:text-white" />
+          <IconInstagram className="h-6 w-6 cursor-pointer text-white/90 hover:text-white" />
+          <IconYouTube className="h-6 w-6 cursor-pointer text-white/90 hover:text-white" />
         </div>
       </div>
     </footer>
@@ -205,49 +217,49 @@ export default function HubClient({
   // =========================
   if (mode === "intro") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className={cn("min-h-screen", PAGE_BG)}>
         {Header}
 
         {/* HERO */}
-        <section className="relative overflow-hidden">
-          <div className={cn("absolute inset-0", `bg-gradient-to-br ${GRADIENT_2}`)} />
+        <section className={cn("relative overflow-hidden", HERO_ACCENT_BG)}>
+          <div className="pointer-events-none absolute -top-20 right-0 h-64 w-64 rounded-full bg-emerald-100/80 blur-3xl" />
           <div className="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 py-12 sm:px-6 sm:py-14 lg:grid-cols-2 lg:px-10 lg:py-16">
             {/* LEFT */}
-            <div className="max-w-3xl space-y-6 text-white">
+            <div className="max-w-3xl space-y-6 text-slate-900">
               <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
                 {/* ✅ dpImage (local) */}
                 {dpImageSrc ? (
                   <img
                     src={dpImageSrc}
                     alt={`${hub.name} avatar`}
-                    className="h-20 w-20 rounded-full object-cover border-4 border-white shadow-xl"
+                    className="h-20 w-20 rounded-full object-cover border-4 border-white shadow-sm"
                     loading="lazy"
                   />
                 ) : (
-                  <div className="h-20 w-20 rounded-full bg-white/20 border-4 border-white/40" />
+                  <div className="h-20 w-20 rounded-full border-4 border-white bg-emerald-100/70" />
                 )}
 
                 <div className="min-w-0">
-                  <h1 className="break-words text-3xl font-extrabold leading-tight sm:text-4xl lg:text-5xl">{hub.name}</h1>
-                  <div className="mt-1 text-white/90 text-lg">{hub.locationLabel}</div>
+                  <h1 className={cn("break-words text-3xl leading-tight sm:text-4xl lg:text-5xl", DISPLAY_HEADING)}>{hub.name}</h1>
+                  <div className="mt-1 text-lg text-slate-600">{hub.locationLabel}</div>
                 </div>
               </div>
 
               <div className="flex items-center flex-wrap gap-3">
                 {/* ✅ Public badge BG white */}
-                <span className="bg-white text-teal-700 px-3 py-1 rounded-full text-xs font-semibold">
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
                   {hub.visibility}
                 </span>
-                <span className="text-white/90 text-sm">{hub.membersLabel}</span>
+                <span className="text-sm text-slate-600">{hub.membersLabel}</span>
               </div>
 
-              <p className="text-lg sm:text-xl text-white/90 leading-relaxed">{hub.description}</p>
+              <p className="text-lg leading-relaxed text-slate-600 sm:text-xl">{hub.description}</p>
 
               <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:flex-wrap sm:gap-4">
                 <button
                   type="button"
                   onClick={handleSubscribe}
-                  className="rounded-xl bg-white px-6 py-3 text-center font-semibold text-teal-700 shadow-xl hover:bg-white/80 sm:px-8 sm:py-4"
+                  className={cn(BUTTON_PRIMARY, "text-center")}
                 >
                   {subscribed ? "Subscribed" : isPublic ? "Subscribe" : "Request Access"}
                 </button>
@@ -256,20 +268,20 @@ export default function HubClient({
                 <button
                   type="button"
                   onClick={handleShare}
-                  className="rounded-xl border-2 border-white px-6 py-3 text-center font-semibold text-white shadow-xl hover:bg-white/10 sm:px-8 sm:py-4"
+                  className="rounded-full border border-slate-300 px-6 py-3 text-center text-sm font-medium text-slate-700 hover:bg-slate-100"
                 >
                   Share
                 </button>
               </div>
 
               {!isPublic && (
-                <div className="text-white/90 text-sm">
+                <div className="text-sm text-slate-600">
                   This is a private hub. Subscribe to request access. Once approved, you’ll unlock the full hub.
                 </div>
               )}
 
               {requested && !isPublic && (
-                <div className="rounded-2xl bg-white/15 border border-white/25 p-4 text-white/95">
+                <div className="rounded-xl border border-slate-100 bg-[#E3F1EF] p-4 text-slate-700">
                   Request sent. You’ll get access after the hub admin approves.
                 </div>
               )}
@@ -278,19 +290,14 @@ export default function HubClient({
             {/* RIGHT IMAGE (heroImage local) */}
             <div className="flex justify-center">
               <div className="relative w-full max-w-2xl">
-                <div className="pointer-events-none absolute -inset-6 rounded-[2.5rem] bg-cyan-300/30 blur-3xl" />
-
-                <div className="relative rounded-[2.5rem] p-[3px] bg-gradient-to-br from-cyan-300/70 via-white/40 to-cyan-200/70 shadow-[0_0_70px_rgba(93,191,201,0.45)]">
-                  <div className="relative overflow-hidden rounded-[2.5rem] bg-white/5 backdrop-blur-sm">
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-white/30" />
-                    <div className="relative h-[280px] w-full sm:h-[380px] lg:h-[460px]">
-                      <img
-                        src={heroImageSrc}
-                        alt={`${hub.name} cover`}
-                        className="h-full w-full object-cover rounded-[2.5rem]"
-                        loading="lazy"
-                      />
-                    </div>
+                <div className="relative overflow-hidden rounded-[2.5rem] border border-emerald-100 bg-white shadow-sm">
+                  <div className="relative h-[280px] w-full sm:h-[380px] lg:h-[460px]">
+                    <img
+                      src={heroImageSrc}
+                      alt={`${hub.name} cover`}
+                      className="h-full w-full object-cover rounded-[2.5rem]"
+                      loading="lazy"
+                    />
                   </div>
                 </div>
               </div>
@@ -322,15 +329,15 @@ export default function HubClient({
             <PrettyCard title="What You’ll Get" subtitle="Why it’s worth it" iconLabel="★">
               <ul className="space-y-3">
                 <li className="flex items-start gap-2">
-                  <span className="text-teal-700 font-bold">✓</span>
+                  <span className="text-slate-800 font-bold">✓</span>
                   <span>Announcements & important alerts</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-teal-700 font-bold">✓</span>
+                  <span className="text-slate-800 font-bold">✓</span>
                   <span>Events, reminders, and updates</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-teal-700 font-bold">✓</span>
+                  <span className="text-slate-800 font-bold">✓</span>
                   <span>Subscriber-only drops (when enabled)</span>
                 </li>
               </ul>
@@ -338,16 +345,16 @@ export default function HubClient({
 
             <PrettyCard title="Popular Topics" subtitle="What people follow" iconLabel="#">
               <div className="flex flex-wrap gap-2">
-                <span className="px-3 py-1.5 bg-teal-50 text-teal-700 rounded-full text-xs font-semibold">
+                <span className={cn("px-3 py-1.5 rounded-full text-xs font-semibold text-[#111111]", ACCENT_MEDIUM_GREEN)}>
                   Updates
                 </span>
-                <span className="px-3 py-1.5 bg-cyan-50 text-cyan-700 rounded-full text-xs font-semibold">
+                <span className={cn("px-3 py-1.5 rounded-full text-xs font-semibold text-[#111111]", ACCENT_MEDIUM_GREEN)}>
                   Events
                 </span>
-                <span className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-xs font-semibold">
+                <span className="px-3 py-1.5 bg-[#E3F1EF] text-slate-700 rounded-full text-xs font-semibold">
                   Deals
                 </span>
-                <span className="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-xs font-semibold">
+                <span className="px-3 py-1.5 bg-[#E3F1EF] text-slate-700 rounded-full text-xs font-semibold">
                   Community
                 </span>
               </div>
@@ -368,16 +375,15 @@ export default function HubClient({
           </div>
 
           {/* About block + checklist */}
-          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-lg shadow-black/5 sm:p-8">
+          <div className="bg-white rounded-xl border border-slate-100 p-6 shadow-sm sm:p-8">
             <div className="flex items-center justify-between gap-4 flex-wrap">
-              <h2 className="text-2xl font-extrabold text-gray-900">About This Hub</h2>
+              <h2 className={cn("text-2xl", DISPLAY_HEADING)}>About This Hub</h2>
 
               <button
                 type="button"
                 onClick={handleSubscribe}
                 className={cn(
-                  "text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition",
-                  `bg-gradient-to-br ${GRADIENT_2}`
+                  `${BUTTON_PRIMARY} transition`
                 )}
               >
                 {subscribed ? "Subscribed" : isPublic ? "Subscribe to Continue" : "Request Access"}
@@ -391,8 +397,8 @@ export default function HubClient({
                 <li key={idx} className="flex items-start gap-3">
                   <span
                     className={cn(
-                      "mt-0.5 h-6 w-6 rounded-full text-white grid place-items-center text-sm font-extrabold",
-                      `bg-gradient-to-br ${GRADIENT_2}`
+                      "mt-0.5 grid h-6 w-6 place-items-center rounded-full text-[#0E5A64] text-sm font-extrabold",
+                      ACCENT_MEDIUM_GREEN
                     )}
                   >
                     ✓
@@ -413,13 +419,13 @@ export default function HubClient({
   // FULL (post-subscribe) placeholder
   // =========================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className={cn("min-h-screen", PAGE_BG)}>
       {Header}
 
       <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-10">
-        <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-lg shadow-black/5 sm:p-10">
+        <div className="bg-white rounded-xl border border-slate-100 p-6 shadow-sm sm:p-10">
           <div className="text-sm text-gray-500">FULL HUB (Managed Experience)</div>
-          <h1 className="mt-2 break-words text-2xl font-extrabold text-gray-900 sm:text-3xl">{hub.name}</h1>
+          <h1 className={cn("mt-2 break-words text-2xl sm:text-3xl", DISPLAY_HEADING)}>{hub.name}</h1>
           <p className="text-gray-700 mt-4">
             This is the post-subscribe detailed hub view. Next we’ll plug in the real managed tabs
             (About, Updates, Events, Gallery) and use your actual images from{" "}
@@ -429,10 +435,7 @@ export default function HubClient({
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href={`/hubs/${hub.category}/${hub.slug}`}
-              className={cn(
-                "inline-block px-7 py-3 rounded-xl font-semibold text-white",
-                `bg-gradient-to-br ${GRADIENT_2}`
-              )}
+              className={BUTTON_PRIMARY}
             >
               Back to Intro
             </Link>
