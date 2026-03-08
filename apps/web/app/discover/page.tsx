@@ -90,14 +90,14 @@ function toDiscoverCategory(category: string): Exclude<Category, "All"> {
       return "Fitness";
     case "pet-clubs":
       return "Pet Clubs";
-    case "hoas":
+    case "hoa":
       return "HOA’s";
     default:
       return "Communities";
   }
 }
 
-function normalizePublicSrc(src: string) {
+function normalizePublicSrc(src?: string) {
   if (!src) return "";
   if (src.startsWith("http://") || src.startsWith("https://")) return src;
   if (src.startsWith("/")) return src;
@@ -114,7 +114,7 @@ const HUBS: Hub[] = HUBS_SOURCE.map((h) => ({
   visibility: (h.visibility as "Public" | "Private") ?? "Public",
   description: h.description,
   href: `/hubs/${h.category}/${h.slug}`,
-  image: normalizePublicSrc(h.heroImage),
+  image: normalizePublicSrc(h.dpImage || h.heroImage),
   tags: h.tags,
 }));
 
@@ -197,13 +197,27 @@ function LightArrowButton({
 }
 
 function HubCard({ hub }: { hub: Hub }) {
+  const [imageFailed, setImageFailed] = useState(false);
+
   return (
     <Link
       href={hub.href}
       // ✅ FIX: force identical card width + no flex expansion
       className="w-[min(320px,calc(100vw-2rem))] flex-shrink-0 overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition hover:border-slate-300 sm:w-[320px]"
     >
-      <img src={hub.image} alt={hub.name} className="h-44 w-full object-cover" loading="lazy" />
+      {hub.image && !imageFailed ? (
+        <img
+          src={hub.image}
+          alt={hub.name}
+          className="h-44 w-full object-cover"
+          loading="lazy"
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        <div className="grid h-44 w-full place-items-center bg-[#A9D1CA]/35 text-center">
+          <span className="px-4 text-sm font-semibold text-[#0C5C57]">Image Coming Soon</span>
+        </div>
+      )}
       <div className="min-w-0 p-6">
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs bg-[#E3F1EF] text-slate-700 px-3 py-1 rounded-full font-semibold">
@@ -244,7 +258,7 @@ function CarouselSection({ title, hubs }: { title: string; hubs: Hub[] }) {
         </div>
       </div>
 
-      <div ref={rowRef} className="flex gap-6 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" as any }}>
+      <div ref={rowRef} className="flex gap-6 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>
         {hubs.map((h) => (
           <HubCard key={h.id} hub={h} />
         ))}
@@ -342,7 +356,7 @@ export default function DiscoverPage() {
   useEffect(() => {
     if (!nearMeOpen) return;
 
-    updateNearMePos();
+    const raf = window.requestAnimationFrame(() => updateNearMePos());
 
     const onWinScroll = () => updateNearMePos();
     const onResize = () => updateNearMePos();
@@ -355,9 +369,10 @@ export default function DiscoverPage() {
     chipsEl?.addEventListener("scroll", onChipsScroll, { passive: true });
 
     return () => {
+      window.cancelAnimationFrame(raf);
       window.removeEventListener("scroll", onWinScroll, true);
       window.removeEventListener("resize", onResize);
-      chipsEl?.removeEventListener("scroll", onChipsScroll as any);
+      chipsEl?.removeEventListener("scroll", onChipsScroll);
     };
   }, [nearMeOpen]);
 
@@ -459,7 +474,7 @@ export default function DiscoverPage() {
             <div
               ref={chipsRef}
               className="flex items-center gap-3 overflow-x-auto pb-2 flex-1"
-              style={{ scrollbarWidth: "none" as any }}
+              style={{ scrollbarWidth: "none" }}
             >
               <button
                 onClick={() => setActiveCategory("All")}

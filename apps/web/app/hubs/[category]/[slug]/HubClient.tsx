@@ -3,7 +3,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { HubRecord } from "@/lib/hubs";
 
@@ -11,13 +11,13 @@ const HEADER_BG = "bg-white border-b border-slate-200/60";
 const FOOTER_BG = "bg-[#0C5C57]";
 const PAGE_BG = "bg-[#E3F1EF]";
 const SECTION_MINT_BG = "bg-[#E3F1EF]";
-const HERO_ACCENT_BG = SECTION_MINT_BG;
 const NAV_TEXT = "text-[#111111]";
 const LOGO_TEXT = "text-[#111111]";
+const BODY_TEXT = "text-slate-600";
 const BRAND_TEXT_STYLE = `truncate text-xl font-serif font-semibold tracking-tight ${LOGO_TEXT} sm:text-2xl`;
 const DISPLAY_HEADING = "font-serif font-semibold tracking-tight text-[#111111]";
 const ACCENT_MEDIUM_GREEN = "bg-[#A9D1CA]";
-const ICON_GREEN = "text-[#0B6E78]";
+const ICON_GREEN = "text-[#0C5C57]";
 const BUTTON_PRIMARY =
   "rounded-full bg-[#0C5C57] px-6 py-3 text-sm font-medium text-white hover:bg-[#094a46]";
 
@@ -32,7 +32,6 @@ function subKey(hubId: string) {
   return `udeets:subscribed:${hubId}`;
 }
 
-// Ensure local public images work even if caller forgets leading "/"
 function normalizePublicSrc(src?: string) {
   if (!src) return "";
   if (src.startsWith("http://") || src.startsWith("https://")) return src;
@@ -40,7 +39,15 @@ function normalizePublicSrc(src?: string) {
   return `/${src}`;
 }
 
-// ✅ Footer icons: same SVG set as Home page
+function initials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s) => s[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
 function IconFacebook(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -65,7 +72,6 @@ function IconYouTube(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-// Simple small inline icon (no emojis)
 function MiniIcon({ label }: { label: string }) {
   return (
     <span
@@ -93,20 +99,18 @@ function PrettyCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="group bg-white rounded-xl p-6 shadow-sm border border-slate-100 transition-all">
-      <div className="flex items-center gap-3 mb-4">
+    <div className="group rounded-xl border border-slate-100 bg-white p-6 shadow-sm transition-all">
+      <div className="mb-4 flex items-center gap-3">
         <MiniIcon label={iconLabel} />
         <div className="min-w-0">
-          <div className="text-base font-extrabold text-gray-900 leading-tight truncate">
-            {title}
-          </div>
-          <div className="text-xs text-gray-500">{subtitle}</div>
+          <div className="truncate text-base font-extrabold leading-tight text-[#111111]">{title}</div>
+          <div className="text-xs text-slate-500">{subtitle}</div>
         </div>
       </div>
 
-      <div className="text-sm text-gray-700">{children}</div>
+      <div className="text-sm text-slate-700">{children}</div>
 
-      <div className="mt-5 h-1 w-0 group-hover:w-full transition-all rounded-full bg-slate-300" />
+      <div className="mt-5 h-1 w-0 rounded-full bg-slate-300 transition-all group-hover:w-full" />
     </div>
   );
 }
@@ -122,35 +126,81 @@ export default function HubClient({
   category?: string;
   slug?: string;
 }) {
+  return <HubClientInner key={hub.id} hub={hub} mode={mode} category={category} slug={slug} />;
+}
+
+function HubClientInner({
+  hub,
+  mode = "intro",
+  category,
+  slug,
+}: {
+  hub: HubRecord;
+  mode?: "intro" | "full";
+  category?: string;
+  slug?: string;
+}) {
   const router = useRouter();
 
-  const [subscribed, setSubscribed] = useState(false);
   const [requested, setRequested] = useState(false);
+  const [dpFailed, setDpFailed] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [currentImageFailed, setCurrentImageFailed] = useState(false);
 
   const isPublic = hub.visibility === "Public";
-
-  useEffect(() => {
-    try {
-      setSubscribed(localStorage.getItem(subKey(hub.id)) === "true");
-    } catch {
-      // ignore
-    }
-  }, [hub.id]);
 
   const resolvedCategory = category ?? hub.category;
   const resolvedSlug = slug ?? hub.slug;
 
-  const heroImageSrc = normalizePublicSrc(hub.heroImage);
   const dpImageSrc = normalizePublicSrc(hub.dpImage);
+  const galleryImages = useMemo(() => {
+    const primary = hub.heroImage ? [hub.heroImage] : [];
+    const sourceGallery = hub.galleryImages?.length ? hub.galleryImages : [];
+    const ordered = [...primary, ...sourceGallery]
+      .map((src) => normalizePublicSrc(src))
+      .filter(Boolean);
+    const unique = [...new Set(ordered)];
+    if (unique.length > 0) return unique;
+    return dpImageSrc ? [dpImageSrc] : [];
+  }, [hub.heroImage, hub.galleryImages, dpImageSrc]);
+  const hasGalleryNav = galleryImages.length > 1;
+  const activeImageSrc = galleryImages[currentImageIndex] || "";
 
   const aboutLines = useMemo(() => {
     if (hub.about?.length) return hub.about;
     return [
-      "See what’s happening right now—announcements, specials, and highlights.",
-      "Get reminders so you never miss key events or limited-time deals.",
-      "Unlock the full hub experience after subscribing.",
+      "See what is happening right now with announcements and highlights.",
+      "Get reminders so you never miss key community updates.",
+      "Subscribe to unlock a richer, ongoing local experience.",
     ];
   }, [hub.about]);
+
+  const offerings = useMemo(() => {
+    if (hub.offerings?.length) return hub.offerings;
+    return [
+      "Timely announcements and alerts",
+      "Events and participation opportunities",
+      "Subscriber-focused updates and reminders",
+    ];
+  }, [hub.offerings]);
+
+  const highlights = useMemo(() => {
+    if (hub.highlights?.length) return hub.highlights;
+    return [
+      "Active local community participation",
+      "Reliable communication and updates",
+      "Clear, organized information in one place",
+    ];
+  }, [hub.highlights]);
+
+  const quickInfo = useMemo(() => {
+    if (hub.quickInfo?.length) return hub.quickInfo;
+    return [
+      { label: "Type", value: "Community Hub" },
+      { label: "Access", value: hub.visibility },
+      { label: "Location", value: hub.locationLabel },
+    ];
+  }, [hub.quickInfo, hub.visibility, hub.locationLabel]);
 
   const handleSubscribe = () => {
     try {
@@ -158,7 +208,6 @@ export default function HubClient({
     } catch {
       // ignore
     }
-    setSubscribed(true);
 
     if (isPublic) {
       router.push(`/hubs/${resolvedCategory}/${resolvedSlug}/full`);
@@ -170,11 +219,25 @@ export default function HubClient({
 
   const handleShare = () => {
     if (typeof window === "undefined") return;
-    const url = window.location.href;
-    navigator.clipboard?.writeText(url).catch(() => {});
+    navigator.clipboard?.writeText(window.location.href).catch(() => {});
   };
 
-  // ✅ Header: extreme ends like Home page
+  const ctaTitle = hub.cta?.title ?? "Stay Connected";
+  const ctaDescription =
+    hub.cta?.description ?? "Subscribe to get the latest updates and important announcements.";
+
+  const showPrevImage = () => {
+    if (!hasGalleryNav) return;
+    setCurrentImageFailed(false);
+    setCurrentImageIndex((prev) => (prev === 0 ? galleryImages.length - 1 : prev - 1));
+  };
+
+  const showNextImage = () => {
+    if (!hasGalleryNav) return;
+    setCurrentImageFailed(false);
+    setCurrentImageIndex((prev) => (prev + 1) % galleryImages.length);
+  };
+
   const Header = (
     <header className={cn("sticky top-0 z-50", HEADER_BG)}>
       <div className="flex min-h-16 w-full items-center justify-between px-4 py-2 sm:px-6 lg:px-10">
@@ -185,12 +248,17 @@ export default function HubClient({
           <span className={BRAND_TEXT_STYLE}>uDeets</span>
         </Link>
 
-        {/* No icons on Home/Discover */}
         <div className="flex items-center gap-2 sm:gap-3">
-          <Link href={ROUTE_HOME} className={`rounded-full px-4 py-2 text-sm font-medium ${NAV_TEXT} hover:bg-slate-100 sm:px-5 sm:py-2.5`}>
+          <Link
+            href={ROUTE_HOME}
+            className={`rounded-full px-4 py-2 text-sm font-medium ${NAV_TEXT} hover:bg-slate-100 sm:px-5 sm:py-2.5`}
+          >
             Home
           </Link>
-          <Link href={ROUTE_DISCOVER} className={`rounded-full px-4 py-2 text-sm font-medium ${NAV_TEXT} hover:bg-slate-100 sm:px-5 sm:py-2.5`}>
+          <Link
+            href={ROUTE_DISCOVER}
+            className={`rounded-full px-4 py-2 text-sm font-medium ${NAV_TEXT} hover:bg-slate-100 sm:px-5 sm:py-2.5`}
+          >
             Discover
           </Link>
         </div>
@@ -198,7 +266,6 @@ export default function HubClient({
     </header>
   );
 
-  // ✅ Footer: compact like Home page
   const Footer = (
     <footer className={FOOTER_BG}>
       <div className="flex min-h-16 w-full flex-col items-center justify-between gap-2 px-4 py-3 text-center text-white sm:flex-row sm:px-6 sm:text-left lg:px-10">
@@ -212,59 +279,55 @@ export default function HubClient({
     </footer>
   );
 
-  // =========================
-  // INTRO (pre-subscribe)
-  // =========================
   if (mode === "intro") {
     return (
       <div className={cn("min-h-screen", PAGE_BG)}>
         {Header}
 
-        {/* HERO */}
-        <section className={cn("relative overflow-hidden", HERO_ACCENT_BG)}>
+        <section className={cn("relative overflow-hidden", SECTION_MINT_BG)}>
           <div className="pointer-events-none absolute -top-20 right-0 h-64 w-64 rounded-full bg-emerald-100/80 blur-3xl" />
           <div className="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 py-12 sm:px-6 sm:py-14 lg:grid-cols-2 lg:px-10 lg:py-16">
-            {/* LEFT */}
             <div className="max-w-3xl space-y-6 text-slate-900">
               <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-                {/* ✅ dpImage (local) */}
-                {dpImageSrc ? (
+                {dpImageSrc && !dpFailed ? (
                   <img
                     src={dpImageSrc}
                     alt={`${hub.name} avatar`}
-                    className="h-20 w-20 rounded-full object-cover border-4 border-white shadow-sm"
+                    className="h-20 w-20 rounded-full border-4 border-white object-cover shadow-sm"
                     loading="lazy"
+                    onError={() => setDpFailed(true)}
                   />
                 ) : (
-                  <div className="h-20 w-20 rounded-full border-4 border-white bg-emerald-100/70" />
+                  <div className="grid h-20 w-20 place-items-center rounded-full border-4 border-white bg-[#A9D1CA] font-serif text-lg font-semibold text-[#111111]">
+                    {initials(hub.name)}
+                  </div>
                 )}
 
                 <div className="min-w-0">
-                  <h1 className={cn("break-words text-3xl leading-tight sm:text-4xl lg:text-5xl", DISPLAY_HEADING)}>{hub.name}</h1>
-                  <div className="mt-1 text-lg text-slate-600">{hub.locationLabel}</div>
+                  <h1 className={cn("break-words text-3xl leading-tight sm:text-4xl lg:text-5xl", DISPLAY_HEADING)}>
+                    {hub.name}
+                  </h1>
+                  <div className={cn("mt-1 text-lg", BODY_TEXT)}>{hub.tagline ?? hub.locationLabel}</div>
                 </div>
               </div>
 
-              <div className="flex items-center flex-wrap gap-3">
-                {/* ✅ Public badge BG white */}
+              <div className="flex flex-wrap items-center gap-3">
                 <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
                   {hub.visibility}
                 </span>
-                <span className="text-sm text-slate-600">{hub.membersLabel}</span>
+                <span className={cn("text-sm", BODY_TEXT)}>{hub.membersLabel}</span>
+                <span className={cn("text-sm", BODY_TEXT)}>{hub.locationLabel}</span>
               </div>
 
-              <p className="text-lg leading-relaxed text-slate-600 sm:text-xl">{hub.description}</p>
+              <p className={cn("text-lg leading-relaxed sm:text-xl", BODY_TEXT)}>
+                {hub.intro ?? hub.description}
+              </p>
 
               <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:flex-wrap sm:gap-4">
-                <button
-                  type="button"
-                  onClick={handleSubscribe}
-                  className={cn(BUTTON_PRIMARY, "text-center")}
-                >
-                  {subscribed ? "Subscribed" : isPublic ? "Subscribe" : "Request Access"}
+                <button type="button" onClick={handleSubscribe} className={cn(BUTTON_PRIMARY, "text-center")}>
+                  Subscribe
                 </button>
 
-                {/* No icon on Share */}
                 <button
                   type="button"
                   onClick={handleShare}
@@ -275,29 +338,59 @@ export default function HubClient({
               </div>
 
               {!isPublic && (
-                <div className="text-sm text-slate-600">
-                  This is a private hub. Subscribe to request access. Once approved, you’ll unlock the full hub.
+                <div className={cn("text-sm", BODY_TEXT)}>
+                  This is a private hub. Subscribe to request access. Once approved, you will unlock the full hub.
                 </div>
               )}
 
               {requested && !isPublic && (
                 <div className="rounded-xl border border-slate-100 bg-[#E3F1EF] p-4 text-slate-700">
-                  Request sent. You’ll get access after the hub admin approves.
+                  Request sent. You will get access after the hub admin approves.
                 </div>
               )}
             </div>
 
-            {/* RIGHT IMAGE (heroImage local) */}
             <div className="flex justify-center">
               <div className="relative w-full max-w-2xl">
                 <div className="relative overflow-hidden rounded-[2.5rem] border border-emerald-100 bg-white shadow-sm">
-                  <div className="relative h-[280px] w-full sm:h-[380px] lg:h-[460px]">
-                    <img
-                      src={heroImageSrc}
-                      alt={`${hub.name} cover`}
-                      className="h-full w-full object-cover rounded-[2.5rem]"
-                      loading="lazy"
-                    />
+                  <div className="relative aspect-[16/9] w-full bg-[#E3F1EF]">
+                    {activeImageSrc && !currentImageFailed ? (
+                      <img
+                        src={activeImageSrc}
+                        alt={`${hub.name} cover`}
+                        className="h-full w-full rounded-[2.5rem] object-cover object-center"
+                        loading="lazy"
+                        onError={() => setCurrentImageFailed(true)}
+                      />
+                    ) : (
+                      <div className="grid h-full w-full place-items-center rounded-[2.5rem] bg-[#A9D1CA]/40 p-8 text-center">
+                        <div>
+                          <div className="text-sm font-semibold text-[#0C5C57]">Hero Image Coming Soon</div>
+                          <div className="mt-2 text-sm text-slate-600">/hub-images/{hub.slug}-hero.jpg</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {hasGalleryNav ? (
+                      <>
+                        <button
+                          type="button"
+                          aria-label="Previous image"
+                          onClick={showPrevImage}
+                          className="absolute left-4 top-1/2 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/85 text-[#0C5C57] shadow-sm transition hover:bg-white"
+                        >
+                          ‹
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Next image"
+                          onClick={showNextImage}
+                          className="absolute right-4 top-1/2 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/85 text-[#0C5C57] shadow-sm transition hover:bg-white"
+                        >
+                          ›
+                        </button>
+                      </>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -305,108 +398,96 @@ export default function HubClient({
           </div>
         </section>
 
-        {/* ✅ CONTENT SECTION (RESTORED) */}
         <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-10">
-          {/* 4 cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <div className="mb-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <PrettyCard title="Quick Info" subtitle="Know the basics" iconLabel="i">
               <div className="space-y-3">
-                <div className="flex items-start gap-2">
-                  <span className="text-gray-600">Location:</span>
-                  <span className="font-semibold text-gray-900">{hub.locationLabel}</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-gray-600">Visibility:</span>
-                  <span className="font-semibold text-gray-900">{hub.visibility}</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-gray-600">Members:</span>
-                  <span className="font-semibold text-gray-900">{hub.membersLabel}</span>
-                </div>
+                {quickInfo.map((item) => (
+                  <div key={`${item.label}-${item.value}`} className="flex items-start gap-2">
+                    <span className="text-slate-600">{item.label}:</span>
+                    <span className="font-semibold text-[#111111]">{item.value}</span>
+                  </div>
+                ))}
               </div>
             </PrettyCard>
 
-            <PrettyCard title="What You’ll Get" subtitle="Why it’s worth it" iconLabel="★">
+            <PrettyCard title="Key Offerings" subtitle="What is available" iconLabel="★">
               <ul className="space-y-3">
-                <li className="flex items-start gap-2">
-                  <span className="text-slate-800 font-bold">✓</span>
-                  <span>Announcements & important alerts</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-slate-800 font-bold">✓</span>
-                  <span>Events, reminders, and updates</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-slate-800 font-bold">✓</span>
-                  <span>Subscriber-only drops (when enabled)</span>
-                </li>
+                {offerings.map((item, idx) => (
+                  <li key={`${idx}-${item}`} className="flex items-start gap-2">
+                    <span className={cn("font-bold", ICON_GREEN)}>✓</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
               </ul>
             </PrettyCard>
 
-            <PrettyCard title="Popular Topics" subtitle="What people follow" iconLabel="#">
-              <div className="flex flex-wrap gap-2">
-                <span className={cn("px-3 py-1.5 rounded-full text-xs font-semibold text-[#111111]", ACCENT_MEDIUM_GREEN)}>
-                  Updates
-                </span>
-                <span className={cn("px-3 py-1.5 rounded-full text-xs font-semibold text-[#111111]", ACCENT_MEDIUM_GREEN)}>
-                  Events
-                </span>
-                <span className="px-3 py-1.5 bg-[#E3F1EF] text-slate-700 rounded-full text-xs font-semibold">
-                  Deals
-                </span>
-                <span className="px-3 py-1.5 bg-[#E3F1EF] text-slate-700 rounded-full text-xs font-semibold">
-                  Community
-                </span>
-              </div>
+            <PrettyCard title="Community Highlights" subtitle="What to expect" iconLabel="#">
+              <ul className="space-y-3">
+                {highlights.map((item, idx) => (
+                  <li key={`${idx}-${item}`} className="flex items-start gap-2">
+                    <span className={cn("font-bold", ICON_GREEN)}>✓</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
             </PrettyCard>
 
-            <PrettyCard title="Contact" subtitle="Reach the hub" iconLabel="✉">
-              <div className="space-y-3 min-w-0">
+            <PrettyCard title="Contact" subtitle="Visit and connect" iconLabel="✉">
+              <div className="space-y-3">
                 <div className="flex items-start gap-2">
-                  <span className="text-gray-600">Email:</span>
-                  <span className="break-all font-semibold text-gray-900">contact@{hub.slug}.com</span>
+                  <span className="text-slate-600">Website:</span>
+                  {hub.website ? (
+                    <a
+                      href={hub.website}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="break-all font-semibold text-[#0C5C57] hover:underline"
+                    >
+                      {hub.website}
+                    </a>
+                  ) : (
+                    <span className="font-semibold text-[#111111]">Coming soon</span>
+                  )}
                 </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-gray-600">Phone:</span>
-                  <span className="font-semibold text-gray-900">(000) 000-0000</span>
-                </div>
+                {hub.contact?.visit ? <p className="text-slate-700">{hub.contact.visit}</p> : null}
               </div>
             </PrettyCard>
           </div>
 
-          {/* About block + checklist */}
-          <div className="bg-white rounded-xl border border-slate-100 p-6 shadow-sm sm:p-8">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <h2 className={cn("text-2xl", DISPLAY_HEADING)}>About This Hub</h2>
+          <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
+            <h2 className={cn("text-2xl", DISPLAY_HEADING)}>About This Hub</h2>
+            <p className={cn("mt-5 leading-relaxed", BODY_TEXT)}>{hub.description}</p>
 
-              <button
-                type="button"
-                onClick={handleSubscribe}
-                className={cn(
-                  `${BUTTON_PRIMARY} transition`
-                )}
-              >
-                {subscribed ? "Subscribed" : isPublic ? "Subscribe to Continue" : "Request Access"}
-              </button>
-            </div>
-
-            <p className="text-gray-600 mt-5 leading-relaxed">{hub.description}</p>
-
-            <ul className="space-y-3 mt-6">
+            <ul className="mt-6 space-y-3">
               {aboutLines.map((line, idx) => (
                 <li key={idx} className="flex items-start gap-3">
                   <span
                     className={cn(
-                      "mt-0.5 grid h-6 w-6 place-items-center rounded-full text-[#0E5A64] text-sm font-extrabold",
+                      "mt-0.5 grid h-6 w-6 place-items-center rounded-full text-sm font-extrabold text-[#0C5C57]",
                       ACCENT_MEDIUM_GREEN
                     )}
                   >
                     ✓
                   </span>
-                  <span className="text-gray-700">{line}</span>
+                  <span className="text-slate-700">{line}</span>
                 </li>
               ))}
             </ul>
+          </div>
+
+          <div className="mt-8 rounded-xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
+            <h2 className={cn("text-2xl", DISPLAY_HEADING)}>{ctaTitle}</h2>
+            <p className={cn("mt-4 max-w-3xl", BODY_TEXT)}>{ctaDescription}</p>
+            {hub.contact?.stayConnected ? (
+              <p className={cn("mt-3 max-w-3xl", BODY_TEXT)}>{hub.contact.stayConnected}</p>
+            ) : null}
+
+            <div className="mt-6">
+              <button type="button" onClick={handleSubscribe} className={BUTTON_PRIMARY}>
+                Subscribe
+              </button>
+            </div>
           </div>
         </main>
 
@@ -415,34 +496,27 @@ export default function HubClient({
     );
   }
 
-  // =========================
-  // FULL (post-subscribe) placeholder
-  // =========================
   return (
     <div className={cn("min-h-screen", PAGE_BG)}>
       {Header}
 
       <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-10">
-        <div className="bg-white rounded-xl border border-slate-100 p-6 shadow-sm sm:p-10">
-          <div className="text-sm text-gray-500">FULL HUB (Managed Experience)</div>
+        <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm sm:p-10">
+          <div className="text-sm text-slate-500">FULL HUB (Managed Experience)</div>
           <h1 className={cn("mt-2 break-words text-2xl sm:text-3xl", DISPLAY_HEADING)}>{hub.name}</h1>
-          <p className="text-gray-700 mt-4">
-            This is the post-subscribe detailed hub view. Next we’ll plug in the real managed tabs
-            (About, Updates, Events, Gallery) and use your actual images from{" "}
-            <code className="px-2 py-1 bg-gray-50 rounded">public/hub-images</code>.
+          <p className="mt-4 text-slate-700">
+            This is the post-subscribe detailed hub view. The full managed tabs (About, Updates, Events, Gallery)
+            can be layered in here next while reusing this shared data model.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              href={`/hubs/${hub.category}/${hub.slug}`}
-              className={BUTTON_PRIMARY}
-            >
+            <Link href={`/hubs/${hub.category}/${hub.slug}`} className={BUTTON_PRIMARY}>
               Back to Intro
             </Link>
 
             <Link
               href={ROUTE_DISCOVER}
-              className="inline-block px-7 py-3 rounded-xl font-semibold border-2 border-gray-200 text-gray-700 hover:bg-gray-50"
+              className="inline-block rounded-xl border-2 border-gray-200 px-7 py-3 font-semibold text-gray-700 hover:bg-gray-50"
             >
               Back to Discover
             </Link>

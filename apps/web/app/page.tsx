@@ -60,7 +60,7 @@ const topHubs: TopHub[] = HUBS_SOURCE.map((hub) => ({
   name: hub.name,
   intro: hub.description,
   href: `/hubs/${hub.category}/${hub.slug}`,
-  image: normalizePublicSrc(hub.heroImage),
+  image: normalizePublicSrc(hub.dpImage || hub.heroImage),
   visibility: hub.visibility,
 }));
 
@@ -103,6 +103,43 @@ function IconChevronRight(props: React.SVGProps<SVGSVGElement>) {
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
       <path d="M7.5 15l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
+  );
+}
+
+function TopHubCard({ hub }: { hub: TopHub }) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  return (
+    <Link
+      href={hub.href}
+      className="group relative flex h-[260px] w-[min(360px,calc(100vw-2rem))] flex-shrink-0 min-w-0 overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition hover:border-slate-300 sm:w-[360px]"
+    >
+      {hub.image && !imageFailed ? (
+        <img
+          src={hub.image}
+          alt={hub.name}
+          className="absolute inset-0 h-full w-full object-cover"
+          loading="lazy"
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        <div className="absolute inset-0 grid place-items-center bg-[#A9D1CA]/35">
+          <span className="px-4 text-sm font-semibold text-[#0C5C57]">Hub Image Coming Soon</span>
+        </div>
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/75 via-[#111111]/35 to-transparent" />
+      <div className="relative mt-auto w-full p-6">
+        <div className="mb-3 flex items-start justify-between gap-4">
+          <h3 className={cn("min-w-0 break-words text-2xl leading-tight text-white", SECTION_HEADING)}>
+            {hub.name}
+          </h3>
+          <span className="shrink-0 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-[#111111]">
+            {hub.visibility}
+          </span>
+        </div>
+        <p className="line-clamp-2 break-words text-sm text-white/90">{hub.intro}</p>
+      </div>
+    </Link>
   );
 }
 
@@ -284,26 +321,8 @@ export default function Page() {
               className="flex gap-6 overflow-x-auto pb-2"
               style={{ scrollbarWidth: "none" as never }}
             >
-              {[...topHubs, ...topHubs].map((hub, idx) => (
-                <Link
-                  key={`${hub.id}-${idx}`}
-                  href={hub.href}
-                  className="group relative flex h-[260px] w-[min(360px,calc(100vw-2rem))] flex-shrink-0 min-w-0 overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition hover:border-slate-300 sm:w-[360px]"
-                >
-                  <img src={hub.image} alt={hub.name} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/75 via-[#111111]/35 to-transparent" />
-                  <div className="relative mt-auto w-full p-6">
-                    <div className="mb-3 flex items-start justify-between gap-4">
-                      <h3 className={cn("min-w-0 break-words text-2xl leading-tight text-white", SECTION_HEADING)}>
-                        {hub.name}
-                      </h3>
-                      <span className="shrink-0 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-[#111111]">
-                        {hub.visibility}
-                      </span>
-                    </div>
-                    <p className="line-clamp-2 break-words text-sm text-white/90">{hub.intro}</p>
-                  </div>
-                </Link>
+              {topHubs.map((hub) => (
+                <TopHubCard key={hub.id} hub={hub} />
               ))}
             </div>
           </div>
