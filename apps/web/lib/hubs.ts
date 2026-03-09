@@ -32,6 +32,8 @@ export type HubRecord = {
   heroImage?: string;
   dpImage?: string;
   galleryImages?: string[];
+  feedImages?: string[];
+  adminImages?: string[];
 
   tags: HubTag[];
 
@@ -66,7 +68,7 @@ export type HubRecord = {
   }>;
 };
 
-export const HUBS: HubRecord[] = [
+const HUBS_BASE: HubRecord[] = [
   {
     id: "hcv",
     name: "Hindu Center of Virginia",
@@ -739,6 +741,37 @@ export const HUBS: HubRecord[] = [
     },
   },
 ];
+
+function hubMediaPaths(category: HubCategorySlug, slug: string) {
+  const base = `/hub-images/${category}/${slug}`;
+  return {
+    dpImage: `${base}/dp.jpg`,
+    heroImage: `${base}/cover.jpg`,
+    galleryImages: [
+      `${base}/gallery-1.jpg`,
+      `${base}/gallery-2.jpg`,
+      `${base}/gallery-3.jpg`,
+    ],
+    feedImages: [
+      `${base}/feed-1.jpg`,
+      `${base}/feed-2.jpg`,
+      `${base}/feed-3.jpg`,
+    ],
+    adminImages: [`${base}/admin-1.jpg`, `${base}/admin-2.jpg`],
+  } as const;
+}
+
+export const HUBS: HubRecord[] = HUBS_BASE.map((hub) => {
+  const scoped = hubMediaPaths(hub.category, hub.slug);
+  return {
+    ...hub,
+    dpImage: hub.dpImage ?? scoped.dpImage,
+    heroImage: hub.heroImage ?? scoped.heroImage,
+    galleryImages: hub.galleryImages?.length ? hub.galleryImages : scoped.galleryImages,
+    feedImages: hub.feedImages?.length ? hub.feedImages : scoped.feedImages,
+    adminImages: hub.adminImages?.length ? hub.adminImages : scoped.adminImages,
+  };
+});
 
 export function getHub(category: string, slug: string): HubRecord | undefined {
   return HUBS.find((h) => h.category === category && h.slug === slug);
