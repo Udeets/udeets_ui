@@ -758,7 +758,7 @@ function hubMediaPaths(category: HubCategorySlug, slug: string) {
       `${base}/feed-3.jpg`,
     ],
     adminImages: [`${base}/admin-1.jpg`, `${base}/admin-2.jpg`],
-  } as const;
+  };
 }
 
 export const HUBS: HubRecord[] = HUBS_BASE.map((hub) => {

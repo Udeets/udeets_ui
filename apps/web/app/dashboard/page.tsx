@@ -211,7 +211,7 @@ function FooterActionIcon({ path }: { path: string }) {
   );
 }
 
-function IconLike(props: React.SVGProps<SVGSVGElement>) {
+function IconLike(props: React.SVGProps<SVGSVGElement> & { "data-liked"?: boolean }) {
   const liked = Boolean(props["data-liked"]);
   return (
     <svg
@@ -394,7 +394,7 @@ export default function DashboardPage() {
               </h1>
 
               <div className="flex items-center gap-4 text-sm font-medium sm:text-base">
-                <Link href="/discover" className={cn(TEXT_DARK, "hover:opacity-80")}>
+                <Link href="/create-hub" className={cn(TEXT_DARK, "hover:opacity-80")}>
                   Create Hub
                 </Link>
                 <button
@@ -417,7 +417,7 @@ export default function DashboardPage() {
                     imageSrc={hub.dpImage}
                   />
                 ))}
-                <HubCardTile href="/discover" label="Create Hub" isCreate />
+                <HubCardTile href="/create-hub" label="Create Hub" isCreate />
               </div>
             ) : (
               <div className="flex gap-5 overflow-x-auto pb-3">
@@ -429,7 +429,7 @@ export default function DashboardPage() {
                     imageSrc={hub.dpImage}
                   />
                 ))}
-                <HubCardTile href="/discover" label="Create Hub" isCreate />
+                <HubCardTile href="/create-hub" label="Create Hub" isCreate />
               </div>
             )}
           </div>
@@ -515,7 +515,7 @@ export default function DashboardPage() {
                               isLiked ? "font-medium text-[#0C5C57]" : "text-slate-600 hover:text-[#111111]"
                             )}
                           >
-                            <IconLike className="h-4 w-4" data-liked={isLiked ? "true" : ""} />
+                            <IconLike className="h-4 w-4" data-liked={isLiked} />
                             <span>Like {displayLikeCount}</span>
                           </button>
                           <button

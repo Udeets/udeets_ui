@@ -8,7 +8,6 @@ import {
   CirclePlus,
   Home,
   LogOut,
-  MessageCircle,
   Search,
   Settings,
   SquarePen,
@@ -16,16 +15,21 @@ import {
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { HOME_CHATS, HOME_EVENTS, HOME_NOTIFICATIONS } from "@/lib/hub-content";
+import { HOME_EVENTS, HOME_NOTIFICATIONS } from "@/lib/hub-content";
 import { clearMockSession } from "@/lib/mock-auth";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-export type NavKey = "home" | "alerts" | "events" | "chat";
+function truncateLine(value: string, max = 64) {
+  if (value.length <= max) return value;
+  return `${value.slice(0, max - 1)}...`;
+}
 
-type OpenPanel = "alerts" | "events" | "chat" | "profile" | null;
+export type NavKey = "home" | "alerts" | "events";
+
+type OpenPanel = "alerts" | "events" | "profile" | null;
 
 const HEADER_BG = "bg-white border-b border-slate-200/70";
 const FOOTER_BG = "bg-[#0C5C57]";
@@ -38,7 +42,6 @@ const PRIMARY_ITEMS = [
   { href: "/dashboard", label: "Home", key: "home" },
   { href: "/alerts", label: "Alerts", key: "alerts" },
   { href: "/events", label: "Events", key: "events" },
-  { href: "/chat", label: "Chat", key: "chat" },
 ] as const;
 
 const PROFILE_ITEMS = [
@@ -51,10 +54,6 @@ const PROFILE_ITEMS = [
 const FILTERS = ["All", "Tagged", "New Posts", "Activity"] as const;
 
 const EVENT_FILTERS = ["Today", "Tomorrow", "This Week", "My Hubs", "Saved"] as const;
-
-const CHATS = [
-  ...HOME_CHATS,
-];
 
 function NavIconButton({
   active = false,
@@ -109,6 +108,7 @@ function NavIconLink({
 
 function NotificationsPanel() {
   const [activeFilter, setActiveFilter] = useState<(typeof FILTERS)[number]>("All");
+  const filteredItems = HOME_NOTIFICATIONS.filter((item) => activeFilter === "All" || item.type === activeFilter);
 
   return (
     <div className="absolute right-16 top-full z-[120] mt-3 w-[360px] rounded-3xl border border-slate-100 bg-white p-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
@@ -135,61 +135,30 @@ function NotificationsPanel() {
           </button>
         ))}
       </div>
-      <div className="mt-4 space-y-3">
-        {HOME_NOTIFICATIONS.filter((item) => activeFilter === "All" || item.type === activeFilter).map((item) => (
-          <Link key={item.id} href={item.href} className="block rounded-2xl bg-[#F7FBFA] p-4 transition hover:bg-[#EEF7F5]">
-            <div className="flex items-center justify-between gap-4">
-              <p className="text-sm font-semibold text-[#111111]">{item.title}</p>
-              <span className="text-xs text-slate-500">{item.meta}</span>
-            </div>
-            <p className="mt-2 text-sm leading-relaxed text-slate-600">{item.body}</p>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ChatPanel() {
-  return (
-    <div className="absolute right-16 top-full z-[120] mt-3 w-[360px] rounded-3xl border border-slate-100 bg-white p-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-serif font-semibold text-[#111111]">Chat</h3>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50"
-          >
-            <Settings className="h-4.5 w-4.5 stroke-[1.8]" />
-          </button>
-          <button
-            type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50"
-          >
-            <SquarePen className="h-4.5 w-4.5 stroke-[1.8]" />
-          </button>
-        </div>
-      </div>
-      <div className="mt-4 space-y-3">
-        {CHATS.map((chat) => (
+      <div className="mt-4 max-h-[420px] space-y-1.5 overflow-y-auto pr-1">
+        {filteredItems.map((item) => (
           <Link
-            key={chat.id}
-            href={chat.href}
-            className="flex w-full items-start justify-between rounded-2xl bg-[#F7FBFA] px-4 py-4 text-left hover:bg-[#EEF7F5]"
+            key={item.id}
+            href={item.href}
+            title={truncateLine(item.body, 96)}
+            className="group relative flex items-center gap-3 rounded-2xl px-2 py-2.5 transition hover:bg-[#EEF7F5]"
           >
-            <div>
-              <p className="text-sm font-semibold text-[#111111]">{chat.title}</p>
-              <p className="mt-1 text-sm text-slate-600">{chat.preview}</p>
-              <p className="mt-1 text-xs text-slate-500">{chat.hub}</p>
+            <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-[#E3F1EF]">
+              <Image
+                src={item.hubImage || "/udeets-logo.png"}
+                alt={item.hub}
+                fill
+                className="object-cover"
+                sizes="36px"
+              />
             </div>
-            <div className="ml-4 text-right">
-              <p className="text-xs text-slate-500">{chat.time}</p>
-              {chat.unread ? (
-                <span className="mt-2 inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[#0C5C57] px-2 text-xs font-semibold text-white">
-                  {chat.unread}
-                </span>
-              ) : null}
-            </div>
+            <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[#111111]">
+              {`${item.hub} — ${item.title}`}
+            </p>
+            <span className="shrink-0 text-[11px] font-medium text-slate-500">{item.meta}</span>
+            <span className="pointer-events-none absolute left-12 top-full z-10 mt-1 max-w-[280px] rounded-full bg-[#111111] px-3 py-1 text-[11px] font-medium text-white opacity-0 shadow-sm transition group-hover:opacity-100">
+              {truncateLine(item.body, 78)}
+            </span>
           </Link>
         ))}
       </div>
@@ -238,29 +207,36 @@ function EventsPanel() {
         ))}
       </div>
 
-      <div className="mt-4 max-h-[420px] space-y-5 overflow-y-auto pr-1">
+      <div className="mt-4 max-h-[420px] space-y-4 overflow-y-auto pr-1">
         {Object.entries(filteredGroups).map(([groupTitle, items]) => (
           <section key={groupTitle}>
             <h4 className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               {groupTitle}
             </h4>
-            <div className="space-y-3">
+            <div className="space-y-1.5">
               {items.map((event) => (
-                <Link key={event.id} href={event.href} className="block rounded-2xl bg-[#F7FBFA] p-4 transition hover:bg-[#EEF7F5]">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-semibold text-[#111111]">{event.title}</p>
-                      <p className="mt-1 text-sm text-slate-500">{event.hub}</p>
-                    </div>
-                    <span className="rounded-full bg-[#A9D1CA]/55 px-2.5 py-1 text-[11px] font-semibold text-[#0C5C57]">
-                      {event.badge}
-                    </span>
+                <Link
+                  key={event.id}
+                  href={event.href}
+                  title={truncateLine(`${event.dateLabel} • ${event.time} • ${event.location}`, 96)}
+                  className="group relative flex items-center gap-3 rounded-2xl px-2 py-2.5 transition hover:bg-[#EEF7F5]"
+                >
+                  <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-[#E3F1EF]">
+                    <Image
+                      src={event.hubImage || "/udeets-logo.png"}
+                      alt={event.hub}
+                      fill
+                      className="object-cover"
+                      sizes="36px"
+                    />
                   </div>
-                  <div className="mt-3 space-y-1 text-sm text-slate-600">
-                    <p>{event.dateLabel}</p>
-                    <p>{event.time}</p>
-                    <p>{event.location}</p>
-                  </div>
+                  <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[#111111]">
+                    {`${event.hub} — ${event.title}`}
+                  </p>
+                  <span className="shrink-0 text-[11px] font-medium text-slate-500">{event.dateLabel}</span>
+                  <span className="pointer-events-none absolute left-12 top-full z-10 mt-1 max-w-[300px] rounded-full bg-[#111111] px-3 py-1 text-[11px] font-medium text-white opacity-0 shadow-sm transition group-hover:opacity-100">
+                    {truncateLine(`${event.time} • ${event.location}`, 78)}
+                  </span>
                 </Link>
               ))}
             </div>
@@ -342,7 +318,6 @@ export function UdeetsHeader() {
   const isDiscoverActive = pathname === "/discover";
   const isAlertsActive = pathname === "/alerts";
   const isEventsActive = pathname === "/events";
-  const isChatActive = pathname === "/chat";
 
   return (
     <header className={cn("sticky top-0 z-30", HEADER_BG)}>
@@ -389,13 +364,6 @@ export function UdeetsHeader() {
               <Calendar className={ICON_BASE} />
             </NavIconButton>
 
-            <NavIconButton
-              aria-label="Chat"
-              active={isChatActive}
-              onClick={() => setOpenPanel((panel) => (panel === "chat" ? null : "chat"))}
-            >
-              <MessageCircle className={ICON_BASE} />
-            </NavIconButton>
           </nav>
 
           <NavIconLink
@@ -417,7 +385,6 @@ export function UdeetsHeader() {
 
           {openPanel === "alerts" ? <NotificationsPanel /> : null}
           {openPanel === "events" ? <EventsPanel /> : null}
-          {openPanel === "chat" ? <ChatPanel /> : null}
           {openPanel === "profile" ? <ProfilePanel onLogout={handleLogout} /> : null}
         </div>
       </div>
@@ -438,7 +405,7 @@ export function UdeetsFooter() {
 export function UdeetsBottomNav({ activeNav = "home" }: { activeNav?: NavKey }) {
   return (
     <nav className={cn("fixed bottom-0 left-0 right-0 z-50 border-t border-white/40 md:hidden", BOTTOM_NAV_BG)}>
-      <div className="mx-auto grid max-w-7xl grid-cols-4 px-2 py-2 sm:px-4">
+      <div className="mx-auto grid max-w-7xl grid-cols-3 px-2 py-2 sm:px-4">
         {PRIMARY_ITEMS.map((item) => (
           <Link
             key={item.key}
@@ -452,7 +419,6 @@ export function UdeetsBottomNav({ activeNav = "home" }: { activeNav?: NavKey }) 
             {item.key === "home" ? <Home className={ICON_BASE} /> : null}
             {item.key === "alerts" ? <Bell className={ICON_BASE} /> : null}
             {item.key === "events" ? <Calendar className={ICON_BASE} /> : null}
-            {item.key === "chat" ? <MessageCircle className={ICON_BASE} /> : null}
             <span className="text-xs font-medium">{item.label}</span>
           </Link>
         ))}

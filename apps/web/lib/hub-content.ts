@@ -32,6 +32,7 @@ export type HubEventItem = {
   id: string;
   title: string;
   hub: string;
+  hubImage?: string;
   category: HubRecord["category"];
   slug: string;
   dateLabel: string;
@@ -50,22 +51,12 @@ export type HubNotificationItem = {
   title: string;
   body: string;
   meta: string;
+  hub: string;
+  hubImage?: string;
   type: "Tagged" | "New Posts" | "Activity";
   category: HubRecord["category"];
   slug: string;
   focusId: string;
-  href: string;
-};
-
-export type HubChatPreview = {
-  id: string;
-  title: string;
-  preview: string;
-  time: string;
-  unread: number;
-  hub: string;
-  category: HubRecord["category"];
-  slug: string;
   href: string;
 };
 
@@ -74,23 +65,22 @@ export type HubContent = {
   feed: HubFeedItem[];
   events: HubEventItem[];
   notifications: HubNotificationItem[];
-  chats: HubChatPreview[];
 };
 
 function hrefFor(hub: HubRecord, focusId: string) {
   return `/hubs/${hub.category}/${hub.slug}?focus=${focusId}`;
 }
 
-function chatHrefFor(hub: HubRecord, focusId: string) {
-  return `/hubs/${hub.category}/${hub.slug}?tab=Chat&focus=${focusId}`;
+function hubTabHrefFor(hub: HubRecord, tab: "Posts" | "Events", focusId: string) {
+  return `/hubs/${hub.category}/${hub.slug}?tab=${tab}&focus=${focusId}`;
 }
 
 function fallbackImage(hub: HubRecord, index = 0) {
   return (
+    hub.dpImage ||
     hub.feedImages?.[index] ||
     hub.galleryImages?.[index] ||
     hub.heroImage ||
-    hub.dpImage ||
     "/udeets-logo.png"
   );
 }
@@ -211,6 +201,7 @@ function buildContentForHub(hub: HubRecord): HubContent {
       id: `${hub.id}-event-1`,
       title: `${hub.name} community meetup`,
       hub: hub.name,
+      hubImage: fallbackImage(hub, 0),
       category: hub.category,
       slug: hub.slug,
       dateLabel: "Today",
@@ -220,13 +211,14 @@ function buildContentForHub(hub: HubRecord): HubContent {
       theme: primaryTheme,
       description: `Join the latest ${hub.name} gathering with updates, volunteer coordination, and community connection.`,
       focusId: eventPostOneId,
-      href: hrefFor(hub, eventPostOneId),
+      href: hubTabHrefFor(hub, "Events", `${hub.id}-event-1`),
       group: "Today",
     },
     {
       id: `${hub.id}-event-2`,
       title: `${hub.name} weekend session`,
       hub: hub.name,
+      hubImage: fallbackImage(hub, 0),
       category: hub.category,
       slug: hub.slug,
       dateLabel: "This Week",
@@ -236,13 +228,14 @@ function buildContentForHub(hub: HubRecord): HubContent {
       theme: primaryTheme === "Temple" ? "Pooja" : primaryTheme,
       description: `A follow-up session for members, families, and attendees with practical details in the feed.`,
       focusId: eventPostTwoId,
-      href: hrefFor(hub, eventPostTwoId),
+      href: hubTabHrefFor(hub, "Events", `${hub.id}-event-2`),
       group: "This Week",
     },
     {
       id: `${hub.id}-event-3`,
       title: `${hub.name} family spotlight`,
       hub: hub.name,
+      hubImage: fallbackImage(hub, 0),
       category: hub.category,
       slug: hub.slug,
       dateLabel: "Tomorrow",
@@ -252,7 +245,7 @@ function buildContentForHub(hub: HubRecord): HubContent {
       theme: primaryTheme === "Church" ? "Community" : primaryTheme,
       description: "A lighter community session with family updates, volunteer reminders, and member highlights.",
       focusId: eventPostThreeId,
-      href: hrefFor(hub, eventPostThreeId),
+      href: hubTabHrefFor(hub, "Events", `${hub.id}-event-3`),
       group: "Tomorrow",
     },
   ];
@@ -263,69 +256,39 @@ function buildContentForHub(hub: HubRecord): HubContent {
       title: `${hub.name} tagged you in an update`,
       body: "A moderator highlighted a new planning note and wants you to review the latest details.",
       meta: "5m ago",
+      hub: hub.name,
+      hubImage: fallbackImage(hub, 0),
       type: "Tagged",
       category: hub.category,
       slug: hub.slug,
       focusId: announcementId,
-      href: hrefFor(hub, announcementId),
+      href: hubTabHrefFor(hub, "Posts", announcementId),
     },
     {
       id: `${hub.id}-notification-2`,
       title: `New photo post from ${hub.name}`,
       body: "Fresh visual highlights were shared in the main Deets feed.",
       meta: "32m ago",
+      hub: hub.name,
+      hubImage: fallbackImage(hub, 0),
       type: "New Posts",
       category: hub.category,
       slug: hub.slug,
       focusId: photoId,
-      href: hrefFor(hub, photoId),
+      href: hubTabHrefFor(hub, "Posts", photoId),
     },
     {
       id: `${hub.id}-notification-3`,
       title: `${hub.name} posted a notice`,
       body: "Operational updates and visitor guidance are now live in the hub feed.",
       meta: "1h ago",
+      hub: hub.name,
+      hubImage: fallbackImage(hub, 0),
       type: "Activity",
       category: hub.category,
       slug: hub.slug,
       focusId: noticeId,
-      href: hrefFor(hub, noticeId),
-    },
-  ];
-
-  const chats: HubChatPreview[] = [
-    {
-      id: `${hub.id}-chat-1`,
-      title: `${hub.name} Admins`,
-      preview: "Can we pin the latest update thread before tonight's activity begins?",
-      time: "2m ago",
-      unread: 2,
-      hub: hub.name,
-      category: hub.category,
-      slug: hub.slug,
-      href: chatHrefFor(hub, `${hub.id}-chat-1`),
-    },
-    {
-      id: `${hub.id}-chat-2`,
-      title: `${hub.name} Volunteers`,
-      preview: "Volunteer arrival timing was moved up by 15 minutes for setup.",
-      time: "18m ago",
-      unread: 1,
-      hub: hub.name,
-      category: hub.category,
-      slug: hub.slug,
-      href: chatHrefFor(hub, `${hub.id}-chat-2`),
-    },
-    {
-      id: `${hub.id}-chat-3`,
-      title: `${hub.name} Members`,
-      preview: "Thanks everyone for sharing feedback on the upcoming session.",
-      time: "1h ago",
-      unread: 0,
-      hub: hub.name,
-      category: hub.category,
-      slug: hub.slug,
-      href: chatHrefFor(hub, `${hub.id}-chat-3`),
+      href: hubTabHrefFor(hub, "Posts", noticeId),
     },
   ];
 
@@ -334,7 +297,6 @@ function buildContentForHub(hub: HubRecord): HubContent {
     feed,
     events,
     notifications,
-    chats,
   };
 }
 
@@ -343,9 +305,15 @@ export const HUB_CONTENT_BY_ID = Object.fromEntries(
 ) as Record<string, HubContent>;
 
 export function getHubContent(hubId: string): HubContent {
-  return HUB_CONTENT_BY_ID[hubId];
+  return (
+    HUB_CONTENT_BY_ID[hubId] ?? {
+      hubId,
+      feed: [],
+      events: [],
+      notifications: [],
+    }
+  );
 }
 
 export const HOME_NOTIFICATIONS = HUBS.flatMap((hub) => HUB_CONTENT_BY_ID[hub.id]?.notifications ?? []);
 export const HOME_EVENTS = HUBS.flatMap((hub) => HUB_CONTENT_BY_ID[hub.id]?.events ?? []);
-export const HOME_CHATS = HUBS.flatMap((hub) => HUB_CONTENT_BY_ID[hub.id]?.chats ?? []);

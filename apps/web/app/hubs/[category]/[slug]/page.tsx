@@ -1,5 +1,5 @@
-import { notFound } from "next/navigation";
-import HubClient from "./HubClient";
+import { Suspense } from "react";
+import HubRouteClient from "./HubRouteClient";
 import { allHubParams, getHub } from "@/lib/hubs";
 
 export function generateStaticParams() {
@@ -13,9 +13,11 @@ export default async function Page({
   params: Promise<{ category: string; slug: string }>;
 }) {
   const { category, slug } = await params;
+  const hub = getHub(category, slug) ?? null;
 
-  const hub = getHub(category, slug);
-  if (!hub) return notFound();
-
-  return <HubClient hub={hub} />;
+  return (
+    <Suspense fallback={null}>
+      <HubRouteClient category={category} slug={slug} initialHub={hub} />
+    </Suspense>
+  );
 }

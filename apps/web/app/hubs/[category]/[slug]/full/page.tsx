@@ -1,5 +1,5 @@
-import { notFound } from "next/navigation";
-import HubClient from "../HubClient";
+import { Suspense } from "react";
+import HubRouteClient from "../HubRouteClient";
 import { getHub } from "@/lib/hubs";
 
 export default async function Page({
@@ -8,10 +8,11 @@ export default async function Page({
   params: Promise<{ category: string; slug: string }>;
 }) {
   const { category, slug } = await params;
+  const hub = getHub(category, slug) ?? null;
 
-  const hub = getHub(category, slug);
-  if (!hub) return notFound();
-
-  // For now, HubClient will render the FULL view when it detects "/full"
-  return <HubClient hub={hub} mode="full" category={category} slug={slug} />;
+  return (
+    <Suspense fallback={null}>
+      <HubRouteClient category={category} slug={slug} initialHub={hub} mode="full" />
+    </Suspense>
+  );
 }

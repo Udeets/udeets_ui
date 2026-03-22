@@ -48,7 +48,7 @@ const PREFERENCES = [
   { label: "SMS alerts", value: "Important updates only", kind: "toggle", enabled: false },
   { label: "Push notifications", value: "Realtime app activity", kind: "toggle", enabled: true },
   { label: "Private profile visibility", value: "Limit profile details to joined hubs", kind: "toggle", enabled: false },
-  { label: "Activity status", value: "Show when you are active in hub chats", kind: "toggle", enabled: true },
+  { label: "Activity status", value: "Show when you are active around hub updates and activity", kind: "toggle", enabled: true },
 ];
 
 function InfoRow({

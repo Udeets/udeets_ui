@@ -1,126 +1,253 @@
 "use client";
 
-import { useState } from "react";
-import MockAppShell, { cardClass, sectionTitleClass } from "@/components/mock-app-shell";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import MockAppShell, { cardClass } from "@/components/mock-app-shell";
+import { createCustomHub } from "@/lib/custom-hubs";
 
-function Field({
-  label,
+const CATEGORY_GROUPS = [
+  {
+    title: "Community",
+    items: ["Community Group", "Cultural Association", "Religious Place", "HOA", "Parent Group", "Nonprofit"],
+  },
+  {
+    title: "Local Business",
+    items: ["Restaurant", "Grocery", "Fitness", "Salon", "Retail", "Professional Services"],
+  },
+  {
+    title: "Interest & Clubs",
+    items: ["Sports Club", "Pet Club", "Book Club", "Volunteer Group", "Arts & Music", "Networking"],
+  },
+] as const;
+
+type Step = 1 | 2 | 3;
+type Visibility = "Private" | "Public";
+
+function cn(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
+
+function StepPanel({
+  title,
+  subtitle,
   children,
 }: {
-  label: string;
+  title: string;
+  subtitle?: string;
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
-      <span className="mb-2 block text-sm font-medium text-slate-700">{label}</span>
-      {children}
-    </label>
+    <section className="mx-auto flex min-h-[calc(100vh-17rem)] max-w-3xl items-center justify-center">
+      <div className={cardClass("w-full max-w-2xl p-6 sm:p-8")}>
+        <div className="text-center">
+          <h1 className="text-3xl font-serif font-semibold tracking-tight text-[#111111]">{title}</h1>
+          {subtitle ? <p className="mt-3 text-sm leading-relaxed text-slate-600">{subtitle}</p> : null}
+        </div>
+        <div className="mt-8">{children}</div>
+      </div>
+    </section>
   );
 }
 
-function inputClass(multiline?: boolean) {
-  return multiline
-    ? "min-h-28 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-[#0C5C57]"
-    : "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-[#0C5C57]";
-}
-
 export default function CreateHubPage() {
-  const [submitted, setSubmitted] = useState(false);
+  const router = useRouter();
+  const [step, setStep] = useState<Step>(1);
+  const [hubName, setHubName] = useState("");
+  const [visibility, setVisibility] = useState<Visibility>("Private");
+  const [discoverable, setDiscoverable] = useState(true);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
+  const isNameValid = hubName.trim().length > 0;
+  const canContinueCategories = selectedCategories.length > 0;
+  const selectedVisibilityDescription = useMemo(
+    () =>
+      visibility === "Private"
+        ? "Only approved members can view posts, updates, and files."
+        : "Anyone can discover and view this hub's public updates.",
+    [visibility]
+  );
+
+  const toggleCategory = (category: string) => {
+    setSelectedCategories((current) =>
+      current.includes(category) ? current.filter((item) => item !== category) : [...current, category]
+    );
+  };
+
+  const handleCreate = () => {
+    const createdHub = createCustomHub({
+      name: hubName,
+      visibility,
+      discoverable,
+      selectedCategories,
+    });
+
+    router.push(createdHub.href);
+  };
 
   return (
     <MockAppShell activeNav="home">
-      <section className="mb-4">
-        <h1 className="text-3xl font-serif font-semibold tracking-tight text-[#111111]">Create Hub</h1>
-        <p className="mt-2 text-sm leading-relaxed text-slate-600">
-          Set up a new mock community, business, or local place page for the uDeets frontend flow.
-        </p>
-      </section>
-
-      <section className={cardClass("p-6 sm:p-8")}>
-        <form
-          className="grid gap-5"
-          onSubmit={(event) => {
-            event.preventDefault();
-            setSubmitted(true);
-          }}
-        >
-          <div className="grid gap-5 lg:grid-cols-2">
-            <Field label="Hub Name">
-              <input defaultValue="Richmond Weekend Market" className={inputClass()} />
-            </Field>
-            <Field label="Category">
-              <select defaultValue="communities" className={inputClass()}>
-                <option value="communities">Communities</option>
-                <option value="restaurants">Restaurants</option>
-                <option value="fitness">Fitness</option>
-                <option value="pet-clubs">Pet Clubs</option>
-                <option value="religious-places">Religious Places</option>
-              </select>
-            </Field>
-          </div>
-
-          <Field label="Description">
-            <textarea
-              defaultValue="A local market hub for weekly vendor updates, timing changes, and featured community events."
-              className={inputClass(true)}
+      {step === 1 ? (
+        <StepPanel title="Create a Hub">
+          <label className="block">
+            <span className="mb-3 block text-sm font-semibold tracking-tight text-[#111111]">Hub Name</span>
+            <input
+              value={hubName}
+              onChange={(event) => setHubName(event.target.value)}
+              placeholder="Enter your hub name"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none ring-[#A9D1CA] transition focus:ring-2"
             />
-          </Field>
+          </label>
 
-          <div className="grid gap-5 lg:grid-cols-2">
-            <Field label="Location">
-              <input defaultValue="Richmond, VA" className={inputClass()} />
-            </Field>
-            <Field label="Contact Email">
-              <input defaultValue="market@udeets-demo.com" className={inputClass()} />
-            </Field>
-          </div>
-
-          <div className="grid gap-5 lg:grid-cols-2">
-            <Field label="Website">
-              <input defaultValue="https://example.com" className={inputClass()} />
-            </Field>
-            <Field label="Contact Phone">
-              <input defaultValue="(804) 555-0144" className={inputClass()} />
-            </Field>
-          </div>
-
-          <Field label="Images">
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-[#F7FBFA] px-4 py-8 text-center text-sm text-slate-500">
-              Drag image files here or browse to upload hero, gallery, and profile photos.
-            </div>
-          </Field>
-
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="mt-8 flex justify-end">
             <button
-              type="submit"
-              className="rounded-full bg-[#0C5C57] px-6 py-3 text-sm font-medium text-white hover:bg-[#094a46]"
+              type="button"
+              disabled={!isNameValid}
+              onClick={() => setStep(2)}
+              className={cn(
+                "rounded-full px-6 py-3 text-sm font-semibold transition",
+                isNameValid
+                  ? "bg-[#0C5C57] text-white hover:bg-[#094a46]"
+                  : "cursor-not-allowed bg-slate-200 text-slate-400"
+              )}
             >
-              Save Mock Hub
+              Next
+            </button>
+          </div>
+        </StepPanel>
+      ) : null}
+
+      {step === 2 ? (
+        <StepPanel title="Hub Visibility" subtitle="Choose how people can access your hub on uDeets.">
+          <div className="space-y-4">
+            {[
+              {
+                title: "Private Hub",
+                value: "Private" as const,
+                description: "Only approved members can view posts, updates, and files.",
+              },
+              {
+                title: "Public Hub",
+                value: "Public" as const,
+                description: "Anyone can discover and view this hub's public updates.",
+              },
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setVisibility(option.value)}
+                className={cn(
+                  "w-full rounded-3xl border px-5 py-5 text-left transition",
+                  visibility === option.value
+                    ? "border-[#0C5C57] bg-[#EAF6F3] shadow-sm"
+                    : "border-slate-200 bg-white hover:border-[#A9D1CA] hover:bg-[#F7FBFA]"
+                )}
+              >
+                <p className="text-lg font-serif font-semibold text-[#111111]">{option.title}</p>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">{option.description}</p>
+              </button>
+            ))}
+          </div>
+
+          <label className="mt-5 flex items-center justify-between rounded-2xl bg-[#F7FBFA] px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold text-[#111111]">Show this hub in Discover</p>
+              <p className="mt-1 text-xs text-slate-500">{selectedVisibilityDescription}</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={discoverable}
+              onClick={() => setDiscoverable((current) => !current)}
+              className={cn(
+                "relative inline-flex h-7 w-12 shrink-0 rounded-full transition-all duration-200",
+                discoverable ? "bg-[#A9D1CA] ring-1 ring-[#0C5C57]/15" : "bg-slate-300"
+              )}
+            >
+              <span
+                className={cn(
+                  "absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-200",
+                  discoverable ? "left-6" : "left-1"
+                )}
+              />
+            </button>
+          </label>
+
+          <div className="mt-8 flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+            >
+              Previous
             </button>
             <button
               type="button"
-              className="rounded-full border border-slate-300 px-6 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              onClick={() => setStep(3)}
+              className="rounded-full bg-[#0C5C57] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#094a46]"
             >
-              Preview Draft
+              Next
             </button>
           </div>
+        </StepPanel>
+      ) : null}
 
-          {submitted ? (
-            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-              Mock hub saved locally for the current frontend session. No backend data was created.
-            </div>
-          ) : null}
-        </form>
-      </section>
+      {step === 3 ? (
+        <StepPanel
+          title="Choose hub categories"
+          subtitle="Select the categories that best describe your hub."
+        >
+          <div className="space-y-6">
+            {CATEGORY_GROUPS.map((group) => (
+              <section key={group.title}>
+                <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{group.title}</h2>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  {group.items.map((category) => {
+                    const selected = selectedCategories.includes(category);
+                    return (
+                      <button
+                        key={category}
+                        type="button"
+                        onClick={() => toggleCategory(category)}
+                        className={cn(
+                          "rounded-full px-4 py-2.5 text-sm font-semibold transition",
+                          selected
+                            ? "bg-[#A9D1CA] text-[#0C5C57]"
+                            : "border border-slate-200 bg-white text-slate-600 hover:bg-[#F7FBFA] hover:text-[#0C5C57]"
+                        )}
+                      >
+                        {category}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
 
-      <section className={cardClass("mt-6 p-5 sm:p-6")}>
-        <h2 className={sectionTitleClass()}>Create Checklist</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl bg-[#F7FBFA] p-4 text-sm text-slate-600">Add a clear hub description and value proposition.</div>
-          <div className="rounded-2xl bg-[#F7FBFA] p-4 text-sm text-slate-600">Upload a profile photo plus at least one hero image.</div>
-          <div className="rounded-2xl bg-[#F7FBFA] p-4 text-sm text-slate-600">Share contact details so followers know how to stay connected.</div>
-        </div>
-      </section>
+          <div className="mt-8 flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => router.push("/dashboard")}
+              className="rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={!canContinueCategories}
+              onClick={handleCreate}
+              className={cn(
+                "rounded-full px-6 py-3 text-sm font-semibold transition",
+                canContinueCategories
+                  ? "bg-[#0C5C57] text-white hover:bg-[#094a46]"
+                  : "cursor-not-allowed bg-slate-200 text-slate-400"
+              )}
+            >
+              Save & Continue
+            </button>
+          </div>
+        </StepPanel>
+      ) : null}
     </MockAppShell>
   );
 }

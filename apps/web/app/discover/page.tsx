@@ -268,7 +268,7 @@ function CarouselSection({ title, hubs }: { title: string; hubs: Hub[] }) {
 }
 
 export default function DiscoverPage() {
-  const { homeHref } = useMockAuth();
+  const { homeHref, loggedIn } = useMockAuth();
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<Category>("All");
   const [nearMe, setNearMe] = useState<NearMeOption>("Any");
@@ -460,7 +460,7 @@ export default function DiscoverPage() {
 
           <div className="mt-8">
             <Link
-              href={ROUTE_AUTH}
+              href={loggedIn ? "/create-hub" : ROUTE_AUTH}
               className={cn("inline-block transition", BUTTON_PRIMARY)}
             >
               Create Hub
