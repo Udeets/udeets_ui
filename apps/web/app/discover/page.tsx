@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { HUBS as HUBS_SOURCE } from "@/lib/hubs";
+import { useMockAuth } from "@/lib/mock-auth";
 
 const HEADER_BG = "bg-white border-b border-slate-200/60";
 const FOOTER_BG = "bg-[#0C5C57]";
@@ -21,7 +22,6 @@ const ACTION_TEXT = "font-serif font-semibold tracking-tight text-[#111111]";
 const BUTTON_PRIMARY = "rounded-full bg-[#0C5C57] px-6 py-3 text-sm font-serif font-semibold tracking-tight text-white hover:bg-[#094a46]";
 const ACTIVE_CHIP = "bg-[#0C5C57] text-white border-transparent";
 
-const ROUTE_HOME = "/";
 const ROUTE_AUTH = "/auth";
 
 type Category =
@@ -268,6 +268,7 @@ function CarouselSection({ title, hubs }: { title: string; hubs: Hub[] }) {
 }
 
 export default function DiscoverPage() {
+  const { homeHref } = useMockAuth();
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<Category>("All");
   const [nearMe, setNearMe] = useState<NearMeOption>("Any");
@@ -424,14 +425,14 @@ export default function DiscoverPage() {
     <div className={cn("min-h-screen", PAGE_BG)}>
       <header className={cn("sticky top-0 z-50", HEADER_BG)}>
         <div className="flex min-h-16 w-full items-center justify-between px-4 py-2 sm:px-6 lg:px-10">
-          <Link href={ROUTE_HOME} className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
             <div className="relative h-10 w-10">
               <Image src="/udeets-logo.png" alt="uDeets Logo" fill className="object-contain" priority />
             </div>
             <span className={BRAND_TEXT_STYLE}>uDeets</span>
           </Link>
 
-          <Link href={ROUTE_HOME} className={cn("rounded-full px-4 py-2 text-sm transition hover:bg-slate-100 sm:px-5 sm:py-2.5", NAV_TEXT, ACTION_TEXT)}>
+          <Link href={homeHref} className={cn("rounded-full px-4 py-2 text-sm transition hover:bg-slate-100 sm:px-5 sm:py-2.5", NAV_TEXT, ACTION_TEXT)}>
             Home
           </Link>
         </div>

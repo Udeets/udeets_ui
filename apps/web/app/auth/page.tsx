@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { setMockSession, useMockAuth } from "@/lib/mock-auth";
 
 type Mode = "signin" | "signup";
 
@@ -45,6 +46,7 @@ function AppleIcon(props: React.SVGProps<SVGSVGElement>) {
 
 export default function Page() {
   const router = useRouter();
+  const { homeHref } = useMockAuth();
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -61,6 +63,7 @@ export default function Page() {
 
     if (email === "demo@udeets.com" && password === "Demo@123") {
       setError("");
+      setMockSession();
       router.push("/dashboard");
       return;
     }
@@ -105,7 +108,7 @@ export default function Page() {
               Discover
             </Link>
             <Link
-              href="/"
+              href={homeHref}
               className={`rounded-full px-4 py-2 text-sm font-medium ${NAV_TEXT} transition hover:bg-slate-100 sm:px-5 sm:py-2.5`}
             >
               Home

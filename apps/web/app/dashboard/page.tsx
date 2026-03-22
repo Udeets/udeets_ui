@@ -1,9 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
+import { HUB_CONTENT_BY_ID } from "@/lib/hub-content";
 import { HUBS as HUBS_SOURCE } from "@/lib/hubs";
+import { useMockAuth } from "@/lib/mock-auth";
 
 type DashboardHub = {
   id: string;
@@ -17,25 +19,21 @@ type DashboardHub = {
 type FeedPost = {
   id: string;
   hubId: string;
-  type: "announcement" | "notice" | "poll" | "event" | "update" | "image";
+  type: "announcement" | "notice" | "event" | "update" | "image" | "file";
   dateLabel: string;
   title: string;
   body: string;
   image?: string;
+  href: string;
   views: number;
   likesCount: number;
   commentsCount: number;
   sharesCount: number;
-  pollOptions?: Array<{ label: string; percent: number }>;
 };
 
 const PAGE_BG = "bg-[#E3F1EF]";
-const HEADER_BG = "bg-white border-b border-slate-200/70";
-const FOOTER_BG = "bg-[#0C5C57]";
 const TOP_BG = "bg-[#E3F1EF]";
-const BOTTOM_NAV_BG = "bg-[#A9D1CA]";
 const TEXT_DARK = "text-[#111111]";
-const TEXT_DARK_GREEN = "text-[#0C5C57]";
 const CARD = "rounded-3xl border border-slate-100 bg-white shadow-sm";
 const TILE_BOX =
   "relative h-[148px] w-[148px] overflow-hidden rounded-[30px] bg-white shadow-[0_10px_24px_rgba(15,23,42,0.14)]";
@@ -62,292 +60,44 @@ const HUBS: DashboardHub[] = HUBS_SOURCE.map((hub) => ({
   href: `/hubs/${hub.category}/${hub.slug}`,
 }));
 
-const POSTS: FeedPost[] = [
-  {
-    id: "p01",
-    hubId: "hcv",
-    type: "announcement",
-    dateLabel: "2h ago",
-    title: "Chaitra Festival Seva Registration Opens Friday",
-    body: "Volunteer signup windows for prasadam, queue support, and decor open this Friday at 9:00 AM.",
-    views: 984,
-    likesCount: 57,
-    commentsCount: 16,
-    sharesCount: 9,
-  },
-  {
-    id: "p02",
-    hubId: "rks",
-    type: "notice",
-    dateLabel: "3h ago",
-    title: "Parking Update for Kannada Cultural Night",
-    body: "Overflow parking is now redirected to the east lot. Please follow volunteer signage when arriving.",
-    image: "/hub-images/richmond-kannada-sangha2.jpg",
-    views: 712,
-    likesCount: 32,
-    commentsCount: 11,
-    sharesCount: 5,
-  },
-  {
-    id: "p03",
-    hubId: "desi",
-    type: "image",
-    dateLabel: "4h ago",
-    title: "Weekend Special: Family Combo Goes Live Tonight",
-    body: "Our Friday-to-Sunday combo includes two curries, fresh naan, and dessert. Limited servings each evening.",
-    views: 1250,
-    likesCount: 76,
-    commentsCount: 24,
-    sharesCount: 18,
-  },
-  {
-    id: "p04",
-    hubId: "saint-mikes",
-    type: "event",
-    dateLabel: "6h ago",
-    title: "Community Outreach Drive This Saturday",
-    body: "Families are invited to join the parish outreach collection and packing event from 10:00 AM to 1:00 PM.",
-    image: "/hub-images/saintmike-3.webp",
-    views: 843,
-    likesCount: 41,
-    commentsCount: 13,
-    sharesCount: 7,
-  },
-  {
-    id: "p05",
-    hubId: "grtava",
-    type: "poll",
-    dateLabel: "8h ago",
-    title: "Which family event should we host next month?",
-    body: "Vote on the preferred format so we can open registrations early.",
-    views: 679,
-    likesCount: 29,
-    commentsCount: 31,
-    sharesCount: 10,
-    pollOptions: [
-      { label: "Telugu Cultural Evening", percent: 42 },
-      { label: "Family Sports Day", percent: 28 },
-      { label: "Community Picnic", percent: 19 },
-      { label: "Youth Talent Showcase", percent: 11 },
-    ],
-  },
-  {
-    id: "p06",
-    hubId: "honest",
-    type: "update",
-    dateLabel: "9h ago",
-    title: "New Street-Style Chaat Menu Added",
-    body: "Evening menu now includes three new chaat options. Available for dine-in and takeout from 5 PM onward.",
-    image: "/hub-images/honest-2.jpg",
-    views: 1108,
-    likesCount: 63,
-    commentsCount: 19,
-    sharesCount: 14,
-  },
-  {
-    id: "p07",
-    hubId: "otf",
-    type: "announcement",
-    dateLabel: "11h ago",
-    title: "Registration Opens Friday for 4-Week Challenge",
-    body: "Members can enroll Friday morning. Spots are capped for personalized coach check-ins.",
-    views: 932,
-    likesCount: 48,
-    commentsCount: 15,
-    sharesCount: 8,
-  },
-  {
-    id: "p08",
-    hubId: "lafit",
-    type: "event",
-    dateLabel: "12h ago",
-    title: "Saturday Morning Mobility Session",
-    body: "Join the 45-minute guided mobility class this Saturday at 9:30 AM near studio zone B.",
-    image: "/hub-images/lafitness-2.jpeg",
-    views: 544,
-    likesCount: 22,
-    commentsCount: 8,
-    sharesCount: 4,
-  },
-  {
-    id: "p09",
-    hubId: "tiny-paws",
-    type: "notice",
-    dateLabel: "13h ago",
-    title: "Pickup Window Reminder for Weekend Boarding",
-    body: "Saturday and Sunday pickup closes at 6:30 PM this week. Please plan drop-off and return slots accordingly.",
-    image: "/hub-images/tinypaws-2.jpg",
-    views: 468,
-    likesCount: 19,
-    commentsCount: 6,
-    sharesCount: 3,
-  },
-  {
-    id: "p10",
-    hubId: "ruff",
-    type: "update",
-    dateLabel: "15h ago",
-    title: "Training Group Slots Updated",
-    body: "Two beginner obedience slots opened for next week. Bookings are now available in the member schedule.",
-    image: "/hub-images/ruffcanine-2.webp",
-    views: 389,
-    likesCount: 15,
-    commentsCount: 7,
-    sharesCount: 2,
-  },
-  {
-    id: "p11",
-    hubId: "giles-hanover",
-    type: "notice",
-    dateLabel: "18h ago",
-    title: "HOA Meeting Agenda Posted",
-    body: "This month’s agenda includes landscaping bids, traffic-calming updates, and neighborhood event budget proposals.",
-    image: "/hub-images/giles-3.webp",
-    views: 521,
-    likesCount: 27,
-    commentsCount: 12,
-    sharesCount: 6,
-  },
-  {
-    id: "p12",
-    hubId: "wellesley-hoa",
-    type: "poll",
-    dateLabel: "1d ago",
-    title: "Preferred timing for next neighborhood meetup?",
-    body: "Help us finalize a convenient meetup time for maximum resident participation.",
-    views: 602,
-    likesCount: 34,
-    commentsCount: 18,
-    sharesCount: 5,
-    pollOptions: [
-      { label: "Saturday 10:00 AM", percent: 37 },
-      { label: "Saturday 5:00 PM", percent: 33 },
-      { label: "Sunday 11:00 AM", percent: 30 },
-    ],
-  },
-];
+const POSTS: FeedPost[] = HUBS_SOURCE.flatMap((hub) => {
+  const content = HUB_CONTENT_BY_ID[hub.id];
 
-function SearchIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <circle cx="11" cy="11" r="7" />
-      <path d="M20 20l-3.5-3.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function MenuUserIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <circle cx="12" cy="8" r="3.5" />
-      <path
-        d="M5 19c1.5-2.7 4-4 7-4s5.5 1.3 7 4"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function MenuPostsIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path d="M7 7h10M7 12h10M7 17h6" strokeLinecap="round" />
-      <rect x="4" y="4" width="16" height="16" rx="2.5" />
-    </svg>
-  );
-}
-
-function MenuCreateIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-    >
-      <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function MenuSettingsIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <circle cx="12" cy="12" r="3.2" />
-      <path d="M19 12a7 7 0 0 0-.1-1l2-1.6-2-3.4-2.4 1a7 7 0 0 0-1.7-1L14.5 3h-5L9.2 6a7 7 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.3 3h5l.3-3a7 7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6c.1-.3.1-.7.1-1Z" />
-    </svg>
-  );
-}
-
-function MenuLogoutIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path
-        d="M14 7l5 5-5 5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path d="M19 12H9" strokeLinecap="round" />
-      <path d="M5 5h6v14H5z" />
-    </svg>
-  );
-}
+  return content.feed.map((item) => ({
+    id: item.id,
+    hubId: hub.id,
+    type:
+      item.kind === "announcement"
+        ? "announcement"
+        : item.kind === "notice"
+          ? "notice"
+          : item.kind === "event"
+            ? "event"
+            : item.kind === "photo"
+              ? "image"
+              : "file",
+    dateLabel: item.time,
+    title: item.title,
+    body: item.body,
+    image: item.image,
+    href: `/hubs/${hub.category}/${hub.slug}?focus=${item.id}`,
+    views: item.views,
+    likesCount: item.likes,
+    commentsCount: item.comments,
+    sharesCount: Math.max(2, Math.round(item.comments / 2)),
+  }));
+});
 
 function PlusIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
-      className={cn("h-8 w-8", TEXT_DARK_GREEN)}
+      className="h-8 w-8 text-[#0C5C57]"
       fill="none"
       stroke="currentColor"
       strokeWidth="2.5"
     >
       <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function BottomNavIcon({ path }: { path: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path d={path} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -447,9 +197,9 @@ function CoverImage({ src, alt }: { src?: string; alt: string }) {
 function iconForType(type: FeedPost["type"]) {
   if (type === "announcement") return "Announcement";
   if (type === "notice") return "Notice";
-  if (type === "poll") return "Poll";
   if (type === "event") return "Event";
   if (type === "image") return "Image";
+  if (type === "file") return "File";
   return "Update";
 }
 
@@ -511,8 +261,8 @@ function getFeedImageForPost(post: FeedPost, hub: DashboardHub) {
 }
 
 export default function DashboardPage() {
+  const { loggedIn } = useMockAuth();
   const [isHubsExpanded, setIsHubsExpanded] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [expandedAnchor, setExpandedAnchor] = useState<{
     top: number;
     left: number;
@@ -521,7 +271,6 @@ export default function DashboardPage() {
   } | null>(null);
 
   const hubsPanelRef = useRef<HTMLDivElement | null>(null);
-  const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
   const hubMap = useMemo(() => new Map(HUBS.map((hub) => [hub.id, hub])), []);
   const collapsedHubs = HUBS.slice(0, 8);
@@ -542,19 +291,11 @@ export default function DashboardPage() {
       ) {
         setIsHubsExpanded(false);
       }
-
-      if (
-        isProfileOpen &&
-        profileMenuRef.current &&
-        !profileMenuRef.current.contains(target)
-      ) {
-        setIsProfileOpen(false);
-      }
     };
 
     document.addEventListener("mousedown", onPointerDown);
     return () => document.removeEventListener("mousedown", onPointerDown);
-  }, [isHubsExpanded, isProfileOpen]);
+  }, [isHubsExpanded]);
 
   useEffect(() => {
     if (!isHubsExpanded) return;
@@ -599,94 +340,13 @@ export default function DashboardPage() {
     setIsHubsExpanded(false);
   };
 
+  if (!loggedIn) {
+    return null;
+  }
+
   return (
     <div className={cn("min-h-screen", PAGE_BG)}>
-      <header className={cn("sticky top-0 z-30", HEADER_BG)}>
-        <div className="flex min-h-16 w-full items-center justify-between px-4 py-2 sm:px-6 lg:px-10">
-          <Link href="/" className="flex min-w-0 items-center gap-3">
-            <div className="relative h-10 w-10">
-              <Image
-                src="/udeets-logo.png"
-                alt="uDeets Logo"
-                fill
-                className="object-contain"
-                priority
-              />
-            </div>
-            <span
-              className={cn(
-                "truncate text-2xl font-serif font-semibold tracking-tight",
-                TEXT_DARK
-              )}
-            >
-              uDeets
-            </span>
-          </Link>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href="/discover"
-              aria-label="Search"
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-700 hover:bg-slate-50"
-            >
-              <SearchIcon />
-            </Link>
-
-            <div className="relative" ref={profileMenuRef}>
-              <button
-                type="button"
-                onClick={() => setIsProfileOpen((v) => !v)}
-                aria-label="Open profile menu"
-                className="relative h-10 w-10 overflow-hidden rounded-full border border-slate-200"
-              >
-                <Image src="/udeets-logo.png" alt="uDeets" fill className="object-cover" />
-              </button>
-
-              {isProfileOpen ? (
-                <div className="absolute right-0 z-[120] mt-3 w-[132px]">
-                  <div className="space-y-2">
-                    <Link
-                      href="/discover"
-                      className="flex items-center gap-2 whitespace-nowrap bg-white px-3 py-2.5 text-sm font-medium text-black shadow-[0_6px_14px_rgba(15,23,42,0.10)] transition hover:bg-slate-50"
-                    >
-                      <MenuUserIcon />
-                      <span>Profile</span>
-                    </Link>
-                    <Link
-                      href="/discover"
-                      className="flex items-center gap-2 whitespace-nowrap bg-white px-3 py-2.5 text-sm font-medium text-black shadow-[0_6px_14px_rgba(15,23,42,0.10)] transition hover:bg-slate-50"
-                    >
-                      <MenuPostsIcon />
-                      <span>My Posts</span>
-                    </Link>
-                    <Link
-                      href="/discover"
-                      className="flex items-center gap-2 whitespace-nowrap bg-white px-3 py-2.5 text-sm font-medium text-black shadow-[0_6px_14px_rgba(15,23,42,0.10)] transition hover:bg-slate-50"
-                    >
-                      <MenuCreateIcon />
-                      <span>Create Hub</span>
-                    </Link>
-                    <Link
-                      href="/discover"
-                      className="flex items-center gap-2 whitespace-nowrap bg-white px-3 py-2.5 text-sm font-medium text-black shadow-[0_6px_14px_rgba(15,23,42,0.10)] transition hover:bg-slate-50"
-                    >
-                      <MenuSettingsIcon />
-                      <span>Settings</span>
-                    </Link>
-                    <Link
-                      href="/auth"
-                      className="flex items-center gap-2 whitespace-nowrap bg-white px-3 py-2.5 text-sm font-medium text-black shadow-[0_6px_14px_rgba(15,23,42,0.10)] transition hover:bg-slate-50"
-                    >
-                      <MenuLogoutIcon />
-                      <span>Logout</span>
-                    </Link>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      </header>
+      <UdeetsHeader />
 
       {isHubsExpanded ? (
         <button
@@ -697,7 +357,7 @@ export default function DashboardPage() {
         />
       ) : null}
 
-      <main className="mx-auto w-full max-w-7xl px-4 pb-28 pt-6 sm:px-6 lg:px-10">
+      <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 md:pb-6 lg:px-10">
         <section
           className={cn("relative mb-6 rounded-3xl p-4 sm:p-6", TOP_BG)}
           style={
@@ -803,7 +463,7 @@ export default function DashboardPage() {
               return (
                 <Link
                   key={post.id}
-                  href="/discover"
+                  href={post.href}
                   className={cn("block overflow-hidden", CARD)}
                 >
                   <article>
@@ -828,25 +488,6 @@ export default function DashboardPage() {
                       <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
                         <h3 className={cn("text-base font-semibold", TEXT_DARK)}>{post.title}</h3>
                         <p className="mt-2 text-sm leading-relaxed text-slate-600">{post.body}</p>
-
-                        {post.type === "poll" && post.pollOptions?.length ? (
-                          <div className="mt-4 space-y-2.5">
-                            {post.pollOptions.map((opt) => (
-                              <div key={`${post.id}-${opt.label}`}>
-                                <div className="mb-1 flex items-center justify-between text-xs text-slate-600">
-                                  <span>{opt.label}</span>
-                                  <span>{opt.percent}%</span>
-                                </div>
-                                <div className="h-2.5 w-full rounded-full bg-slate-200">
-                                  <div
-                                    className="h-2.5 rounded-full bg-[#0C5C57]"
-                                    style={{ width: `${opt.percent}%` }}
-                                  />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : null}
 
                         {(post.image ||
                           post.type === "image" ||
@@ -915,64 +556,8 @@ export default function DashboardPage() {
         </section>
       </main>
 
-      <footer className={FOOTER_BG}>
-        <div className="flex min-h-14 w-full items-center justify-center px-4 text-sm text-white sm:px-6 lg:px-10">
-          © 2026 uDeets. All rights reserved.
-        </div>
-      </footer>
-
-      <nav
-        className={cn(
-          "fixed bottom-0 left-0 right-0 z-50 border-t border-white/40",
-          BOTTOM_NAV_BG
-        )}
-      >
-        <div className="mx-auto grid max-w-7xl grid-cols-4 px-2 py-2 sm:px-4">
-          <Link
-            href="/dashboard"
-            className={cn(
-              "flex flex-col items-center justify-center gap-1 py-1",
-              TEXT_DARK_GREEN
-            )}
-          >
-            <BottomNavIcon path="M3 10.5 12 3l9 7.5V21H3v-10.5Z" />
-            <span className="text-xs font-medium">Home</span>
-          </Link>
-
-          <Link
-            href="/discover"
-            className={cn(
-              "flex flex-col items-center justify-center gap-1 py-1",
-              TEXT_DARK_GREEN
-            )}
-          >
-            <BottomNavIcon path="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0a3 3 0 1 1-6 0" />
-            <span className="text-xs font-medium">Alerts</span>
-          </Link>
-
-          <Link
-            href="/discover"
-            className={cn(
-              "flex flex-col items-center justify-center gap-1 py-1",
-              TEXT_DARK_GREEN
-            )}
-          >
-            <BottomNavIcon path="M8 2v3m8-3v3M3 9h18M5 6h14a2 2 0 0 1 2 2v11H3V8a2 2 0 0 1 2-2Z" />
-            <span className="text-xs font-medium">Events</span>
-          </Link>
-
-          <Link
-            href="/discover"
-            className={cn(
-              "flex flex-col items-center justify-center gap-1 py-1",
-              TEXT_DARK_GREEN
-            )}
-          >
-            <BottomNavIcon path="M7 8h10M7 12h7m7-2a8 8 0 0 1-8 8H5l-2 3V10a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8Z" />
-            <span className="text-xs font-medium">Chat</span>
-          </Link>
-        </div>
-      </nav>
+      <UdeetsFooter />
+      <UdeetsBottomNav activeNav="home" />
     </div>
   );
 }
