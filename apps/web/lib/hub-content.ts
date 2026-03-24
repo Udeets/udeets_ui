@@ -1,4 +1,5 @@
 import { HUBS, type HubRecord } from "@/lib/hubs";
+import { UDEETS_LOGO_SRC } from "@/lib/branding";
 
 export type HubFeedItemKind = "announcement" | "photo" | "notice" | "event" | "file";
 export type HubEventTheme =
@@ -81,7 +82,7 @@ function fallbackImage(hub: HubRecord, index = 0) {
     hub.feedImages?.[index] ||
     hub.galleryImages?.[index] ||
     hub.heroImage ||
-    "/udeets-logo.png"
+    UDEETS_LOGO_SRC
   );
 }
 

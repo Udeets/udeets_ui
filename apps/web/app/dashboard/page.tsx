@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
+import { isUdeetsLogoSrc, UDEETS_LOGO_SRC } from "@/lib/branding";
 import { HUB_CONTENT_BY_ID } from "@/lib/hub-content";
 import { HUBS as HUBS_SOURCE } from "@/lib/hubs";
 import { useMockAuth } from "@/lib/mock-auth";
@@ -43,7 +44,7 @@ function cn(...classes: Array<string | false | null | undefined>) {
 }
 
 function normalizePublicSrc(src?: string) {
-  if (!src) return "/udeets-logo.png";
+  if (!src) return UDEETS_LOGO_SRC;
   if (src.startsWith("http://") || src.startsWith("https://")) return src;
   if (src.startsWith("/")) return src;
   return `/${src}`;
@@ -161,11 +162,13 @@ function AvatarImage({ src, alt }: { src?: string; alt: string }) {
     return <div className="h-full w-full bg-[#A9D1CA]/40" />;
   }
 
+  const isLogo = isUdeetsLogoSrc(src);
+
   return (
     <img
       src={src}
       alt={alt}
-      className="h-full w-full object-cover"
+      className={cn("h-full w-full", isLogo ? "object-contain" : "object-cover")}
       loading="lazy"
       onError={() => setImageFailed(true)}
     />

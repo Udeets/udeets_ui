@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import MockAppShell, { cardClass, sectionTitleClass } from "@/components/mock-app-shell";
-import { useMockAuth } from "@/lib/mock-auth";
+import { DEMO_MOCK_USER_AVATAR_SRC, useMockAuth } from "@/lib/mock-auth";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -190,8 +190,14 @@ export default function ProfilePage() {
           <section className={cardClass("p-6 sm:p-8")}>
             <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-start gap-4">
-                <div className="relative h-20 w-20 overflow-hidden rounded-full border border-slate-200 bg-white">
-                  <Image src="/udeets-logo.png" alt="uDeets avatar" fill className="object-contain p-3" />
+                <div className="relative h-20 w-20 overflow-hidden rounded-full border border-slate-200">
+                  <Image
+                    src={DEMO_MOCK_USER_AVATAR_SRC}
+                    alt={user ? `${user.name} profile photo` : "Mock user profile photo"}
+                    fill
+                    className="object-cover object-center"
+                    sizes="80px"
+                  />
                 </div>
 
                 <div>

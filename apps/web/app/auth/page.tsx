@@ -1,10 +1,10 @@
 // app/auth/page.tsx
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { UdeetsBrandLockup } from "@/components/brand-logo";
 import { setMockSession, useMockAuth } from "@/lib/mock-auth";
 
 type Mode = "signin" | "signup";
@@ -76,8 +76,7 @@ export default function Page() {
   const FOOTER_BG = "bg-[#0C5C57]";
   const TEXT_PRIMARY = "text-[#111111]";
   const NAV_TEXT = "text-[#111111]";
-  const LOGO_TEXT = "text-[#111111]";
-  const BRAND_TEXT_STYLE = `truncate text-xl font-serif font-semibold tracking-tight ${LOGO_TEXT} sm:text-2xl`;
+  const BRAND_TEXT_STYLE = "text-xl sm:text-2xl";
   const DISPLAY_HEADING = `font-serif font-semibold tracking-tight ${TEXT_PRIMARY}`;
   const BUTTON_PRIMARY = "rounded-full bg-[#0C5C57] px-6 py-3 text-sm font-medium text-white hover:bg-[#094a46]";
   const SURFACE = "rounded-2xl border border-slate-100 bg-white shadow-sm";
@@ -88,16 +87,7 @@ export default function Page() {
       <header className={cx("sticky top-0 z-50", HEADER_BG)}>
         <div className="flex min-h-16 w-full items-center justify-between px-4 py-2 sm:px-6 lg:px-10">
           <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <div className="relative h-10 w-10">
-              <Image
-                src="/udeets-logo.png"
-                alt="uDeets Logo"
-                fill
-                className="object-contain"
-                priority
-              />
-            </div>
-            <span className={BRAND_TEXT_STYLE}>uDeets</span>
+            <UdeetsBrandLockup textClassName={BRAND_TEXT_STYLE} priority />
           </Link>
 
           <nav className="flex items-center gap-2 sm:gap-3">

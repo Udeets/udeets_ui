@@ -15,8 +15,10 @@ import {
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { UdeetsBrandLockup, UdeetsLogoIcon } from "@/components/brand-logo";
 import { HOME_EVENTS, HOME_NOTIFICATIONS } from "@/lib/hub-content";
-import { clearMockSession } from "@/lib/mock-auth";
+import { isUdeetsLogoSrc, UDEETS_LOGO_SRC } from "@/lib/branding";
+import { clearMockSession, DEMO_MOCK_USER_AVATAR_SRC, useMockAuth } from "@/lib/mock-auth";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -34,7 +36,6 @@ type OpenPanel = "alerts" | "events" | "profile" | null;
 const HEADER_BG = "bg-white border-b border-slate-200/70";
 const FOOTER_BG = "bg-[#0C5C57]";
 const BOTTOM_NAV_BG = "bg-[#A9D1CA]";
-const TEXT_DARK = "text-[#111111]";
 const TEXT_DARK_GREEN = "text-[#0C5C57]";
 const ICON_BASE = "h-5 w-5 stroke-[1.8]";
 
@@ -137,29 +138,36 @@ function NotificationsPanel() {
       </div>
       <div className="mt-4 max-h-[420px] space-y-1.5 overflow-y-auto pr-1">
         {filteredItems.map((item) => (
-          <Link
-            key={item.id}
-            href={item.href}
-            title={truncateLine(item.body, 96)}
-            className="group relative flex items-center gap-3 rounded-2xl px-2 py-2.5 transition hover:bg-[#EEF7F5]"
-          >
-            <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-[#E3F1EF]">
-              <Image
-                src={item.hubImage || "/udeets-logo.png"}
-                alt={item.hub}
-                fill
-                className="object-cover"
-                sizes="36px"
-              />
-            </div>
-            <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[#111111]">
-              {`${item.hub} — ${item.title}`}
-            </p>
-            <span className="shrink-0 text-[11px] font-medium text-slate-500">{item.meta}</span>
-            <span className="pointer-events-none absolute left-12 top-full z-10 mt-1 max-w-[280px] rounded-full bg-[#111111] px-3 py-1 text-[11px] font-medium text-white opacity-0 shadow-sm transition group-hover:opacity-100">
-              {truncateLine(item.body, 78)}
-            </span>
-          </Link>
+          (() => {
+            const imageSrc = item.hubImage || UDEETS_LOGO_SRC;
+            const isLogo = isUdeetsLogoSrc(imageSrc);
+
+            return (
+              <Link
+                key={item.id}
+                href={item.href}
+                title={truncateLine(item.body, 96)}
+                className="group relative flex items-center gap-3 rounded-2xl px-2 py-2.5 transition hover:bg-[#EEF7F5]"
+              >
+                <div className={cn("relative h-9 w-9 shrink-0 overflow-hidden", !isLogo && "rounded-full border border-slate-200 bg-[#E3F1EF]")}>
+                  <Image
+                    src={imageSrc}
+                    alt={item.hub}
+                    fill
+                    className={cn(isLogo ? "object-contain" : "object-cover")}
+                    sizes="36px"
+                  />
+                </div>
+                <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[#111111]">
+                  {`${item.hub} — ${item.title}`}
+                </p>
+                <span className="shrink-0 text-[11px] font-medium text-slate-500">{item.meta}</span>
+                <span className="pointer-events-none absolute left-12 top-full z-10 mt-1 max-w-[280px] rounded-full bg-[#111111] px-3 py-1 text-[11px] font-medium text-white opacity-0 shadow-sm transition group-hover:opacity-100">
+                  {truncateLine(item.body, 78)}
+                </span>
+              </Link>
+            );
+          })()
         ))}
       </div>
     </div>
@@ -215,29 +223,36 @@ function EventsPanel() {
             </h4>
             <div className="space-y-1.5">
               {items.map((event) => (
-                <Link
-                  key={event.id}
-                  href={event.href}
-                  title={truncateLine(`${event.dateLabel} • ${event.time} • ${event.location}`, 96)}
-                  className="group relative flex items-center gap-3 rounded-2xl px-2 py-2.5 transition hover:bg-[#EEF7F5]"
-                >
-                  <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-[#E3F1EF]">
-                    <Image
-                      src={event.hubImage || "/udeets-logo.png"}
-                      alt={event.hub}
-                      fill
-                      className="object-cover"
-                      sizes="36px"
-                    />
-                  </div>
-                  <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[#111111]">
-                    {`${event.hub} — ${event.title}`}
-                  </p>
-                  <span className="shrink-0 text-[11px] font-medium text-slate-500">{event.dateLabel}</span>
-                  <span className="pointer-events-none absolute left-12 top-full z-10 mt-1 max-w-[300px] rounded-full bg-[#111111] px-3 py-1 text-[11px] font-medium text-white opacity-0 shadow-sm transition group-hover:opacity-100">
-                    {truncateLine(`${event.time} • ${event.location}`, 78)}
-                  </span>
-                </Link>
+                (() => {
+                  const imageSrc = event.hubImage || UDEETS_LOGO_SRC;
+                  const isLogo = isUdeetsLogoSrc(imageSrc);
+
+                  return (
+                    <Link
+                      key={event.id}
+                      href={event.href}
+                      title={truncateLine(`${event.dateLabel} • ${event.time} • ${event.location}`, 96)}
+                      className="group relative flex items-center gap-3 rounded-2xl px-2 py-2.5 transition hover:bg-[#EEF7F5]"
+                    >
+                      <div className={cn("relative h-9 w-9 shrink-0 overflow-hidden", !isLogo && "rounded-full border border-slate-200 bg-[#E3F1EF]")}>
+                        <Image
+                          src={imageSrc}
+                          alt={event.hub}
+                          fill
+                          className={cn(isLogo ? "object-contain" : "object-cover")}
+                          sizes="36px"
+                        />
+                      </div>
+                      <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[#111111]">
+                        {`${event.hub} — ${event.title}`}
+                      </p>
+                      <span className="shrink-0 text-[11px] font-medium text-slate-500">{event.dateLabel}</span>
+                      <span className="pointer-events-none absolute left-12 top-full z-10 mt-1 max-w-[300px] rounded-full bg-[#111111] px-3 py-1 text-[11px] font-medium text-white opacity-0 shadow-sm transition group-hover:opacity-100">
+                        {truncateLine(`${event.time} • ${event.location}`, 78)}
+                      </span>
+                    </Link>
+                  );
+                })()
               ))}
             </div>
           </section>
@@ -280,6 +295,7 @@ function ProfilePanel({ onLogout }: { onLogout: () => void }) {
 export function UdeetsHeader() {
   const router = useRouter();
   const pathname = usePathname();
+  const { loggedIn, user } = useMockAuth();
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
   const controlsRef = useRef<HTMLDivElement | null>(null);
 
@@ -323,12 +339,11 @@ export function UdeetsHeader() {
     <header className={cn("sticky top-0 z-30", HEADER_BG)}>
       <div className="flex min-h-16 w-full items-center justify-between px-4 py-2 sm:px-6 lg:px-10">
         <button type="button" onClick={handleHome} className="flex min-w-0 items-center gap-3">
-          <div className="relative h-10 w-10">
-            <Image src="/udeets-logo.png" alt="uDeets Logo" fill className="object-contain" priority />
-          </div>
-          <span className={cn("truncate text-2xl font-serif font-semibold tracking-tight", TEXT_DARK)}>
-            uDeets
-          </span>
+          <UdeetsBrandLockup
+            logoClassName="h-10 w-10"
+            textClassName="text-2xl"
+            priority
+          />
         </button>
 
         <div ref={controlsRef} className="relative flex items-center gap-3">
@@ -378,9 +393,19 @@ export function UdeetsHeader() {
             type="button"
             onClick={() => setOpenPanel((panel) => (panel === "profile" ? null : "profile"))}
             aria-label="Open profile menu"
-            className="relative h-10 w-10 overflow-hidden rounded-full border border-slate-200"
+            className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-slate-200"
           >
-            <Image src="/udeets-logo.png" alt="uDeets" fill className="object-cover" />
+            {loggedIn ? (
+              <Image
+                src={DEMO_MOCK_USER_AVATAR_SRC}
+                alt={user ? `${user.name} profile photo` : "Mock user profile photo"}
+                fill
+                className="object-cover object-center"
+                sizes="40px"
+              />
+            ) : (
+              <UdeetsLogoIcon className="h-full w-full" imageClassName="object-contain" decorative />
+            )}
           </button>
 
           {openPanel === "alerts" ? <NotificationsPanel /> : null}

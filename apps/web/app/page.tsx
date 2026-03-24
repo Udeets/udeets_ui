@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { UdeetsBrandLockup } from "@/components/brand-logo";
 import { HUBS as HUBS_SOURCE } from "@/lib/hubs";
 
 const PAGE_BG = "bg-[#E3F1EF]";
@@ -12,8 +13,7 @@ const SECTION_MINT_BG = "bg-[#E3F1EF]";
 const ACCENT_MEDIUM_GREEN = "bg-[#A9D1CA]";
 const TEXT_PRIMARY = "text-[#111111]";
 const NAV_TEXT = "text-[#111111]";
-const LOGO_TEXT = "text-[#111111]";
-const BRAND_TEXT_STYLE = `truncate text-xl font-serif font-semibold tracking-tight ${LOGO_TEXT} sm:text-2xl`;
+const BRAND_TEXT_STYLE = `text-xl sm:text-2xl`;
 const DISPLAY_HEADING = `font-serif font-semibold tracking-tight ${TEXT_PRIMARY}`;
 const SECTION_HEADING = `font-serif font-semibold tracking-tight ${TEXT_PRIMARY}`;
 const BODY_TEXT = "font-sans leading-relaxed text-slate-600";
@@ -180,16 +180,7 @@ export default function Page() {
       <header className={cn("sticky top-0 z-50", HEADER_BG)}>
         <div className="flex min-h-16 w-full items-center justify-between px-4 py-2 sm:px-6 lg:px-10">
           <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <div className="relative h-10 w-10">
-              <Image
-                src="/udeets-logo.png"
-                alt="uDeets Logo"
-                fill
-                className="object-contain"
-                priority
-              />
-            </div>
-            <span className={BRAND_TEXT_STYLE}>uDeets</span>
+            <UdeetsBrandLockup textClassName={BRAND_TEXT_STYLE} priority />
           </Link>
 
           <div className="flex items-center gap-2 sm:gap-3">

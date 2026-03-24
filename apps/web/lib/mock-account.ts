@@ -1,4 +1,5 @@
 import { HUBS as HUBS_SOURCE } from "@/lib/hubs";
+import { UDEETS_LOGO_SRC } from "@/lib/branding";
 
 export const PROFILE_STATS = [
   { label: "Joined Hubs", value: "12" },
@@ -12,7 +13,7 @@ export const JOINED_HUBS = HUBS_SOURCE.slice(0, 4).map((hub) => ({
   category: hub.category,
   membersLabel: hub.membersLabel,
   href: `/hubs/${hub.category}/${hub.slug}`,
-  image: hub.dpImage || hub.heroImage || "/udeets-logo.png",
+  image: hub.dpImage || hub.heroImage || UDEETS_LOGO_SRC,
 }));
 
 export const MY_POSTS = [

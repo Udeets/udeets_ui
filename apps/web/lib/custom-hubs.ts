@@ -1,5 +1,6 @@
 "use client";
 
+import { UDEETS_LOGO_SRC } from "@/lib/branding";
 import type { HubCategorySlug, HubRecord } from "@/lib/hubs";
 
 const CUSTOM_HUBS_STORAGE_KEY = "udeets-custom-hubs";
@@ -99,7 +100,7 @@ export function createCustomHub(input: CreateCustomHubInput) {
     tagline: `${input.name.trim()} on uDeets`,
     intro: "Start sharing updates, upcoming events, and key files with your community.",
     website: "",
-    dpImage: "/udeets-logo.png",
+    dpImage: UDEETS_LOGO_SRC,
     heroImage: "/udeets-home.png",
     galleryImages: [],
     feedImages: [],

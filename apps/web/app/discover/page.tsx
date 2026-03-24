@@ -1,10 +1,11 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { UdeetsBrandLockup } from "@/components/brand-logo";
+import { isUdeetsLogoSrc } from "@/lib/branding";
 import { HUBS as HUBS_SOURCE } from "@/lib/hubs";
 import { useMockAuth } from "@/lib/mock-auth";
 
@@ -14,8 +15,7 @@ const PAGE_BG = "bg-[#E3F1EF]";
 const SECTION_MINT_BG = "bg-[#E3F1EF]";
 const HERO_ACCENT_BG = SECTION_MINT_BG;
 const NAV_TEXT = "text-[#111111]";
-const LOGO_TEXT = "text-[#111111]";
-const BRAND_TEXT_STYLE = `truncate text-xl font-serif font-semibold tracking-tight ${LOGO_TEXT} sm:text-2xl`;
+const BRAND_TEXT_STYLE = "text-xl sm:text-2xl";
 const DISPLAY_HEADING = "font-serif font-semibold tracking-tight text-[#111111]";
 const FILTER_TEXT = "font-serif font-semibold tracking-tight";
 const ACTION_TEXT = "font-serif font-semibold tracking-tight text-[#111111]";
@@ -198,6 +198,7 @@ function LightArrowButton({
 
 function HubCard({ hub }: { hub: Hub }) {
   const [imageFailed, setImageFailed] = useState(false);
+  const isLogo = isUdeetsLogoSrc(hub.image);
 
   return (
     <Link
@@ -209,7 +210,7 @@ function HubCard({ hub }: { hub: Hub }) {
         <img
           src={hub.image}
           alt={hub.name}
-          className="h-44 w-full object-cover"
+          className={cn("h-44 w-full", isLogo ? "object-contain" : "object-cover")}
           loading="lazy"
           onError={() => setImageFailed(true)}
         />
@@ -426,10 +427,7 @@ export default function DiscoverPage() {
       <header className={cn("sticky top-0 z-50", HEADER_BG)}>
         <div className="flex min-h-16 w-full items-center justify-between px-4 py-2 sm:px-6 lg:px-10">
           <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <div className="relative h-10 w-10">
-              <Image src="/udeets-logo.png" alt="uDeets Logo" fill className="object-contain" priority />
-            </div>
-            <span className={BRAND_TEXT_STYLE}>uDeets</span>
+            <UdeetsBrandLockup textClassName={BRAND_TEXT_STYLE} priority />
           </Link>
 
           <Link href={homeHref} className={cn("rounded-full px-4 py-2 text-sm transition hover:bg-slate-100 sm:px-5 sm:py-2.5", NAV_TEXT, ACTION_TEXT)}>

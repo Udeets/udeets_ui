@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 
 export const UDEETS_MOCK_LOGGED_IN_KEY = "udeets_mock_logged_in";
 export const UDEETS_MOCK_USER_KEY = "udeets_mock_user";
+export const DEMO_MOCK_USER_AVATAR_SRC = "/mock/mock-user.jpg";
 const MOCK_AUTH_EVENT = "udeets-mock-auth-change";
 
 export type MockUser = {
