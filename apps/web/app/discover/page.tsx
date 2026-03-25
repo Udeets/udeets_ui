@@ -2,6 +2,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
@@ -269,6 +270,7 @@ function CarouselSection({ title, hubs }: { title: string; hubs: Hub[] }) {
 }
 
 export default function DiscoverPage() {
+  const searchParams = useSearchParams();
   const { homeHref, loggedIn } = useMockAuth();
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<Category>("All");
@@ -458,7 +460,14 @@ export default function DiscoverPage() {
 
           <div className="mt-8">
             <Link
-              href={loggedIn ? "/create-hub" : ROUTE_AUTH}
+              href={
+                searchParams.get("demo_preview") === "1"
+                  ? "/create-hub?demo_preview=1"
+                  : loggedIn
+                    ? "/create-hub"
+                    : ROUTE_AUTH
+              }
+              data-demo-target={searchParams.get("demo_preview") === "1" ? "discover-create-hub" : undefined}
               className={cn("inline-block transition", BUTTON_PRIMARY)}
             >
               Create Hub

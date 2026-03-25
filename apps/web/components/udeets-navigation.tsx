@@ -13,7 +13,7 @@ import {
   SquarePen,
   UserRound,
 } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { UdeetsBrandLockup, UdeetsLogoIcon } from "@/components/brand-logo";
 import { HOME_EVENTS, HOME_NOTIFICATIONS } from "@/lib/hub-content";
@@ -108,11 +108,16 @@ function NavIconLink({
 }
 
 function NotificationsPanel() {
+  const searchParams = useSearchParams();
   const [activeFilter, setActiveFilter] = useState<(typeof FILTERS)[number]>("All");
+  const isDemoPreview = searchParams.get("demo_preview") === "1";
   const filteredItems = HOME_NOTIFICATIONS.filter((item) => activeFilter === "All" || item.type === activeFilter);
 
   return (
-    <div className="absolute right-16 top-full z-[120] mt-3 w-[360px] rounded-3xl border border-slate-100 bg-white p-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
+    <div
+      data-demo-target={isDemoPreview ? "dashboard-alerts-dropdown" : undefined}
+      className="absolute right-16 top-full z-[120] mt-3 w-[360px] rounded-3xl border border-slate-100 bg-white p-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)]"
+    >
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-serif font-semibold text-[#111111]">Notifications</h3>
         <button type="button" className="text-sm font-medium text-[#0C5C57] hover:opacity-80">
@@ -145,8 +150,17 @@ function NotificationsPanel() {
             return (
               <Link
                 key={item.id}
-                href={item.href}
+                href={
+                  isDemoPreview
+                    ? `${item.href}${item.href.includes("?") ? "&" : "?"}demo_preview=1`
+                    : item.href
+                }
                 title={truncateLine(item.body, 96)}
+                data-demo-target={
+                  isDemoPreview && item.title === "Free Pet Check-up in Mechanicsville"
+                    ? "dashboard-alert-item"
+                    : undefined
+                }
                 className="group relative flex items-center gap-3 rounded-2xl px-2 py-2.5 transition hover:bg-[#EEF7F5]"
               >
                 <div className={cn("relative h-9 w-9 shrink-0 overflow-hidden", !isLogo && "rounded-full border border-slate-200 bg-[#E3F1EF]")}>
@@ -295,8 +309,9 @@ function ProfilePanel({ onLogout }: { onLogout: () => void }) {
 export function UdeetsHeader() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { loggedIn, user } = useMockAuth();
-  const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
+  const [openPanel, setOpenPanel] = useState<OpenPanel>(searchParams.get("demo_open_panel") === "alerts" ? "alerts" : null);
   const controlsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -364,6 +379,7 @@ export function UdeetsHeader() {
               aria-label="Alerts"
               active={isAlertsActive}
               onClick={() => setOpenPanel((panel) => (panel === "alerts" ? null : "alerts"))}
+              data-demo-target={searchParams.get("demo_preview") === "1" ? "dashboard-header-alerts" : undefined}
             >
               <Bell className={ICON_BASE} />
               {unreadNotifications ? (

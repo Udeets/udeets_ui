@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader, type NavKey } from "@/components/udeets-navigation";
 import { useMockAuth } from "@/lib/mock-auth";
@@ -28,14 +28,16 @@ export default function MockAppShell({
   activeNav?: NavKey;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { loggedIn } = useMockAuth();
+  const isDemoPreview = searchParams.get("demo_preview") === "1";
 
   useEffect(() => {
-    if (loggedIn) return;
+    if (loggedIn || isDemoPreview) return;
     router.replace("/");
-  }, [loggedIn, router]);
+  }, [isDemoPreview, loggedIn, router]);
 
-  if (!loggedIn) {
+  if (!loggedIn && !isDemoPreview) {
     return null;
   }
 

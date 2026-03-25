@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
+import { HowItWorksAnimated } from "@/components/home/how-it-works-animated";
 import { HUBS as HUBS_SOURCE } from "@/lib/hubs";
 
 const PAGE_BG = "bg-[#E3F1EF]";
@@ -18,26 +19,11 @@ const DISPLAY_HEADING = `font-serif font-semibold tracking-tight ${TEXT_PRIMARY}
 const SECTION_HEADING = `font-serif font-semibold tracking-tight ${TEXT_PRIMARY}`;
 const BODY_TEXT = "font-sans leading-relaxed text-slate-600";
 const BUTTON_PRIMARY = "rounded-full bg-[#0C5C57] px-6 py-3 text-sm font-medium text-white hover:bg-[#094a46]";
-const STEP_BADGE = `${ACCENT_MEDIUM_GREEN} text-[#111111]`;
 const HEADER_ACTION = `rounded-full px-4 py-2 text-sm font-medium ${NAV_TEXT} hover:bg-slate-100 sm:px-5 sm:py-2.5`;
-
-const steps = [
-  {
-    n: 1,
-    title: "Create Your Profile",
-    desc: "Sign up and personalize your profile with your intersets and location.",
-  },
-  {
-    n: 2,
-    title: "Subscribe or Create Hubs",
-    desc: "Discover and Subscribe to existing communities or start your own hub around your passion.",
-  },
-  {
-    n: 3,
-    title: "Engage or Stay Updated",
-    desc: "Engage with members and stay updated with what matters most.",
-  },
-];
+const HERO_HEADING_LINE_ONE = "Details that matter.";
+const HERO_HEADING_LINE_TWO = "Simplified and organized.";
+const HERO_TAGLINE_PREFIX = "Create hubs or subscribe to stay on top of deets that matter. Powered by ";
+const HERO_TAGLINE_HIGHLIGHT = "uDeets.";
 
 type TopHub = {
   id: string;
@@ -146,6 +132,10 @@ function TopHubCard({ hub }: { hub: TopHub }) {
 export default function Page() {
   const hubsRowRef = useRef<HTMLDivElement | null>(null);
   const [pauseAutoScroll, setPauseAutoScroll] = useState(false);
+  const [typedHeadingLineOne, setTypedHeadingLineOne] = useState("");
+  const [typedHeadingLineTwo, setTypedHeadingLineTwo] = useState("");
+  const [typedTagline, setTypedTagline] = useState("");
+  const [isHeroTypingComplete, setIsHeroTypingComplete] = useState(false);
 
   useEffect(() => {
     const el = hubsRowRef.current;
@@ -167,6 +157,50 @@ export default function Page() {
 
     return () => window.clearInterval(timer);
   }, [pauseAutoScroll]);
+
+  useEffect(() => {
+    const timers: number[] = [];
+
+    const scheduleTyping = (
+      text: string,
+      update: (value: string) => void,
+      speed: number,
+      startDelay: number,
+      onComplete?: () => void
+    ) => {
+      for (let index = 1; index <= text.length; index += 1) {
+        const timer = window.setTimeout(() => {
+          update(text.slice(0, index));
+
+          if (index === text.length) {
+            onComplete?.();
+          }
+        }, startDelay + index * speed);
+
+        timers.push(timer);
+      }
+    };
+
+    const initialDelay = 300;
+    const headingSpeed = 34;
+    const taglineSpeed = 24;
+    const stagePause = 220;
+
+    const lineOneDuration = initialDelay + HERO_HEADING_LINE_ONE.length * headingSpeed;
+    const lineTwoStart = lineOneDuration + stagePause;
+    const lineTwoDuration = lineTwoStart + HERO_HEADING_LINE_TWO.length * headingSpeed;
+    const taglineStart = lineTwoDuration + stagePause;
+
+    scheduleTyping(HERO_HEADING_LINE_ONE, setTypedHeadingLineOne, headingSpeed, initialDelay);
+    scheduleTyping(HERO_HEADING_LINE_TWO, setTypedHeadingLineTwo, headingSpeed, lineTwoStart);
+    scheduleTyping(HERO_TAGLINE_PREFIX, setTypedTagline, taglineSpeed, taglineStart, () => {
+      setIsHeroTypingComplete(true);
+    });
+
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, []);
 
   const scrollHubsBy = (delta: number) => {
     const el = hubsRowRef.current;
@@ -210,12 +244,19 @@ export default function Page() {
             {/* LEFT CONTENT */}
             <div className="max-w-3xl space-y-6 text-slate-900 sm:space-y-7">
               <h1 className={cn("break-words text-4xl leading-[0.95] sm:text-5xl lg:text-6xl", DISPLAY_HEADING)}>
-                Create. Subscribe. Stay Informed.
+                <span className="block">{typedHeadingLineOne}</span>
+                <span className="block">{typedHeadingLineTwo}</span>
               </h1>
 
               <p className={cn("max-w-2xl text-lg sm:text-xl lg:text-2xl", BODY_TEXT)}>
-                Create hubs to share updates, or subscribe to receive the details
-                that matter to you.
+                {isHeroTypingComplete ? (
+                  <>
+                    <span>{HERO_TAGLINE_PREFIX}</span>
+                    <span className="blink-word font-semibold">{HERO_TAGLINE_HIGHLIGHT}</span>
+                  </>
+                ) : (
+                  typedTagline
+                )}
               </p>
 
               <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:gap-4 sm:pt-4">
@@ -261,24 +302,7 @@ export default function Page() {
           </div>
         </section>
 
-        {/* HOW IT WORKS */}
-        <section className={cn("py-20 text-center", SECTION_MINT_BG)}>
-          <h2 className={cn("mb-12 px-4 text-3xl sm:text-4xl", SECTION_HEADING)}>How It Works</h2>
-
-          <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-3 lg:px-10">
-            {steps.map((s) => (
-              <div key={s.n} className="min-w-0 rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
-                <div
-                  className={cn("mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full text-4xl font-bold", STEP_BADGE)}
-                >
-                  {s.n}
-                </div>
-                <h3 className={cn("mb-3 text-2xl", SECTION_HEADING)}>{s.title}</h3>
-                <p className="text-slate-600">{s.desc}</p>
-              </div>
-            ))}
-          </div>
-        </section>
+        <HowItWorksAnimated />
 
         {/* TOP HUBS */}
         <section className="py-20">

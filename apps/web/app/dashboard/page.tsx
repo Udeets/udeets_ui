@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
 import { isUdeetsLogoSrc, UDEETS_LOGO_SRC } from "@/lib/branding";
 import { HUB_CONTENT_BY_ID } from "@/lib/hub-content";
@@ -264,6 +265,7 @@ function getFeedImageForPost(post: FeedPost, hub: DashboardHub) {
 }
 
 export default function DashboardPage() {
+  const searchParams = useSearchParams();
   const { loggedIn } = useMockAuth();
   const [isHubsExpanded, setIsHubsExpanded] = useState(false);
   const [expandedAnchor, setExpandedAnchor] = useState<{
@@ -343,7 +345,7 @@ export default function DashboardPage() {
     setIsHubsExpanded(false);
   };
 
-  if (!loggedIn) {
+  if (!loggedIn && searchParams.get("demo_preview") !== "1") {
     return null;
   }
 

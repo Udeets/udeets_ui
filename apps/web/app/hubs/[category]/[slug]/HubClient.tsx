@@ -213,12 +213,24 @@ export default function HubClient({
   const hubBaseHref = `/hubs/${hub.category}/${hub.slug}`;
   const focusTarget = searchParams.get("focus");
   const requestedTab = searchParams.get("tab") as HubTab | null;
+  const isDemoPreview = searchParams.get("demo_preview") === "1";
+  const demoHubName = searchParams.get("demo_name")?.trim();
+  const demoHubDescription = searchParams.get("demo_description")?.trim();
+  const demoHubTagline = searchParams.get("demo_tagline")?.trim();
+  const demoComposerText = searchParams.get("demo_composer") ?? "";
+  const demoPostedText = searchParams.get("demo_posted") ?? "";
+  const demoPollEnabled = searchParams.get("demo_poll") === "1";
+  const demoPollVote = searchParams.get("demo_poll_vote");
+  const demoLiked = searchParams.get("demo_liked") === "1";
   const initialActiveSection: HubTab = requestedTab && HUB_TABS.includes(requestedTab) ? requestedTab : "Posts";
   const [activeSection, setActiveSection] = useState<HubTab>(initialActiveSection);
   const [activePanel, setActivePanel] = useState<HubPanel>("posts");
   const isCustomHub = "isCustom" in hub && Boolean(hub.isCustom);
-  const [settingsHubName, setSettingsHubName] = useState(hub.name);
-  const [settingsDescription, setSettingsDescription] = useState(hub.description);
+  const hubName = demoHubName || hub.name;
+  const hubDescription = demoHubDescription || hub.description;
+  const hubTagline = demoHubTagline || hub.tagline || hubName;
+  const [settingsHubName, setSettingsHubName] = useState(hubName);
+  const [settingsDescription, setSettingsDescription] = useState(hubDescription);
   const [settingsLocation, setSettingsLocation] = useState(hub.locationLabel);
   const [settingsVisibility, setSettingsVisibility] = useState<HubRecord["visibility"]>(hub.visibility);
   const [settingsDiscoverable, setSettingsDiscoverable] = useState(
@@ -256,7 +268,7 @@ export default function HubClient({
   const memberItems = isCustomHub
     ? []
     : [
-        `${hub.name} Admin`,
+        `${hubName} Admin`,
         "Moderator Team",
         "Volunteer Leads",
         "Community Members",
@@ -269,7 +281,7 @@ export default function HubClient({
   const memberRoleItems = isCustomHub
     ? []
     : [
-        { name: `${hub.name} Admin`, role: "Admin" },
+        { name: `${hubName} Admin`, role: "Admin" },
         { name: "Moderator Team", role: "Admin" },
         { name: "Community Members", role: "Member" },
       ];
@@ -328,7 +340,10 @@ export default function HubClient({
     ) : (
       <>
         <section className={cn(CARD, "p-5")}>
+          <div data-demo-target={isDemoPreview ? "hub-composer-section" : undefined}>
           <textarea
+            defaultValue={demoComposerText}
+            data-demo-target={isDemoPreview ? "hub-composer-input" : undefined}
             placeholder="Share an update with your hub..."
             rows={3}
             className="w-full resize-none rounded-2xl border border-slate-200 p-4 text-sm text-slate-700 outline-none ring-[#A9D1CA] transition focus:ring-2"
@@ -351,11 +366,67 @@ export default function HubClient({
                 <MapPin className={ICON} />
               </button>
             </div>
-            <button type="button" className={BUTTON_PRIMARY}>
+            <button
+              type="button"
+              data-demo-target={isDemoPreview ? "hub-composer-post" : undefined}
+              className={BUTTON_PRIMARY}
+            >
               Post
             </button>
           </div>
+          </div>
         </section>
+
+        {demoPostedText ? (
+          <section className={cn(CARD, "p-5")}>
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <h3 className="text-base font-semibold text-[#111111]">Announcement</h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">{demoPostedText}</p>
+            </div>
+          </section>
+        ) : null}
+
+        {demoPollEnabled ? (
+          <section className={cn(CARD, "p-5")}>
+            <div
+              data-demo-target={isDemoPreview ? "hub-poll-section" : undefined}
+              className="rounded-2xl border border-slate-100 bg-slate-50 p-4"
+            >
+              <h3 className="text-base font-semibold text-[#111111]">Free Pet Check-up in Mechanicsville</h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                Would you attend the complimentary pet wellness check this Saturday?
+              </p>
+              <div className="mt-4 flex gap-3">
+                <button
+                  type="button"
+                  data-demo-target={isDemoPreview ? "hub-poll-yes" : undefined}
+                  className={cn(
+                    "rounded-full px-4 py-2 text-sm font-medium transition",
+                    demoPollVote === "yes" ? "bg-[#0C5C57] text-white" : "bg-white text-slate-600 border border-slate-200"
+                  )}
+                >
+                  Yes
+                </button>
+                <button type="button" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-500">
+                  Maybe
+                </button>
+              </div>
+              <div className="mt-4 flex items-center justify-between">
+                <button
+                  type="button"
+                  data-demo-target={isDemoPreview ? "hub-like-button" : undefined}
+                  className={cn(
+                    "rounded-full px-4 py-2 text-sm font-medium transition",
+                    demoLiked ? "bg-[#EAF6F3] text-[#0C5C57]" : "bg-white text-slate-500 border border-slate-200"
+                  )}
+                >
+                  Like
+                </button>
+                <span className="text-xs font-medium text-slate-400">214 people engaged</span>
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         <section className={cn(CARD, "p-5")}>
           <div className="flex flex-wrap gap-2">
@@ -522,13 +593,13 @@ export default function HubClient({
           key={`${img}-${index}`}
           type="button"
           className={cn(CARD, "overflow-hidden p-0")}
-          onClick={() => openViewer(recentPhotos, index, `${hub.name} Album`, "Recent photos from this hub.")}
+          onClick={() => openViewer(recentPhotos, index, `${hubName} Album`, "Recent photos from this hub.")}
         >
           <div className="aspect-square">
             <ImageWithFallback
               src={img}
               sources={[img, ...recentPhotos.filter((photo) => photo !== img), coverImageSrc, dpImageSrc]}
-              alt={`${hub.name} album ${index + 1}`}
+              alt={`${hubName} album ${index + 1}`}
               className="h-full w-full object-cover"
               fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA]/25 text-sm font-medium text-[#0C5C57]"
               fallback="Photo"
@@ -851,14 +922,14 @@ export default function HubClient({
                   <ImageWithFallback
                     src={dpImageSrc}
                     sources={[dpImageSrc, coverImageSrc, ...galleryImages]}
-                    alt={`${hub.name} display`}
+                    alt={`${hubName} display`}
                     className="h-full w-full object-cover"
                     fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA] text-2xl font-semibold text-[#111111]"
-                    fallback={initials(hub.name)}
+                    fallback={initials(hubName)}
                   />
                 </div>
-                <h1 className="text-xl font-serif font-semibold tracking-tight text-[#111111]">{hub.name}</h1>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">{hub.description}</p>
+                <h1 className="text-xl font-serif font-semibold tracking-tight text-[#111111]">{hubName}</h1>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">{hubDescription}</p>
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
                   <span className="rounded-full bg-[#F7FBFA] px-3 py-1 text-xs font-medium text-slate-600">
                     {hub.membersLabel}
@@ -891,13 +962,13 @@ export default function HubClient({
                     type="button"
                     className="aspect-square overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 ring-2 ring-white"
                     onClick={() =>
-                      openViewer(recentPhotos, index, `${hub.name} Photo`, "Recent photo from this hub.")
+                      openViewer(recentPhotos, index, `${hubName} Photo`, "Recent photo from this hub.")
                     }
                   >
                     <ImageWithFallback
                       src={img}
                       sources={[img, ...recentPhotos.filter((photo) => photo !== img), coverImageSrc, dpImageSrc]}
-                      alt={`${hub.name} photo ${index + 1}`}
+                      alt={`${hubName} photo ${index + 1}`}
                       className="h-full w-full object-cover"
                       fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA]/25 text-[11px] font-medium text-[#0C5C57]"
                       fallback="Photo"
@@ -945,7 +1016,7 @@ export default function HubClient({
                 <ImageWithFallback
                   src={coverImageSrc}
                   sources={[coverImageSrc, ...galleryImages, dpImageSrc]}
-                  alt={`${hub.name} cover`}
+                  alt={`${hubName} cover`}
                   className="h-full w-full object-cover"
                   fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA]/35 text-sm font-medium text-[#0C5C57]"
                   fallback="Cover photo"
@@ -956,7 +1027,7 @@ export default function HubClient({
                   <div>
                     <p className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">{hub.category.replace(/-/g, " ")}</p>
                     <h2 className="mt-2 text-2xl font-serif font-semibold tracking-tight text-[#111111]">
-                      {hub.tagline || hub.name}
+                      {hubTagline}
                     </h2>
                     <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">
                       {isCustomHub ? settingsDescription : hub.intro || hub.description}
@@ -1065,12 +1136,12 @@ export default function HubClient({
                         alt="Admin"
                         className="h-full w-full object-cover"
                         fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA] text-xs font-semibold text-[#111111]"
-                        fallback={initials(index === 0 ? `${hub.name} Admin` : "Moderator Team")}
+                        fallback={initials(index === 0 ? `${hubName} Admin` : "Moderator Team")}
                       />
                     </div>
                     <div>
                       <p className="text-sm font-medium text-[#111111]">
-                        {index === 0 ? `${hub.name} Admin` : "Moderator Team"}
+                        {index === 0 ? `${hubName} Admin` : "Moderator Team"}
                       </p>
                       <p className="text-xs text-slate-500">
                         {index === 0 ? "Lead Admin" : "Community Admin"}
@@ -1085,8 +1156,8 @@ export default function HubClient({
         </div>
       </main>
 
-      <UdeetsFooter />
-      <UdeetsBottomNav activeNav="home" />
+      {!isDemoPreview ? <UdeetsFooter /> : null}
+      {!isDemoPreview ? <UdeetsBottomNav activeNav="home" /> : null}
 
       {viewer.open ? (
         <div className="fixed inset-0 z-[120] flex bg-black/85">

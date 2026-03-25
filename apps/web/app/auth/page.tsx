@@ -74,10 +74,8 @@ export default function Page() {
   const PAGE_BG = "bg-[#E3F1EF]";
   const HEADER_BG = "bg-white border-b border-slate-200/60";
   const FOOTER_BG = "bg-[#0C5C57]";
-  const TEXT_PRIMARY = "text-[#111111]";
   const NAV_TEXT = "text-[#111111]";
   const BRAND_TEXT_STYLE = "text-xl sm:text-2xl";
-  const DISPLAY_HEADING = `font-serif font-semibold tracking-tight ${TEXT_PRIMARY}`;
   const BUTTON_PRIMARY = "rounded-full bg-[#0C5C57] px-6 py-3 text-sm font-medium text-white hover:bg-[#094a46]";
   const SURFACE = "rounded-2xl border border-slate-100 bg-white shadow-sm";
 
@@ -110,8 +108,8 @@ export default function Page() {
       {/* MAIN */}
       <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-7xl items-center justify-center px-4 py-10 sm:px-6 lg:px-10">
         <div className={cx(SURFACE, "w-full max-w-md p-6 sm:p-8")}>
-          <div className="text-center mb-8">
-            <h1 className={cx("mb-2 text-3xl", DISPLAY_HEADING)}>uDeets</h1>
+          <div className="mb-8 text-center">
+            <UdeetsBrandLockup className="mb-2 justify-center" textClassName="text-3xl" showIcon={false} />
             <p className="text-gray-600">Create. Subscribe. Stay Informed.</p>
           </div>
 
