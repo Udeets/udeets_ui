@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import MockAppShell, { cardClass } from "@/components/mock-app-shell";
-import { createCustomHub } from "@/lib/custom-hubs";
+import { getCurrentSession } from "@/services/auth/getCurrentSession";
+import { createHub } from "@/services/hubs/createHub";
 
 const CATEGORY_GROUPS = [
   {
@@ -22,9 +23,46 @@ const CATEGORY_GROUPS = [
 
 type Step = 1 | 2 | 3;
 type Visibility = "Private" | "Public";
+type SubmitState =
+  | { type: "idle"; message: string | null }
+  | { type: "error"; message: string }
+  | { type: "success"; message: string; href: string };
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
+}
+
+function slugify(value: string) {
+  return (
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "new-hub"
+  );
+}
+
+function categoryFor(categories: string[]) {
+  if (categories.includes("Religious Place")) return "religious-places";
+  if (categories.includes("HOA")) return "hoa";
+  if (categories.includes("Fitness")) return "fitness";
+  if (categories.includes("Pet Club")) return "pet-clubs";
+  if (
+    categories.some((category) =>
+      ["Restaurant", "Grocery", "Salon", "Retail", "Professional Services"].includes(category)
+    )
+  ) {
+    return "restaurants";
+  }
+
+  return "communities";
+}
+
+function descriptionFor(categories: string[]) {
+  if (!categories.length) return "A new uDeets hub for local updates, events, and community connection.";
+  if (categories.length === 1) return `${categories[0]} updates, events, and community details in one place.`;
+  return `${categories.slice(0, 2).join(" and ")} updates, events, and community details in one place.`;
 }
 
 function StepPanel({
@@ -63,6 +101,8 @@ export default function CreateHubPage() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
     initialCategories ? initialCategories.split(",").filter(Boolean) : []
   );
+  const [submitState, setSubmitState] = useState<SubmitState>({ type: "idle", message: null });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isNameValid = hubName.trim().length > 0;
   const canContinueCategories = selectedCategories.length > 0;
@@ -80,15 +120,50 @@ export default function CreateHubPage() {
     );
   };
 
-  const handleCreate = () => {
-    const createdHub = createCustomHub({
-      name: hubName,
-      visibility,
-      discoverable,
-      selectedCategories,
-    });
+  const handleCreate = async () => {
+    setIsSubmitting(true);
+    setSubmitState({ type: "idle", message: null });
 
-    router.push(isDemoPreview ? `${createdHub.href}?demo_preview=1` : createdHub.href);
+    try {
+      const session = await getCurrentSession();
+      const userId = session?.user.id;
+
+      if (!userId) {
+        throw new Error("You must be signed in to create a hub.");
+      }
+
+      const normalizedName = hubName.trim();
+      const timestamp = Date.now();
+      const slug = `${slugify(normalizedName)}-${timestamp}`;
+      const href = `/hubs/${categoryFor(selectedCategories)}/${slug}`;
+
+      await createHub({
+        name: normalizedName,
+        slug,
+        category: categoryFor(selectedCategories),
+        tagline: `${normalizedName} on uDeets`,
+        description: descriptionFor(selectedCategories),
+        city: null,
+        state: null,
+        country: null,
+        cover_image_url: null,
+        logo_image_url: null,
+        created_by: userId,
+      });
+
+      setSubmitState({
+        type: "success",
+        message: `Hub created successfully for your account. Slug: ${slug}`,
+        href,
+      });
+    } catch (error) {
+      setSubmitState({
+        type: "error",
+        message: error instanceof Error ? error.message : "Failed to create hub.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -267,9 +342,36 @@ export default function CreateHubPage() {
                     : "cursor-not-allowed bg-slate-200 text-slate-400"
                 )}
               >
-                Save & Continue
+                {isSubmitting ? "Saving..." : "Save & Continue"}
               </button>
             </div>
+
+            {submitState.message ? (
+              <div
+                className={cn(
+                  "mt-6 rounded-2xl border px-4 py-3 text-sm",
+                  submitState.type === "error"
+                    ? "border-rose-200 bg-rose-50 text-rose-700"
+                    : submitState.type === "success"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : "border-slate-200 bg-white text-slate-600"
+                )}
+              >
+                {submitState.message}
+
+                {submitState.type === "success" ? (
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      onClick={() => router.push(submitState.href)}
+                      className="rounded-full bg-[#0C5C57] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#094a46]"
+                    >
+                      View Hub
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </StepPanel>
       ) : null}

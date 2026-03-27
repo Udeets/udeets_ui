@@ -9,6 +9,9 @@ import { UdeetsBrandLockup } from "@/components/brand-logo";
 import { isUdeetsLogoSrc } from "@/lib/branding";
 import { HUBS as HUBS_SOURCE } from "@/lib/hubs";
 import { useMockAuth } from "@/lib/mock-auth";
+import { getCurrentSession } from "@/services/auth/getCurrentSession";
+import { listHubs } from "@/services/hubs/listHubs";
+import type { Hub as SupabaseHub } from "@/types/hub";
 
 const HEADER_BG = "bg-white border-b border-slate-200/60";
 const FOOTER_BG = "bg-[#0C5C57]";
@@ -75,6 +78,8 @@ type Hub = {
   tags: Array<"trending" | "popular" | "nearby">;
 };
 
+type SupabaseLoadState = "idle" | "loading" | "success" | "signed_out" | "error";
+
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
@@ -118,6 +123,28 @@ const HUBS: Hub[] = HUBS_SOURCE.map((h) => ({
   image: normalizePublicSrc(h.dpImage || h.heroImage),
   tags: h.tags,
 }));
+
+function locationLabelFor(hub: SupabaseHub) {
+  return [hub.city, hub.state, hub.country].filter(Boolean).join(", ") || "Location coming soon";
+}
+
+function toDiscoverHub(hub: SupabaseHub): Hub {
+  const imageSrc = hub.logo_image_url || hub.cover_image_url || undefined;
+
+  return {
+    id: hub.id,
+    name: hub.name,
+    category: toDiscoverCategory(hub.category),
+    locationLabel: locationLabelFor(hub),
+    distanceMi: 0,
+    membersLabel: "New hub",
+    visibility: "Public",
+    description: hub.description || "A new uDeets hub is getting set up.",
+    href: `/hubs/${hub.category}/${hub.slug}`,
+    image: normalizePublicSrc(imageSrc),
+    tags: [],
+  };
+}
 
 function matchesNearMe(h: Hub, nearMe: NearMeOption) {
   if (nearMe === "Any") return true;
@@ -276,6 +303,9 @@ export default function DiscoverPage() {
   const [activeCategory, setActiveCategory] = useState<Category>("All");
   const [nearMe, setNearMe] = useState<NearMeOption>("Any");
   const [nearMeOpen, setNearMeOpen] = useState(false);
+  const [supabaseHubs, setSupabaseHubs] = useState<Hub[]>([]);
+  const [supabaseLoadState, setSupabaseLoadState] = useState<SupabaseLoadState>("idle");
+  const [supabaseLoadError, setSupabaseLoadError] = useState<string | null>(null);
 
   const chipsRef = useRef<HTMLDivElement | null>(null);
   const [canChipLeft, setCanChipLeft] = useState(false);
@@ -380,9 +410,59 @@ export default function DiscoverPage() {
     };
   }, [nearMeOpen]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSupabaseHubs() {
+      setSupabaseLoadState("loading");
+      setSupabaseLoadError(null);
+
+      try {
+        const session = await getCurrentSession();
+        const userId = session?.user.id;
+
+        if (!userId) {
+          if (!cancelled) {
+            setSupabaseHubs([]);
+            setSupabaseLoadState("signed_out");
+          }
+          return;
+        }
+
+        const hubs = await listHubs();
+        const mapped = hubs.map(toDiscoverHub);
+
+        if (!cancelled) {
+          setSupabaseHubs(mapped);
+          setSupabaseLoadState("success");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setSupabaseHubs([]);
+          setSupabaseLoadState("error");
+          setSupabaseLoadError(
+            error instanceof Error ? error.message : "Supabase-backed hubs could not be loaded."
+          );
+        }
+      }
+    }
+
+    void loadSupabaseHubs();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const allHubs = useMemo(() => {
+    const seen = new Set(HUBS.map((hub) => hub.href));
+    const uniqueSupabaseHubs = supabaseHubs.filter((hub) => !seen.has(hub.href));
+    return [...uniqueSupabaseHubs, ...HUBS];
+  }, [supabaseHubs]);
+
   const baseFiltered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return HUBS.filter((h) => {
+    return allHubs.filter((h) => {
       const matchQuery =
         !q ||
         h.name.toLowerCase().includes(q) ||
@@ -393,7 +473,7 @@ export default function DiscoverPage() {
       const matchNear = matchesNearMe(h, nearMe);
       return matchQuery && matchNear;
     });
-  }, [query, nearMe]);
+  }, [allHubs, query, nearMe]);
 
   const categoryHubs = useMemo(() => {
     if (activeCategory === "All") return [];
@@ -570,6 +650,24 @@ export default function DiscoverPage() {
         )}
 
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-10">
+        {supabaseLoadState === "loading" ? (
+          <div className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
+            Loading your Supabase-backed hubs...
+          </div>
+        ) : null}
+
+        {supabaseLoadState === "error" ? (
+          <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">
+            {supabaseLoadError ?? "Supabase-backed hubs could not be loaded."}
+          </div>
+        ) : null}
+
+        {supabaseLoadState === "signed_out" ? (
+          <div className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
+            Sign in to see your Supabase-backed hubs. Showing the current mock discovery experience for now.
+          </div>
+        ) : null}
+
         {isResultsMode ? (
           <CarouselSection
             title="Results"
