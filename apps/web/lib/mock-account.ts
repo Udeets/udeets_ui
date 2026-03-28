@@ -1,20 +1,17 @@
-import { HUBS as HUBS_SOURCE } from "@/lib/hubs";
-import { UDEETS_LOGO_SRC } from "@/lib/branding";
-
 export const PROFILE_STATS = [
   { label: "Joined Hubs", value: "12" },
   { label: "Posts Shared", value: "18" },
   { label: "Saved Alerts", value: "27" },
 ];
 
-export const JOINED_HUBS = HUBS_SOURCE.slice(0, 4).map((hub) => ({
-  id: hub.id,
-  name: hub.name,
-  category: hub.category,
-  membersLabel: hub.membersLabel,
-  href: `/hubs/${hub.category}/${hub.slug}`,
-  image: hub.dpImage || hub.heroImage || UDEETS_LOGO_SRC,
-}));
+export const JOINED_HUBS: Array<{
+  id: string;
+  name: string;
+  category: string;
+  membersLabel: string;
+  href: string;
+  image: string;
+}> = [];
 
 export const MY_POSTS = [
   {

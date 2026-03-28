@@ -18,7 +18,8 @@ import { useEffect, useRef, useState } from "react";
 import { UdeetsBrandLockup, UdeetsLogoIcon } from "@/components/brand-logo";
 import { HOME_EVENTS, HOME_NOTIFICATIONS } from "@/lib/hub-content";
 import { isUdeetsLogoSrc, UDEETS_LOGO_SRC } from "@/lib/branding";
-import { clearMockSession, DEMO_MOCK_USER_AVATAR_SRC, useMockAuth } from "@/lib/mock-auth";
+import { signOut } from "@/services/auth/signOut";
+import { useAuthSession } from "@/services/auth/useAuthSession";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -142,47 +143,51 @@ function NotificationsPanel() {
         ))}
       </div>
       <div className="mt-4 max-h-[420px] space-y-1.5 overflow-y-auto pr-1">
-        {filteredItems.map((item) => (
-          (() => {
-            const imageSrc = item.hubImage || UDEETS_LOGO_SRC;
-            const isLogo = isUdeetsLogoSrc(imageSrc);
+        {filteredItems.length ? (
+          filteredItems.map((item) => (
+            (() => {
+              const imageSrc = item.hubImage || UDEETS_LOGO_SRC;
+              const isLogo = isUdeetsLogoSrc(imageSrc);
 
-            return (
-              <Link
-                key={item.id}
-                href={
-                  isDemoPreview
-                    ? `${item.href}${item.href.includes("?") ? "&" : "?"}demo_preview=1`
-                    : item.href
-                }
-                title={truncateLine(item.body, 96)}
-                data-demo-target={
-                  isDemoPreview && item.title === "Free Pet Check-up in Mechanicsville"
-                    ? "dashboard-alert-item"
-                    : undefined
-                }
-                className="group relative flex items-center gap-3 rounded-2xl px-2 py-2.5 transition hover:bg-[#EEF7F5]"
-              >
-                <div className={cn("relative h-9 w-9 shrink-0 overflow-hidden", !isLogo && "rounded-full border border-slate-200 bg-[#E3F1EF]")}>
-                  <Image
-                    src={imageSrc}
-                    alt={item.hub}
-                    fill
-                    className={cn(isLogo ? "object-contain" : "object-cover")}
-                    sizes="36px"
-                  />
-                </div>
-                <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[#111111]">
-                  {`${item.hub} — ${item.title}`}
-                </p>
-                <span className="shrink-0 text-[11px] font-medium text-slate-500">{item.meta}</span>
-                <span className="pointer-events-none absolute left-12 top-full z-10 mt-1 max-w-[280px] rounded-full bg-[#111111] px-3 py-1 text-[11px] font-medium text-white opacity-0 shadow-sm transition group-hover:opacity-100">
-                  {truncateLine(item.body, 78)}
-                </span>
-              </Link>
-            );
-          })()
-        ))}
+              return (
+                <Link
+                  key={item.id}
+                  href={
+                    isDemoPreview
+                      ? `${item.href}${item.href.includes("?") ? "&" : "?"}demo_preview=1`
+                      : item.href
+                  }
+                  title={truncateLine(item.body, 96)}
+                  data-demo-target={
+                    isDemoPreview && item.title === "Free Pet Check-up in Mechanicsville"
+                      ? "dashboard-alert-item"
+                      : undefined
+                  }
+                  className="group relative flex items-center gap-3 rounded-2xl px-2 py-2.5 transition hover:bg-[#EEF7F5]"
+                >
+                  <div className={cn("relative h-9 w-9 shrink-0 overflow-hidden", !isLogo && "rounded-full border border-slate-200 bg-[#E3F1EF]")}>
+                    <Image
+                      src={imageSrc}
+                      alt={item.hub}
+                      fill
+                      className={cn(isLogo ? "object-contain" : "object-cover")}
+                      sizes="36px"
+                    />
+                  </div>
+                  <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[#111111]">
+                    {`${item.hub} — ${item.title}`}
+                  </p>
+                  <span className="shrink-0 text-[11px] font-medium text-slate-500">{item.meta}</span>
+                  <span className="pointer-events-none absolute left-12 top-full z-10 mt-1 max-w-[280px] rounded-full bg-[#111111] px-3 py-1 text-[11px] font-medium text-white opacity-0 shadow-sm transition group-hover:opacity-100">
+                    {truncateLine(item.body, 78)}
+                  </span>
+                </Link>
+              );
+            })()
+          ))
+        ) : (
+          <p className="rounded-2xl bg-[#F7FBFA] px-4 py-4 text-sm text-slate-500">No notifications yet.</p>
+        )}
       </div>
     </div>
   );
@@ -230,47 +235,51 @@ function EventsPanel() {
       </div>
 
       <div className="mt-4 max-h-[420px] space-y-4 overflow-y-auto pr-1">
-        {Object.entries(filteredGroups).map(([groupTitle, items]) => (
-          <section key={groupTitle}>
-            <h4 className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              {groupTitle}
-            </h4>
-            <div className="space-y-1.5">
-              {items.map((event) => (
-                (() => {
-                  const imageSrc = event.hubImage || UDEETS_LOGO_SRC;
-                  const isLogo = isUdeetsLogoSrc(imageSrc);
+        {Object.keys(filteredGroups).length ? (
+          Object.entries(filteredGroups).map(([groupTitle, items]) => (
+            <section key={groupTitle}>
+              <h4 className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                {groupTitle}
+              </h4>
+              <div className="space-y-1.5">
+                {items.map((event) => (
+                  (() => {
+                    const imageSrc = event.hubImage || UDEETS_LOGO_SRC;
+                    const isLogo = isUdeetsLogoSrc(imageSrc);
 
-                  return (
-                    <Link
-                      key={event.id}
-                      href={event.href}
-                      title={truncateLine(`${event.dateLabel} • ${event.time} • ${event.location}`, 96)}
-                      className="group relative flex items-center gap-3 rounded-2xl px-2 py-2.5 transition hover:bg-[#EEF7F5]"
-                    >
-                      <div className={cn("relative h-9 w-9 shrink-0 overflow-hidden", !isLogo && "rounded-full border border-slate-200 bg-[#E3F1EF]")}>
-                        <Image
-                          src={imageSrc}
-                          alt={event.hub}
-                          fill
-                          className={cn(isLogo ? "object-contain" : "object-cover")}
-                          sizes="36px"
-                        />
-                      </div>
-                      <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[#111111]">
-                        {`${event.hub} — ${event.title}`}
-                      </p>
-                      <span className="shrink-0 text-[11px] font-medium text-slate-500">{event.dateLabel}</span>
-                      <span className="pointer-events-none absolute left-12 top-full z-10 mt-1 max-w-[300px] rounded-full bg-[#111111] px-3 py-1 text-[11px] font-medium text-white opacity-0 shadow-sm transition group-hover:opacity-100">
-                        {truncateLine(`${event.time} • ${event.location}`, 78)}
-                      </span>
-                    </Link>
-                  );
-                })()
-              ))}
-            </div>
-          </section>
-        ))}
+                    return (
+                      <Link
+                        key={event.id}
+                        href={event.href}
+                        title={truncateLine(`${event.dateLabel} • ${event.time} • ${event.location}`, 96)}
+                        className="group relative flex items-center gap-3 rounded-2xl px-2 py-2.5 transition hover:bg-[#EEF7F5]"
+                      >
+                        <div className={cn("relative h-9 w-9 shrink-0 overflow-hidden", !isLogo && "rounded-full border border-slate-200 bg-[#E3F1EF]")}>
+                          <Image
+                            src={imageSrc}
+                            alt={event.hub}
+                            fill
+                            className={cn(isLogo ? "object-contain" : "object-cover")}
+                            sizes="36px"
+                          />
+                        </div>
+                        <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[#111111]">
+                          {`${event.hub} — ${event.title}`}
+                        </p>
+                        <span className="shrink-0 text-[11px] font-medium text-slate-500">{event.dateLabel}</span>
+                        <span className="pointer-events-none absolute left-12 top-full z-10 mt-1 max-w-[300px] rounded-full bg-[#111111] px-3 py-1 text-[11px] font-medium text-white opacity-0 shadow-sm transition group-hover:opacity-100">
+                          {truncateLine(`${event.time} • ${event.location}`, 78)}
+                        </span>
+                      </Link>
+                    );
+                  })()
+                ))}
+              </div>
+            </section>
+          ))
+        ) : (
+          <p className="rounded-2xl bg-[#F7FBFA] px-4 py-4 text-sm text-slate-500">No events yet.</p>
+        )}
       </div>
     </div>
   );
@@ -310,7 +319,7 @@ export function UdeetsHeader() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { loggedIn, user } = useMockAuth();
+  const { isAuthenticated, status, user } = useAuthSession();
   const [openPanel, setOpenPanel] = useState<OpenPanel>(searchParams.get("demo_open_panel") === "alerts" ? "alerts" : null);
   const controlsRef = useRef<HTMLDivElement | null>(null);
 
@@ -328,24 +337,27 @@ export function UdeetsHeader() {
   }, [openPanel]);
 
   const handleHome = () => {
-    if (pathname === "/dashboard") {
+    const homeHref = isAuthenticated ? "/dashboard" : "/";
+
+    if (pathname === homeHref) {
       if (window.scrollY > 0) {
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
       return;
     }
 
-    router.push("/dashboard");
+    router.push(homeHref);
   };
 
-  const handleLogout = () => {
-    clearMockSession();
+  const handleLogout = async () => {
+    await signOut();
     setOpenPanel(null);
-    router.push("/");
+    router.push("/auth");
+    router.refresh();
   };
 
   const unreadNotifications = HOME_NOTIFICATIONS.length > 0;
-  const isHomeActive = pathname === "/dashboard";
+  const isHomeActive = isAuthenticated ? pathname === "/dashboard" : pathname === "/";
   const isDiscoverActive = pathname === "/discover";
   const isAlertsActive = pathname === "/alerts";
   const isEventsActive = pathname === "/events";
@@ -405,28 +417,38 @@ export function UdeetsHeader() {
             <Search className={ICON_BASE} />
           </NavIconLink>
 
-          <button
-            type="button"
-            onClick={() => setOpenPanel((panel) => (panel === "profile" ? null : "profile"))}
-            aria-label="Open profile menu"
-            className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-slate-200"
-          >
-            {loggedIn ? (
-              <Image
-                src={DEMO_MOCK_USER_AVATAR_SRC}
-                alt={user ? `${user.name} profile photo` : "Mock user profile photo"}
-                fill
-                className="object-cover object-center"
-                sizes="40px"
-              />
-            ) : (
-              <UdeetsLogoIcon className="h-full w-full" imageClassName="object-contain" decorative />
-            )}
-          </button>
+          {isAuthenticated ? (
+            <button
+              type="button"
+              onClick={() => setOpenPanel((panel) => (panel === "profile" ? null : "profile"))}
+              aria-label="Open profile menu"
+              className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-[#F7FBFA]"
+            >
+              {user?.user_metadata?.avatar_url ? (
+                <Image
+                  src={user.user_metadata.avatar_url as string}
+                  alt={user.email ? `${user.email} profile photo` : "User profile photo"}
+                  fill
+                  className="object-cover object-center"
+                  sizes="40px"
+                />
+              ) : (
+                <UserRound className="h-5 w-5 text-slate-700" />
+              )}
+            </button>
+          ) : (
+            <Link
+              href="/auth"
+              aria-label="Sign in"
+              className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-[#E3F1EF]"
+            >
+              {status === "loading" ? "..." : "Sign in"}
+            </Link>
+          )}
 
           {openPanel === "alerts" ? <NotificationsPanel /> : null}
           {openPanel === "events" ? <EventsPanel /> : null}
-          {openPanel === "profile" ? <ProfilePanel onLogout={handleLogout} /> : null}
+          {openPanel === "profile" && isAuthenticated ? <ProfilePanel onLogout={handleLogout} /> : null}
         </div>
       </div>
     </header>
@@ -435,7 +457,7 @@ export function UdeetsHeader() {
 
 export function UdeetsFooter() {
   return (
-    <footer className={FOOTER_BG}>
+    <footer className={cn(FOOTER_BG, "mt-auto")}>
       <div className="flex min-h-14 w-full items-center justify-center px-4 text-sm text-white sm:px-6 lg:px-10">
         © 2026 uDeets. All rights reserved.
       </div>

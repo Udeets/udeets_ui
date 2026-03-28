@@ -1,8 +1,9 @@
 import type { Session } from "@supabase/supabase-js";
 
-import { supabase } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 
 export async function getCurrentSession(): Promise<Session | null> {
+  const supabase = createClient();
   const { data, error } = await supabase.auth.getSession();
 
   if (error) {

@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import MockAppShell, { cardClass, sectionTitleClass } from "@/components/mock-app-shell";
 import { SETTINGS_SECTIONS } from "@/lib/mock-account";
-import { clearMockSession, useMockAuth } from "@/lib/mock-auth";
+import { signOut } from "@/services/auth/signOut";
+import { useAuthSession } from "@/services/auth/useAuthSession";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -12,7 +13,7 @@ function cn(...classes: Array<string | false | null | undefined>) {
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user } = useMockAuth();
+  const { user } = useAuthSession();
   const [settingsState, setSettingsState] = useState(() =>
     Object.fromEntries(
       SETTINGS_SECTIONS.flatMap((section) =>
@@ -21,9 +22,10 @@ export default function SettingsPage() {
     ) as Record<string, boolean>
   );
 
-  const handleLogout = () => {
-    clearMockSession();
-    router.push("/");
+  const handleLogout = async () => {
+    await signOut();
+    router.push("/auth");
+    router.refresh();
   };
 
   return (
@@ -31,7 +33,7 @@ export default function SettingsPage() {
       <section className="mb-4">
         <h1 className="text-3xl font-serif font-semibold tracking-tight text-[#111111]">Settings</h1>
         <p className="mt-2 text-sm leading-relaxed text-slate-600">
-          Manage preferences, privacy, and account controls for this mock account.
+          Manage preferences, privacy, and account controls for your account.
         </p>
       </section>
 
@@ -39,8 +41,10 @@ export default function SettingsPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Account</p>
-            <h2 className="mt-2 text-2xl font-serif font-semibold text-[#111111]">{user?.name ?? "Demo User"}</h2>
-            <p className="mt-1 text-sm text-slate-500">{user?.email ?? "demo@udeets.com"}</p>
+            <h2 className="mt-2 text-2xl font-serif font-semibold text-[#111111]">
+              {(user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? "uDeets User"}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">{user?.email ?? "Email coming soon"}</p>
           </div>
           <button
             type="button"
@@ -97,7 +101,7 @@ export default function SettingsPage() {
       <section className={cardClass("mt-6 p-5 sm:p-6")}>
         <h2 className={sectionTitleClass("text-rose-600")}>Sign Out</h2>
         <p className="mt-2 text-sm leading-relaxed text-slate-600">
-          End this mock session and clear locally stored demo account state.
+          End your current session on this device.
         </p>
         <button
           type="button"

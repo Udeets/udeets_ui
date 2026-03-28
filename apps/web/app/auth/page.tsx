@@ -2,10 +2,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
-import { setMockSession, useMockAuth } from "@/lib/mock-auth";
+import { getCurrentSession } from "@/services/auth/getCurrentSession";
+import { signInWithGoogle } from "@/services/auth/signInWithGoogle";
+import { useAuthSession } from "@/services/auth/useAuthSession";
 
 type Mode = "signin" | "signup";
 
@@ -36,39 +38,58 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-function AppleIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
-      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
-    </svg>
-  );
-}
-
 export default function Page() {
   const router = useRouter();
-  const { homeHref } = useMockAuth();
+  const searchParams = useSearchParams();
+  const { isAuthenticated } = useAuthSession();
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(searchParams.get("error") ?? "");
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    setError(searchParams.get("error") ?? "");
+  }, [searchParams]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkSession() {
+      try {
+        const session = await getCurrentSession();
+
+        if (!cancelled && session) {
+          router.replace("/dashboard");
+        }
+      } catch {
+        // Keep the auth page usable even if session lookup fails.
+      }
+    }
+
+    void checkSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setError("Email/password sign-in is not enabled yet. Continue with Google.");
+  }
 
-    if (mode !== "signin") {
-      alert("Sign up (mock)");
-      return;
+  async function handleGoogleSignIn() {
+    setError("");
+    setIsGoogleLoading(true);
+
+    try {
+      await signInWithGoogle();
+    } catch (signInError) {
+      setError(signInError instanceof Error ? signInError.message : "Failed to sign in with Google.");
+      setIsGoogleLoading(false);
     }
-
-    if (email === "demo@udeets.com" && password === "Demo@123") {
-      setError("");
-      setMockSession();
-      router.push("/dashboard");
-      return;
-    }
-
-    setError("Invalid demo credentials");
   }
 
   const PAGE_BG = "bg-[#E3F1EF]";
@@ -96,7 +117,7 @@ export default function Page() {
               Discover
             </Link>
             <Link
-              href={homeHref}
+              href={isAuthenticated ? "/dashboard" : "/"}
               className={`rounded-full px-4 py-2 text-sm font-medium ${NAV_TEXT} transition hover:bg-slate-100 sm:px-5 sm:py-2.5`}
             >
               Home
@@ -145,13 +166,14 @@ export default function Page() {
 
           {/* Social */}
           <div className="mb-6 space-y-3">
-            <button className="w-full flex items-center justify-center px-4 py-3 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 transition">
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={isGoogleLoading}
+              className="w-full flex items-center justify-center px-4 py-3 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 transition disabled:cursor-not-allowed disabled:opacity-60"
+            >
               <GoogleIcon className="w-5 h-5 mr-3" />
-              Continue with Google
-            </button>
-            <button className="w-full flex items-center justify-center px-4 py-3 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 transition">
-              <AppleIcon className="w-5 h-5 mr-3 text-gray-900" />
-              Continue with Apple
+              {isGoogleLoading ? "Connecting to Google..." : "Continue with Google"}
             </button>
           </div>
 

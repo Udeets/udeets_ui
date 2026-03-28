@@ -3,7 +3,8 @@
 import Image from "next/image";
 import { useState } from "react";
 import MockAppShell, { cardClass, sectionTitleClass } from "@/components/mock-app-shell";
-import { DEMO_MOCK_USER_AVATAR_SRC, useMockAuth } from "@/lib/mock-auth";
+import { UDEETS_LOGO_SRC } from "@/lib/branding";
+import { useAuthSession } from "@/services/auth/useAuthSession";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -144,7 +145,7 @@ function PreferenceRow({
 }
 
 export default function ProfilePage() {
-  const { user } = useMockAuth();
+  const { user } = useAuthSession();
   const [preferenceState, setPreferenceState] = useState(() =>
     Object.fromEntries(
       PREFERENCES.filter((item) => item.kind === "toggle").map((item) => [
@@ -192,8 +193,8 @@ export default function ProfilePage() {
               <div className="flex items-start gap-4">
                 <div className="relative h-20 w-20 overflow-hidden rounded-full border border-slate-200">
                   <Image
-                    src={DEMO_MOCK_USER_AVATAR_SRC}
-                    alt={user ? `${user.name} profile photo` : "Mock user profile photo"}
+                    src={(user?.user_metadata?.avatar_url as string | undefined) ?? UDEETS_LOGO_SRC}
+                    alt={user?.email ? `${user.email} profile photo` : "User profile photo"}
                     fill
                     className="object-cover object-center"
                     sizes="80px"
@@ -202,9 +203,9 @@ export default function ProfilePage() {
 
                 <div>
                   <h2 className="text-3xl font-serif font-semibold tracking-tight text-[#111111]">
-                    {user?.name ?? "Demo User"}
+                    {(user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? "uDeets User"}
                   </h2>
-                  <p className="mt-1 text-sm text-slate-500">{user?.email ?? "demo@udeets.com"}</p>
+                  <p className="mt-1 text-sm text-slate-500">{user?.email ?? "Email coming soon"}</p>
                   <p className="mt-1 text-sm text-slate-500">Richmond, VA</p>
 
                   <div className="mt-4 flex flex-wrap gap-3">
@@ -248,7 +249,13 @@ export default function ProfilePage() {
                 <InfoRow
                   key={item.label}
                   label={item.label}
-                  value={item.label === "Full Name" ? user?.name ?? item.value : item.label === "Email" ? user?.email ?? item.value : item.value}
+                  value={
+                    item.label === "Full Name"
+                      ? (user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? item.value
+                      : item.label === "Email"
+                        ? user?.email ?? item.value
+                        : item.value
+                  }
                 />
               ))}
             </div>

@@ -7,9 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
 import { isUdeetsLogoSrc } from "@/lib/branding";
-import { HUBS as HUBS_SOURCE } from "@/lib/hubs";
-import { useMockAuth } from "@/lib/mock-auth";
-import { getCurrentSession } from "@/services/auth/getCurrentSession";
+import { useAuthSession } from "@/services/auth/useAuthSession";
 import { listHubs } from "@/services/hubs/listHubs";
 import type { Hub as SupabaseHub } from "@/types/hub";
 
@@ -78,7 +76,7 @@ type Hub = {
   tags: Array<"trending" | "popular" | "nearby">;
 };
 
-type SupabaseLoadState = "idle" | "loading" | "success" | "signed_out" | "error";
+type SupabaseLoadState = "idle" | "loading" | "success" | "error";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -110,26 +108,12 @@ function normalizePublicSrc(src?: string) {
   return `/${src}`;
 }
 
-const HUBS: Hub[] = HUBS_SOURCE.map((h) => ({
-  id: h.id,
-  name: h.name,
-  category: toDiscoverCategory(h.category),
-  locationLabel: h.locationLabel,
-  distanceMi: h.distanceMi,
-  membersLabel: h.membersLabel,
-  visibility: (h.visibility as "Public" | "Private") ?? "Public",
-  description: h.description,
-  href: `/hubs/${h.category}/${h.slug}`,
-  image: normalizePublicSrc(h.dpImage || h.heroImage),
-  tags: h.tags,
-}));
-
 function locationLabelFor(hub: SupabaseHub) {
   return [hub.city, hub.state, hub.country].filter(Boolean).join(", ") || "Location coming soon";
 }
 
 function toDiscoverHub(hub: SupabaseHub): Hub {
-  const imageSrc = hub.logo_image_url || hub.cover_image_url || undefined;
+  const imageSrc = hub.dp_image_url || hub.cover_image_url || undefined;
 
   return {
     id: hub.id,
@@ -288,9 +272,16 @@ function CarouselSection({ title, hubs }: { title: string; hubs: Hub[] }) {
       </div>
 
       <div ref={rowRef} className="flex gap-6 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>
-        {hubs.map((h) => (
-          <HubCard key={h.id} hub={h} />
-        ))}
+        {hubs.length ? (
+          hubs.map((h) => <HubCard key={h.id} hub={h} />)
+        ) : (
+          <div className="w-full rounded-xl border border-slate-100 bg-white p-8 text-center shadow-sm">
+            <h3 className="text-xl font-serif font-semibold tracking-tight text-[#111111]">No hubs yet</h3>
+            <p className="mt-3 text-sm leading-relaxed text-slate-600">
+              Create the first hub to see it appear here.
+            </p>
+          </div>
+        )}
       </div>
     </section>
   );
@@ -298,7 +289,7 @@ function CarouselSection({ title, hubs }: { title: string; hubs: Hub[] }) {
 
 export default function DiscoverPage() {
   const searchParams = useSearchParams();
-  const { homeHref, loggedIn } = useMockAuth();
+  const { isAuthenticated } = useAuthSession();
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<Category>("All");
   const [nearMe, setNearMe] = useState<NearMeOption>("Any");
@@ -418,17 +409,6 @@ export default function DiscoverPage() {
       setSupabaseLoadError(null);
 
       try {
-        const session = await getCurrentSession();
-        const userId = session?.user.id;
-
-        if (!userId) {
-          if (!cancelled) {
-            setSupabaseHubs([]);
-            setSupabaseLoadState("signed_out");
-          }
-          return;
-        }
-
         const hubs = await listHubs();
         const mapped = hubs.map(toDiscoverHub);
 
@@ -454,11 +434,7 @@ export default function DiscoverPage() {
     };
   }, []);
 
-  const allHubs = useMemo(() => {
-    const seen = new Set(HUBS.map((hub) => hub.href));
-    const uniqueSupabaseHubs = supabaseHubs.filter((hub) => !seen.has(hub.href));
-    return [...uniqueSupabaseHubs, ...HUBS];
-  }, [supabaseHubs]);
+  const allHubs = useMemo(() => supabaseHubs, [supabaseHubs]);
 
   const baseFiltered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -482,17 +458,17 @@ export default function DiscoverPage() {
 
   const trending = useMemo(() => {
     if (activeCategory !== "All") return [];
-    return baseFiltered.filter((h) => h.tags.includes("trending"));
+    return baseFiltered.slice(0, 8);
   }, [activeCategory, baseFiltered]);
 
   const popular = useMemo(() => {
     if (activeCategory !== "All") return [];
-    return baseFiltered.filter((h) => h.tags.includes("popular"));
+    return baseFiltered.slice(8, 16).length ? baseFiltered.slice(8, 16) : baseFiltered.slice(0, 8);
   }, [activeCategory, baseFiltered]);
 
   const nearby = useMemo(() => {
     if (activeCategory !== "All") return [];
-    return baseFiltered.filter((h) => h.tags.includes("nearby"));
+    return baseFiltered.filter((h) => h.locationLabel !== "Location coming soon");
   }, [activeCategory, baseFiltered]);
 
   // ✅ RESULTS MODE:
@@ -512,7 +488,7 @@ export default function DiscoverPage() {
             <UdeetsBrandLockup textClassName={BRAND_TEXT_STYLE} priority />
           </Link>
 
-          <Link href={homeHref} className={cn("rounded-full px-4 py-2 text-sm transition hover:bg-slate-100 sm:px-5 sm:py-2.5", NAV_TEXT, ACTION_TEXT)}>
+          <Link href={isAuthenticated ? "/dashboard" : "/"} className={cn("rounded-full px-4 py-2 text-sm transition hover:bg-slate-100 sm:px-5 sm:py-2.5", NAV_TEXT, ACTION_TEXT)}>
             Home
           </Link>
         </div>
@@ -543,7 +519,7 @@ export default function DiscoverPage() {
               href={
                 searchParams.get("demo_preview") === "1"
                   ? "/create-hub?demo_preview=1"
-                  : loggedIn
+                  : isAuthenticated
                     ? "/create-hub"
                     : ROUTE_AUTH
               }
@@ -659,12 +635,6 @@ export default function DiscoverPage() {
         {supabaseLoadState === "error" ? (
           <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">
             {supabaseLoadError ?? "Supabase-backed hubs could not be loaded."}
-          </div>
-        ) : null}
-
-        {supabaseLoadState === "signed_out" ? (
-          <div className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
-            Sign in to see your Supabase-backed hubs. Showing the current mock discovery experience for now.
           </div>
         ) : null}
 

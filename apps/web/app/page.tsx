@@ -5,7 +5,8 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
 import { HowItWorksAnimated } from "@/components/home/how-it-works-animated";
-import { HUBS as HUBS_SOURCE } from "@/lib/hubs";
+import { listHubs } from "@/services/hubs/listHubs";
+import type { Hub as SupabaseHub } from "@/types/hub";
 
 const PAGE_BG = "bg-[#E3F1EF]";
 const HEADER_BG = "bg-white border-b border-slate-200/60";
@@ -41,14 +42,16 @@ function normalizePublicSrc(src?: string) {
   return `/${src}`;
 }
 
-const topHubs: TopHub[] = HUBS_SOURCE.map((hub) => ({
-  id: hub.id,
-  name: hub.name,
-  intro: hub.description,
-  href: `/hubs/${hub.category}/${hub.slug}`,
-  image: normalizePublicSrc(hub.dpImage || hub.heroImage),
-  visibility: hub.visibility,
-}));
+function toTopHub(hub: SupabaseHub): TopHub {
+  return {
+    id: hub.id,
+    name: hub.name,
+    intro: hub.description || "A new uDeets hub is getting set up.",
+    href: `/hubs/${hub.category}/${hub.slug}`,
+    image: normalizePublicSrc(hub.dp_image_url || hub.cover_image_url || undefined),
+    visibility: "Public",
+  };
+}
 
 function IconFacebook(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -132,6 +135,7 @@ function TopHubCard({ hub }: { hub: TopHub }) {
 export default function Page() {
   const hubsRowRef = useRef<HTMLDivElement | null>(null);
   const [pauseAutoScroll, setPauseAutoScroll] = useState(false);
+  const [topHubs, setTopHubs] = useState<TopHub[]>([]);
   const [typedHeadingLineOne, setTypedHeadingLineOne] = useState("");
   const [typedHeadingLineTwo, setTypedHeadingLineTwo] = useState("");
   const [typedTagline, setTypedTagline] = useState("");
@@ -157,6 +161,29 @@ export default function Page() {
 
     return () => window.clearInterval(timer);
   }, [pauseAutoScroll]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTopHubs() {
+      try {
+        const hubs = await listHubs();
+        if (!cancelled) {
+          setTopHubs(hubs.slice(0, 8).map(toTopHub));
+        }
+      } catch {
+        if (!cancelled) {
+          setTopHubs([]);
+        }
+      }
+    }
+
+    void loadTopHubs();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const timers: number[] = [];
@@ -336,9 +363,14 @@ export default function Page() {
               className="flex gap-6 overflow-x-auto pb-2"
               style={{ scrollbarWidth: "none" as never }}
             >
-              {topHubs.map((hub) => (
-                <TopHubCard key={hub.id} hub={hub} />
-              ))}
+              {topHubs.length ? (
+                topHubs.map((hub) => <TopHubCard key={hub.id} hub={hub} />)
+              ) : (
+                <div className="w-full rounded-xl border border-slate-100 bg-white p-8 text-center shadow-sm">
+                  <h3 className={cn("text-2xl", SECTION_HEADING)}>No hubs yet</h3>
+                  <p className="mt-3 text-sm text-slate-600">Create the first hub to see it featured here.</p>
+                </div>
+              )}
             </div>
           </div>
         </section>

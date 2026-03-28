@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
 import { isUdeetsLogoSrc, UDEETS_LOGO_SRC } from "@/lib/branding";
-import { HUB_CONTENT_BY_ID } from "@/lib/hub-content";
-import { HUBS as HUBS_SOURCE } from "@/lib/hubs";
-import { useMockAuth } from "@/lib/mock-auth";
+import { getCurrentSession } from "@/services/auth/getCurrentSession";
+import { listHubs } from "@/services/hubs/listHubs";
+import type { Hub as SupabaseHub } from "@/types/hub";
 
 type DashboardHub = {
   id: string;
@@ -39,6 +39,7 @@ const TEXT_DARK = "text-[#111111]";
 const CARD = "rounded-3xl border border-slate-100 bg-white shadow-sm";
 const TILE_BOX =
   "relative h-[148px] w-[148px] overflow-hidden rounded-[30px] bg-white shadow-[0_10px_24px_rgba(15,23,42,0.14)]";
+type AuthStatus = "checking" | "authenticated" | "unauthenticated";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -51,44 +52,21 @@ function normalizePublicSrc(src?: string) {
   return `/${src}`;
 }
 
-const HUBS: DashboardHub[] = HUBS_SOURCE.map((hub) => ({
-  id: hub.id,
-  name: hub.name,
-  dpImage: normalizePublicSrc(hub.dpImage || hub.heroImage),
-  heroImage: normalizePublicSrc(hub.heroImage),
-  galleryImages: (hub.galleryImages?.length ? hub.galleryImages : [hub.heroImage, hub.dpImage])
-    .filter((src): src is string => Boolean(src))
-    .map((src) => normalizePublicSrc(src)),
-  href: `/hubs/${hub.category}/${hub.slug}`,
-}));
+function toDashboardHub(hub: SupabaseHub): DashboardHub {
+  const dpImage = normalizePublicSrc(hub.dp_image_url || hub.cover_image_url || undefined);
+  const heroImage = normalizePublicSrc(hub.cover_image_url || hub.dp_image_url || undefined);
 
-const POSTS: FeedPost[] = HUBS_SOURCE.flatMap((hub) => {
-  const content = HUB_CONTENT_BY_ID[hub.id];
+  return {
+    id: hub.id,
+    name: hub.name,
+    dpImage,
+    heroImage,
+    galleryImages: [heroImage, dpImage].filter(Boolean),
+    href: `/hubs/${hub.category}/${hub.slug}`,
+  };
+}
 
-  return content.feed.map((item) => ({
-    id: item.id,
-    hubId: hub.id,
-    type:
-      item.kind === "announcement"
-        ? "announcement"
-        : item.kind === "notice"
-          ? "notice"
-          : item.kind === "event"
-            ? "event"
-            : item.kind === "photo"
-              ? "image"
-              : "file",
-    dateLabel: item.time,
-    title: item.title,
-    body: item.body,
-    image: item.image,
-    href: `/hubs/${hub.category}/${hub.slug}?focus=${item.id}`,
-    views: item.views,
-    likesCount: item.likes,
-    commentsCount: item.comments,
-    sharesCount: Math.max(2, Math.round(item.comments / 2)),
-  }));
-});
+const POSTS: FeedPost[] = [];
 
 function PlusIcon() {
   return (
@@ -265,8 +243,12 @@ function getFeedImageForPost(post: FeedPost, hub: DashboardHub) {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const { loggedIn } = useMockAuth();
+  const [authStatus, setAuthStatus] = useState<AuthStatus>("checking");
+  const [hubs, setHubs] = useState<DashboardHub[]>([]);
+  const [isLoadingHubs, setIsLoadingHubs] = useState(true);
+  const [hubsLoadError, setHubsLoadError] = useState<string | null>(null);
   const [isHubsExpanded, setIsHubsExpanded] = useState(false);
   const [expandedAnchor, setExpandedAnchor] = useState<{
     top: number;
@@ -277,13 +259,80 @@ export default function DashboardPage() {
 
   const hubsPanelRef = useRef<HTMLDivElement | null>(null);
 
-  const hubMap = useMemo(() => new Map(HUBS.map((hub) => [hub.id, hub])), []);
-  const collapsedHubs = HUBS.slice(0, 8);
+  const hubMap = useMemo(() => new Map(hubs.map((hub) => [hub.id, hub])), [hubs]);
+  const collapsedHubs = hubs.slice(0, 8);
   const [likedById, setLikedById] = useState<Record<string, boolean>>({});
 
   const toggleLike = (postId: string) => {
     setLikedById((prev) => ({ ...prev, [postId]: !prev[postId] }));
   };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkSession() {
+      try {
+        const session = await getCurrentSession();
+
+        if (cancelled) return;
+
+        if (session) {
+          setAuthStatus("authenticated");
+          return;
+        }
+
+        setAuthStatus("unauthenticated");
+        router.replace("/auth");
+      } catch {
+        if (cancelled) return;
+        setAuthStatus("unauthenticated");
+        router.replace("/auth");
+      }
+    }
+
+    void checkSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
+  useEffect(() => {
+    if (authStatus !== "authenticated") {
+      setHubs([]);
+      setIsLoadingHubs(authStatus === "checking");
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadDashboardHubs() {
+      setIsLoadingHubs(true);
+      setHubsLoadError(null);
+
+      try {
+        const dbHubs = await listHubs();
+        if (!cancelled) {
+          setHubs(dbHubs.map(toDashboardHub));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setHubs([]);
+          setHubsLoadError(error instanceof Error ? error.message : "Hubs could not be loaded.");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingHubs(false);
+        }
+      }
+    }
+
+    void loadDashboardHubs();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authStatus]);
 
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
@@ -345,8 +394,40 @@ export default function DashboardPage() {
     setIsHubsExpanded(false);
   };
 
-  if (!loggedIn && searchParams.get("demo_preview") !== "1") {
-    return null;
+  if (authStatus === "checking" && searchParams.get("demo_preview") !== "1") {
+    return (
+      <div className={cn("min-h-screen", PAGE_BG)}>
+        <UdeetsHeader />
+        <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 md:pb-6 lg:px-10">
+          <section className={cn("p-6 text-center", CARD)}>
+            <h1 className="text-2xl font-serif font-semibold tracking-tight text-[#111111]">Loading dashboard...</h1>
+            <p className="mt-3 text-sm leading-relaxed text-slate-600">
+              We&apos;re checking your session and loading your hubs.
+            </p>
+          </section>
+        </main>
+        <UdeetsFooter />
+        <UdeetsBottomNav activeNav="home" />
+      </div>
+    );
+  }
+
+  if (authStatus === "unauthenticated" && searchParams.get("demo_preview") !== "1") {
+    return (
+      <div className={cn("min-h-screen", PAGE_BG)}>
+        <UdeetsHeader />
+        <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 md:pb-6 lg:px-10">
+          <section className={cn("p-6 text-center", CARD)}>
+            <h1 className="text-2xl font-serif font-semibold tracking-tight text-[#111111]">Redirecting to sign in...</h1>
+            <p className="mt-3 text-sm leading-relaxed text-slate-600">
+              Your session could not be found, so we&apos;re sending you to the auth page.
+            </p>
+          </section>
+        </main>
+        <UdeetsFooter />
+        <UdeetsBottomNav activeNav="home" />
+      </div>
+    );
   }
 
   return (
@@ -414,7 +495,7 @@ export default function DashboardPage() {
 
             {isHubsExpanded ? (
               <div className="flex flex-wrap gap-x-6 gap-y-6">
-                {HUBS.map((hub) => (
+                {hubs.map((hub) => (
                   <HubCardTile
                     key={hub.id}
                     href={hub.href}
@@ -437,6 +518,12 @@ export default function DashboardPage() {
                 <HubCardTile href="/create-hub" label="Create Hub" isCreate />
               </div>
             )}
+
+            {isLoadingHubs ? <p className="mt-4 text-sm text-slate-500">Loading hubs...</p> : null}
+            {hubsLoadError ? <p className="mt-4 text-sm text-rose-600">{hubsLoadError}</p> : null}
+            {!isLoadingHubs && !hubs.length && !hubsLoadError ? (
+              <p className="mt-4 text-sm text-slate-500">No hubs yet. Create one to get started.</p>
+            ) : null}
           </div>
         </section>
 
@@ -459,7 +546,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-4">
-            {POSTS.map((post) => {
+            {POSTS.length ? POSTS.map((post) => {
               const hub = hubMap.get(post.hubId);
               if (!hub) return null;
               const isLiked = Boolean(likedById[post.id]);
@@ -556,7 +643,14 @@ export default function DashboardPage() {
                   </article>
                 </Link>
               );
-            })}
+            }) : (
+              <div className={cn("p-6 text-center", CARD)}>
+                <h3 className="text-lg font-serif font-semibold text-[#111111]">No deets yet</h3>
+                <p className="mt-2 text-sm text-slate-600">
+                  Hub posts and updates will appear here once they are published from your hubs.
+                </p>
+              </div>
+            )}
           </div>
         </section>
       </main>

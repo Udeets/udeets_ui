@@ -1,30 +1,7 @@
-export type Hub = {
-  readonly id: string;
-  name: string;
-  slug: string;
-  category: string;
-  tagline: string | null;
-  description: string | null;
-  city: string | null;
-  state: string | null;
-  country: string | null;
-  cover_image_url: string | null;
-  logo_image_url: string | null;
-  created_by: string;
-  readonly created_at: string;
-  readonly updated_at: string;
-};
+import type { CreateHubInput as ServiceCreateHubInput, HubCategory, HubRecord as ServiceHubRecord } from "@/lib/services/hubs/hub-types";
 
-export type CreateHubInput = {
-  name: string;
-  slug: string;
-  category: string;
-  tagline?: string | null;
-  description?: string | null;
-  city?: string | null;
-  state?: string | null;
-  country?: string | null;
-  cover_image_url?: string | null;
-  logo_image_url?: string | null;
-  created_by: string;
-};
+export type Hub = ServiceHubRecord;
+
+export type CreateHubInput = ServiceCreateHubInput;
+
+export type HubCategorySlug = HubCategory;

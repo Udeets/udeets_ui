@@ -3,8 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import MockAppShell, { cardClass } from "@/components/mock-app-shell";
-import { getCurrentSession } from "@/services/auth/getCurrentSession";
-import { createHub } from "@/services/hubs/createHub";
+import { createHub } from "@/lib/services/hubs/create-hub";
 
 const CATEGORY_GROUPS = [
   {
@@ -23,11 +22,6 @@ const CATEGORY_GROUPS = [
 
 type Step = 1 | 2 | 3;
 type Visibility = "Private" | "Public";
-type SubmitState =
-  | { type: "idle"; message: string | null }
-  | { type: "error"; message: string }
-  | { type: "success"; message: string; href: string };
-
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
@@ -101,8 +95,10 @@ export default function CreateHubPage() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
     initialCategories ? initialCategories.split(",").filter(Boolean) : []
   );
-  const [submitState, setSubmitState] = useState<SubmitState>({ type: "idle", message: null });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [createdHubHref, setCreatedHubHref] = useState<string | null>(null);
 
   const isNameValid = hubName.trim().length > 0;
   const canContinueCategories = selectedCategories.length > 0;
@@ -121,46 +117,33 @@ export default function CreateHubPage() {
   };
 
   const handleCreate = async () => {
+    const normalizedName = hubName.trim();
+
     setIsSubmitting(true);
-    setSubmitState({ type: "idle", message: null });
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setCreatedHubHref(null);
 
     try {
-      const session = await getCurrentSession();
-      const userId = session?.user.id;
-
-      if (!userId) {
-        throw new Error("You must be signed in to create a hub.");
-      }
-
-      const normalizedName = hubName.trim();
       const timestamp = Date.now();
       const slug = `${slugify(normalizedName)}-${timestamp}`;
-      const href = `/hubs/${categoryFor(selectedCategories)}/${slug}`;
-
-      await createHub({
+      const createdHub = await createHub({
         name: normalizedName,
         slug,
         category: categoryFor(selectedCategories),
         tagline: `${normalizedName} on uDeets`,
         description: descriptionFor(selectedCategories),
-        city: null,
-        state: null,
-        country: null,
-        cover_image_url: null,
-        logo_image_url: null,
-        created_by: userId,
+        city: undefined,
+        state: undefined,
+        country: undefined,
+        coverImageUrl: undefined,
+        dpImageUrl: undefined,
       });
 
-      setSubmitState({
-        type: "success",
-        message: `Hub created successfully for your account. Slug: ${slug}`,
-        href,
-      });
+      setSuccessMessage(`Hub created successfully for your account. Slug: ${createdHub.slug}`);
+      setCreatedHubHref(`/hubs/${createdHub.category}/${createdHub.slug}`);
     } catch (error) {
-      setSubmitState({
-        type: "error",
-        message: error instanceof Error ? error.message : "Failed to create hub.",
-      });
+      setErrorMessage(error instanceof Error ? error.message : "Failed to create hub.");
     } finally {
       setIsSubmitting(false);
     }
@@ -181,6 +164,7 @@ export default function CreateHubPage() {
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none ring-[#A9D1CA] transition focus:ring-2"
               />
             </label>
+
           </div>
 
           <div className="mt-8 flex justify-end">
@@ -346,24 +330,24 @@ export default function CreateHubPage() {
               </button>
             </div>
 
-            {submitState.message ? (
+            {errorMessage || successMessage ? (
               <div
                 className={cn(
                   "mt-6 rounded-2xl border px-4 py-3 text-sm",
-                  submitState.type === "error"
+                  errorMessage
                     ? "border-rose-200 bg-rose-50 text-rose-700"
-                    : submitState.type === "success"
+                    : successMessage
                       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                       : "border-slate-200 bg-white text-slate-600"
                 )}
               >
-                {submitState.message}
+                {errorMessage || successMessage}
 
-                {submitState.type === "success" ? (
+                {successMessage && createdHubHref ? (
                   <div className="mt-4">
                     <button
                       type="button"
-                      onClick={() => router.push(submitState.href)}
+                      onClick={() => router.push(createdHubHref)}
                       className="rounded-full bg-[#0C5C57] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#094a46]"
                     >
                       View Hub

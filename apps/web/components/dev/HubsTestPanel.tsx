@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 
-import { getCurrentSession } from "@/services/auth/getCurrentSession";
-import { createHub } from "@/services/hubs/createHub";
+import { createHub } from "@/lib/services/hubs/create-hub";
 import { listHubs } from "@/services/hubs/listHubs";
 import type { Hub } from "@/types/hub";
 
@@ -35,15 +34,6 @@ export function HubsTestPanel() {
     });
 
     try {
-      const session = await getCurrentSession();
-      const userId = session?.user.id;
-
-      if (!userId) {
-        throw new Error(
-          "You must be signed in to create a test hub. Use the auth test page first.",
-        );
-      }
-
       const hub = await createHub({
         name: `Test Hub ${timestamp}`,
         slug,
@@ -53,12 +43,11 @@ export function HubsTestPanel() {
         city: "Richmond",
         state: "VA",
         country: "USA",
-        created_by: userId,
       });
 
       setResult({
         type: "success",
-        message: `Test hub created successfully for signed-in user ${userId}.`,
+        message: `Test hub created successfully with slug "${hub.slug}".`,
         data: hub,
       });
     } catch (error) {
@@ -84,13 +73,6 @@ export function HubsTestPanel() {
     });
 
     try {
-      const session = await getCurrentSession();
-      const userId = session?.user.id;
-
-      if (!userId) {
-        throw new Error("You must be signed in to load hubs.");
-      }
-
       const hubs = await listHubs();
 
       setResult({
