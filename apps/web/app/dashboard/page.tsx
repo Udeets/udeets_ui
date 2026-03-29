@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
 import { isUdeetsLogoSrc, UDEETS_LOGO_SRC } from "@/lib/branding";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
@@ -13,132 +13,84 @@ type DashboardHub = {
   id: string;
   name: string;
   dpImage: string;
-  heroImage: string;
-  galleryImages: string[];
+  coverImage: string;
   href: string;
+  membersLabel: string;
+  visibilityLabel: "Public" | "Private";
+  createdBy: string;
 };
 
-type FeedPost = {
+type AuthStatus = "checking" | "authenticated" | "unauthenticated";
+type HubView = "my-hubs" | "following";
+type FeedFilter = "All" | "Posts" | "Notices" | "Deals" | "Announcements" | "Polls" | "Photos" | "Videos";
+type FeedItem = {
   id: string;
-  hubId: string;
-  type: "announcement" | "notice" | "event" | "update" | "image" | "file";
-  dateLabel: string;
   title: string;
   body: string;
-  image?: string;
-  href: string;
-  views: number;
-  likesCount: number;
-  commentsCount: number;
-  sharesCount: number;
+  type: FeedFilter;
+  hubName: string;
+  href?: string;
 };
 
 const PAGE_BG = "bg-[#E3F1EF]";
-const TOP_BG = "bg-[#E3F1EF]";
-const TEXT_DARK = "text-[#111111]";
-const CARD = "rounded-3xl border border-slate-100 bg-white shadow-sm";
-const TILE_BOX =
-  "relative h-[148px] w-[148px] overflow-hidden rounded-[30px] bg-white shadow-[0_10px_24px_rgba(15,23,42,0.14)]";
-type AuthStatus = "checking" | "authenticated" | "unauthenticated";
+const CARD = "rounded-[28px] border border-[#D6E8E4] bg-white shadow-[0_14px_34px_rgba(12,92,87,0.08)]";
+const TEXT_DARK = "text-[#12312D]";
+const TEXT_MUTED = "text-[#58706B]";
+const PRIMARY_BUTTON =
+  "inline-flex items-center justify-center rounded-full bg-[#0C5C57] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#094944]";
+const FEED_FILTERS: FeedFilter[] = ["All", "Posts", "Notices", "Deals", "Announcements", "Polls", "Photos", "Videos"];
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-function normalizePublicSrc(src?: string) {
+function normalizePublicSrc(src?: string | null) {
   if (!src) return UDEETS_LOGO_SRC;
   if (src.startsWith("http://") || src.startsWith("https://")) return src;
   if (src.startsWith("/")) return src;
   return `/${src}`;
 }
 
-function toDashboardHub(hub: SupabaseHub): DashboardHub {
-  const dpImage = normalizePublicSrc(hub.dp_image_url || hub.cover_image_url || undefined);
-  const heroImage = normalizePublicSrc(hub.cover_image_url || hub.dp_image_url || undefined);
+function memberCountLabel(hub: SupabaseHub) {
+  const galleryCount = Array.isArray(hub.gallery_image_urls) ? hub.gallery_image_urls.length : 0;
+  const count = Math.max(1, galleryCount + 1);
+  return `${count} ${count === 1 ? "Member" : "Members"}`;
+}
 
+function visibilityLabel(): "Public" | "Private" {
+  return "Public";
+}
+
+function toDashboardHub(hub: SupabaseHub): DashboardHub {
   return {
     id: hub.id,
     name: hub.name,
-    dpImage,
-    heroImage,
-    galleryImages: [heroImage, dpImage].filter(Boolean),
+    dpImage: normalizePublicSrc(hub.dp_image_url || hub.cover_image_url),
+    coverImage: normalizePublicSrc(hub.cover_image_url || hub.dp_image_url),
     href: `/hubs/${hub.category}/${hub.slug}`,
+    membersLabel: memberCountLabel(hub),
+    visibilityLabel: visibilityLabel(),
+    createdBy: hub.created_by,
   };
 }
 
-const POSTS: FeedPost[] = [];
-
-function PlusIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-8 w-8 text-[#0C5C57]"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-    >
-      <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function HubCardTile({
-  href,
-  label,
-  imageSrc,
-  isCreate = false,
+function DashboardImage({
+  src,
+  alt,
+  className,
 }: {
-  href: string;
-  label: string;
-  imageSrc?: string;
-  isCreate?: boolean;
+  src?: string;
+  alt: string;
+  className?: string;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
 
-  return (
-    <Link href={href} className="block w-[148px] shrink-0" aria-label={label}>
-      <div className={cn(TILE_BOX, "group transition-transform duration-200 hover:-translate-y-0.5")}>
-        {isCreate ? (
-          <div className="flex h-full w-full items-center justify-center bg-[#A9D1CA]/30">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm">
-              <PlusIcon />
-            </div>
-          </div>
-        ) : (
-          <div className="relative h-full w-full overflow-hidden rounded-[30px]">
-            {imageSrc && !imageFailed ? (
-              <img
-                src={imageSrc}
-                alt={label}
-                className="h-full w-full object-cover"
-                loading="lazy"
-                onError={() => setImageFailed(true)}
-              />
-            ) : (
-              <div className="grid h-full w-full place-items-center bg-[#A9D1CA]/35 text-center">
-                <span className="px-3 text-[11px] font-semibold leading-tight text-[#0C5C57]">
-                  Image Coming Soon
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="mt-3 min-h-[40px] px-1">
-        <p className="line-clamp-2 text-center text-[12px] font-serif font-semibold leading-tight text-[#111111]">
-          {label}
-        </p>
-      </div>
-    </Link>
-  );
-}
-
-function AvatarImage({ src, alt }: { src?: string; alt: string }) {
-  const [imageFailed, setImageFailed] = useState(false);
-
   if (!src || imageFailed) {
-    return <div className="h-full w-full bg-[#A9D1CA]/40" />;
+    return (
+      <div className={cn("grid place-items-center bg-[#DCEDEA] text-center text-[#0C5C57]", className)}>
+        <span className="px-4 text-xs font-semibold tracking-[0.12em] uppercase">uDeets</span>
+      </div>
+    );
   }
 
   const isLogo = isUdeetsLogoSrc(src);
@@ -147,125 +99,197 @@ function AvatarImage({ src, alt }: { src?: string; alt: string }) {
     <img
       src={src}
       alt={alt}
-      className={cn("h-full w-full", isLogo ? "object-contain" : "object-cover")}
+      className={cn(className, isLogo ? "object-contain" : "object-cover")}
       loading="lazy"
       onError={() => setImageFailed(true)}
     />
   );
 }
 
-function CoverImage({ src, alt }: { src?: string; alt: string }) {
-  const [imageFailed, setImageFailed] = useState(false);
-
-  if (!src || imageFailed) {
-    return (
-      <div className="grid h-full w-full place-items-center bg-[#A9D1CA]/35 text-center">
-        <span className="px-4 text-sm font-semibold text-[#0C5C57]">Image Coming Soon</span>
+function HubTile({
+  hub,
+  onInvite,
+  copiedInviteHubId,
+}: {
+  hub: DashboardHub;
+  onInvite: (hub: DashboardHub) => void;
+  copiedInviteHubId: string | null;
+}) {
+  return (
+    <Link
+      href={hub.href}
+      className={cn(
+        "block overflow-hidden rounded-[24px] bg-white shadow-[0_10px_26px_rgba(12,92,87,0.06)] transition-transform duration-200 hover:-translate-y-0.5",
+      )}
+    >
+      <div className="relative overflow-visible rounded-t-[24px] bg-[#DCEDEA]">
+        <div className="aspect-[3/2] w-full">
+          <DashboardImage src={hub.coverImage} alt={`${hub.name} hub image`} className="h-full w-full" />
+        </div>
+        <div className="absolute bottom-0 left-3 z-10 translate-y-[30%] h-10 w-10 overflow-hidden rounded-full border-2 border-[#DCEDEA] bg-white/95 p-0.5 shadow-sm">
+          <div className="h-full w-full overflow-hidden rounded-full bg-white">
+            <DashboardImage src={hub.dpImage} alt={`${hub.name} avatar`} className="h-full w-full" />
+          </div>
+        </div>
       </div>
-    );
-  }
 
-  return (
-    <img
-      src={src}
-      alt={alt}
-      className="h-full w-full object-cover"
-      loading="lazy"
-      onError={() => setImageFailed(true)}
-    />
+      <div className="bg-[#DCEDEA] px-3.5 pb-3 pt-5">
+        <div className="flex items-start justify-between gap-3">
+          <h3 className={cn("line-clamp-2 text-[15px] font-semibold leading-5", TEXT_DARK)}>{hub.name}</h3>
+          <span className="mt-0.5 shrink-0 text-[#58706B]" aria-label={hub.visibilityLabel}>
+            {hub.visibilityLabel === "Public" ? (
+              <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.9">
+                <circle cx="12" cy="12" r="8" />
+                <path d="M4 12h16M12 4a12 12 0 0 1 0 16M12 4a12 12 0 0 0 0 16" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.9">
+                <rect x="5" y="11" width="14" height="9" rx="2" />
+                <path d="M8 11V8a4 4 0 1 1 8 0v3" strokeLinecap="round" />
+              </svg>
+            )}
+          </span>
+        </div>
+        <div className={cn("mt-1.5 flex items-center justify-between gap-3 text-xs", TEXT_MUTED)}>
+          <span className="truncate">{hub.membersLabel}</span>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onInvite(hub);
+            }}
+            className="shrink-0 text-xs font-normal text-[#58706B] transition hover:text-[#45625C]"
+            aria-label={`Invite to ${hub.name}`}
+            title={copiedInviteHubId === hub.id ? "Link copied" : `Invite to ${hub.name}`}
+          >
+            Invite
+          </button>
+        </div>
+      </div>
+    </Link>
   );
 }
 
-function iconForType(type: FeedPost["type"]) {
-  if (type === "announcement") return "Announcement";
-  if (type === "notice") return "Notice";
-  if (type === "event") return "Event";
-  if (type === "image") return "Image";
-  if (type === "file") return "File";
-  return "Update";
-}
-
-function FooterActionIcon({ path }: { path: string }) {
+function CreateHubTile() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d={path} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function IconLike(props: React.SVGProps<SVGSVGElement> & { "data-liked"?: boolean }) {
-  const liked = Boolean(props["data-liked"]);
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill={liked ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
+    <Link
+      href="/create-hub"
+      className={cn(
+        "block h-full w-full overflow-hidden rounded-[24px] bg-[#DCEDEA] shadow-[0_10px_26px_rgba(12,92,87,0.06)] transition-transform duration-200 hover:-translate-y-0.5",
+      )}
     >
-      <path
-        d="M12 20.5s-7.5-4.5-9.5-9c-1.3-3 .4-6.5 4-7.2 2.2-.4 4.1.4 5.5 2.2 1.4-1.8 3.3-2.6 5.5-2.2 3.6.7 5.3 4.2 4 7.2-2 4.5-9.5 9-9.5 9Z"
-      />
-    </svg>
+      <div className="relative h-full w-full overflow-hidden rounded-t-[24px] bg-[#DCEDEA]">
+        <div className="flex h-full w-full flex-col items-center justify-center gap-2">
+            <svg viewBox="0 0 24 24" className="h-9 w-9 text-[#0C5C57]" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+            </svg>
+            <h3 className={cn("text-[15px] font-medium leading-5", TEXT_DARK)}>Create Hub</h3>
+        </div>
+      </div>
+
+      <div className="bg-[#DCEDEA] px-3.5 pb-3 pt-5">
+        <div className="flex items-start justify-between gap-3">
+          <span className="text-[15px] leading-5 opacity-0">Create Hub</span>
+          <span className="mt-0.5 h-4.5 w-4.5 shrink-0" aria-hidden="true" />
+        </div>
+        <div className={cn("mt-1.5 flex items-center justify-between gap-3 text-xs", TEXT_MUTED)}>
+          <span>&nbsp;</span>
+          <span>&nbsp;</span>
+        </div>
+      </div>
+    </Link>
   );
 }
 
-function IconShare(props: React.SVGProps<SVGSVGElement>) {
+function HubLauncher({
+  selectedView,
+  onSelectView,
+  hubs,
+  onInvite,
+  copiedInviteHubId,
+}: {
+  selectedView: HubView;
+  onSelectView: (view: HubView) => void;
+  hubs: DashboardHub[];
+  onInvite: (hub: DashboardHub) => void;
+  copiedInviteHubId: string | null;
+}) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <circle cx="18" cy="5" r="3" />
-      <circle cx="6" cy="12" r="3" />
-      <circle cx="18" cy="19" r="3" />
-      <path d="M8.59 13.51 15.42 17.49" />
-      <path d="M15.41 6.51 8.59 10.49" />
-    </svg>
-  );
-}
+    <section className={cn(CARD, "p-4 sm:p-5")}>
+      <div className="flex justify-start">
+        <div className="inline-flex rounded-full bg-[#ECF6F3] p-1.5 shadow-[inset_0_1px_2px_rgba(12,92,87,0.08)]">
+          <button
+            type="button"
+            onClick={() => onSelectView("my-hubs")}
+            className={cn(
+              "rounded-full px-4 py-2 text-sm font-semibold transition",
+              selectedView === "my-hubs" ? "bg-white text-[#12312D] shadow-sm" : "text-[#58706B] hover:text-[#12312D]",
+            )}
+          >
+            My Hubs
+          </button>
+          <button
+            type="button"
+            onClick={() => onSelectView("following")}
+            className={cn(
+              "rounded-full px-4 py-2 text-sm font-semibold transition",
+              selectedView === "following" ? "bg-white text-[#12312D] shadow-sm" : "text-[#58706B] hover:text-[#12312D]",
+            )}
+          >
+            Following
+          </button>
+        </div>
+      </div>
 
-function getFeedImageForPost(post: FeedPost, hub: DashboardHub) {
-  if (post.image) return normalizePublicSrc(post.image);
-  const nonDpGallery = hub.galleryImages.filter((src) => src !== hub.dpImage);
-  const source = nonDpGallery.length ? nonDpGallery : hub.galleryImages;
-  if (!source.length) return hub.heroImage;
-  const numericId = Number(post.id.replace(/\D/g, "")) || 1;
-  const idx = (numericId + 1) % source.length;
-  return source[idx] ?? source[0] ?? hub.heroImage;
+      {hubs.length ? (
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
+          <CreateHubTile />
+          {hubs.map((hub) => (
+            <HubTile key={hub.id} hub={hub} onInvite={onInvite} copiedInviteHubId={copiedInviteHubId} />
+          ))}
+        </div>
+      ) : (
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
+          <CreateHubTile />
+        </div>
+      )}
+
+      {!hubs.length ? (
+        <div className="mt-5 rounded-[24px] bg-[#F6FBFA] px-6 py-10 text-center">
+          <h3 className={cn("text-xl font-serif font-semibold tracking-tight", TEXT_DARK)}>
+            {selectedView === "my-hubs" ? "No hubs to manage yet" : "No followed hubs yet"}
+          </h3>
+          <p className={cn("mx-auto mt-3 max-w-xl text-sm leading-6 sm:text-base", TEXT_MUTED)}>
+            {selectedView === "my-hubs"
+              ? "Create your first hub to make this launcher feel like home."
+              : "Discover hubs to follow and they will appear here for quick switching."}
+          </p>
+          <div className="mt-6">
+            <Link href={selectedView === "my-hubs" ? "/create-hub" : "/discover"} className={PRIMARY_BUTTON}>
+              {selectedView === "my-hubs" ? "Create Hub" : "Discover Hubs"}
+            </Link>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
 }
 
 export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [authStatus, setAuthStatus] = useState<AuthStatus>("checking");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [selectedHubView, setSelectedHubView] = useState<HubView>("my-hubs");
+  const [selectedFeedFilter, setSelectedFeedFilter] = useState<FeedFilter>("All");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+  const [copiedInviteHubId, setCopiedInviteHubId] = useState<string | null>(null);
   const [hubs, setHubs] = useState<DashboardHub[]>([]);
   const [isLoadingHubs, setIsLoadingHubs] = useState(true);
   const [hubsLoadError, setHubsLoadError] = useState<string | null>(null);
-  const [isHubsExpanded, setIsHubsExpanded] = useState(false);
-  const [expandedAnchor, setExpandedAnchor] = useState<{
-    top: number;
-    left: number;
-    width: number;
-    height: number;
-  } | null>(null);
-
-  const hubsPanelRef = useRef<HTMLDivElement | null>(null);
-
-  const hubMap = useMemo(() => new Map(hubs.map((hub) => [hub.id, hub])), [hubs]);
-  const collapsedHubs = hubs.slice(0, 8);
-  const [likedById, setLikedById] = useState<Record<string, boolean>>({});
-
-  const toggleLike = (postId: string) => {
-    setLikedById((prev) => ({ ...prev, [postId]: !prev[postId] }));
-  };
 
   useEffect(() => {
     let cancelled = false;
@@ -277,14 +301,17 @@ export default function DashboardPage() {
         if (cancelled) return;
 
         if (session) {
+          setCurrentUserId(session.user.id);
           setAuthStatus("authenticated");
           return;
         }
 
+        setCurrentUserId(null);
         setAuthStatus("unauthenticated");
         router.replace("/auth");
       } catch {
         if (cancelled) return;
+        setCurrentUserId(null);
         setAuthStatus("unauthenticated");
         router.replace("/auth");
       }
@@ -334,64 +361,45 @@ export default function DashboardPage() {
     };
   }, [authStatus]);
 
+  const myHubs = useMemo(
+    () => hubs.filter((hub) => Boolean(currentUserId && hub.createdBy === currentUserId)),
+    [currentUserId, hubs],
+  );
+  const followingHubs = useMemo(
+    () => hubs.filter((hub) => !currentUserId || hub.createdBy !== currentUserId),
+    [currentUserId, hubs],
+  );
+  const visibleHubs = selectedHubView === "my-hubs" ? myHubs : followingHubs;
+  const myDeetsItems = useMemo<FeedItem[]>(() => [], []);
+  const filteredDeetsItems = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
+    return myDeetsItems.filter((item) => {
+      const matchesFilter = selectedFeedFilter === "All" || item.type === selectedFeedFilter;
+      const matchesQuery =
+        !normalizedQuery ||
+        [item.title, item.body, item.hubName].some((value) => value.toLowerCase().includes(normalizedQuery));
+
+      return matchesFilter && matchesQuery;
+    });
+  }, [myDeetsItems, searchQuery, selectedFeedFilter]);
+
   useEffect(() => {
-    const onPointerDown = (event: MouseEvent) => {
-      const target = event.target as Node;
+    if (!copiedInviteHubId) return;
 
-      if (
-        isHubsExpanded &&
-        hubsPanelRef.current &&
-        !hubsPanelRef.current.contains(target)
-      ) {
-        setIsHubsExpanded(false);
-      }
-    };
+    const timer = window.setTimeout(() => setCopiedInviteHubId(null), 1800);
+    return () => window.clearTimeout(timer);
+  }, [copiedInviteHubId]);
 
-    document.addEventListener("mousedown", onPointerDown);
-    return () => document.removeEventListener("mousedown", onPointerDown);
-  }, [isHubsExpanded]);
-
-  useEffect(() => {
-    if (!isHubsExpanded) return;
-
-    const updateAnchor = () => {
-      const rect = hubsPanelRef.current?.getBoundingClientRect();
-      if (!rect) return;
-
-      setExpandedAnchor({
-        top: Math.max(72, rect.top),
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
-      });
-    };
-
-    updateAnchor();
-    window.addEventListener("resize", updateAnchor);
-    window.addEventListener("scroll", updateAnchor, true);
-
-    return () => {
-      window.removeEventListener("resize", updateAnchor);
-      window.removeEventListener("scroll", updateAnchor, true);
-    };
-  }, [isHubsExpanded]);
-
-  const toggleHubsExpanded = () => {
-    if (!isHubsExpanded) {
-      const rect = hubsPanelRef.current?.getBoundingClientRect();
-      if (rect) {
-        setExpandedAnchor({
-          top: Math.max(72, rect.top),
-          left: rect.left,
-          width: rect.width,
-          height: rect.height,
-        });
-      }
-      setIsHubsExpanded(true);
-      return;
+  const handleInvite = async (hub: DashboardHub) => {
+    try {
+      const shareUrl =
+        typeof window === "undefined" ? hub.href : new URL(hub.href, window.location.origin).toString();
+      await navigator.clipboard.writeText(shareUrl);
+      setCopiedInviteHubId(hub.id);
+    } catch {
+      setCopiedInviteHubId(null);
     }
-
-    setIsHubsExpanded(false);
   };
 
   if (authStatus === "checking" && searchParams.get("demo_preview") !== "1") {
@@ -399,9 +407,9 @@ export default function DashboardPage() {
       <div className={cn("min-h-screen", PAGE_BG)}>
         <UdeetsHeader />
         <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 md:pb-6 lg:px-10">
-          <section className={cn("p-6 text-center", CARD)}>
-            <h1 className="text-2xl font-serif font-semibold tracking-tight text-[#111111]">Loading dashboard...</h1>
-            <p className="mt-3 text-sm leading-relaxed text-slate-600">
+          <section className={cn(CARD, "p-6 text-center")}>
+            <h1 className={cn("text-2xl font-serif font-semibold tracking-tight", TEXT_DARK)}>Loading dashboard...</h1>
+            <p className={cn("mt-3 text-sm leading-relaxed", TEXT_MUTED)}>
               We&apos;re checking your session and loading your hubs.
             </p>
           </section>
@@ -417,9 +425,11 @@ export default function DashboardPage() {
       <div className={cn("min-h-screen", PAGE_BG)}>
         <UdeetsHeader />
         <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 md:pb-6 lg:px-10">
-          <section className={cn("p-6 text-center", CARD)}>
-            <h1 className="text-2xl font-serif font-semibold tracking-tight text-[#111111]">Redirecting to sign in...</h1>
-            <p className="mt-3 text-sm leading-relaxed text-slate-600">
+          <section className={cn(CARD, "p-6 text-center")}>
+            <h1 className={cn("text-2xl font-serif font-semibold tracking-tight", TEXT_DARK)}>
+              Redirecting to sign in...
+            </h1>
+            <p className={cn("mt-3 text-sm leading-relaxed", TEXT_MUTED)}>
               Your session could not be found, so we&apos;re sending you to the auth page.
             </p>
           </section>
@@ -434,225 +444,172 @@ export default function DashboardPage() {
     <div className={cn("min-h-screen", PAGE_BG)}>
       <UdeetsHeader />
 
-      {isHubsExpanded ? (
-        <button
-          type="button"
-          aria-label="Close expanded hubs panel"
-          onClick={() => setIsHubsExpanded(false)}
-          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm"
-        />
-      ) : null}
-
       <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 md:pb-6 lg:px-10">
-        <section
-          className={cn("relative mb-6 rounded-3xl p-4 sm:p-6", TOP_BG)}
-          style={
-            isHubsExpanded && expandedAnchor
-              ? { minHeight: expandedAnchor.height }
-              : undefined
-          }
-        >
-          <div
-            ref={hubsPanelRef}
-            className={cn(
-              CARD,
-              "p-5 sm:p-6",
-              isHubsExpanded && "fixed z-50 max-h-[72vh] overflow-y-auto"
-            )}
-            style={
-              isHubsExpanded && expandedAnchor
-                ? {
-                    top: expandedAnchor.top,
-                    left: expandedAnchor.left,
-                    width: expandedAnchor.width,
-                  }
-                : undefined
-            }
-          >
-            <div className="mb-4 flex items-center justify-between gap-4">
-              <h1
-                className={cn(
-                  "text-2xl font-serif font-semibold tracking-tight sm:text-3xl",
-                  TEXT_DARK
-                )}
-              >
-                My Hubs
-              </h1>
+        {isLoadingHubs ? (
+          <section className={cn(CARD, "mt-6 p-6 text-center sm:p-8")}>
+            <h2 className={cn("text-2xl font-serif font-semibold tracking-tight", TEXT_DARK)}>Loading your hubs...</h2>
+            <p className={cn("mt-3 text-sm leading-6 sm:text-base", TEXT_MUTED)}>
+              We&apos;re organizing your dashboard now.
+            </p>
+          </section>
+        ) : null}
 
-              <div className="flex items-center gap-4 text-sm font-medium sm:text-base">
-                <Link href="/create-hub" className={cn(TEXT_DARK, "hover:opacity-80")}>
-                  Create Hub
-                </Link>
-                <button
-                  type="button"
-                  onClick={toggleHubsExpanded}
-                  className={cn(TEXT_DARK, "hover:opacity-80")}
-                >
-                  {isHubsExpanded ? "Collapse" : "See All"}
-                </button>
-              </div>
-            </div>
-
-            {isHubsExpanded ? (
-              <div className="flex flex-wrap gap-x-6 gap-y-6">
-                {hubs.map((hub) => (
-                  <HubCardTile
-                    key={hub.id}
-                    href={hub.href}
-                    label={hub.name}
-                    imageSrc={hub.dpImage}
-                  />
-                ))}
-                <HubCardTile href="/create-hub" label="Create Hub" isCreate />
-              </div>
-            ) : (
-              <div className="flex gap-5 overflow-x-auto pb-3">
-                {collapsedHubs.map((hub) => (
-                  <HubCardTile
-                    key={hub.id}
-                    href={hub.href}
-                    label={hub.name}
-                    imageSrc={hub.dpImage}
-                  />
-                ))}
-                <HubCardTile href="/create-hub" label="Create Hub" isCreate />
-              </div>
-            )}
-
-            {isLoadingHubs ? <p className="mt-4 text-sm text-slate-500">Loading hubs...</p> : null}
-            {hubsLoadError ? <p className="mt-4 text-sm text-rose-600">{hubsLoadError}</p> : null}
-            {!isLoadingHubs && !hubs.length && !hubsLoadError ? (
-              <p className="mt-4 text-sm text-slate-500">No hubs yet. Create one to get started.</p>
-            ) : null}
-          </div>
-        </section>
-
-        <section className={cn("mt-6", isHubsExpanded && "pointer-events-none")}>
-          <div className="mb-4 flex items-center justify-between">
-            <h2
-              className={cn(
-                "text-xl font-serif font-semibold tracking-tight sm:text-2xl",
-                TEXT_DARK
-              )}
-            >
-              My deets
+        {hubsLoadError ? (
+          <section className={cn(CARD, "mt-6 p-6 text-center sm:p-8")}>
+            <h2 className={cn("text-2xl font-serif font-semibold tracking-tight", TEXT_DARK)}>
+              We couldn&apos;t load your dashboard
             </h2>
-            <Link
-              href="/discover"
-              className="text-sm font-medium text-slate-600 hover:text-slate-900"
-            >
-              Explore
-            </Link>
-          </div>
+            <p className="mt-3 text-sm leading-6 text-rose-700 sm:text-base">{hubsLoadError}</p>
+          </section>
+        ) : null}
 
-          <div className="space-y-4">
-            {POSTS.length ? POSTS.map((post) => {
-              const hub = hubMap.get(post.hubId);
-              if (!hub) return null;
-              const isLiked = Boolean(likedById[post.id]);
-              const displayLikeCount = post.likesCount + (isLiked ? 1 : 0);
+        {!isLoadingHubs && !hubsLoadError ? (
+          <div className="mt-6 space-y-6">
+            <HubLauncher
+              selectedView={selectedHubView}
+              onSelectView={setSelectedHubView}
+              hubs={visibleHubs}
+              onInvite={handleInvite}
+              copiedInviteHubId={copiedInviteHubId}
+            />
 
-              return (
-                <Link
-                  key={post.id}
-                  href={post.href}
-                  className={cn("block overflow-hidden", CARD)}
-                >
-                  <article>
-                    <div className="flex items-start gap-3 p-4 sm:p-5">
-                      <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full border border-slate-200">
-                        <AvatarImage src={hub.dpImage} alt={`${hub.name} logo`} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className={cn("truncate text-sm font-semibold sm:text-base", TEXT_DARK)}>
-                          {hub.name}
-                        </p>
-                        <div className="mt-1 flex items-center gap-2">
-                          <span className="rounded-full bg-[#A9D1CA] px-2.5 py-0.5 text-[11px] font-semibold text-[#111111]">
-                            {iconForType(post.type)}
-                          </span>
-                          <p className="text-xs text-slate-500">{post.dateLabel}</p>
-                        </div>
-                      </div>
+            <section className={cn(CARD, "p-4 sm:p-5")}>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className={cn("text-2xl font-serif font-semibold tracking-tight", TEXT_DARK)}>My Deets</h2>
+                </div>
+
+                <div className="relative flex items-center gap-2">
+                  <div
+                    className={cn(
+                      "overflow-hidden rounded-full bg-[#F3FAF8] transition-all duration-300",
+                      isSearchOpen ? "w-56 px-3 py-2 opacity-100 sm:w-72" : "w-0 px-0 py-0 opacity-0",
+                    )}
+                  >
+                    <input
+                      value={searchQuery}
+                      onChange={(event) => setSearchQuery(event.target.value)}
+                      placeholder="Search posts"
+                      className="w-full bg-transparent text-sm text-[#12312D] outline-none placeholder:text-[#78908B]"
+                      aria-label="Search posts"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex h-10 w-10 items-center justify-center rounded-full bg-[#F3FAF8] text-[#12312D] transition hover:bg-[#E8F4F1]",
+                      isSearchOpen && "bg-[#E8F4F1]",
+                    )}
+                    onClick={() => setIsSearchOpen((current) => !current)}
+                    aria-label="Toggle search"
+                  >
+                    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="11" cy="11" r="6" />
+                      <path d="m20 20-3.5-3.5" strokeLinecap="round" />
+                    </svg>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex h-10 w-10 items-center justify-center rounded-full bg-[#F3FAF8] text-[#12312D] transition hover:bg-[#E8F4F1]",
+                      isFilterMenuOpen && "bg-[#E8F4F1]",
+                    )}
+                    onClick={() => setIsFilterMenuOpen((current) => !current)}
+                    aria-label="Open filters"
+                  >
+                    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M4 6h16" strokeLinecap="round" />
+                      <path d="M7 12h10" strokeLinecap="round" />
+                      <path d="M10 18h4" strokeLinecap="round" />
+                    </svg>
+                  </button>
+
+                  {isFilterMenuOpen ? (
+                    <div className="absolute right-0 top-12 z-10 w-48 rounded-[22px] bg-white p-2 shadow-[0_14px_34px_rgba(12,92,87,0.12)]">
+                      {FEED_FILTERS.map((filter) => (
+                        <button
+                          key={filter}
+                          type="button"
+                          onClick={() => {
+                            setSelectedFeedFilter(filter);
+                            setIsFilterMenuOpen(false);
+                          }}
+                          className={cn(
+                            "flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left text-sm transition",
+                            selectedFeedFilter === filter
+                              ? "bg-[#EFF7F5] font-semibold text-[#12312D]"
+                              : "text-[#58706B] hover:bg-[#F6FBFA] hover:text-[#12312D]",
+                          )}
+                        >
+                          <span>{filter}</span>
+                          {selectedFeedFilter === filter ? <span className="h-2 w-2 rounded-full bg-[#0C5C57]" /> : null}
+                        </button>
+                      ))}
                     </div>
-
-                    <div className="p-4 pt-0 sm:p-5 sm:pt-0">
-                      <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
-                        <h3 className={cn("text-base font-semibold", TEXT_DARK)}>{post.title}</h3>
-                        <p className="mt-2 text-sm leading-relaxed text-slate-600">{post.body}</p>
-
-                        {(post.image ||
-                          post.type === "image" ||
-                          post.type === "announcement" ||
-                          post.type === "event" ||
-                          post.type === "update") && (
-                          <div className="relative mt-4 aspect-[16/9] w-full overflow-hidden rounded-xl border border-slate-100 bg-slate-100">
-                            <CoverImage src={getFeedImageForPost(post, hub)} alt={post.title} />
-                            <div className="absolute inset-0 bg-black/10" />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="mt-3 flex items-center justify-between px-1">
-                        <div className="flex items-center gap-5 text-sm text-slate-600">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              toggleLike(post.id);
-                            }}
-                            className={cn(
-                              "inline-flex items-center gap-1.5 transition-colors",
-                              isLiked ? "font-medium text-[#0C5C57]" : "text-slate-600 hover:text-[#111111]"
-                            )}
-                          >
-                            <IconLike className="h-4 w-4" data-liked={isLiked} />
-                            <span>Like {displayLikeCount}</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                            }}
-                            className="inline-flex items-center gap-1.5 hover:text-[#111111]"
-                          >
-                            <FooterActionIcon path="M7 8h10M7 12h7m7-2a8 8 0 0 1-8 8H5l-2 3V10a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8Z" />
-                            <span>Comment {post.commentsCount}</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                            }}
-                            className="inline-flex items-center gap-1.5 hover:text-[#111111]"
-                          >
-                            <IconShare className="h-4 w-4" />
-                            <span>Share {post.sharesCount}</span>
-                          </button>
-                        </div>
-
-                        <div className="inline-flex items-center gap-1.5 text-sm text-slate-600">
-                          <FooterActionIcon path="M2.5 12s3.6-6 9.5-6 9.5 6 9.5 6-3.6 6-9.5 6-9.5-6-9.5-6Z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-                          <span>{post.views.toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                </Link>
-              );
-            }) : (
-              <div className={cn("p-6 text-center", CARD)}>
-                <h3 className="text-lg font-serif font-semibold text-[#111111]">No deets yet</h3>
-                <p className="mt-2 text-sm text-slate-600">
-                  Hub posts and updates will appear here once they are published from your hubs.
-                </p>
+                  ) : null}
+                </div>
               </div>
-            )}
+
+              <div className="mt-5">
+                {filteredDeetsItems.length ? (
+                  <div className="space-y-3">
+                    {filteredDeetsItems.map((item) =>
+                      item.href ? (
+                        <Link
+                          key={item.id}
+                          href={item.href}
+                          className="block rounded-[24px] bg-[#F6FBFA] p-5 transition hover:bg-[#EFF7F5]"
+                        >
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5F807A]">{item.type}</p>
+                          <h3 className={cn("mt-2 text-lg font-semibold", TEXT_DARK)}>{item.title}</h3>
+                          <p className={cn("mt-2 text-sm leading-6", TEXT_MUTED)}>{item.body}</p>
+                        </Link>
+                      ) : (
+                        <article key={item.id} className="rounded-[24px] bg-[#F6FBFA] p-5">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5F807A]">{item.type}</p>
+                          <h3 className={cn("mt-2 text-lg font-semibold", TEXT_DARK)}>{item.title}</h3>
+                          <p className={cn("mt-2 text-sm leading-6", TEXT_MUTED)}>{item.body}</p>
+                        </article>
+                      ),
+                    )}
+                  </div>
+                ) : (
+                  <div className="rounded-[24px] bg-[#F6FBFA] px-6 py-10 text-center">
+                    <h3 className={cn("text-xl font-serif font-semibold tracking-tight", TEXT_DARK)}>
+                      No {selectedFeedFilter === "All" ? "deets" : selectedFeedFilter.toLowerCase()} yet
+                    </h3>
+                    <p className={cn("mx-auto mt-3 max-w-2xl text-sm leading-6 sm:text-base", TEXT_MUTED)}>
+                      Aggregated hub activity is not fully wired on this dashboard yet, so this section is ready for
+                      posts, notices, deals, announcements, polls, photos, and videos as those content streams become
+                      available.
+                    </p>
+                    <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-[22px] bg-white px-5 py-4 text-left shadow-[0_8px_20px_rgba(12,92,87,0.05)]">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5F807A]">Current view</p>
+                        <p className={cn("mt-2 text-base font-semibold", TEXT_DARK)}>
+                          {selectedHubView === "my-hubs" ? "My Hubs" : "Following"}
+                        </p>
+                        <p className={cn("mt-1 text-sm", TEXT_MUTED)}>
+                          {searchQuery ? `Searching for "${searchQuery}".` : "Search and filter controls are ready here."}
+                        </p>
+                      </div>
+                      <div className="rounded-[22px] bg-white px-5 py-4 text-left shadow-[0_8px_20px_rgba(12,92,87,0.05)]">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5F807A]">Next step</p>
+                        <p className={cn("mt-2 text-base font-semibold", TEXT_DARK)}>
+                          {selectedFeedFilter === "All" ? "Browse all activity" : `Filtered by ${selectedFeedFilter}`}
+                        </p>
+                        <p className={cn("mt-1 text-sm", TEXT_MUTED)}>
+                          This space will populate as richer hub-level feed data becomes available.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
           </div>
-        </section>
+        ) : null}
       </main>
 
       <UdeetsFooter />

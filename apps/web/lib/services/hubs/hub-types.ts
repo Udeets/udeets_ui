@@ -20,6 +20,8 @@ export interface CreateHubInput {
 }
 
 export interface UpdateHubInput {
+  name?: string | null;
+  category?: HubCategory;
   websiteUrl?: string | null;
   facebookUrl?: string | null;
   instagramUrl?: string | null;

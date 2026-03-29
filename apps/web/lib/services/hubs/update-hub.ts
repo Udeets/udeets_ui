@@ -47,6 +47,14 @@ export async function updateHub(hubId: string, input: UpdateHubInput): Promise<H
 
   const payload: Record<string, string | string[] | null> = {};
 
+  if (input.name !== undefined) {
+    payload.name = normalizeText(input.name);
+  }
+
+  if (input.category !== undefined) {
+    payload.category = input.category;
+  }
+
   if (input.websiteUrl !== undefined) {
     payload.website_url = normalizeUrl(input.websiteUrl);
   }

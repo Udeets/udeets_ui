@@ -5,7 +5,6 @@ import {
   BarChart3,
   Bell,
   Building2,
-  Calendar,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -18,6 +17,7 @@ import {
   Images,
   Instagram,
   Landmark,
+  Lock,
   Loader2,
   MapPin,
   Megaphone,
@@ -28,7 +28,6 @@ import {
   Plus,
   Search,
   Share2,
-  Shield,
   Settings,
   Target,
   UtensilsCrossed,
@@ -58,7 +57,7 @@ const ACTION_ICON = "h-4 w-4 stroke-[1.6]";
 const ACTION_ICON_BUTTON = "inline-flex items-center text-[#111111]/78 transition hover:text-[#0C5C57]";
 const PREMIUM_ICON_WRAPPER =
   "inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#F7FBFA] text-[#0C5C57]";
-type HubTab = "Posts" | "Events" | "Photos" | "Files" | "Members";
+type HubTab = "About" | "Posts" | "Events" | "Members" | "Photos" | "Files" | "Settings";
 type HubPanel = "posts" | "challenges" | "settings" | "members" | "invite";
 
 type ViewerState = {
@@ -70,7 +69,13 @@ type ViewerState = {
   focusId?: string;
 };
 
-const HUB_TABS: HubTab[] = ["Posts", "Events", "Photos", "Files", "Members"];
+type PendingNavigation = {
+  tab: HubTab;
+  panel: HubPanel;
+  membersMode?: "list" | "invite";
+};
+
+const HUB_TABS: HubTab[] = ["About", "Posts", "Events", "Members", "Photos", "Files", "Settings"];
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -173,49 +178,6 @@ function FeedItemIcon({ kind }: { kind: "announcement" | "photo" | "notice" | "e
   return <Files className={ICON} />;
 }
 
-function summaryLine(parts: string[]) {
-  return parts.filter(Boolean).join(" - ");
-}
-
-function EmptySection({
-  title,
-  body,
-}: {
-  title: string;
-  body: string;
-}) {
-  return (
-    <section className={cn(CARD, "grid min-h-[220px] place-items-center p-8 text-center")}>
-      <div className="max-w-sm">
-        <h3 className="text-xl font-serif font-semibold tracking-tight text-[#111111]">{title}</h3>
-        <p className="mt-3 text-sm leading-relaxed text-slate-600">{body}</p>
-      </div>
-    </section>
-  );
-}
-
-function SettingsSection({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className={cn(CARD, "p-5")}>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-serif font-semibold text-[#111111]">{title}</h3>
-          {description ? <p className="mt-1 text-sm text-slate-600">{description}</p> : null}
-        </div>
-      </div>
-      <div className="mt-4">{children}</div>
-    </section>
-  );
-}
-
 function SettingField({
   label,
   children,
@@ -270,23 +232,25 @@ export default function HubClient({
   const isDemoPreview = searchParams.get("demo_preview") === "1";
   const demoHubName = searchParams.get("demo_name")?.trim();
   const demoHubDescription = searchParams.get("demo_description")?.trim();
-  const demoHubTagline = searchParams.get("demo_tagline")?.trim();
   const demoComposerText = searchParams.get("demo_composer") ?? "";
   const demoPostedText = searchParams.get("demo_posted") ?? "";
   const demoPollEnabled = searchParams.get("demo_poll") === "1";
   const demoPollVote = searchParams.get("demo_poll_vote");
   const demoLiked = searchParams.get("demo_liked") === "1";
-  const initialActiveSection: HubTab = requestedTab && HUB_TABS.includes(requestedTab) ? requestedTab : "Posts";
+  const initialActiveSection: HubTab = requestedTab && HUB_TABS.includes(requestedTab) ? requestedTab : "About";
   const [activeSection, setActiveSection] = useState<HubTab>(initialActiveSection);
   const [activePanel, setActivePanel] = useState<HubPanel>("posts");
   const [membersPanelMode, setMembersPanelMode] = useState<"list" | "invite">("list");
   const [postSearchQuery, setPostSearchQuery] = useState("");
   const [feedFilter, setFeedFilter] = useState<"Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos">("Newest");
   const [composerToolTarget, setComposerToolTarget] = useState<"photo" | "file" | "poll" | "event" | "location" | null>(null);
-  const hubName = demoHubName || hub.name;
+  const initialHubName = demoHubName || hub.name;
   const hubDescription = demoHubDescription || hub.description;
-  const hubTagline = demoHubTagline || hub.tagline || hubName;
-  const [settingsHubName, setSettingsHubName] = useState(hubName);
+  const [savedHubName, setSavedHubName] = useState(initialHubName);
+  const [savedHubCategory, setSavedHubCategory] = useState<HubRecord["category"]>(hub.category);
+  const hubName = savedHubName;
+  const [settingsHubName, setSettingsHubName] = useState(initialHubName);
+  const [settingsCategory, setSettingsCategory] = useState<HubRecord["category"]>(hub.category);
   const [settingsDescription, setSettingsDescription] = useState(hubDescription);
   const [settingsLocation, setSettingsLocation] = useState(hub.locationLabel);
   const [settingsVisibility, setSettingsVisibility] = useState<HubRecord["visibility"]>(hub.visibility);
@@ -297,8 +261,14 @@ export default function HubClient({
   const [approvalSetting, setApprovalSetting] = useState(settingsVisibility === "Private" ? "Required" : "Open");
   const [whoCanPost, setWhoCanPost] = useState("Admins and members");
   const [whoCanUpload, setWhoCanUpload] = useState("Admins and members");
+  const [subscriptionState, setSubscriptionState] = useState<"idle" | "subscribed" | "awaiting">("idle");
   const [isConnectEditorOpen, setIsConnectEditorOpen] = useState(false);
   const [isAdminsEditorOpen, setIsAdminsEditorOpen] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [settingsSaveError, setSettingsSaveError] = useState<string | null>(null);
+  const [settingsSaveSuccess, setSettingsSaveSuccess] = useState<string | null>(null);
+  const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation | null>(null);
+  const [isUnsavedChangesOpen, setIsUnsavedChangesOpen] = useState(false);
   const [isSavingConnect, setIsSavingConnect] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
   const [connectSuccess, setConnectSuccess] = useState<string | null>(null);
@@ -333,6 +303,7 @@ export default function HubClient({
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
 
   const recentPhotos = galleryImages.slice(0, 6);
+  const displayCoverImageSrc = galleryImages.find((image) => image && image !== coverImageSrc) || coverImageSrc;
 
   const adminImages = (hub.adminImages ?? []).map(normalizePublicSrc).filter(Boolean);
   const isCreatorAdmin = Boolean(user?.id && hub.createdBy && user.id === hub.createdBy);
@@ -348,14 +319,21 @@ export default function HubClient({
   const creatorAvatarSrc =
     isCreatorAdmin && typeof creatorMetadata?.avatar_url === "string" ? creatorMetadata.avatar_url : "";
   const albumChoices = galleryImages.filter((image) => image !== dpImageSrc && image !== coverImageSrc);
-  const categoryMeta = categoryMetaFor(hub.category);
-  const CategoryIcon = categoryMeta.icon;
+  const categoryMeta = categoryMetaFor(savedHubCategory);
   const memberCount = Math.max(1, Number.parseInt(hub.membersLabel, 10) || 0);
+  const isDirty =
+    settingsHubName.trim() !== savedHubName.trim() ||
+    settingsCategory !== savedHubCategory;
+  const subscribeLabel =
+    subscriptionState === "subscribed"
+      ? "Subscribed"
+      : subscriptionState === "awaiting"
+        ? "Awaiting Approval"
+        : "Subscribe";
 
   const fileItems: string[] = [];
 
   const memberItems: string[] = [];
-  const hubLabelChips = hub.tags ?? [];
   const memberRoleItems: Array<{ name: string; role: string }> = [];
 
   useEffect(() => {
@@ -376,10 +354,31 @@ export default function HubClient({
   }, [hub.facebookUrl, hub.instagramUrl, hub.phoneNumber, hub.website, hub.youtubeUrl]);
 
   useEffect(() => {
+    setSavedHubName(initialHubName);
+    setSettingsHubName(initialHubName);
+    setSavedHubCategory(hub.category);
+    setSettingsCategory(hub.category);
+    setSettingsSaveError(null);
+    setSettingsSaveSuccess(null);
+  }, [hub.category, initialHubName]);
+
+  useEffect(() => {
     setDpImageSrc(normalizePublicSrc(hub.dpImage));
     setCoverImageSrc(normalizePublicSrc(hub.heroImage));
     setGalleryImages((hub.galleryImages ?? []).map(normalizePublicSrc).filter(Boolean));
   }, [hub.dpImage, hub.galleryImages, hub.heroImage]);
+
+  useEffect(() => {
+    if (!isDirty) return;
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
 
   useEffect(() => {
     if (!focusTarget) return;
@@ -419,6 +418,32 @@ export default function HubClient({
       index: current.index === 0 ? current.images.length - 1 : current.index - 1,
     }));
 
+  const applyNavigation = ({ tab, panel, membersMode }: PendingNavigation) => {
+    setActiveSection(tab);
+    if (membersMode) {
+      setMembersPanelMode(membersMode);
+    }
+    setActivePanel(panel);
+  };
+
+  const requestNavigation = (next: PendingNavigation) => {
+    const sameSection = activeSection === next.tab;
+    const samePanel = activePanel === next.panel;
+    const sameMembersMode = next.membersMode ? membersPanelMode === next.membersMode : true;
+
+    if (sameSection && samePanel && sameMembersMode) {
+      return;
+    }
+
+    if (isDirty) {
+      setPendingNavigation(next);
+      setIsUnsavedChangesOpen(true);
+      return;
+    }
+
+    applyNavigation(next);
+  };
+
   const navigateToFocus = (focusId: string, tab?: HubTab) => {
     const params = new URLSearchParams();
     params.set("focus", focusId);
@@ -435,6 +460,46 @@ export default function HubClient({
       const value = event.target.value;
       setConnectDraft((current) => ({ ...current, [field]: value }));
     };
+
+  const handleSaveSettings = async () => {
+    if (!isCreatorAdmin || !isDirty) {
+      return;
+    }
+
+    setIsSavingSettings(true);
+    setSettingsSaveError(null);
+    setSettingsSaveSuccess(null);
+
+    try {
+      const updatedHub = await updateHub(hub.id, {
+        name: settingsHubName,
+        category: settingsCategory,
+      });
+
+      setSavedHubName(updatedHub.name);
+      setSettingsHubName(updatedHub.name);
+      setSavedHubCategory(updatedHub.category);
+      setSettingsCategory(updatedHub.category);
+      setSettingsSaveSuccess("Hub settings saved.");
+
+      if (pendingNavigation) {
+        applyNavigation(pendingNavigation);
+        setPendingNavigation(null);
+        setIsUnsavedChangesOpen(false);
+      }
+    } catch (error) {
+      setSettingsSaveError(error instanceof Error ? error.message : "Hub settings could not be saved.");
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  const handleCancelSettingsChanges = () => {
+    setSettingsHubName(savedHubName);
+    setSettingsCategory(savedHubCategory);
+    setSettingsSaveError(null);
+    setSettingsSaveSuccess(null);
+  };
 
   const openConnectEditor = () => {
     setConnectDraft(connectLinks);
@@ -531,8 +596,11 @@ export default function HubClient({
     };
 
   const openCenterMembers = (mode: "list" | "invite") => {
-    setMembersPanelMode(mode);
-    setActivePanel(mode === "invite" ? "invite" : "members");
+    requestNavigation({
+      tab: "Members",
+      panel: mode === "invite" ? "invite" : "members",
+      membersMode: mode,
+    });
   };
 
   const normalizedPostSearch = postSearchQuery.trim().toLowerCase();
@@ -633,7 +701,7 @@ export default function HubClient({
   };
 
   const renderPostComposer = () => (
-    <section className={cn(CARD, "p-5")}>
+    <section className="rounded-2xl bg-[#F7FBFA] p-5">
       <div data-demo-target={isDemoPreview ? "hub-composer-section" : undefined}>
         <textarea
           defaultValue={demoComposerText}
@@ -685,7 +753,7 @@ export default function HubClient({
   );
 
   const renderPostSearchRow = () => (
-    <section className={cn(CARD, "p-4")}>
+    <section className="rounded-2xl bg-[#F7FBFA] p-4">
       <label className="flex items-center gap-3 rounded-2xl bg-[#F7FBFA] px-4 py-3">
         <Search className="h-4.5 w-4.5 text-slate-400" />
         <input
@@ -722,29 +790,29 @@ export default function HubClient({
   );
 
   const renderPostFeed = () => (
-    <>
-      {renderPostSearchRow()}
-      {renderPostComposer()}
-      {renderCenterPanel({
-        title: "Deets",
-        description: normalizedPostSearch ? "Showing filtered hub updates." : "Latest posts and updates from this hub.",
-        actions: (
-          <select
-            value={feedFilter}
-            onChange={(event) =>
-              setFeedFilter(
-                event.target.value as "Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos"
-              )
-            }
-            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 outline-none ring-[#A9D1CA] transition focus:ring-2"
-          >
-            {["Newest", "Oldest", "Announcements", "Events", "Polls", "Photos"].map((option) => (
-              <option key={option}>{option}</option>
-            ))}
-          </select>
-        ),
-        children:
-          filteredFeedItems.length === 0 && !showDemoPostedText && !showDemoPoll ? (
+    renderCenterPanel({
+      title: "Posts",
+      description: normalizedPostSearch ? "Showing filtered hub updates." : "Latest posts and updates from this hub.",
+      actions: (
+        <select
+          value={feedFilter}
+          onChange={(event) =>
+            setFeedFilter(
+              event.target.value as "Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos"
+            )
+          }
+          className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 outline-none ring-[#A9D1CA] transition focus:ring-2"
+        >
+          {["Newest", "Oldest", "Announcements", "Events", "Polls", "Photos"].map((option) => (
+            <option key={option}>{option}</option>
+          ))}
+        </select>
+      ),
+      children:
+        filteredFeedItems.length === 0 && !showDemoPostedText && !showDemoPoll ? (
+          <div className="space-y-4">
+            {renderPostSearchRow()}
+            {renderPostComposer()}
             <div className="grid min-h-[260px] place-items-center text-center">
               <div className="max-w-md">
                 <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-[#EAF6F3] text-[#0C5C57]">
@@ -762,246 +830,281 @@ export default function HubClient({
                 </p>
               </div>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {showDemoPostedText ? (
-                <section className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                  <div className="flex items-center gap-2">
-                    <Megaphone className="h-4.5 w-4.5 text-[#0C5C57]" />
-                    <h3 className="text-base font-semibold text-[#111111]">Update</h3>
-                  </div>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-600">{demoPostedText}</p>
-                </section>
-              ) : null}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {renderPostSearchRow()}
+            {renderPostComposer()}
 
-              {showDemoPoll ? (
-                <section
-                  data-demo-target={isDemoPreview ? "hub-poll-section" : undefined}
-                  className="rounded-2xl border border-slate-100 bg-slate-50 p-4"
-                >
-                  <h3 className="text-base font-semibold text-[#111111]">Free Pet Check-up in Mechanicsville</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                    Would you attend the complimentary pet wellness check this Saturday?
-                  </p>
-                  <div className="mt-4 flex gap-3">
-                    <button
-                      type="button"
-                      data-demo-target={isDemoPreview ? "hub-poll-yes" : undefined}
-                      className={cn(
-                        "rounded-full px-4 py-2 text-sm font-medium transition",
-                        demoPollVote === "yes" ? "bg-[#0C5C57] text-white" : "border border-slate-200 bg-white text-slate-600"
-                      )}
-                    >
-                      Yes
-                    </button>
-                    <button type="button" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-500">
-                      Maybe
-                    </button>
-                  </div>
-                  <div className="mt-4 flex items-center justify-between">
-                    <button
-                      type="button"
-                      data-demo-target={isDemoPreview ? "hub-like-button" : undefined}
-                      className={cn(
-                        "rounded-full px-4 py-2 text-sm font-medium transition",
-                        demoLiked ? "bg-[#EAF6F3] text-[#0C5C57]" : "border border-slate-200 bg-white text-slate-500"
-                      )}
-                    >
-                      Like
-                    </button>
-                    <span className="text-xs font-medium text-slate-400">214 people engaged</span>
-                  </div>
-                </section>
-              ) : null}
+            {showDemoPostedText ? (
+              <section className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <div className="flex items-center gap-2">
+                  <Megaphone className="h-4.5 w-4.5 text-[#0C5C57]" />
+                  <h3 className="text-base font-semibold text-[#111111]">Update</h3>
+                </div>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">{demoPostedText}</p>
+              </section>
+            ) : null}
 
-              <section className="space-y-4">
-                {filteredFeedItems.map((item) => (
-                  <article
-                    id={item.id}
-                    key={item.id}
+            {showDemoPoll ? (
+              <section
+                data-demo-target={isDemoPreview ? "hub-poll-section" : undefined}
+                className="rounded-2xl border border-slate-100 bg-slate-50 p-4"
+              >
+                <h3 className="text-base font-semibold text-[#111111]">Free Pet Check-up in Mechanicsville</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                  Would you attend the complimentary pet wellness check this Saturday?
+                </p>
+                <div className="mt-4 flex gap-3">
+                  <button
+                    type="button"
+                    data-demo-target={isDemoPreview ? "hub-poll-yes" : undefined}
                     className={cn(
-                      "rounded-2xl border border-slate-100 bg-slate-50 p-4 transition",
-                      highlightedItemId === item.id && "ring-2 ring-[#A9D1CA] ring-offset-2 ring-offset-white"
+                      "rounded-full px-4 py-2 text-sm font-medium transition",
+                      demoPollVote === "yes" ? "bg-[#0C5C57] text-white" : "border border-slate-200 bg-white text-slate-600"
                     )}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-[#A9D1CA]">
-                        <ImageWithFallback
-                          src={dpImageSrc}
-                          sources={[dpImageSrc, coverImageSrc, ...recentPhotos]}
-                          alt={`${item.author} avatar`}
-                          className="h-full w-full object-cover"
-                          fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA] text-xs font-semibold text-[#111111]"
-                          fallback={initials(item.author)}
-                        />
+                    Yes
+                  </button>
+                  <button type="button" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-500">
+                    Maybe
+                  </button>
+                </div>
+                <div className="mt-4 flex items-center justify-between">
+                  <button
+                    type="button"
+                    data-demo-target={isDemoPreview ? "hub-like-button" : undefined}
+                    className={cn(
+                      "rounded-full px-4 py-2 text-sm font-medium transition",
+                      demoLiked ? "bg-[#EAF6F3] text-[#0C5C57]" : "border border-slate-200 bg-white text-slate-500"
+                    )}
+                  >
+                    Like
+                  </button>
+                  <span className="text-xs font-medium text-slate-400">214 people engaged</span>
+                </div>
+              </section>
+            ) : null}
+
+            <section className="space-y-4">
+              {filteredFeedItems.map((item) => (
+                <article
+                  id={item.id}
+                  key={item.id}
+                  className={cn(
+                    "rounded-2xl border border-slate-100 bg-slate-50 p-4 transition",
+                    highlightedItemId === item.id && "ring-2 ring-[#A9D1CA] ring-offset-2 ring-offset-white"
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-[#A9D1CA]">
+                      <ImageWithFallback
+                        src={dpImageSrc}
+                        sources={[dpImageSrc, coverImageSrc, ...recentPhotos]}
+                        alt={`${item.author} avatar`}
+                        className="h-full w-full object-cover"
+                        fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA] text-xs font-semibold text-[#111111]"
+                        fallback={initials(item.author)}
+                      />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-sm font-semibold text-[#111111]">{item.author}</h3>
+                        <span className="text-xs text-slate-400">•</span>
+                        <span className="text-xs text-slate-500">{item.time}</span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[#0C5C57]">
+                          <FeedItemIcon kind={item.kind} />
+                          {item.title}
+                        </span>
                       </div>
 
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-sm font-semibold text-[#111111]">{item.author}</h3>
-                          <span className="text-xs text-slate-400">•</span>
-                          <span className="text-xs text-slate-500">{item.time}</span>
-                          <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[#0C5C57]">
-                            <FeedItemIcon kind={item.kind} />
-                            {item.title}
-                          </span>
-                        </div>
+                      <p className="mt-2 text-sm leading-relaxed text-slate-700">{item.body}</p>
 
-                        <p className="mt-2 text-sm leading-relaxed text-slate-700">{item.body}</p>
+                      {item.image ? (
+                        <button
+                          type="button"
+                          className="mt-4 block w-full overflow-hidden rounded-2xl border border-slate-100 bg-slate-100"
+                          onClick={() =>
+                            openViewer([item.image!, ...recentPhotos], 0, item.title, item.body, item.id)
+                          }
+                        >
+                          <div className="aspect-[16/9] w-full">
+                            <ImageWithFallback
+                              src={item.image}
+                              sources={[item.image, ...recentPhotos, coverImageSrc]}
+                              alt={item.title}
+                              className="h-full w-full object-cover"
+                              fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA]/25 text-sm font-medium text-[#0C5C57]"
+                              fallback="Image unavailable"
+                              loading="lazy"
+                            />
+                          </div>
+                        </button>
+                      ) : null}
 
-                        {item.image ? (
-                          <button
-                            type="button"
-                            className="mt-4 block w-full overflow-hidden rounded-2xl border border-slate-100 bg-slate-100"
-                            onClick={() =>
-                              openViewer([item.image!, ...recentPhotos], 0, item.title, item.body, item.id)
-                            }
-                          >
-                            <div className="aspect-[16/9] w-full">
-                              <ImageWithFallback
-                                src={item.image}
-                                sources={[item.image, ...recentPhotos, coverImageSrc]}
-                                alt={item.title}
-                                className="h-full w-full object-cover"
-                                fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA]/25 text-sm font-medium text-[#0C5C57]"
-                                fallback="Image unavailable"
-                                loading="lazy"
-                              />
-                            </div>
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-3 text-sm text-slate-600">
+                        <div className="flex flex-wrap items-center gap-5">
+                          <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[#0C5C57]">
+                            <Heart className={ICON} />
+                            <span>{item.likes}</span>
                           </button>
-                        ) : null}
-
-                        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-3 text-sm text-slate-600">
-                          <div className="flex flex-wrap items-center gap-5">
-                            <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[#0C5C57]">
-                              <Heart className={ICON} />
-                              <span>{item.likes}</span>
-                            </button>
-                            <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[#0C5C57]">
-                              <MessageSquare className={ICON} />
-                              <span>{item.comments}</span>
-                            </button>
-                            <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[#0C5C57]">
-                              <Share2 className={ICON} />
-                              <span>Share</span>
-                            </button>
-                          </div>
-                          <div className="inline-flex items-center gap-1.5 text-slate-500">
-                            <Eye className={ICON} />
-                            <span>{item.views}</span>
-                          </div>
+                          <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[#0C5C57]">
+                            <MessageSquare className={ICON} />
+                            <span>{item.comments}</span>
+                          </button>
+                          <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[#0C5C57]">
+                            <Share2 className={ICON} />
+                            <span>Share</span>
+                          </button>
+                        </div>
+                        <div className="inline-flex items-center gap-1.5 text-slate-500">
+                          <Eye className={ICON} />
+                          <span>{item.views}</span>
                         </div>
                       </div>
                     </div>
-                  </article>
-                ))}
-              </section>
-            </div>
-          ),
-      })}
-    </>
+                  </div>
+                </article>
+              ))}
+            </section>
+          </div>
+        ),
+    })
   );
 
   const renderEventsTab = () => (
-    hubContent.events.length === 0 ? (
-      <EmptySection title="No events yet" body="Plan the first event for your hub when you are ready." />
-    ) : (
-      <section className="space-y-4">
-        {hubContent.events.map((event) => (
-        <article
-          id={event.id}
-          key={event.id}
-          className={cn(
-            CARD,
-            "scroll-mt-28 p-5 transition",
-            highlightedItemId === event.id && "ring-2 ring-[#A9D1CA] ring-offset-2 ring-offset-[#E3F1EF]"
-          )}
-        >
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-[#A9D1CA]/55 px-2.5 py-1 text-[11px] font-semibold text-[#0C5C57]">
-                  {event.theme}
-                </span>
-                <span className="rounded-full bg-[#F7FBFA] px-2.5 py-1 text-[11px] font-semibold text-slate-600">
-                  {event.badge}
-                </span>
-              </div>
-              <h3 className="mt-3 text-lg font-serif font-semibold text-[#111111]">{event.title}</h3>
-              <p className="mt-1 text-sm text-slate-600">{event.description}</p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => navigateToFocus(event.focusId, "Posts")}
-              className={BUTTON_SECONDARY}
+    renderCenterPanel({
+      title: "Events",
+      description: "Upcoming plans, gatherings, and reminders for this hub.",
+      children: hubContent.events.length === 0 ? (
+        <div className="grid min-h-[260px] place-items-center text-center">
+          <div className="max-w-sm">
+            <h3 className="text-xl font-serif font-semibold tracking-tight text-[#111111]">No events yet</h3>
+            <p className="mt-3 text-sm leading-relaxed text-slate-600">
+              Plan the first event for your hub when you are ready.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <section className="space-y-4">
+          {hubContent.events.map((event) => (
+            <article
+              id={event.id}
+              key={event.id}
+              className={cn(
+                "scroll-mt-28 rounded-2xl border border-slate-100 bg-slate-50 p-5 transition",
+                highlightedItemId === event.id && "ring-2 ring-[#A9D1CA] ring-offset-2 ring-offset-white"
+              )}
             >
-              View event update
-            </button>
-          </div>
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-[#A9D1CA]/55 px-2.5 py-1 text-[11px] font-semibold text-[#0C5C57]">
+                      {event.theme}
+                    </span>
+                    <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+                      {event.badge}
+                    </span>
+                  </div>
+                  <h3 className="mt-3 text-lg font-serif font-semibold text-[#111111]">{event.title}</h3>
+                  <p className="mt-1 text-sm text-slate-600">{event.description}</p>
+                </div>
 
-          <div className="mt-4 grid gap-3 text-sm text-slate-600 sm:grid-cols-3">
-            <div className="rounded-2xl bg-[#F7FBFA] px-4 py-3">{event.dateLabel}</div>
-            <div className="rounded-2xl bg-[#F7FBFA] px-4 py-3">{event.time}</div>
-            <div className="rounded-2xl bg-[#F7FBFA] px-4 py-3">{event.location}</div>
-          </div>
-        </article>
-        ))}
-      </section>
-    )
+                <button
+                  type="button"
+                  onClick={() => navigateToFocus(event.focusId, "Posts")}
+                  className={BUTTON_SECONDARY}
+                >
+                  View event update
+                </button>
+              </div>
+
+              <div className="mt-4 grid gap-3 text-sm text-slate-600 sm:grid-cols-3">
+                <div className="rounded-2xl bg-white px-4 py-3">{event.dateLabel}</div>
+                <div className="rounded-2xl bg-white px-4 py-3">{event.time}</div>
+                <div className="rounded-2xl bg-white px-4 py-3">{event.location}</div>
+              </div>
+            </article>
+          ))}
+        </section>
+      ),
+    })
   );
 
   const renderPhotosTab = () => (
-    recentPhotos.length === 0 ? (
-      <EmptySection title="No photos yet" body="Add photos later to bring this hub to life." />
-    ) : (
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {recentPhotos.map((img, index) => (
-        <button
-          key={`${img}-${index}`}
-          type="button"
-          className={cn(CARD, "overflow-hidden p-0")}
-          onClick={() => openViewer(recentPhotos, index, `${hubName} Album`, "Recent photos from this hub.")}
-        >
-          <div className="aspect-square">
-            <ImageWithFallback
-              src={img}
-              sources={[img, ...recentPhotos.filter((photo) => photo !== img)]}
-              alt={`${hubName} album ${index + 1}`}
-              className="h-full w-full object-cover"
-              fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA]/25 text-sm font-medium text-[#0C5C57]"
-              fallback="Photo"
-            />
+    renderCenterPanel({
+      title: "Photos",
+      description: "Recent images and visual moments shared by this hub.",
+      children:
+        recentPhotos.length === 0 ? (
+          <div className="grid min-h-[240px] place-items-center text-center">
+            <div className="max-w-sm">
+              <h3 className="text-xl font-serif font-semibold tracking-tight text-[#111111]">No photos yet</h3>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600">Add photos later to bring this hub to life.</p>
+            </div>
           </div>
-        </button>
-      ))}
-      </section>
-    )
+        ) : (
+          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {recentPhotos.map((img, index) => (
+              <button
+                key={`${img}-${index}`}
+                type="button"
+                className="overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 p-0"
+                onClick={() => openViewer(recentPhotos, index, `${hubName} Album`, "Recent photos from this hub.")}
+              >
+                <div className="aspect-square">
+                  <ImageWithFallback
+                    src={img}
+                    sources={[img, ...recentPhotos.filter((photo) => photo !== img)]}
+                    alt={`${hubName} album ${index + 1}`}
+                    className="h-full w-full object-cover"
+                    fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA]/25 text-sm font-medium text-[#0C5C57]"
+                    fallback="Photo"
+                  />
+                </div>
+              </button>
+            ))}
+          </section>
+        ),
+    })
   );
 
   const renderFilesTab = () => (
-    fileItems.length === 0 ? (
-      <EmptySection title="No files yet" body="Shared guides, forms, and resources will appear here." />
-    ) : (
-      <section className="space-y-3">
-      {fileItems.map((file) => (
-        <div key={file} className={cn(CARD, "flex items-center justify-between gap-3 p-4")}>
-          <div className="flex items-center gap-3">
-            <span className={PREMIUM_ICON_WRAPPER}>
-              <Paperclip className={ICON} />
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-[#111111]">{file}</p>
-              <p className="text-xs text-slate-500">Mock shared file</p>
+    renderCenterPanel({
+      title: "Files",
+      description: "Shared guides, forms, and reference files for this hub.",
+      children:
+        fileItems.length === 0 ? (
+          <div className="grid min-h-[240px] place-items-center text-center">
+            <div className="max-w-sm">
+              <h3 className="text-xl font-serif font-semibold tracking-tight text-[#111111]">No files yet</h3>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                Shared guides, forms, and resources will appear here.
+              </p>
             </div>
           </div>
-          <button type="button" className={BUTTON_SECONDARY}>
-            Open
-          </button>
-        </div>
-      ))}
-      </section>
-    )
+        ) : (
+          <section className="space-y-3">
+            {fileItems.map((file) => (
+              <div key={file} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <div className="flex items-center gap-3">
+                  <span className={PREMIUM_ICON_WRAPPER}>
+                    <Paperclip className={ICON} />
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-[#111111]">{file}</p>
+                    <p className="text-xs text-slate-500">Mock shared file</p>
+                  </div>
+                </div>
+                <button type="button" className={BUTTON_SECONDARY}>
+                  Open
+                </button>
+              </div>
+            ))}
+          </section>
+        ),
+    })
   );
 
   const renderMembersTab = () =>
@@ -1011,6 +1114,12 @@ export default function HubClient({
         membersPanelMode === "invite"
           ? "Invite tools can plug in here next. This area will handle invitations and join requests."
           : "Manage and review the people connected to this hub.",
+      actions:
+        membersPanelMode === "list" ? (
+          <button type="button" onClick={() => openCenterMembers("invite")} className={BUTTON_PRIMARY}>
+            Invite Members
+          </button>
+        ) : null,
       children:
         memberItems.length === 0 ? (
           <div className="grid min-h-[260px] place-items-center text-center">
@@ -1049,11 +1158,168 @@ export default function HubClient({
         ),
     });
 
+  const renderAboutTab = () =>
+    renderCenterPanel({
+      title: "About",
+      description: "A quick overview of this hub, its people, and the ways to stay connected.",
+      children: (
+        <div className="space-y-6">
+          <section className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.8fr)]">
+            <div className="rounded-2xl bg-[#F7FBFA] p-5">
+              <h3 className="text-lg font-serif font-semibold text-[#111111]">About this hub</h3>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                {hubDescription || "A new uDeets hub is getting set up."}
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {[
+                  { label: "Category", value: categoryMeta.label },
+                  { label: "Visibility", value: settingsVisibility },
+                  { label: "Location", value: settingsLocation || hub.locationLabel },
+                  { label: "Members", value: String(memberCount) },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-2xl bg-white px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{item.label}</p>
+                    <p className="mt-2 text-sm font-medium text-[#111111]">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-[#F7FBFA] p-5">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-lg font-serif font-semibold text-[#111111]">Connect</h3>
+                {isCreatorAdmin ? (
+                  <button
+                    type="button"
+                    onClick={openConnectEditor}
+                    className={ACTION_ICON_BUTTON}
+                    aria-label="Edit connect links"
+                    title="Edit connect links"
+                  >
+                    <Settings className={ACTION_ICON} />
+                  </button>
+                ) : null}
+              </div>
+              <div className="mt-4 space-y-2.5 text-sm text-slate-600">
+                {[
+                  { icon: Globe, label: "Website", value: connectLinks.website, alwaysVisible: true, href: connectLinks.website || "#" },
+                  { icon: Facebook, label: "Facebook", value: connectLinks.facebook, href: connectLinks.facebook },
+                  { icon: Instagram, label: "Instagram", value: connectLinks.instagram, href: connectLinks.instagram },
+                  { icon: Youtube, label: "YouTube", value: connectLinks.youtube, href: connectLinks.youtube },
+                  { icon: Phone, label: "Phone", value: connectLinks.phone, href: connectLinks.phone ? `tel:${connectLinks.phone}` : undefined },
+                ]
+                  .filter((item) => item.alwaysVisible || item.value)
+                  .map(({ icon: LinkIcon, label, value, href, alwaysVisible }) =>
+                    value ? (
+                      <a
+                        key={label}
+                        href={href}
+                        target={label === "Phone" ? undefined : "_blank"}
+                        rel={label === "Phone" ? undefined : "noreferrer"}
+                        className="flex items-center gap-3 rounded-2xl bg-white px-3 py-3 transition hover:text-[#0C5C57]"
+                      >
+                        <LinkIcon className={ICON} />
+                        <span className="truncate">{label === "Phone" ? value : displayLinkValue(value)}</span>
+                      </a>
+                    ) : (
+                      <div key={label} className="flex items-center gap-3 rounded-2xl bg-white px-3 py-3 text-slate-400">
+                        <LinkIcon className={ICON} />
+                        {alwaysVisible ? <span className="truncate italic">Not added yet</span> : null}
+                      </div>
+                    )
+                  )}
+              </div>
+              {connectSuccess ? <p className="mt-4 text-xs font-medium text-[#0C5C57]">{connectSuccess}</p> : null}
+              {connectError ? <p className="mt-4 text-xs font-medium text-[#B42318]">{connectError}</p> : null}
+            </div>
+          </section>
+
+          <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <div className="rounded-2xl bg-[#F7FBFA] p-5">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-lg font-serif font-semibold text-[#111111]">Recent Photos</h3>
+                {isCreatorAdmin ? (
+                  <button
+                    type="button"
+                    onClick={() => galleryInputRef.current?.click()}
+                    disabled={isUploadingGallery}
+                    className={cn(BUTTON_SECONDARY, isUploadingGallery && "cursor-not-allowed opacity-70")}
+                  >
+                    {isUploadingGallery ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Uploading
+                      </span>
+                    ) : (
+                      "Add Photo"
+                    )}
+                  </button>
+                ) : null}
+              </div>
+              <input
+                ref={galleryInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleMediaFileChange("gallery")}
+                className="hidden"
+              />
+              <div className="mt-4">{renderPhotosTab()}</div>
+            </div>
+
+            <div className="rounded-2xl bg-[#F7FBFA] p-5">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-lg font-serif font-semibold text-[#111111]">Hub Admins</h3>
+                {isCreatorAdmin ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsAdminsEditorOpen(true)}
+                    className={ACTION_ICON_BUTTON}
+                    aria-label="Manage hub admins"
+                    title="Manage hub admins"
+                  >
+                    <Settings className={ACTION_ICON} />
+                  </button>
+                ) : null}
+              </div>
+              <div className="mt-4 space-y-4">
+                <div className="flex items-center gap-3 rounded-2xl bg-white px-4 py-4">
+                  <div className="relative h-11 w-11 overflow-hidden rounded-full border border-slate-200 bg-[#A9D1CA]">
+                    <ImageWithFallback
+                      src={creatorAvatarSrc}
+                      sources={[creatorAvatarSrc, ...adminImages, dpImageSrc, coverImageSrc, ...recentPhotos]}
+                      alt={creatorDisplayName}
+                      className="h-full w-full object-cover"
+                      fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA] text-xs font-semibold text-[#111111]"
+                      fallback={initials(creatorDisplayName)}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium tracking-tight text-[#111111]">{creatorDisplayName}</p>
+                    <p className="text-xs text-slate-500">{creatorDetail}</p>
+                  </div>
+                </div>
+                <p className="text-sm leading-relaxed text-slate-500">
+                  {status === "loading"
+                    ? "Loading admin details..."
+                    : isCreatorAdmin
+                      ? "You are the first Hub Admin because you created this hub."
+                      : "The hub creator is the first admin for now."}
+                </p>
+                <div>{renderFilesTab()}</div>
+              </div>
+            </div>
+          </section>
+        </div>
+      ),
+    });
+
   const renderMainContent = () => {
     if (activeSection === "Events") return renderEventsTab();
+    if (activeSection === "Members") return renderMembersTab();
+    if (activeSection === "About") return renderAboutTab();
     if (activeSection === "Photos") return renderPhotosTab();
     if (activeSection === "Files") return renderFilesTab();
-    if (activeSection === "Members") return renderMembersTab();
+    if (activeSection === "Settings") return renderSettingsPanel();
     return renderPostFeed();
   };
 
@@ -1084,6 +1350,33 @@ export default function HubClient({
     renderCenterPanel({
       title: "Settings",
       description: "Manage how this hub appears and behaves across uDeets.",
+      actions: (
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleCancelSettingsChanges}
+            disabled={!isDirty || isSavingSettings}
+            className={cn(BUTTON_SECONDARY, (!isDirty || isSavingSettings) && "cursor-not-allowed opacity-60")}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSaveSettings()}
+            disabled={!isDirty || isSavingSettings || !isCreatorAdmin}
+            className={cn(BUTTON_PRIMARY, (!isDirty || isSavingSettings || !isCreatorAdmin) && "cursor-not-allowed opacity-60")}
+          >
+            {isSavingSettings ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Saving
+              </span>
+            ) : (
+              "Save Changes"
+            )}
+          </button>
+        </div>
+      ),
       children: (
         <div className="space-y-8">
           <div>
@@ -1110,7 +1403,11 @@ export default function HubClient({
               <SettingField label="Hub Name">
                 <input
                   value={settingsHubName}
-                  onChange={(event) => setSettingsHubName(event.target.value)}
+                  onChange={(event) => {
+                    setSettingsHubName(event.target.value);
+                    setSettingsSaveError(null);
+                    setSettingsSaveSuccess(null);
+                  }}
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none ring-[#A9D1CA] transition focus:ring-2"
                 />
               </SettingField>
@@ -1162,9 +1459,22 @@ export default function HubClient({
               </SettingField>
               <div className="space-y-4">
                 <SettingField label="Category">
-                  <div className="rounded-2xl border border-slate-200 bg-[#F7FBFA] px-4 py-3 text-sm text-slate-700">
-                    {hubLabelChips.length ? hubLabelChips.join(", ") : "General Hub"}
-                  </div>
+                  <select
+                    value={settingsCategory}
+                    onChange={(event) => {
+                      setSettingsCategory(event.target.value as HubRecord["category"]);
+                      setSettingsSaveError(null);
+                      setSettingsSaveSuccess(null);
+                    }}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none ring-[#A9D1CA] transition focus:ring-2"
+                  >
+                    <option value="communities">Community</option>
+                    <option value="religious-places">Religious Place</option>
+                    <option value="restaurants">Restaurant</option>
+                    <option value="fitness">Fitness</option>
+                    <option value="pet-clubs">Pet Club</option>
+                    <option value="hoa">HOA</option>
+                  </select>
                 </SettingField>
                 <SettingField label="Location">
                   <input
@@ -1191,7 +1501,7 @@ export default function HubClient({
                 )}
               >
                 <p className="text-base font-serif font-semibold text-[#111111]">Public</p>
-                <p className="mt-2 text-sm text-slate-600">Anyone can discover and view this hub's public updates.</p>
+                <p className="mt-2 text-sm text-slate-600">Anyone can discover and view this hub&apos;s public updates.</p>
               </button>
               <button
                 type="button"
@@ -1314,6 +1624,8 @@ export default function HubClient({
               </button>
             </div>
           </div>
+          {settingsSaveSuccess ? <p className="text-sm font-medium text-[#0C5C57]">{settingsSaveSuccess}</p> : null}
+          {settingsSaveError ? <p className="text-sm font-medium text-[#B42318]">{settingsSaveError}</p> : null}
         </div>
       ),
     });
@@ -1323,400 +1635,219 @@ export default function HubClient({
       <UdeetsHeader />
 
       <main className="mx-auto max-w-7xl px-4 pb-24 pt-6 sm:px-6 md:pb-8 lg:px-10">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start">
-          <aside className="space-y-6 lg:col-span-3 lg:row-span-2 lg:self-start lg:sticky lg:top-24">
-            <section className={cn(CARD, "overflow-hidden")}>
-              <div className="p-4">
-                <div className="relative aspect-[4/4.2] overflow-hidden rounded-[1.6rem]">
-                  <div className="absolute inset-0">
-                    <input
-                      ref={dpInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleMediaFileChange("dp")}
-                      className="hidden"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => openMediaChooser("dp")}
-                      disabled={!isCreatorAdmin || isUploadingDp}
-                      className={cn(
-                        "group relative h-full w-full overflow-hidden rounded-[1.6rem] bg-[#A9D1CA] shadow-sm",
-                        isCreatorAdmin && "cursor-pointer"
-                      )}
-                    >
-                      {dpImageSrc ? (
-                        <ImageWithFallback
-                          src={dpImageSrc}
-                          sources={[dpImageSrc]}
-                          alt={`${hubName} display`}
-                          className="h-full w-full object-cover"
-                          fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA] text-2xl font-semibold text-[#111111]"
-                          fallback={initials(hubName)}
-                        />
-                      ) : (
-                        <MediaEmptyState />
-                      )}
-                    </button>
-                  </div>
+        <section className={cn(CARD, "overflow-hidden")}>
+          <div className="relative aspect-[16/6] w-full bg-slate-100">
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleMediaFileChange("cover")}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => openMediaChooser("cover")}
+              disabled={!isCreatorAdmin || isUploadingCover}
+              className={cn("relative z-0 h-full w-full", isCreatorAdmin && "cursor-pointer")}
+              style={!displayCoverImageSrc ? { backgroundColor: EMPTY_MEDIA_BG } : undefined}
+            >
+              {displayCoverImageSrc ? (
+                <ImageWithFallback
+                  src={displayCoverImageSrc}
+                  sources={[displayCoverImageSrc, coverImageSrc].filter(Boolean)}
+                  alt={`${hubName} cover`}
+                  className="h-full w-full object-cover"
+                  fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA]/35 text-sm font-medium text-[#0C5C57]"
+                  fallback="Cover photo"
+                />
+              ) : (
+                <MediaEmptyState />
+              )}
+            </button>
+            <input
+              ref={dpInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleMediaFileChange("dp")}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => openMediaChooser("dp")}
+              disabled={!isCreatorAdmin || isUploadingDp}
+              className={cn(
+                "absolute bottom-6 left-6 right-auto top-auto z-30 h-20 w-20 overflow-hidden rounded-full border-[3px] border-white bg-[#A9D1CA] shadow-[0_10px_24px_rgba(15,23,42,0.12)]",
+                isCreatorAdmin && "cursor-pointer"
+              )}
+            >
+              {dpImageSrc ? (
+                <ImageWithFallback
+                  src={dpImageSrc}
+                  sources={[dpImageSrc]}
+                  alt={`${hubName} display`}
+                  className="h-full w-full object-cover"
+                  fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA] text-2xl font-semibold text-[#111111]"
+                  fallback={initials(hubName)}
+                />
+              ) : (
+                <MediaEmptyState />
+              )}
+            </button>
+          </div>
+
+          <div className="border-t border-slate-100 bg-white px-5 py-4 sm:px-6">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 items-center gap-2">
+                  <h1 className="truncate text-xl font-serif font-semibold tracking-tight text-[#111111] sm:text-2xl">
+                    {hubName}
+                  </h1>
+                  {settingsVisibility === "Private" ? (
+                    <Lock className="h-4 w-4 shrink-0 text-slate-500" />
+                  ) : (
+                    <Globe className="h-4 w-4 shrink-0 text-slate-500" />
+                  )}
                 </div>
+                <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+                  {categoryMeta.label}
+                </p>
               </div>
-              <div className="bg-[#A9D1CA] px-4 py-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <CategoryIcon className="h-4.5 w-4.5 shrink-0 stroke-[1.9] text-white" />
-                    <p className="truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-white/85">
-                      {categoryMeta.label}
-                    </p>
-                  </div>
-                  <span className="shrink-0 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-[#111111]">
-                    {settingsVisibility}
-                  </span>
-                </div>
-                <h1 className="mt-2 text-lg font-serif font-semibold tracking-tight text-[#111111]">{hubName}</h1>
-                <div className="mt-3 flex items-center gap-4 text-[#111111]">
+
+              <div className="flex shrink-0 items-center gap-3">
+                {!isCreatorAdmin ? (
                   <button
                     type="button"
-                    onClick={() => setActivePanel("settings")}
-                    className={ACTION_ICON_BUTTON}
+                    onClick={() =>
+                      setSubscriptionState(settingsVisibility === "Private" ? "awaiting" : "subscribed")
+                    }
+                    className="text-sm font-medium text-slate-600 transition hover:text-[#0C5C57]"
+                  >
+                    {subscribeLabel}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => openCenterMembers("invite")}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#A9D1CA] text-[#12312D] shadow-sm transition hover:bg-[#97c7bf]"
+                  aria-label="Invite members"
+                  title="Invite members"
+                >
+                  <Share2 className="h-4.5 w-4.5 stroke-[1.8]" />
+                </button>
+                {isCreatorAdmin ? (
+                  <button
+                    type="button"
+                    onClick={() => requestNavigation({ tab: "Settings", panel: "settings" })}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#A9D1CA] text-[#12312D] shadow-sm transition hover:bg-[#97c7bf]"
                     aria-label="Hub settings"
                     title="Hub settings"
                   >
-                    <Settings className={ACTION_ICON} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActivePanel("challenges")}
-                    className={ACTION_ICON_BUTTON}
-                    aria-label="Challenges"
-                    title="Challenges"
-                  >
-                    <Target className={ACTION_ICON} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openCenterMembers("list")}
-                    className="inline-flex items-center gap-1.5 text-sm font-medium text-[#111111]/78 transition hover:text-[#0C5C57]"
-                    aria-label="Members"
-                    title="Members"
-                  >
-                    <UsersRound className={ACTION_ICON} />
-                    <span>{memberCount}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openCenterMembers("invite")}
-                    className={ACTION_ICON_BUTTON}
-                    aria-label="Invite members"
-                    title="Invite members"
-                  >
-                    <UserPlus className={ACTION_ICON} />
-                  </button>
-                </div>
-              </div>
-            </section>
-
-            <section className={cn(CARD, "p-6")}>
-              <input
-                ref={galleryInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleMediaFileChange("gallery")}
-                className="hidden"
-              />
-              <h2 className="text-sm font-semibold tracking-tight text-[#111111]">Recent Photos</h2>
-              <div className="mt-4 grid grid-cols-3 gap-2">
-                {recentPhotos.length === 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => isCreatorAdmin && galleryInputRef.current?.click()}
-                    disabled={!isCreatorAdmin || isUploadingGallery}
-                    className={cn("aspect-square overflow-hidden rounded-2xl", isCreatorAdmin && "cursor-pointer")}
-                    style={{ backgroundColor: EMPTY_MEDIA_BG }}
-                  >
-                    <MediaEmptyState square />
-                  </button>
-                ) : (
-                  recentPhotos.map((img, index) => (
-                    <div
-                      key={`${img}-${index}`}
-                      className="group relative aspect-square overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 ring-2 ring-white"
-                    >
-                      <button
-                        type="button"
-                        className="h-full w-full"
-                        onClick={() =>
-                          openViewer(recentPhotos, index, `${hubName} Photo`, "Recent photo from this hub.")
-                        }
-                      >
-                        <ImageWithFallback
-                          src={img}
-                          sources={[img, ...recentPhotos.filter((photo) => photo !== img)]}
-                          alt={`${hubName} photo ${index + 1}`}
-                          className="h-full w-full object-cover"
-                          fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA]/25 text-[11px] font-medium text-[#0C5C57]"
-                          fallback="Photo"
-                          loading="lazy"
-                        />
-                      </button>
-                      {isCreatorAdmin && index === 0 ? (
-                        <button
-                          type="button"
-                          onClick={() => galleryInputRef.current?.click()}
-                          className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-white/92 text-[#0C5C57] shadow-sm transition hover:bg-white"
-                          aria-label="Add another photo"
-                        >
-                          {isUploadingGallery ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                        </button>
-                      ) : null}
-                    </div>
-                  ))
-                )}
-              </div>
-            </section>
-
-            <section className={cn(CARD, "p-6")}>
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-base font-semibold tracking-tight text-[#111111]">Connect</h2>
-                {isCreatorAdmin ? (
-                  <button
-                    type="button"
-                    onClick={openConnectEditor}
-                    className={ACTION_ICON_BUTTON}
-                    aria-label="Edit connect links"
-                    title="Edit connect links"
-                  >
-                    <Settings className={ACTION_ICON} />
+                    <Settings className="h-4.5 w-4.5 stroke-[1.8]" />
                   </button>
                 ) : null}
               </div>
-              <div className="mt-4 space-y-2.5 text-sm text-slate-600">
-                {[
-                  { icon: Globe, label: "Website", value: connectLinks.website, alwaysVisible: true, href: connectLinks.website || "#" },
-                  { icon: Facebook, label: "Facebook", value: connectLinks.facebook, href: connectLinks.facebook },
-                  { icon: Instagram, label: "Instagram", value: connectLinks.instagram, href: connectLinks.instagram },
-                  { icon: Youtube, label: "YouTube", value: connectLinks.youtube, href: connectLinks.youtube },
-                  { icon: Phone, label: "Phone", value: connectLinks.phone, href: connectLinks.phone ? `tel:${connectLinks.phone}` : undefined },
-                ]
-                  .filter((item) => item.alwaysVisible || item.value)
-                  .map(({ icon: LinkIcon, label, value, href, alwaysVisible }) =>
-                  value ? (
-                    <a
-                      key={label}
-                      href={href}
-                      target={label === "Phone" ? undefined : "_blank"}
-                      rel={label === "Phone" ? undefined : "noreferrer"}
-                      className="flex items-center gap-3 rounded-2xl px-1 py-1.5 transition hover:text-[#0C5C57]"
-                    >
-                      <LinkIcon className={ICON} />
-                      <span className="truncate">{label === "Phone" ? value : displayLinkValue(value)}</span>
-                    </a>
-                  ) : (
-                    <div key={label} className="flex items-center gap-3 rounded-2xl px-1 py-1.5 text-slate-400">
-                      <LinkIcon className={ICON} />
-                      {alwaysVisible ? <span className="truncate italic">Not added yet</span> : null}
-                    </div>
-                  )
-                )}
-              </div>
-              {connectSuccess ? <p className="mt-4 text-xs font-medium text-[#0C5C57]">{connectSuccess}</p> : null}
-              {connectError ? <p className="mt-4 text-xs font-medium text-[#B42318]">{connectError}</p> : null}
-            </section>
-          </aside>
+            </div>
+          </div>
+        </section>
 
-          <section className="lg:col-span-9">
-            <section className={cn(CARD, "overflow-hidden")}>
-              <div className="relative aspect-[16/6] w-full bg-slate-100">
-                <input
-                  ref={coverInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleMediaFileChange("cover")}
-                  className="hidden"
-                />
+        {mediaSuccess ? <p className="mt-3 text-sm font-medium text-[#0C5C57]">{mediaSuccess}</p> : null}
+        {mediaError ? <p className="mt-3 text-sm font-medium text-[#B42318]">{mediaError}</p> : null}
+
+        <section className={cn(CARD, "mt-6 p-2")}>
+          <div className="flex flex-wrap gap-1">
+            {HUB_TABS.map((tab) => {
+              const isActive =
+                (tab === "Settings" && activePanel === "settings") ||
+                (tab === "Members" && (activePanel === "members" || activePanel === "invite")) ||
+                (tab !== "Settings" && tab !== "Members" && activePanel === "posts" && activeSection === tab);
+
+              return (
                 <button
+                  key={tab}
                   type="button"
-                  onClick={() => openMediaChooser("cover")}
-                  disabled={!isCreatorAdmin || isUploadingCover}
-                  className={cn("h-full w-full", isCreatorAdmin && "cursor-pointer")}
-                  style={!coverImageSrc ? { backgroundColor: EMPTY_MEDIA_BG } : undefined}
-                >
-                  {coverImageSrc ? (
-                    <ImageWithFallback
-                      src={coverImageSrc}
-                      sources={[coverImageSrc]}
-                      alt={`${hubName} cover`}
-                      className="h-full w-full object-cover"
-                      fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA]/35 text-sm font-medium text-[#0C5C57]"
-                      fallback="Cover photo"
-                    />
-                  ) : (
-                    <MediaEmptyState />
+                  onClick={() => {
+                    if (tab === "Settings") {
+                      requestNavigation({ tab, panel: "settings" });
+                      return;
+                    }
+                    if (tab === "Members") {
+                      requestNavigation({ tab, panel: "members", membersMode: "list" });
+                      return;
+                    }
+                    requestNavigation({ tab, panel: "posts" });
+                  }}
+                  aria-label={tab}
+                  title={tab}
+                  className={cn(
+                    "rounded-2xl px-4 py-3 text-sm font-semibold tracking-tight transition",
+                    isActive ? "bg-[#A9D1CA] text-[#0C5C57]" : "text-slate-600 hover:bg-[#E3F1EF] hover:text-[#0C5C57]"
                   )}
+                >
+                  {tab}
                 </button>
-              </div>
-              <div className="p-5 sm:p-6">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">{hub.category.replace(/-/g, " ")}</p>
-                    <h2 className="mt-2 text-2xl font-serif font-semibold tracking-tight text-[#111111]">
-                      {hubTagline}
-                    </h2>
-                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">
-                      {hub.intro || settingsDescription || hub.description}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {hubLabelChips.map((tag) => (
-                      <span key={tag} className="rounded-full bg-[#A9D1CA]/45 px-3 py-1 text-xs font-semibold capitalize text-[#0C5C57]">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </section>
-            {mediaSuccess ? <p className="mt-3 text-sm font-medium text-[#0C5C57]">{mediaSuccess}</p> : null}
-            {mediaError ? <p className="mt-3 text-sm font-medium text-[#B42318]">{mediaError}</p> : null}
-          </section>
+              );
+            })}
+          </div>
+        </section>
 
-          <section className="space-y-6 lg:col-span-6">
-            <section className={cn(CARD, "p-2")}>
-              <div className="grid grid-cols-5 items-center gap-1">
-                {HUB_TABS.map((tab) => (
-                  <div key={tab} className="flex justify-center">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActivePanel("posts");
-                        setActiveSection(tab);
-                        if (tab === "Members") {
-                          setMembersPanelMode("list");
-                        }
-                      }}
-                      aria-label={tab}
-                      title={tab}
-                      className={cn(
-                        "w-full rounded-2xl px-3 py-3 text-center text-sm font-semibold tracking-tight transition",
-                        activePanel === "posts" && activeSection === tab
-                          ? "bg-[#A9D1CA] text-[#0C5C57]"
-                          : "text-slate-600 hover:bg-[#E3F1EF] hover:text-[#0C5C57]"
-                      )}
-                    >
-                      {tab}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            {activePanel === "posts" ? renderMainContent() : null}
-            {activePanel === "challenges" ? renderChallengesPanel() : null}
-            {activePanel === "settings" ? renderSettingsPanel() : null}
-            {activePanel === "members" ? renderMembersTab() : null}
-            {activePanel === "invite" ? renderMembersTab() : null}
-          </section>
-
-          <aside className="space-y-4 lg:col-span-3 lg:self-start lg:sticky lg:top-24">
-            <section className={cn(CARD, "p-4")}>
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-sm font-semibold tracking-tight text-[#111111]">Hub Notifications</h2>
-                <Bell className={ICON} />
-              </div>
-              <div className="mt-3 space-y-2">
-                {hubContent.notifications.length ? (
-                  hubContent.notifications.map((notification) => (
-                    <button
-                      key={notification.id}
-                      type="button"
-                      onClick={() => navigateToFocus(notification.focusId, "Posts")}
-                      className="group grid w-full grid-cols-[64px_minmax(0,1fr)] gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-[#E3F1EF]"
-                    >
-                      <p className="text-[11px] font-medium text-slate-500">{notification.meta}</p>
-                      <p className="truncate text-sm font-semibold leading-snug text-[#111111] group-hover:whitespace-normal">
-                        {notification.title}
-                      </p>
-                    </button>
-                  ))
-                ) : (
-                  <p className="text-sm leading-relaxed text-slate-500">No notifications yet for this hub.</p>
-                )}
-              </div>
-            </section>
-
-            <section className={cn(CARD, "p-4")}>
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-sm font-semibold tracking-tight text-[#111111]">Upcoming Events</h2>
-                <CalendarDays className={ICON} />
-              </div>
-              <div className="mt-3 space-y-2">
-                {hubContent.events.length ? (
-                  hubContent.events.map((event) => (
-                    <button
-                      key={event.id}
-                      type="button"
-                      onClick={() => navigateToFocus(event.focusId, "Posts")}
-                      className="group grid w-full grid-cols-[64px_minmax(0,1fr)] gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-[#E3F1EF]"
-                    >
-                      <p className="text-[11px] font-medium text-slate-500">{event.dateLabel}</p>
-                      <p className="truncate text-sm font-semibold leading-snug text-[#111111] group-hover:whitespace-normal">
-                        {summaryLine([event.title, `${event.dateLabel} ${event.time}`])}
-                      </p>
-                    </button>
-                  ))
-                ) : (
-                  <p className="text-sm leading-relaxed text-slate-500">No events are published for this hub yet.</p>
-                )}
-              </div>
-            </section>
-
-            <section className={cn(CARD, "p-5")}>
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-sm font-semibold tracking-tight text-[#111111]">Hub Admins</h2>
-                {isCreatorAdmin ? (
-                  <button
-                    type="button"
-                    onClick={() => setIsAdminsEditorOpen(true)}
-                    className={ACTION_ICON_BUTTON}
-                    aria-label="Manage hub admins"
-                    title="Manage hub admins"
-                  >
-                    <Settings className={ACTION_ICON} />
-                  </button>
-                ) : null}
-              </div>
-              <div className="mt-3 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="relative h-10 w-10 overflow-hidden rounded-full border border-slate-200 bg-[#A9D1CA]">
-                    <ImageWithFallback
-                      src={creatorAvatarSrc}
-                      sources={[creatorAvatarSrc, ...adminImages, dpImageSrc, coverImageSrc, ...recentPhotos]}
-                      alt={creatorDisplayName}
-                      className="h-full w-full object-cover"
-                      fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA] text-xs font-semibold text-[#111111]"
-                      fallback={initials(creatorDisplayName)}
-                    />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium tracking-tight text-[#111111]">{creatorDisplayName}</p>
-                    <p className="text-xs text-slate-500">{creatorDetail}</p>
-                  </div>
-                </div>
-                <p className="text-sm leading-relaxed text-slate-500">
-                  {status === "loading"
-                    ? "Loading admin details..."
-                    : isCreatorAdmin
-                      ? "You are the first Hub Admin because you created this hub."
-                      : "The hub creator is the first admin for now."}
-                </p>
-              </div>
-            </section>
-          </aside>
-        </div>
+        <section className="mt-6">
+          {activePanel === "posts" ? renderMainContent() : null}
+          {activePanel === "challenges" ? renderChallengesPanel() : null}
+          {activePanel === "settings" ? renderSettingsPanel() : null}
+          {activePanel === "members" ? renderMembersTab() : null}
+          {activePanel === "invite" ? renderMembersTab() : null}
+        </section>
       </main>
 
       {!isDemoPreview ? <UdeetsFooter /> : null}
       {!isDemoPreview ? <UdeetsBottomNav activeNav="home" /> : null}
+
+      {isUnsavedChangesOpen ? (
+        <div className="fixed inset-0 z-[118] flex items-center justify-center bg-[#111111]/45 p-4">
+          <div className={cn(CARD, "w-full max-w-md p-5")}>
+            <div>
+              <h3 className="text-lg font-serif font-semibold tracking-tight text-[#111111]">You have unsaved changes</h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                Save your hub settings before switching tabs, or discard your edits.
+              </p>
+            </div>
+
+            {settingsSaveError ? <p className="mt-4 text-sm font-medium text-[#B42318]">{settingsSaveError}</p> : null}
+
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  handleCancelSettingsChanges();
+                  if (pendingNavigation) {
+                    applyNavigation(pendingNavigation);
+                  }
+                  setPendingNavigation(null);
+                  setIsUnsavedChangesOpen(false);
+                }}
+                className={BUTTON_SECONDARY}
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSaveSettings()}
+                disabled={isSavingSettings}
+                className={cn(BUTTON_PRIMARY, isSavingSettings && "cursor-not-allowed opacity-60")}
+              >
+                {isSavingSettings ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Saving
+                  </span>
+                ) : (
+                  "Save Changes"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {mediaChooserTarget ? (
         <div className="fixed inset-0 z-[115] flex items-center justify-center bg-[#111111]/45 p-4">
