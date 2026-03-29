@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import MockAppShell, { cardClass, sectionTitleClass } from "@/components/mock-app-shell";
 import { MY_POSTS } from "@/lib/mock-account";
 

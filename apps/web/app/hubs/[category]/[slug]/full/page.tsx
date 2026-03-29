@@ -3,6 +3,8 @@ import HubRouteClient from "../HubRouteClient";
 import { toHubRecord } from "@/lib/hubs";
 import { getHubBySlug } from "@/lib/services/hubs/get-hub-by-slug";
 
+export const dynamic = "force-dynamic";
+
 export default async function Page({
   params,
 }: {
