@@ -1,5 +1,7 @@
 import { AuthTestPanel } from "@/components/dev/AuthTestPanel";
 
+export const dynamic = "force-dynamic";
+
 export default function AuthTestPage() {
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-10 text-slate-50">

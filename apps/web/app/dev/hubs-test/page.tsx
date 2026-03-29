@@ -1,5 +1,7 @@
 import { HubsTestPanel } from "@/components/dev/HubsTestPanel";
 
+export const dynamic = "force-dynamic";
+
 export default function HubsTestPage() {
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-10 text-slate-50">
