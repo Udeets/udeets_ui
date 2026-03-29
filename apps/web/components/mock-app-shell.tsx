@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader, type NavKey } from "@/components/udeets-navigation";
 import { useAuthSession } from "@/services/auth/useAuthSession";
 
@@ -20,7 +20,7 @@ export function sectionTitleClass(extra?: string) {
   return cn("text-xl font-serif font-semibold tracking-tight sm:text-2xl", TEXT_DARK, extra);
 }
 
-export default function MockAppShell({
+function MockAppShellContent({
   children,
   activeNav = "home",
 }: {
@@ -68,5 +68,16 @@ export default function MockAppShell({
       <UdeetsFooter />
       <UdeetsBottomNav activeNav={activeNav} />
     </div>
+  );
+}
+
+export default function MockAppShell(props: {
+  children: React.ReactNode;
+  activeNav?: NavKey;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <MockAppShellContent {...props} />
+    </Suspense>
   );
 }

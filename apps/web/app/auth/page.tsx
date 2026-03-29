@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import { signInWithGoogle } from "@/services/auth/signInWithGoogle";
@@ -40,7 +40,7 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-export default function Page() {
+function AuthPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated } = useAuthSession();
@@ -256,5 +256,13 @@ export default function Page() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={null}>
+      <AuthPageContent />
+    </Suspense>
   );
 }

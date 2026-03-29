@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
 import { UDEETS_LOGO_SRC } from "@/lib/branding";
 import { formatDeetTime, getAllStoredDeets, subscribeToStoredDeets, type StoredDeet } from "@/lib/deets-store";
@@ -208,7 +208,7 @@ function HubLauncher({
   );
 }
 
-export default function DashboardPage() {
+function DashboardPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [authStatus, setAuthStatus] = useState<AuthStatus>("checking");
@@ -558,5 +558,13 @@ export default function DashboardPage() {
       <UdeetsFooter />
       <UdeetsBottomNav activeNav="home" />
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={null}>
+      <DashboardPageContent />
+    </Suspense>
   );
 }

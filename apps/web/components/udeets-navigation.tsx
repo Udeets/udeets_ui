@@ -14,7 +14,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { UdeetsBrandLockup, UdeetsLogoIcon } from "@/components/brand-logo";
 import { HOME_EVENTS, HOME_NOTIFICATIONS } from "@/lib/hub-content";
 import { isUdeetsLogoSrc, UDEETS_LOGO_SRC } from "@/lib/branding";
@@ -315,7 +315,7 @@ function ProfilePanel({ onLogout }: { onLogout: () => void }) {
   );
 }
 
-export function UdeetsHeader() {
+function UdeetsHeaderContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -452,6 +452,14 @@ export function UdeetsHeader() {
         </div>
       </div>
     </header>
+  );
+}
+
+export function UdeetsHeader() {
+  return (
+    <Suspense fallback={null}>
+      <UdeetsHeaderContent />
+    </Suspense>
   );
 }
 

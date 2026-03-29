@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import MockAppShell, { cardClass } from "@/components/mock-app-shell";
 import { createHub } from "@/lib/services/hubs/create-hub";
@@ -83,7 +83,7 @@ function StepPanel({
   );
 }
 
-export default function CreateHubPage() {
+function CreateHubPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isDemoPreview = searchParams.get("demo_preview") === "1";
@@ -362,5 +362,13 @@ export default function CreateHubPage() {
         </StepPanel>
       ) : null}
     </MockAppShell>
+  );
+}
+
+export default function CreateHubPage() {
+  return (
+    <Suspense fallback={null}>
+      <CreateHubPageContent />
+    </Suspense>
   );
 }

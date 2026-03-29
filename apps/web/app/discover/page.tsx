@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
 import { isUdeetsLogoSrc } from "@/lib/branding";
@@ -289,7 +289,7 @@ function CarouselSection({ title, hubs }: { title: string; hubs: Hub[] }) {
   );
 }
 
-export default function DiscoverPage() {
+function DiscoverPageContent() {
   const searchParams = useSearchParams();
   const { isAuthenticated } = useAuthSession();
   const [query, setQuery] = useState("");
@@ -662,5 +662,13 @@ export default function DiscoverPage() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function DiscoverPage() {
+  return (
+    <Suspense fallback={null}>
+      <DiscoverPageContent />
+    </Suspense>
   );
 }
