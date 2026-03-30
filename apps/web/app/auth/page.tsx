@@ -43,17 +43,16 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
 function AuthPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryError = searchParams.get("error") ?? "";
   const { isAuthenticated } = useAuthSession();
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
-  const [error, setError] = useState(searchParams.get("error") ?? "");
+  const [error, setError] = useState("");
+  const [dismissedQueryError, setDismissedQueryError] = useState<string | null>(null);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-
-  useEffect(() => {
-    setError(searchParams.get("error") ?? "");
-  }, [searchParams]);
+  const visibleError = error || (queryError && dismissedQueryError !== queryError ? queryError : "");
 
   useEffect(() => {
     let cancelled = false;
@@ -79,10 +78,12 @@ function AuthPageContent() {
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setDismissedQueryError(queryError);
     setError("Email/password sign-in is not enabled yet. Continue with Google.");
   }
 
   async function handleGoogleSignIn() {
+    setDismissedQueryError(queryError);
     setError("");
     setIsGoogleLoading(true);
 
@@ -209,7 +210,7 @@ function AuthPageContent() {
               className="w-full rounded-xl border border-gray-300 px-3 py-3 focus:ring-2 focus:ring-[#A9D1CA]"
             />
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {visibleError && <p className="text-sm text-red-600">{visibleError}</p>}
 
             {mode === "signin" && (
               <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">

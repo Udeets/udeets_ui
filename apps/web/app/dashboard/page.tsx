@@ -9,7 +9,7 @@ import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader } from "@/components/udeets
 import { UDEETS_LOGO_SRC } from "@/lib/branding";
 import { formatDeetTime, getAllStoredDeets, subscribeToStoredDeets, type StoredDeet } from "@/lib/deets-store";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
-import { listHubs } from "@/services/hubs/listHubs";
+import { listHubs } from "@/lib/services/hubs/list-hubs";
 import type { Hub as SupabaseHub } from "@/types/hub";
 import { DashboardHubCard, type DashboardHubCardData } from "./components/DashboardHubCard";
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { Pause, Play } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
 
 type Step = {
@@ -25,11 +25,6 @@ type FocusState = {
 };
 
 type BrandScene = "intro" | "outro" | null;
-
-type TransformTarget = {
-  focusTargetKey?: string;
-  focusScale?: number;
-};
 
 type AnchorType = "button" | "icon" | "input" | "row";
 
@@ -56,7 +51,6 @@ const FRAME_HEIGHT = 1600;
 const CREATE_HUB_NAME = "Kamath Cafe";
 const SHARE_ANNOUNCEMENT =
   "Outdoor soccer sessions for Under 12 kids at Twin Hickory ground at 5:00 PM today";
-const CLINIC_ALERT = "Free Pet Check-up in Mechanicsville";
 const CUSTOM_HUB_STORAGE_KEY = "udeets-custom-hubs";
 
 const DISCOVER_URL = "/discover?demo_preview=1";
@@ -111,7 +105,6 @@ export function HowItWorksAnimated() {
 
   const [isVisible, setIsVisible] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [replayToken, setReplayToken] = useState(0);
   const [activeStep, setActiveStep] = useState(0);
   const [activeDotOffset, setActiveDotOffset] = useState(0);
   const [cycleProgress, setCycleProgress] = useState(0);
@@ -522,185 +515,184 @@ export function HowItWorksAnimated() {
     return () => observer.disconnect();
   }, []);
 
+  const runDemoLoop = useEffectEvent(async (runId: number) => {
+    try {
+      while (!isCancelled(runId)) {
+        resetDemo();
+        cycleStartedAtRef.current = performance.now();
+        pausedDurationRef.current = 0;
+        pausedAtRef.current = null;
+        timelineActiveRef.current = true;
+        if (!(await showBrandScene("intro", runId))) return;
+        if (!(await showRoute(DISCOVER_URL, runId, 680))) return;
+        if (!(await hideBrandScene(runId))) return;
+        if (!(await wait(760, runId))) return;
+
+        if (!(await activateStep(0, runId))) return;
+        if (!(await wait(950, runId))) return;
+        if (
+          !(await clickTarget("discover-create-hub", runId, {
+            moveDuration: 1250,
+            focusScale: 1.38,
+            focusDwell: 720,
+            afterClickWait: 500,
+          }))
+        ) {
+          return;
+        }
+
+        if (!(await waitForRoute(CREATE_HUB_URL, runId))) return;
+        if (!(await wait(1200, runId))) return;
+        if (!(await focusAreaThenAct("create-hub-name-section", runId, { scale: 2.08, dwell: 980, hold: 420 }))) return;
+        if (
+          !(await clickTarget("create-hub-name", runId, {
+            focusTargetKey: "create-hub-name-section",
+            moveDuration: 1100,
+            focusScale: 2.08,
+            focusDwell: 520,
+            afterClickWait: 280,
+          }))
+        ) {
+          return;
+        }
+        if (!(await typeIntoTarget("create-hub-name", CREATE_HUB_NAME, runId, 58))) return;
+        if (!(await wait(1000, runId))) return;
+        if (!(await clearFocus(runId, 760))) return;
+        if (!(await wait(520, runId))) return;
+
+        if (!(await clickTarget("create-hub-name-next", runId, { moveDuration: 980, focusScale: 2.18, focusDwell: 560 }))) return;
+        if (!(await wait(920, runId))) return;
+
+        if (!(await focusAreaThenAct("create-hub-visibility-section", runId, { scale: 2.02, dwell: 980, hold: 420 }))) return;
+        if (
+          !(await clickTarget("create-hub-public", runId, {
+            moveDuration: 1080,
+            focusScale: 2.24,
+            focusDwell: 560,
+            afterClickWait: 360,
+          }))
+        ) {
+          return;
+        }
+        if (!(await wait(420, runId))) return;
+        if (
+          !(await clickTarget("create-hub-visibility-next", runId, {
+            moveDuration: 980,
+            focusScale: 2.18,
+            focusDwell: 520,
+          }))
+        ) {
+          return;
+        }
+        if (!(await clearFocus(runId, 760))) return;
+        if (!(await wait(1200, runId))) return;
+
+        if (!(await focusAreaThenAct("create-hub-category-section", runId, { scale: 1.98, dwell: 980, hold: 420 }))) return;
+        if (
+          !(await clickTarget("create-hub-restaurant", runId, {
+            moveDuration: 1080,
+            focusScale: 2.18,
+            focusDwell: 560,
+            afterClickWait: 360,
+          }))
+        ) {
+          return;
+        }
+        if (!(await wait(420, runId))) return;
+        if (
+          !(await clickTarget("create-hub-save", runId, {
+            moveDuration: 980,
+            focusScale: 2.2,
+            focusDwell: 540,
+            afterClickWait: 520,
+          }))
+        ) {
+          return;
+        }
+
+        if (!(await waitForRoute("/hubs/restaurants/kamath-cafe?demo_preview=1", runId))) return;
+        if (!(await clearFocus(runId, 900))) return;
+        if (!(await wait(1800, runId))) return;
+
+        if (!(await activateStep(1, runId))) return;
+        if (!(await showRoute(SHARE_HUB_URL, runId, 1400))) return;
+        if (!(await wait(900, runId))) return;
+        if (!(await focusAreaThenAct("hub-composer-section", runId, { scale: 1.78, dwell: 900, hold: 360 }))) return;
+        if (
+          !(await clickTarget("hub-composer-input", runId, {
+            focusTargetKey: "hub-composer-section",
+            moveDuration: 1200,
+            focusScale: 1.78,
+            focusDwell: 500,
+          }))
+        ) {
+          return;
+        }
+        if (!(await typeIntoTarget("hub-composer-input", SHARE_ANNOUNCEMENT, runId, 48))) return;
+        if (!(await wait(950, runId))) return;
+        if (
+          !(await clickTarget("hub-composer-post", runId, {
+            moveDuration: 1000,
+            focusScale: 2.16,
+            focusDwell: 520,
+          }))
+        ) {
+          return;
+        }
+
+        if (
+          !(await showRoute(
+            `${SHARE_HUB_URL}&demo_composer=${encodeURIComponent(SHARE_ANNOUNCEMENT)}&demo_posted=${encodeURIComponent(
+              SHARE_ANNOUNCEMENT
+            )}`,
+            runId,
+            1200
+          ))
+        ) {
+          return;
+        }
+        if (!(await clearFocus(runId, 900))) return;
+        if (!(await wait(1800, runId))) return;
+
+        if (!(await activateStep(2, runId))) return;
+        if (!(await showRoute(DASHBOARD_URL, runId, 1400))) return;
+        if (!(await wait(900, runId))) return;
+        if (!(await focusAreaThenAct("dashboard-header-alerts", runId, { scale: 2.55, dwell: 980, hold: 320 }))) return;
+        if (
+          !(await clickTarget("dashboard-header-alerts", runId, {
+            moveDuration: 1250,
+            focusScale: 2.82,
+            focusDwell: 760,
+            afterClickWait: 420,
+          }))
+        ) {
+          return;
+        }
+        if (!(await clearFocus(runId, 620))) return;
+        if (!(await wait(320, runId))) return;
+        if (!(await showRoute(DASHBOARD_ALERTS_URL, runId, 900))) return;
+        if (!(await focusAreaThenAct("dashboard-alerts-dropdown", runId, { scale: 2.18, dwell: 920, hold: 2000 }))) return;
+        if (!(await clearFocus(runId, 720))) return;
+        if (!(await runBrandedOutro(runId))) return;
+      }
+    } finally {
+      timelineActiveRef.current = false;
+      runningRef.current = false;
+    }
+  });
+
   useEffect(() => {
     if (!isVisible || !isPlaying || runningRef.current) return;
 
     const runId = ++runIdRef.current;
     runningRef.current = true;
-
-    const runDemo = async () => {
-      try {
-        while (!isCancelled(runId)) {
-          resetDemo();
-          cycleStartedAtRef.current = performance.now();
-          pausedDurationRef.current = 0;
-          pausedAtRef.current = null;
-          timelineActiveRef.current = true;
-          if (!(await showBrandScene("intro", runId))) return;
-          if (!(await showRoute(DISCOVER_URL, runId, 680))) return;
-          if (!(await hideBrandScene(runId))) return;
-          if (!(await wait(760, runId))) return;
-
-          if (!(await activateStep(0, runId))) return;
-          if (!(await wait(950, runId))) return;
-          if (
-            !(await clickTarget("discover-create-hub", runId, {
-              moveDuration: 1250,
-              focusScale: 1.38,
-              focusDwell: 720,
-              afterClickWait: 500,
-            }))
-          ) {
-            return;
-          }
-
-          if (!(await waitForRoute(CREATE_HUB_URL, runId))) return;
-          if (!(await wait(1200, runId))) return;
-          if (!(await focusAreaThenAct("create-hub-name-section", runId, { scale: 2.08, dwell: 980, hold: 420 }))) return;
-          if (
-            !(await clickTarget("create-hub-name", runId, {
-              focusTargetKey: "create-hub-name-section",
-              moveDuration: 1100,
-              focusScale: 2.08,
-              focusDwell: 520,
-              afterClickWait: 280,
-            }))
-          ) {
-            return;
-          }
-          if (!(await typeIntoTarget("create-hub-name", CREATE_HUB_NAME, runId, 58))) return;
-          if (!(await wait(1000, runId))) return;
-          if (!(await clearFocus(runId, 760))) return;
-          if (!(await wait(520, runId))) return;
-
-          if (!(await clickTarget("create-hub-name-next", runId, { moveDuration: 980, focusScale: 2.18, focusDwell: 560 }))) return;
-          if (!(await wait(920, runId))) return;
-
-          if (!(await focusAreaThenAct("create-hub-visibility-section", runId, { scale: 2.02, dwell: 980, hold: 420 }))) return;
-          if (
-            !(await clickTarget("create-hub-public", runId, {
-              moveDuration: 1080,
-              focusScale: 2.24,
-              focusDwell: 560,
-              afterClickWait: 360,
-            }))
-          ) {
-            return;
-          }
-          if (!(await wait(420, runId))) return;
-          if (
-            !(await clickTarget("create-hub-visibility-next", runId, {
-              moveDuration: 980,
-              focusScale: 2.18,
-              focusDwell: 520,
-            }))
-          ) {
-            return;
-          }
-          if (!(await clearFocus(runId, 760))) return;
-          if (!(await wait(1200, runId))) return;
-
-          if (!(await focusAreaThenAct("create-hub-category-section", runId, { scale: 1.98, dwell: 980, hold: 420 }))) return;
-          if (
-            !(await clickTarget("create-hub-restaurant", runId, {
-              moveDuration: 1080,
-              focusScale: 2.18,
-              focusDwell: 560,
-              afterClickWait: 360,
-            }))
-          ) {
-            return;
-          }
-          if (!(await wait(420, runId))) return;
-          if (
-            !(await clickTarget("create-hub-save", runId, {
-              moveDuration: 980,
-              focusScale: 2.2,
-              focusDwell: 540,
-              afterClickWait: 520,
-            }))
-          ) {
-            return;
-          }
-
-          if (!(await waitForRoute("/hubs/restaurants/kamath-cafe?demo_preview=1", runId))) return;
-          if (!(await clearFocus(runId, 900))) return;
-          if (!(await wait(1800, runId))) return;
-
-          if (!(await activateStep(1, runId))) return;
-          if (!(await showRoute(SHARE_HUB_URL, runId, 1400))) return;
-          if (!(await wait(900, runId))) return;
-          if (!(await focusAreaThenAct("hub-composer-section", runId, { scale: 1.78, dwell: 900, hold: 360 }))) return;
-          if (
-            !(await clickTarget("hub-composer-input", runId, {
-              focusTargetKey: "hub-composer-section",
-              moveDuration: 1200,
-              focusScale: 1.78,
-              focusDwell: 500,
-            }))
-          ) {
-            return;
-          }
-          if (!(await typeIntoTarget("hub-composer-input", SHARE_ANNOUNCEMENT, runId, 48))) return;
-          if (!(await wait(950, runId))) return;
-          if (
-            !(await clickTarget("hub-composer-post", runId, {
-              moveDuration: 1000,
-              focusScale: 2.16,
-              focusDwell: 520,
-            }))
-          ) {
-            return;
-          }
-
-          if (
-            !(await showRoute(
-              `${SHARE_HUB_URL}&demo_composer=${encodeURIComponent(SHARE_ANNOUNCEMENT)}&demo_posted=${encodeURIComponent(
-                SHARE_ANNOUNCEMENT
-              )}`,
-              runId,
-              1200
-            ))
-          ) {
-            return;
-          }
-          if (!(await clearFocus(runId, 900))) return;
-          if (!(await wait(1800, runId))) return;
-
-          if (!(await activateStep(2, runId))) return;
-          if (!(await showRoute(DASHBOARD_URL, runId, 1400))) return;
-          if (!(await wait(900, runId))) return;
-          if (!(await focusAreaThenAct("dashboard-header-alerts", runId, { scale: 2.55, dwell: 980, hold: 320 }))) return;
-          if (
-            !(await clickTarget("dashboard-header-alerts", runId, {
-              moveDuration: 1250,
-              focusScale: 2.82,
-              focusDwell: 760,
-              afterClickWait: 420,
-            }))
-          ) {
-            return;
-          }
-          if (!(await clearFocus(runId, 620))) return;
-          if (!(await wait(320, runId))) return;
-          if (!(await showRoute(DASHBOARD_ALERTS_URL, runId, 900))) return;
-          if (!(await focusAreaThenAct("dashboard-alerts-dropdown", runId, { scale: 2.18, dwell: 920, hold: 2000 }))) return;
-          if (!(await clearFocus(runId, 720))) return;
-          if (!(await runBrandedOutro(runId))) return;
-        }
-      } finally {
-        timelineActiveRef.current = false;
-        runningRef.current = false;
-      }
-    };
-
-    void runDemo();
+    void runDemoLoop(runId);
 
     return () => {
       runIdRef.current += 1;
       runningRef.current = false;
     };
-  }, [isVisible, isPlaying, replayToken]);
+  }, [isVisible, isPlaying]);
 
   return (
     <section ref={sectionRef} className="py-20">

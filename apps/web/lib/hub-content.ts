@@ -67,16 +67,5 @@ export type HubContent = {
   notifications: HubNotificationItem[];
 };
 
-export const HUB_CONTENT_BY_ID: Record<string, HubContent> = {};
-
-export function getHubContent(hubId: string): HubContent {
-  return {
-    hubId,
-    feed: [],
-    events: [],
-    notifications: [],
-  };
-}
-
 export const HOME_NOTIFICATIONS: HubNotificationItem[] = [];
 export const HOME_EVENTS: HubEventItem[] = [];

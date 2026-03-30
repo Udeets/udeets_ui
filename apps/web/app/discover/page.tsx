@@ -10,7 +10,7 @@ import { createPortal } from "react-dom";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
 import { isUdeetsLogoSrc } from "@/lib/branding";
 import { useAuthSession } from "@/services/auth/useAuthSession";
-import { listHubs } from "@/services/hubs/listHubs";
+import { listHubs } from "@/lib/services/hubs/list-hubs";
 import type { Hub as SupabaseHub } from "@/types/hub";
 
 const HEADER_BG = "bg-white border-b border-slate-200/60";

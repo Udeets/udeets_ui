@@ -3,16 +3,15 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { UdeetsBrandLockup } from "@/components/brand-logo";
+import { UdeetsBrandLockup, UdeetsLogoIcon } from "@/components/brand-logo";
 import { HowItWorksAnimated } from "@/components/home/how-it-works-animated";
-import { listHubs } from "@/services/hubs/listHubs";
+import { listHubs } from "@/lib/services/hubs/list-hubs";
 import type { Hub as SupabaseHub } from "@/types/hub";
 
 const PAGE_BG = "bg-[#E3F1EF]";
 const HEADER_BG = "bg-white border-b border-slate-200/60";
 const FOOTER_BG = "bg-[#0C5C57]";
 const SECTION_MINT_BG = "bg-[#E3F1EF]";
-const ACCENT_MEDIUM_GREEN = "bg-[#A9D1CA]";
 const TEXT_PRIMARY = "text-[#111111]";
 const NAV_TEXT = "text-[#111111]";
 const BRAND_TEXT_STYLE = `text-xl sm:text-2xl`;
@@ -104,11 +103,14 @@ function TopHubCard({ hub }: { hub: TopHub }) {
       className="group relative flex h-[260px] w-[min(360px,calc(100vw-2rem))] flex-shrink-0 min-w-0 overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition hover:border-slate-300 sm:w-[360px]"
     >
       {hub.image && !imageFailed ? (
-        <img
+        <Image
           src={hub.image}
           alt={hub.name}
+          fill
+          unoptimized
+          loader={({ src }) => src}
           className="absolute inset-0 h-full w-full object-cover"
-          loading="lazy"
+          sizes="(max-width: 640px) calc(100vw - 2rem), 360px"
           onError={() => setImageFailed(true)}
         />
       ) : (
@@ -129,6 +131,41 @@ function TopHubCard({ hub }: { hub: TopHub }) {
         <p className="line-clamp-2 break-words text-sm text-white/90">{hub.intro}</p>
       </div>
     </Link>
+  );
+}
+
+function HeroBrandVisual() {
+  return (
+    <div className="relative h-[280px] w-full sm:h-[420px] lg:h-[540px]">
+      <div className="pointer-events-none absolute inset-8 rounded-[2.25rem] bg-[#0C5C57]/18 blur-3xl" />
+      <div className="absolute inset-0 rounded-[2rem] bg-[#0C5C57] shadow-[0_28px_80px_rgba(12,92,87,0.28)]" />
+      <div className="absolute inset-[10px] rounded-[1.7rem] border border-white/15 bg-gradient-to-br from-[#1D7B73] via-[#0C5C57] to-[#094844]" />
+      <div className="pointer-events-none absolute inset-x-[12%] top-[10%] h-[22%] rounded-full bg-white/12 blur-3xl" />
+      <div className="pointer-events-none absolute inset-x-[18%] bottom-[9%] h-[16%] rounded-full bg-[#073f3b]/70 blur-2xl" />
+
+      <div className="relative flex h-full items-center justify-center p-6 sm:p-10">
+        <div className="relative w-full max-w-[23rem] rounded-[2rem] border border-white/16 bg-white/[0.08] px-6 py-8 shadow-[0_22px_40px_rgba(6,38,35,0.28)] backdrop-blur-[2px] sm:px-8 sm:py-10">
+          <div className="absolute inset-x-6 top-4 h-px bg-white/30" />
+          <div className="absolute inset-x-6 bottom-4 h-px bg-white/14" />
+          <div className="flex flex-col items-center justify-center gap-5 sm:gap-6">
+            <div className="rounded-[1.6rem] border border-white/14 bg-white/[0.06] p-5 shadow-[0_16px_28px_rgba(6,38,35,0.22)] sm:p-6">
+              <UdeetsLogoIcon
+                className="h-20 w-20 text-white sm:h-24 sm:w-24 lg:h-28 lg:w-28"
+                alt="uDeets logo"
+              />
+            </div>
+            <div className="space-y-2 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-white/70 sm:text-[11px]">
+                Premium Community Updates
+              </p>
+              <p className="text-3xl font-serif font-semibold tracking-tight text-white sm:text-4xl">
+                uDeets
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -312,15 +349,7 @@ export default function Page() {
                 <div className={cn("relative rounded-[2.5rem] border border-slate-100 p-3 shadow-[0_18px_46px_rgba(15,23,42,0.08)]", SECTION_MINT_BG)}>
                   <div className="relative overflow-hidden rounded-[2rem] border border-slate-100 bg-white">
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/70 via-transparent to-emerald-100/45" />
-                    <div className="relative h-[280px] w-full sm:h-[420px] lg:h-[540px]">
-                      <Image
-                        src="/udeets-home.png"
-                        alt="Local business owner managing updates"
-                        fill
-                        priority
-                        className="object-cover rounded-[2rem]"
-                      />
-                    </div>
+                    <HeroBrandVisual />
                   </div>
                 </div>
 

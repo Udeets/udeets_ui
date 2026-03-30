@@ -13,18 +13,6 @@ type Hub = {
   heroImage?: string;
 };
 
-type FeedItem = {
-  id: string;
-  hubSlug: string;
-  hubName: string;
-  category: HubCategory;
-  type: "image" | "event" | "deal";
-  title: string;
-  body?: string;
-  imageUrl?: string;
-  createdAt: string;
-};
-
 const hubs: Hub[] = [
   {
     id: "hub_hcv",
@@ -49,39 +37,6 @@ const hubs: Hub[] = [
     category: "communities",
     city: "Richmond",
     state: "VA",
-  },
-];
-
-const feed: FeedItem[] = [
-  {
-    id: "feed_1",
-    hubSlug: "hindu-center-of-virginia",
-    hubName: "Hindu Center of Virginia",
-    category: "religious",
-    type: "event",
-    title: "Upcoming: Community Puja & Prasadam",
-    body: "Join us this weekend for a special puja followed by prasadam. Families welcome.",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "feed_2",
-    hubSlug: "desi-bites",
-    hubName: "Desi Bites",
-    category: "restaurants",
-    type: "deal",
-    title: "Weekend Deal: Buy 1 Get 1 50% Off",
-    body: "Limited-time offer on select street food items. Dine-in only.",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "feed_3",
-    hubSlug: "richmond-kannada-sangha",
-    hubName: "Richmond Kannada Sangha",
-    category: "communities",
-    type: "image",
-    title: "Highlights from our last meetup",
-    imageUrl: "/mock/rks-meetup.jpg",
-    createdAt: new Date().toISOString(),
   },
 ];
 
@@ -113,11 +68,6 @@ app.get<{
 
   const filtered = hubs.filter((h) => h.category === (category as HubCategory));
   return filtered;
-});
-
-// GET /feed (mock public feed)
-app.get("/feed", async () => {
-  return feed;
 });
 
 const port = Number(process.env.PORT || 3002);

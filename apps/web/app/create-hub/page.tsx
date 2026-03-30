@@ -4,99 +4,21 @@ export const dynamic = "force-dynamic";
 
 import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import MockAppShell, { cardClass } from "@/components/mock-app-shell";
+import MockAppShell from "@/components/mock-app-shell";
 import { createHub } from "@/lib/services/hubs/create-hub";
-
-const CATEGORY_GROUPS = [
-  {
-    title: "Community",
-    items: ["Community Group", "Cultural Association", "Religious Place", "HOA", "Parent Group", "Nonprofit"],
-  },
-  {
-    title: "Local Business",
-    items: ["Restaurant", "Grocery", "Fitness", "Salon", "Retail", "Professional Services"],
-  },
-  {
-    title: "Interest & Clubs",
-    items: ["Sports Club", "Pet Club", "Book Club", "Volunteer Group", "Arts & Music", "Networking"],
-  },
-] as const;
-
-type Step = 1 | 2 | 3;
-type Visibility = "Private" | "Public";
-function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
-}
-
-function slugify(value: string) {
-  return (
-    value
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 60) || "new-hub"
-  );
-}
-
-function categoryFor(categories: string[]) {
-  if (categories.includes("Religious Place")) return "religious-places";
-  if (categories.includes("HOA")) return "hoa";
-  if (categories.includes("Fitness")) return "fitness";
-  if (categories.includes("Pet Club")) return "pet-clubs";
-  if (
-    categories.some((category) =>
-      ["Restaurant", "Grocery", "Salon", "Retail", "Professional Services"].includes(category)
-    )
-  ) {
-    return "restaurants";
-  }
-
-  return "communities";
-}
-
-function descriptionFor(categories: string[]) {
-  if (!categories.length) return "A new uDeets hub for local updates, events, and community connection.";
-  if (categories.length === 1) return `${categories[0]} updates, events, and community details in one place.`;
-  return `${categories.slice(0, 2).join(" and ")} updates, events, and community details in one place.`;
-}
-
-function StepPanel({
-  title,
-  subtitle,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="mx-auto flex min-h-[calc(100vh-17rem)] max-w-3xl items-center justify-center">
-      <div className={cardClass("w-full max-w-2xl p-6 sm:p-8")}>
-        <div className="text-center">
-          <h1 className="text-3xl font-serif font-semibold tracking-tight text-[#111111]">{title}</h1>
-          {subtitle ? <p className="mt-3 text-sm leading-relaxed text-slate-600">{subtitle}</p> : null}
-        </div>
-        <div className="mt-8">{children}</div>
-      </div>
-    </section>
-  );
-}
+import { StepPanel } from "./components/StepPanel";
+import { CATEGORY_GROUPS, VISIBILITY_OPTIONS } from "./constants";
+import { categoryFor, cn, descriptionFor, getInitialCategories, getInitialStep, getInitialVisibility, slugify } from "./helpers";
+import type { Step, Visibility } from "./types";
 
 function CreateHubPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isDemoPreview = searchParams.get("demo_preview") === "1";
-  const initialStep = Number(searchParams.get("demo_step")) as Step;
-  const initialVisibility = searchParams.get("demo_visibility");
-  const initialCategories = searchParams.get("demo_categories");
-  const [step, setStep] = useState<Step>(initialStep === 2 || initialStep === 3 ? initialStep : 1);
+  const [step, setStep] = useState<Step>(getInitialStep(searchParams.get("demo_step")));
   const [hubName, setHubName] = useState(searchParams.get("demo_hub_name") ?? "");
-  const [visibility, setVisibility] = useState<Visibility>(initialVisibility === "Public" ? "Public" : "Private");
+  const [visibility, setVisibility] = useState<Visibility>(getInitialVisibility(searchParams.get("demo_visibility")));
   const [discoverable, setDiscoverable] = useState(true);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(
-    initialCategories ? initialCategories.split(",").filter(Boolean) : []
-  );
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(getInitialCategories(searchParams.get("demo_categories")));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -192,18 +114,7 @@ function CreateHubPageContent() {
         <StepPanel title="Hub Visibility" subtitle="Choose how people can access your hub on uDeets.">
           <div data-demo-target="create-hub-visibility-section" className="rounded-[1.75rem] bg-[#F7FBFA] p-4 sm:p-5">
             <div className="space-y-4">
-              {[
-                {
-                  title: "Private Hub",
-                  value: "Private" as const,
-                  description: "Only approved members can view posts, updates, and files.",
-                },
-                {
-                  title: "Public Hub",
-                  value: "Public" as const,
-                  description: "Anyone can discover and view this hub's public updates.",
-                },
-              ].map((option) => (
+              {VISIBILITY_OPTIONS.map((option) => (
                 <button
                   key={option.value}
                   type="button"

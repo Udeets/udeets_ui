@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { UdeetsBrandLockup, UdeetsLogoIcon } from "@/components/brand-logo";
+import { UdeetsBrandLockup } from "@/components/brand-logo";
 import { HOME_EVENTS, HOME_NOTIFICATIONS } from "@/lib/hub-content";
 import { isUdeetsLogoSrc, UDEETS_LOGO_SRC } from "@/lib/branding";
 import { signOut } from "@/services/auth/signOut";
