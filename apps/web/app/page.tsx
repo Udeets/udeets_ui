@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { Bell, CalendarDays, Clapperboard, ImageIcon, MapPin, Megaphone, Search, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { UdeetsBrandLockup, UdeetsLogoIcon } from "@/components/brand-logo";
 import { HowItWorksAnimated } from "@/components/home/how-it-works-animated";
@@ -11,7 +12,6 @@ import type { Hub as SupabaseHub } from "@/types/hub";
 const PAGE_BG = "bg-[#E3F1EF]";
 const HEADER_BG = "bg-white border-b border-slate-200/60";
 const FOOTER_BG = "bg-[#0C5C57]";
-const SECTION_MINT_BG = "bg-[#E3F1EF]";
 const TEXT_PRIMARY = "text-[#111111]";
 const NAV_TEXT = "text-[#111111]";
 const BRAND_TEXT_STYLE = `text-xl sm:text-2xl`;
@@ -20,10 +20,9 @@ const SECTION_HEADING = `font-serif font-semibold tracking-tight ${TEXT_PRIMARY}
 const BODY_TEXT = "font-sans leading-relaxed text-slate-600";
 const BUTTON_PRIMARY = "rounded-full bg-[#0C5C57] px-6 py-3 text-sm font-medium text-white hover:bg-[#094a46]";
 const HEADER_ACTION = `rounded-full px-4 py-2 text-sm font-medium ${NAV_TEXT} hover:bg-slate-100 sm:px-5 sm:py-2.5`;
-const HERO_HEADING_LINE_ONE = "Details that matter.";
+const HERO_HEADING_LINE_ONE = "Deets that matter.";
 const HERO_HEADING_LINE_TWO = "Simplified and organized.";
-const HERO_TAGLINE_PREFIX = "Create hubs or subscribe to stay on top of deets that matter. Powered by ";
-const HERO_TAGLINE_HIGHLIGHT = "uDeets.";
+const HERO_TAGLINE = "Create hubs or subscribe to stay on top of deets that matter. Powered by uDeets.";
 
 type TopHub = {
   id: string;
@@ -135,33 +134,72 @@ function TopHubCard({ hub }: { hub: TopHub }) {
 }
 
 function HeroBrandVisual() {
+  const pillGroups = [
+    {
+      className: "left-[9%] top-[11%]",
+      pills: [
+        { Icon: ImageIcon, label: "Photo", className: "relative z-10 w-[5.6rem] sm:w-[6.2rem]" },
+        { Icon: Clapperboard, label: "Video", className: "relative -mt-3 ml-6 w-[5.5rem] sm:-mt-3.5 sm:ml-7 sm:w-[6.1rem]" },
+      ],
+    },
+    {
+      className: "right-[8%] top-[14%]",
+      pills: [
+        { Icon: Search, label: "Search", className: "relative z-10 w-[5.8rem] sm:w-[6.4rem]" },
+        { Icon: Users, label: "Members", className: "relative -mt-3 mr-6 w-[6.2rem] sm:-mt-3.5 sm:mr-7 sm:w-[6.9rem]" },
+      ],
+    },
+    {
+      className: "left-[10%] bottom-[16%]",
+      pills: [
+        { Icon: Megaphone, label: "Updates", className: "relative z-10 w-[6.1rem] sm:w-[6.7rem]" },
+        { Icon: Bell, label: "Alerts", className: "relative -mt-3 ml-6 w-[5.7rem] sm:-mt-3.5 sm:ml-7 sm:w-[6.3rem]" },
+      ],
+    },
+    {
+      className: "right-[9%] bottom-[17%]",
+      pills: [
+        { Icon: CalendarDays, label: "Events", className: "relative z-10 w-[5.8rem] sm:w-[6.4rem]" },
+        { Icon: MapPin, label: "Map", className: "relative -mt-3 mr-6 w-[5rem] sm:-mt-3.5 sm:mr-7 sm:w-[5.6rem]" },
+      ],
+    },
+  ] as const;
+
   return (
     <div className="relative h-[280px] w-full sm:h-[420px] lg:h-[540px]">
-      <div className="pointer-events-none absolute inset-8 rounded-[2.25rem] bg-[#0C5C57]/18 blur-3xl" />
-      <div className="absolute inset-0 rounded-[2rem] bg-[#0C5C57] shadow-[0_28px_80px_rgba(12,92,87,0.28)]" />
-      <div className="absolute inset-[10px] rounded-[1.7rem] border border-white/15 bg-gradient-to-br from-[#1D7B73] via-[#0C5C57] to-[#094844]" />
-      <div className="pointer-events-none absolute inset-x-[12%] top-[10%] h-[22%] rounded-full bg-white/12 blur-3xl" />
-      <div className="pointer-events-none absolute inset-x-[18%] bottom-[9%] h-[16%] rounded-full bg-[#073f3b]/70 blur-2xl" />
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div className="h-[18rem] w-[18rem] rounded-full bg-white/60 blur-3xl sm:h-[23rem] sm:w-[23rem] lg:h-[27rem] lg:w-[27rem]" />
+      </div>
 
-      <div className="relative flex h-full items-center justify-center p-6 sm:p-10">
-        <div className="relative w-full max-w-[23rem] rounded-[2rem] border border-white/16 bg-white/[0.08] px-6 py-8 shadow-[0_22px_40px_rgba(6,38,35,0.28)] backdrop-blur-[2px] sm:px-8 sm:py-10">
-          <div className="absolute inset-x-6 top-4 h-px bg-white/30" />
-          <div className="absolute inset-x-6 bottom-4 h-px bg-white/14" />
-          <div className="flex flex-col items-center justify-center gap-5 sm:gap-6">
-            <div className="rounded-[1.6rem] border border-white/14 bg-white/[0.06] p-5 shadow-[0_16px_28px_rgba(6,38,35,0.22)] sm:p-6">
-              <UdeetsLogoIcon
-                className="h-20 w-20 text-white sm:h-24 sm:w-24 lg:h-28 lg:w-28"
-                alt="uDeets logo"
-              />
+      <div className="relative flex h-full items-center justify-center p-4 sm:p-6">
+        <div className="relative flex aspect-square w-full max-w-[29rem] items-center justify-center overflow-hidden rounded-[2rem] bg-[#0C5C57] shadow-[0_24px_60px_rgba(12,92,87,0.18)]">
+          {pillGroups.map(({ className, pills }, index) => (
+            <div
+              key={index}
+              className={`pointer-events-none absolute z-0 flex flex-col items-center gap-1.5 sm:gap-2 ${className}`}
+            >
+              {pills.map(({ Icon, label, className: pillClassName }) => (
+                <div
+                  key={label}
+                  className={`rounded-2xl border border-white/12 bg-white/[0.12] px-3 py-1.5 shadow-[0_12px_30px_rgba(4,24,22,0.16)] backdrop-blur-md sm:px-3.5 sm:py-1.5 ${pillClassName}`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Icon strokeWidth={2} className="h-4 w-4 shrink-0 text-white/92 sm:h-[1.05rem] sm:w-[1.05rem]" />
+                    <span className="text-[10px] font-medium tracking-[0.14em] text-white/78 uppercase sm:text-[11px]">
+                      {label}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="space-y-2 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-white/70 sm:text-[11px]">
-                Premium Community Updates
-              </p>
-              <p className="text-3xl font-serif font-semibold tracking-tight text-white sm:text-4xl">
-                uDeets
-              </p>
-            </div>
+          ))}
+
+          <div className="relative z-10 flex items-center justify-center">
+            <div className="pointer-events-none absolute h-24 w-24 rounded-full bg-white/30 blur-2xl sm:h-32 sm:w-32 lg:h-40 lg:w-40" />
+            <UdeetsLogoIcon
+              className="h-28 w-28 text-white/80 opacity-90 drop-shadow-[0_8px_20px_rgba(255,255,255,0.14)] sm:h-40 sm:w-40 lg:h-52 lg:w-52"
+              alt="uDeets logo"
+            />
           </div>
         </div>
       </div>
@@ -173,10 +211,6 @@ export default function Page() {
   const hubsRowRef = useRef<HTMLDivElement | null>(null);
   const [pauseAutoScroll, setPauseAutoScroll] = useState(false);
   const [topHubs, setTopHubs] = useState<TopHub[]>([]);
-  const [typedHeadingLineOne, setTypedHeadingLineOne] = useState("");
-  const [typedHeadingLineTwo, setTypedHeadingLineTwo] = useState("");
-  const [typedTagline, setTypedTagline] = useState("");
-  const [isHeroTypingComplete, setIsHeroTypingComplete] = useState(false);
 
   useEffect(() => {
     const el = hubsRowRef.current;
@@ -222,50 +256,6 @@ export default function Page() {
     };
   }, []);
 
-  useEffect(() => {
-    const timers: number[] = [];
-
-    const scheduleTyping = (
-      text: string,
-      update: (value: string) => void,
-      speed: number,
-      startDelay: number,
-      onComplete?: () => void
-    ) => {
-      for (let index = 1; index <= text.length; index += 1) {
-        const timer = window.setTimeout(() => {
-          update(text.slice(0, index));
-
-          if (index === text.length) {
-            onComplete?.();
-          }
-        }, startDelay + index * speed);
-
-        timers.push(timer);
-      }
-    };
-
-    const initialDelay = 300;
-    const headingSpeed = 34;
-    const taglineSpeed = 24;
-    const stagePause = 220;
-
-    const lineOneDuration = initialDelay + HERO_HEADING_LINE_ONE.length * headingSpeed;
-    const lineTwoStart = lineOneDuration + stagePause;
-    const lineTwoDuration = lineTwoStart + HERO_HEADING_LINE_TWO.length * headingSpeed;
-    const taglineStart = lineTwoDuration + stagePause;
-
-    scheduleTyping(HERO_HEADING_LINE_ONE, setTypedHeadingLineOne, headingSpeed, initialDelay);
-    scheduleTyping(HERO_HEADING_LINE_TWO, setTypedHeadingLineTwo, headingSpeed, lineTwoStart);
-    scheduleTyping(HERO_TAGLINE_PREFIX, setTypedTagline, taglineSpeed, taglineStart, () => {
-      setIsHeroTypingComplete(true);
-    });
-
-    return () => {
-      timers.forEach((timer) => window.clearTimeout(timer));
-    };
-  }, []);
-
   const scrollHubsBy = (delta: number) => {
     const el = hubsRowRef.current;
     if (!el) return;
@@ -308,20 +298,11 @@ export default function Page() {
             {/* LEFT CONTENT */}
             <div className="max-w-3xl space-y-6 text-slate-900 sm:space-y-7">
               <h1 className={cn("break-words text-4xl leading-[0.95] sm:text-5xl lg:text-6xl", DISPLAY_HEADING)}>
-                <span className="block">{typedHeadingLineOne}</span>
-                <span className="block">{typedHeadingLineTwo}</span>
+                <span className="block">{HERO_HEADING_LINE_ONE}</span>
+                <span className="block">{HERO_HEADING_LINE_TWO}</span>
               </h1>
 
-              <p className={cn("max-w-2xl text-lg sm:text-xl lg:text-2xl", BODY_TEXT)}>
-                {isHeroTypingComplete ? (
-                  <>
-                    <span>{HERO_TAGLINE_PREFIX}</span>
-                    <span className="blink-word font-semibold">{HERO_TAGLINE_HIGHLIGHT}</span>
-                  </>
-                ) : (
-                  typedTagline
-                )}
-              </p>
+              <p className={cn("max-w-2xl text-base sm:text-lg lg:text-xl", BODY_TEXT)}>{HERO_TAGLINE}</p>
 
               <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:gap-4 sm:pt-4">
                 <Link
@@ -340,19 +321,10 @@ export default function Page() {
               </div>
             </div>
 
-            {/* RIGHT IMAGE (Glossy border) */}
+            {/* RIGHT VISUAL */}
             <div className="flex justify-center">
-              <div className="relative w-full max-w-2xl">
-                <div className="pointer-events-none absolute -left-4 top-8 h-40 w-40 rounded-full bg-emerald-100/60 blur-3xl" />
-                <div className="pointer-events-none absolute -right-8 bottom-2 h-48 w-48 rounded-full bg-cyan-100/60 blur-3xl" />
-
-                <div className={cn("relative rounded-[2.5rem] border border-slate-100 p-3 shadow-[0_18px_46px_rgba(15,23,42,0.08)]", SECTION_MINT_BG)}>
-                  <div className="relative overflow-hidden rounded-[2rem] border border-slate-100 bg-white">
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/70 via-transparent to-emerald-100/45" />
-                    <HeroBrandVisual />
-                  </div>
-                </div>
-
+              <div className="w-full max-w-2xl">
+                <HeroBrandVisual />
               </div>
             </div>
           </div>

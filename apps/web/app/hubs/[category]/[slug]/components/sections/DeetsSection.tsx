@@ -255,14 +255,22 @@ export function DeetsSection({
                       <button
                         type="button"
                         className="mt-4 block w-full overflow-hidden rounded-2xl border border-slate-100 bg-slate-100"
-                        onClick={() => onOpenViewer([item.image!, ...recentPhotos], 0, item.title, item.body, item.id)}
+                        onClick={() =>
+                          onOpenViewer(
+                            item.images?.length ? item.images : [item.image!],
+                            0,
+                            item.title,
+                            item.body,
+                            item.id
+                          )
+                        }
                       >
-                        <div className="aspect-[16/9] w-full">
+                        <div className="w-full bg-[#EAF4F1]">
                           <ImageWithFallback
                             src={item.image}
-                            sources={[item.image, ...recentPhotos, coverImageSrc]}
+                            sources={item.images?.length ? item.images : [item.image, coverImageSrc]}
                             alt={item.title}
-                            className="h-full w-full object-cover"
+                            className="max-h-[28rem] w-full object-contain"
                             fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA]/25 text-sm font-medium text-[#0C5C57]"
                             fallback="Image unavailable"
                             loading="lazy"

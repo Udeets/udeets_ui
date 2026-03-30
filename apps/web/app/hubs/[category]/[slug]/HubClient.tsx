@@ -18,7 +18,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
 import type { HubContent } from "@/lib/hub-content";
 import type { HubRecord } from "@/lib/hubs";
-import { createStoredDeet, getHubStoredDeets, storedDeetToHubFeedItem, subscribeToStoredDeets } from "@/lib/deets-store";
+import { createDeet } from "@/lib/services/deets/create-deet";
+import { listDeets, subscribeToDeets } from "@/lib/services/deets/list-deets";
+import type { DeetRecord } from "@/lib/services/deets/deet-types";
+import { uploadDeetMedia } from "@/lib/services/deets/upload-deet-media";
 import { updateHub } from "@/lib/services/hubs/update-hub";
 import { uploadHubMedia } from "@/lib/services/hubs/upload-hub-media";
 import { useAuthSession } from "@/services/auth/useAuthSession";
@@ -68,6 +71,38 @@ function fileToDataUrl(file: File) {
   });
 }
 
+function formatDeetTime(createdAt: string) {
+  const timestamp = new Date(createdAt).getTime();
+  const diffMinutes = Math.max(0, Math.round((Date.now() - timestamp) / 60000));
+
+  if (diffMinutes < 1) return "Just now";
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+
+  const diffDays = Math.round(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return new Date(createdAt).toLocaleDateString();
+}
+
+function deetRecordToHubFeedItem(item: DeetRecord): HubContent["feed"][number] {
+  return {
+    id: item.id,
+    kind: item.kind === "Notices" ? "notice" : item.kind === "Photos" ? "photo" : "announcement",
+    author: item.author_name,
+    time: formatDeetTime(item.created_at),
+    title: item.title,
+    body: item.body,
+    image: item.preview_image_url || undefined,
+    images: item.preview_image_urls ?? undefined,
+    likes: 0,
+    comments: 0,
+    views: 1,
+  };
+}
+
 export default function HubClient({
   hub,
   mode = "intro",
@@ -113,6 +148,7 @@ export default function HubClient({
   const [activeComposerChild, setActiveComposerChild] = useState<ComposerChildFlow | null>(null);
   const [attachedDeetItems, setAttachedDeetItems] = useState<AttachedDeetItem[]>([]);
   const [selectedPhotoPreviews, setSelectedPhotoPreviews] = useState<string[]>([]);
+  const [selectedPhotoFiles, setSelectedPhotoFiles] = useState<File[]>([]);
   const [publishedDeets, setPublishedDeets] = useState<HubContent["feed"]>([]);
   const [modalDraftText, setModalDraftText] = useState("");
   const [isSubmittingDeet, setIsSubmittingDeet] = useState(false);
@@ -218,12 +254,30 @@ export default function HubClient({
     !deetSettings.commentsEnabled;
 
   useEffect(() => {
-    const syncDeets = () => {
-      setPublishedDeets(getHubStoredDeets(hub.id).map(storedDeetToHubFeedItem));
+    let cancelled = false;
+
+    const syncDeets = async () => {
+      try {
+        const items = await listDeets({ hubIds: [hub.id] });
+        if (!cancelled) {
+          setPublishedDeets(items.map(deetRecordToHubFeedItem));
+        }
+      } catch {
+        if (!cancelled) {
+          setPublishedDeets([]);
+        }
+      }
     };
 
-    syncDeets();
-    return subscribeToStoredDeets(() => syncDeets());
+    void syncDeets();
+    const unsubscribe = subscribeToDeets(() => {
+      void syncDeets();
+    }, { hubIds: [hub.id] });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, [hub.id]);
 
   useEffect(() => {
@@ -243,6 +297,7 @@ export default function HubClient({
     setIsFontSizeMenuOpen(false);
     setAttachedDeetItems([]);
     setSelectedPhotoPreviews([]);
+    setSelectedPhotoFiles([]);
     setDeetSettings({ noticeEnabled: false, commentsEnabled: true });
   }, [composerOpen, demoComposerText]);
 
@@ -530,6 +585,7 @@ export default function HubClient({
     setActiveComposerChild(null);
     setAttachedDeetItems([]);
     setSelectedPhotoPreviews([]);
+    setSelectedPhotoFiles([]);
     setModalDraftText("");
     setIsFontSizeMenuOpen(false);
     setDeetFormatting({ fontSize: "small", bold: false, italic: false, underline: false, textColor: "#111111" });
@@ -565,6 +621,7 @@ export default function HubClient({
     try {
       const previews = await Promise.all(files.map((file) => fileToDataUrl(file)));
       setSelectedPhotoPreviews((current) => [...current, ...previews]);
+      setSelectedPhotoFiles((current) => [...current, ...files]);
     } catch {
       setActiveComposerChild(null);
     }
@@ -589,13 +646,26 @@ export default function HubClient({
               title: selectedPhotoPreviews.length === 1 ? "1 photo attached" : `${selectedPhotoPreviews.length} photos attached`,
               detail: "Ready to post in this deet.",
               previews: selectedPhotoPreviews,
+              files: selectedPhotoFiles,
             }
           : null;
       const finalAttachments = [
         ...attachedDeetItems,
         ...(syntheticPhotoAttachment ? [syntheticPhotoAttachment] : []),
       ];
-      const primaryImage = photoAttachment?.previews?.[0] || selectedPhotoPreviews[0];
+      const photoFiles = finalAttachments.flatMap((item) => (item.type === "photo" ? item.files ?? [] : []));
+      const uploadedPhotoAssets = await Promise.all(
+        photoFiles.map((file) =>
+          uploadDeetMedia({
+            file,
+            hubId: hub.id,
+            hubSlug: hub.slug,
+          })
+        )
+      );
+      const uploadedPhotoUrls = uploadedPhotoAssets.map((asset) => asset.publicUrl);
+      const uploadedPhotoPaths = uploadedPhotoAssets.map((asset) => asset.path);
+      const primaryImage = uploadedPhotoUrls[0];
       const newestSticker = [...attachedDeetItems].reverse().find((item) => item.type === "sticker" && item.detail);
       const authorName =
         creatorMetadata?.full_name ||
@@ -603,24 +673,23 @@ export default function HubClient({
         user?.email?.split("@")[0] ||
         "You";
 
-      createStoredDeet({
+      const createdDeet = await createDeet({
         hubId: hub.id,
-        hubSlug: hub.slug,
-        hubHref: `/hubs/${hub.category}/${hub.slug}`,
-        hubName: headerHubName,
-        category: hub.category,
         authorName,
         title: deetSettings.noticeEnabled ? "Notice" : primaryImage ? "Photo" : "Deet",
         body: trimmedText || newestSticker?.detail || "Shared a new update.",
         kind: deetSettings.noticeEnabled ? "Notices" : primaryImage ? "Photos" : "Posts",
-        image: primaryImage,
+        previewImageUrl: primaryImage,
+        previewImageUrls: uploadedPhotoUrls,
         attachments: finalAttachments.map((item) => ({
           type: item.type,
           title: item.title,
           detail: item.detail,
-          previews: item.previews,
+          previews: item.type === "photo" ? uploadedPhotoUrls : item.previews,
+          storagePaths: item.type === "photo" ? uploadedPhotoPaths : undefined,
         })),
       });
+      setPublishedDeets((current) => [deetRecordToHubFeedItem(createdDeet), ...current.filter((item) => item.id !== createdDeet.id)]);
       resetDeetComposer();
     } finally {
       setIsSubmittingDeet(false);
@@ -1010,6 +1079,7 @@ export default function HubClient({
                             title: selectedPhotoPreviews.length === 1 ? "1 photo attached" : `${selectedPhotoPreviews.length} photos attached`,
                             detail: "Ready to post in this deet.",
                             previews: selectedPhotoPreviews,
+                            files: selectedPhotoFiles,
                           });
                         }}
                         className={BUTTON_PRIMARY}

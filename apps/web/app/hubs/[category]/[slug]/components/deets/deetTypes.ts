@@ -8,6 +8,7 @@ export type AttachedDeetItem = {
   detail?: string;
   meta?: string;
   previews?: string[];
+  files?: File[];
 };
 
 export type DeetFormattingState = {

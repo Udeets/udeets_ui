@@ -23,6 +23,7 @@ export type HubFeedItem = {
   title: string;
   body: string;
   image?: string;
+  images?: string[];
   likes: number;
   comments: number;
   views: number;

@@ -11,9 +11,13 @@ import { CATEGORY_GROUPS, VISIBILITY_OPTIONS } from "./constants";
 import { categoryFor, cn, descriptionFor, getInitialCategories, getInitialStep, getInitialVisibility, slugify } from "./helpers";
 import type { Step, Visibility } from "./types";
 
+const DEMO_SHARE_HUB_HREF =
+  "/hubs/communities/grtava?demo_preview=1&demo_name=Soccer%20GrassRoot&demo_tagline=Soccer%20GrassRoot&demo_description=Local%20youth%20soccer%20updates%2C%20training%20sessions%2C%20and%20match-day%20details%20in%20one%20place.";
+
 function CreateHubPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isDemoPreview = searchParams.get("demo_preview") === "1";
   const [step, setStep] = useState<Step>(getInitialStep(searchParams.get("demo_step")));
   const [hubName, setHubName] = useState(searchParams.get("demo_hub_name") ?? "");
   const [visibility, setVisibility] = useState<Visibility>(getInitialVisibility(searchParams.get("demo_visibility")));
@@ -49,6 +53,12 @@ function CreateHubPageContent() {
     setCreatedHubHref(null);
 
     try {
+      if (isDemoPreview) {
+        setSuccessMessage(`Hub created successfully for your account. Slug: ${slugify(normalizedName) || "kamath-cafe"}`);
+        setCreatedHubHref(DEMO_SHARE_HUB_HREF);
+        return;
+      }
+
       const timestamp = Date.now();
       const slug = `${slugify(normalizedName)}-${timestamp}`;
       const createdHub = await createHub({
@@ -261,6 +271,7 @@ function CreateHubPageContent() {
                     <button
                       type="button"
                       onClick={() => router.push(createdHubHref)}
+                      data-demo-target="create-hub-view-hub"
                       className="rounded-full bg-[#0C5C57] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#094a46]"
                     >
                       View Hub

@@ -7,7 +7,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
 import { UDEETS_LOGO_SRC } from "@/lib/branding";
-import { formatDeetTime, getAllStoredDeets, subscribeToStoredDeets, type StoredDeet } from "@/lib/deets-store";
+import { listDeets, subscribeToDeets } from "@/lib/services/deets/list-deets";
+import type { DeetRecord } from "@/lib/services/deets/deet-types";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import { listHubs } from "@/lib/services/hubs/list-hubs";
 import type { Hub as SupabaseHub } from "@/types/hub";
@@ -24,8 +25,10 @@ type FeedItem = {
   body: string;
   type: FeedFilter;
   hubName: string;
+  hubId: string;
   timeLabel: string;
   previewImage?: string;
+  previewImages: string[];
   href?: string;
 };
 
@@ -58,16 +61,34 @@ function visibilityLabel(): "Public" | "Private" {
   return "Public";
 }
 
-function storedDeetToDashboardItem(item: StoredDeet): FeedItem {
+function formatDeetTime(createdAt: string) {
+  const timestamp = new Date(createdAt).getTime();
+  const diffMinutes = Math.max(0, Math.round((Date.now() - timestamp) / 60000));
+
+  if (diffMinutes < 1) return "Just now";
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+
+  const diffDays = Math.round(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return new Date(createdAt).toLocaleDateString();
+}
+
+function deetRecordToDashboardItem(item: DeetRecord): FeedItem {
   return {
     id: item.id,
     title: item.title,
     body: item.body,
     type: item.kind === "Notices" ? "Notices" : item.kind === "Photos" ? "Photos" : "Posts",
-    hubName: item.hubName,
-    timeLabel: formatDeetTime(item.createdAt),
-    previewImage: item.previewImage || undefined,
-    href: item.hubHref,
+    hubName: "",
+    hubId: item.hub_id,
+    timeLabel: formatDeetTime(item.created_at),
+    previewImage: item.preview_image_url || undefined,
+    previewImages: item.preview_image_urls ?? [],
+    href: undefined,
   };
 }
 
@@ -77,12 +98,12 @@ function DashboardDeetImage({ src, alt }: { src?: string; alt: string }) {
   if (!src || imageFailed) return null;
 
   return (
-    <div className="mt-4 overflow-hidden rounded-[20px] bg-[#E3F1EF]">
+    <div className="mt-4 overflow-hidden rounded-[20px] border border-[#D6E8E4] bg-[#EAF4F1]">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
         alt={alt}
-        className="h-56 w-full object-cover"
+        className="max-h-[28rem] w-full object-contain"
         loading="lazy"
         onError={() => setImageFailed(true)}
       />
@@ -258,15 +279,6 @@ function DashboardPageContent() {
   }, [router]);
 
   useEffect(() => {
-    const syncDeets = () => {
-      setMyDeetsItems(getAllStoredDeets().map(storedDeetToDashboardItem));
-    };
-
-    syncDeets();
-    return subscribeToStoredDeets(() => syncDeets());
-  }, []);
-
-  useEffect(() => {
     if (authStatus !== "authenticated") {
       setHubs([]);
       setIsLoadingHubs(authStatus === "checking");
@@ -312,10 +324,66 @@ function DashboardPageContent() {
     [currentUserId, hubs],
   );
   const visibleHubs = selectedHubView === "my-hubs" ? myHubs : followingHubs;
+  const relevantHubIds = useMemo(() => new Set(visibleHubs.map((hub) => hub.id)), [visibleHubs]);
+  useEffect(() => {
+    if (authStatus !== "authenticated") {
+      setMyDeetsItems([]);
+      return;
+    }
+
+    let cancelled = false;
+    const visibleHubIds = visibleHubs.map((hub) => hub.id);
+    const hubById = new Map(visibleHubs.map((hub) => [hub.id, hub]));
+
+    const syncDeets = async () => {
+      if (!visibleHubIds.length) {
+        if (!cancelled) {
+          setMyDeetsItems([]);
+        }
+        return;
+      }
+
+      try {
+        const items = await listDeets({ hubIds: visibleHubIds });
+        if (!cancelled) {
+          setMyDeetsItems(
+            items
+              .map(deetRecordToDashboardItem)
+              .map((item) => {
+                const hub = hubById.get(item.hubId);
+                return {
+                  ...item,
+                  hubName: hub?.name || "Hub",
+                  href: hub?.href,
+                };
+              }),
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setMyDeetsItems([]);
+        }
+      }
+    };
+
+    void syncDeets();
+    const unsubscribe = subscribeToDeets(() => {
+      void syncDeets();
+    }, { hubIds: visibleHubIds });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [authStatus, visibleHubs]);
+
   const filteredDeetsItems = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
+    const dedupedItems = myDeetsItems.filter((item, index, array) => array.findIndex((candidate) => candidate.id === item.id) === index);
+    const scopedItems =
+      relevantHubIds.size > 0 ? dedupedItems.filter((item) => relevantHubIds.has(item.hubId)) : dedupedItems;
 
-    return myDeetsItems.filter((item) => {
+    return scopedItems.filter((item) => {
       const matchesFilter = selectedFeedFilter === "All" || item.type === selectedFeedFilter;
       const matchesQuery =
         !normalizedQuery ||
@@ -323,7 +391,7 @@ function DashboardPageContent() {
 
       return matchesFilter && matchesQuery;
     });
-  }, [myDeetsItems, searchQuery, selectedFeedFilter]);
+  }, [myDeetsItems, relevantHubIds, searchQuery, selectedFeedFilter]);
 
   useEffect(() => {
     if (!copiedInviteHubId) return;
@@ -502,17 +570,27 @@ function DashboardPageContent() {
                           href={item.href}
                           className="block rounded-[24px] bg-[#F6FBFA] p-5 transition hover:bg-[#EFF7F5]"
                         >
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5F807A]">{item.type}</p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5F807A]">{item.type}</p>
+                            <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[#0C5C57]">
+                              {item.hubName}
+                            </span>
+                          </div>
                           <h3 className={cn("mt-2 text-lg font-semibold", TEXT_DARK)}>{item.title}</h3>
                           <p className={cn("mt-2 text-sm leading-6", TEXT_MUTED)}>{item.body}</p>
-                          <DashboardDeetImage src={item.previewImage} alt={item.title} />
+                          <DashboardDeetImage src={item.previewImage || item.previewImages[0]} alt={item.title} />
                         </Link>
                       ) : (
                         <article key={item.id} className="rounded-[24px] bg-[#F6FBFA] p-5">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5F807A]">{item.type}</p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5F807A]">{item.type}</p>
+                            <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[#0C5C57]">
+                              {item.hubName}
+                            </span>
+                          </div>
                           <h3 className={cn("mt-2 text-lg font-semibold", TEXT_DARK)}>{item.title}</h3>
                           <p className={cn("mt-2 text-sm leading-6", TEXT_MUTED)}>{item.body}</p>
-                          <DashboardDeetImage src={item.previewImage} alt={item.title} />
+                          <DashboardDeetImage src={item.previewImage || item.previewImages[0]} alt={item.title} />
                         </article>
                       ),
                     )}
@@ -523,9 +601,8 @@ function DashboardPageContent() {
                       No {selectedFeedFilter === "All" ? "deets" : selectedFeedFilter.toLowerCase()} yet
                     </h3>
                     <p className={cn("mx-auto mt-3 max-w-2xl text-sm leading-6 sm:text-base", TEXT_MUTED)}>
-                      Aggregated hub activity is not fully wired on this dashboard yet, so this section is ready for
-                      posts, notices, deals, announcements, polls, photos, and videos as those content streams become
-                      available.
+                      No matching activity is available from the hubs in this view yet. As updates are posted across
+                      your hubs, they will appear here in one combined feed.
                     </p>
                     <div className="mt-6 grid gap-3 sm:grid-cols-2">
                       <div className="rounded-[22px] bg-white px-5 py-4 text-left shadow-[0_8px_20px_rgba(12,92,87,0.05)]">
@@ -543,7 +620,7 @@ function DashboardPageContent() {
                           {selectedFeedFilter === "All" ? "Browse all activity" : `Filtered by ${selectedFeedFilter}`}
                         </p>
                         <p className={cn("mt-1 text-sm", TEXT_MUTED)}>
-                          This space will populate as richer hub-level feed data becomes available.
+                          Switch views or post a new deet from a hub to populate this feed.
                         </p>
                       </div>
                     </div>
