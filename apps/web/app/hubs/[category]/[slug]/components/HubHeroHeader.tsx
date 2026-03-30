@@ -1,7 +1,6 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
-import { Globe, Settings, Share2, UsersRound } from "lucide-react";
+import { HubHeaderActions } from "./header/HubHeaderActions";
 import { CARD, EMPTY_MEDIA_BG, ImageWithFallback, MediaEmptyState, cn, initials } from "./hubUtils";
 
 export function HubHeroHeader({
@@ -20,7 +19,10 @@ export function HubHeroHeader({
   headerHubName,
   hubName,
   memberCount,
-  CategoryIcon,
+  visibilityLabel,
+  isJoined,
+  onMembershipActionClick,
+  onMembersClick,
   onInviteMembers,
   onOpenSettings,
 }: {
@@ -39,7 +41,10 @@ export function HubHeroHeader({
   headerHubName: string;
   hubName: string;
   memberCount: number;
-  CategoryIcon: LucideIcon;
+  visibilityLabel: "Public" | "Private";
+  isJoined: boolean;
+  onMembershipActionClick: () => void;
+  onMembersClick: () => void;
   onInviteMembers: () => void;
   onOpenSettings: () => void;
 }) {
@@ -73,34 +78,16 @@ export function HubHeroHeader({
 
           <div className="w-full min-w-0 space-y-3 pt-2">
             <h1 className="truncate text-lg font-serif font-semibold tracking-tight text-[#111111] sm:text-xl">{headerHubName}</h1>
-            <div className="flex w-full items-center justify-between px-1 text-sm font-medium text-slate-600 sm:px-2">
-              <CategoryIcon className="h-4 w-4 shrink-0" />
-              <span className="inline-flex items-center gap-1.5">
-                <UsersRound className="h-4 w-4 shrink-0" />
-                <span>{memberCount}</span>
-              </span>
-              <button
-                type="button"
-                onClick={onInviteMembers}
-                className="inline-flex items-center text-slate-600 transition hover:text-[#0C5C57]"
-                aria-label="Invite members"
-                title="Invite members"
-              >
-                <Share2 className="h-4 w-4 shrink-0" />
-              </button>
-              <span className="inline-flex items-center">
-                <Globe className="h-4 w-4 shrink-0" />
-              </span>
-              <button
-                type="button"
-                onClick={onOpenSettings}
-                className="inline-flex items-center text-slate-600 transition hover:text-[#0C5C57]"
-                aria-label="Hub settings"
-                title="Hub settings"
-              >
-                <Settings className="h-4 w-4 shrink-0" />
-              </button>
-            </div>
+            <HubHeaderActions
+              memberCount={memberCount}
+              visibilityLabel={visibilityLabel}
+              canManageHub={isCreatorAdmin}
+              isJoined={isJoined}
+              onMembersClick={onMembersClick}
+              onInviteClick={onInviteMembers}
+              onSettingsClick={onOpenSettings}
+              onMembershipActionClick={onMembershipActionClick}
+            />
           </div>
         </div>
       </div>

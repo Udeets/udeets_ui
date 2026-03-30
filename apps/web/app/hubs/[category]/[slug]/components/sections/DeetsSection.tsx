@@ -124,7 +124,7 @@ export function DeetsSection({
       }
     >
       {filteredFeedItems.length === 0 && !showDemoPostedText && !showDemoPoll ? (
-        <div className="space-y-4">
+        <div className="w-full space-y-4">
           <DeetComposerCard
             isDemoPreview={isDemoPreview}
             isCreatorAdmin={isCreatorAdmin}
@@ -134,8 +134,8 @@ export function DeetsSection({
             hubName={hubName}
             onOpenComposer={onOpenComposer}
           />
-          <div className="grid min-h-[280px] place-items-center rounded-[28px] border border-dashed border-[#CFE4DE] bg-[linear-gradient(180deg,#FCFEFD_0%,#F5FBF9_100%)] p-6 text-center">
-            <div className="max-w-lg">
+          <div className="grid min-h-[280px] w-full place-items-center rounded-[28px] border border-dashed border-[#CFE4DE] bg-[linear-gradient(180deg,#FCFEFD_0%,#F5FBF9_100%)] p-6 text-center">
+            <div className="w-full">
               <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#EAF6F3] text-[#0C5C57] shadow-sm">
                 <Megaphone className="h-7 w-7 stroke-[1.8]" />
               </div>
@@ -153,7 +153,7 @@ export function DeetsSection({
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="w-full space-y-4">
           <DeetComposerCard
             isDemoPreview={isDemoPreview}
             isCreatorAdmin={isCreatorAdmin}
@@ -165,7 +165,7 @@ export function DeetsSection({
           />
 
           {showDemoPostedText ? (
-            <section className="rounded-[26px] border border-[#D8ECE7] bg-[linear-gradient(180deg,#FCFEFD_0%,#F6FBF9_100%)] p-5 shadow-sm">
+            <section className="w-full rounded-[26px] border border-[#D8ECE7] bg-[linear-gradient(180deg,#FCFEFD_0%,#F6FBF9_100%)] p-5 shadow-sm">
               <div className="flex items-center gap-2">
                 <span className={PREMIUM_ICON_WRAPPER}>
                   <Megaphone className={ICON} />
@@ -179,7 +179,7 @@ export function DeetsSection({
           {showDemoPoll ? (
             <section
               data-demo-target={isDemoPreview ? "hub-poll-section" : undefined}
-              className="rounded-[26px] border border-[#D8ECE7] bg-[linear-gradient(180deg,#FCFEFD_0%,#F6FBF9_100%)] p-5 shadow-sm"
+              className="w-full rounded-[26px] border border-[#D8ECE7] bg-[linear-gradient(180deg,#FCFEFD_0%,#F6FBF9_100%)] p-5 shadow-sm"
             >
               <h3 className="text-base font-semibold text-[#111111]">Free Pet Check-up in Mechanicsville</h3>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">
@@ -216,13 +216,13 @@ export function DeetsSection({
             </section>
           ) : null}
 
-          <section className="space-y-4">
+          <section className="w-full space-y-4">
             {filteredFeedItems.map((item) => (
               <article
                 id={item.id}
                 key={item.id}
                 className={cn(
-                  "rounded-[28px] border border-[#DCECE7] bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FCFB_100%)] p-5 shadow-sm transition",
+                  "w-full rounded-[28px] border border-[#DCECE7] bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FCFB_100%)] p-5 shadow-sm transition",
                   highlightedItemId === item.id && "ring-2 ring-[#A9D1CA] ring-offset-2 ring-offset-white"
                 )}
               >

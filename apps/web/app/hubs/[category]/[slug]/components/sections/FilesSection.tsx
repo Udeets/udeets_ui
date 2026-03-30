@@ -8,14 +8,14 @@ export function FilesSection({ fileItems }: { fileItems: string[] }) {
   return (
     <SectionShell title="Files" description="Shared guides, forms, and reference files for this hub.">
       {fileItems.length === 0 ? (
-        <div className="grid min-h-[240px] place-items-center text-center">
-          <div className="max-w-sm">
+        <div className="grid min-h-[240px] w-full place-items-center text-center">
+          <div className="w-full">
             <h3 className="text-xl font-serif font-semibold tracking-tight text-[#111111]">No files yet</h3>
             <p className="mt-3 text-sm leading-relaxed text-slate-600">Shared guides, forms, and resources will appear here.</p>
           </div>
         </div>
       ) : (
-        <section className="space-y-3">
+        <section className="w-full space-y-3">
           {fileItems.map((file) => (
             <div key={file} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
               <div className="flex items-center gap-3">

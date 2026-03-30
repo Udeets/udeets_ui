@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
 import { UDEETS_LOGO_SRC } from "@/lib/branding";
+import { mapDeetToDashboardCard } from "@/lib/mappers/deets/map-deet-to-dashboard-card";
 import { listDeets, subscribeToDeets } from "@/lib/services/deets/list-deets";
 import type { DeetRecord } from "@/lib/services/deets/deet-types";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
@@ -78,16 +79,18 @@ function formatDeetTime(createdAt: string) {
 }
 
 function deetRecordToDashboardItem(item: DeetRecord): FeedItem {
+  const card = mapDeetToDashboardCard(item);
+
   return {
-    id: item.id,
-    title: item.title,
-    body: item.body,
-    type: item.kind === "Notices" ? "Notices" : item.kind === "Photos" ? "Photos" : "Posts",
+    id: card.id,
+    title: card.title ?? "",
+    body: card.body ?? "",
+    type: card.type,
     hubName: "",
-    hubId: item.hub_id,
-    timeLabel: formatDeetTime(item.created_at),
-    previewImage: item.preview_image_url || undefined,
-    previewImages: item.preview_image_urls ?? [],
+    hubId: card.hubId,
+    timeLabel: formatDeetTime(card.createdAt ?? item.created_at),
+    previewImage: card.previewImageUrl || undefined,
+    previewImages: card.previewImageUrls,
     href: undefined,
   };
 }

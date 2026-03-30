@@ -11,35 +11,32 @@ import {
   Target,
   X,
 } from "lucide-react";
-import type { ChangeEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
 import type { HubContent } from "@/lib/hub-content";
 import type { HubRecord } from "@/lib/hubs";
-import { createDeet } from "@/lib/services/deets/create-deet";
-import { listDeets, subscribeToDeets } from "@/lib/services/deets/list-deets";
-import type { DeetRecord } from "@/lib/services/deets/deet-types";
-import { uploadDeetMedia } from "@/lib/services/deets/upload-deet-media";
-import { updateHub } from "@/lib/services/hubs/update-hub";
-import { uploadHubMedia } from "@/lib/services/hubs/upload-hub-media";
 import { useAuthSession } from "@/services/auth/useAuthSession";
+import { AttachmentsSection } from "./components/attachments/AttachmentsSection";
 import { HubHeroHeader } from "./components/HubHeroHeader";
 import { HubTabBar } from "./components/HubTabBar";
+import { MembersSection } from "./components/members/MembersSection";
 import { AboutSection } from "./components/sections/AboutSection";
-import { AdminsSection } from "./components/sections/AdminsSection";
 import { DeetsSection } from "./components/sections/DeetsSection";
-import { EventsSection } from "./components/sections/EventsSection";
-import { FilesSection } from "./components/sections/FilesSection";
-import { MembersSection } from "./components/sections/MembersSection";
-import { PhotosSection } from "./components/sections/PhotosSection";
 import { SettingsSection } from "./components/sections/SettingsSection";
 import { CreateDeetModal } from "./components/deets/CreateDeetModal";
 import { DeetChildModal } from "./components/deets/DeetChildModal";
 import { DeetSettingsModal } from "./components/deets/DeetSettingsModal";
-import type { AttachedDeetItem, ComposerChildFlow, DeetFormattingState, DeetSettingsState } from "./components/deets/deetTypes";
-import type { ConnectLinks, HubPanel, HubTab, PendingNavigation, ViewerState } from "./components/hubTypes";
+import type { HubTab } from "./components/hubTypes";
+import { useHubConnectFlow } from "./hooks/useHubConnectFlow";
+import { useDeetComposer } from "./hooks/useDeetComposer";
+import { useHubFilters } from "./hooks/useHubFilters";
+import { useHubLiveFeed } from "./hooks/useHubLiveFeed";
+import { useHubMediaFlow } from "./hooks/useHubMediaFlow";
+import { useHubSettingsFlow } from "./hooks/useHubSettingsFlow";
+import { useHubSectionState } from "./hooks/useHubSectionState";
+import { useHubViewerState } from "./hooks/useHubViewerState";
 import {
   BUTTON_PRIMARY,
   BUTTON_SECONDARY,
@@ -54,54 +51,6 @@ import {
   normalizePublicSrc,
 } from "./components/hubUtils";
 import { SectionShell } from "./components/SectionShell";
-
-function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        resolve(reader.result);
-        return;
-      }
-
-      reject(new Error("Image preview could not be created."));
-    };
-    reader.onerror = () => reject(new Error("Image preview could not be created."));
-    reader.readAsDataURL(file);
-  });
-}
-
-function formatDeetTime(createdAt: string) {
-  const timestamp = new Date(createdAt).getTime();
-  const diffMinutes = Math.max(0, Math.round((Date.now() - timestamp) / 60000));
-
-  if (diffMinutes < 1) return "Just now";
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-
-  const diffHours = Math.round(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-
-  const diffDays = Math.round(diffHours / 24);
-  if (diffDays < 7) return `${diffDays}d ago`;
-
-  return new Date(createdAt).toLocaleDateString();
-}
-
-function deetRecordToHubFeedItem(item: DeetRecord): HubContent["feed"][number] {
-  return {
-    id: item.id,
-    kind: item.kind === "Notices" ? "notice" : item.kind === "Photos" ? "photo" : "announcement",
-    author: item.author_name,
-    time: formatDeetTime(item.created_at),
-    title: item.title,
-    body: item.body,
-    image: item.preview_image_url || undefined,
-    images: item.preview_image_urls ?? undefined,
-    likes: 0,
-    comments: 0,
-    views: 1,
-  };
-}
 
 export default function HubClient({
   hub,
@@ -120,11 +69,10 @@ export default function HubClient({
   const hubContent = useMemo<HubContent>(() => ({ hubId: hub.id, feed: [], events: [], notifications: [] }), [hub.id]);
 
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
-  const [viewer, setViewer] = useState<ViewerState>({ open: false, images: [], index: 0, title: "", body: "", focusId: undefined });
 
   const hubBaseHref = `/hubs/${hub.category}/${hub.slug}`;
   const focusTarget = searchParams.get("focus");
-  const requestedTab = searchParams.get("tab") as HubTab | null;
+  const requestedTab = searchParams.get("tab");
   const isDemoPreview = searchParams.get("demo_preview") === "1";
   const demoHubName = searchParams.get("demo_name")?.trim();
   const demoHubDescription = searchParams.get("demo_description")?.trim();
@@ -134,106 +82,116 @@ export default function HubClient({
   const demoPollVote = searchParams.get("demo_poll_vote");
   const demoLiked = searchParams.get("demo_liked") === "1";
 
-  const initialActiveSection: HubTab = requestedTab && HUB_TABS.includes(requestedTab) ? requestedTab : "About";
-  const [activeSection, setActiveSection] = useState<HubTab>(initialActiveSection);
-  const [activePanel, setActivePanel] = useState<HubPanel>("posts");
-  const [membersPanelMode, setMembersPanelMode] = useState<"list" | "invite">("list");
-
-  const [postSearchQuery, setPostSearchQuery] = useState("");
-  const [feedFilter, setFeedFilter] = useState<"Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos">("Newest");
-  const [isFeedSearchOpen, setIsFeedSearchOpen] = useState(false);
-  const [isFeedFilterOpen, setIsFeedFilterOpen] = useState(false);
-
-  const [composerOpen, setComposerOpen] = useState(false);
-  const [activeComposerChild, setActiveComposerChild] = useState<ComposerChildFlow | null>(null);
-  const [attachedDeetItems, setAttachedDeetItems] = useState<AttachedDeetItem[]>([]);
-  const [selectedPhotoPreviews, setSelectedPhotoPreviews] = useState<string[]>([]);
-  const [selectedPhotoFiles, setSelectedPhotoFiles] = useState<File[]>([]);
-  const [publishedDeets, setPublishedDeets] = useState<HubContent["feed"]>([]);
-  const [modalDraftText, setModalDraftText] = useState("");
-  const [isSubmittingDeet, setIsSubmittingDeet] = useState(false);
-  const [deetFormatting, setDeetFormatting] = useState<DeetFormattingState>({
-    fontSize: "small",
-    bold: false,
-    italic: false,
-    underline: false,
-    textColor: "#111111",
-  });
-  const [isFontSizeMenuOpen, setIsFontSizeMenuOpen] = useState(false);
-  const [deetSettings, setDeetSettings] = useState<DeetSettingsState>({ noticeEnabled: false, commentsEnabled: true });
-
   const initialHubName = demoHubName || hub.name;
   const hubDescription = demoHubDescription || hub.description;
-  const [savedHubName, setSavedHubName] = useState(initialHubName);
-  const [savedHubCategory, setSavedHubCategory] = useState<HubRecord["category"]>(hub.category);
-  const hubName = savedHubName;
-  const [settingsHubName, setSettingsHubName] = useState(initialHubName);
-  const [settingsCategory, setSettingsCategory] = useState<HubRecord["category"]>(hub.category);
-  const [settingsDescription, setSettingsDescription] = useState(hubDescription);
-  const [settingsLocation, setSettingsLocation] = useState(hub.locationLabel);
-  const [settingsVisibility, setSettingsVisibility] = useState<HubRecord["visibility"]>(hub.visibility);
-  const [settingsDiscoverable, setSettingsDiscoverable] = useState("discoverable" in hub ? Boolean((hub as HubRecord & { discoverable?: boolean }).discoverable) : true);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [approvalSetting, setApprovalSetting] = useState(settingsVisibility === "Private" ? "Required" : "Open");
-  const [whoCanPost, setWhoCanPost] = useState("Admins and members");
-  const [whoCanUpload, setWhoCanUpload] = useState("Admins and members");
-  const [isConnectEditorOpen, setIsConnectEditorOpen] = useState(false);
   const [isAdminsEditorOpen, setIsAdminsEditorOpen] = useState(false);
-  const [isSavingSettings, setIsSavingSettings] = useState(false);
-  const [settingsSaveError, setSettingsSaveError] = useState<string | null>(null);
-  const [settingsSaveSuccess, setSettingsSaveSuccess] = useState<string | null>(null);
-  const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation | null>(null);
-  const [isUnsavedChangesOpen, setIsUnsavedChangesOpen] = useState(false);
-  const [isSavingConnect, setIsSavingConnect] = useState(false);
-  const [connectError, setConnectError] = useState<string | null>(null);
-  const [connectSuccess, setConnectSuccess] = useState<string | null>(null);
-  const [connectLinks, setConnectLinks] = useState<ConnectLinks>({
-    website: hub.website ?? "",
-    facebook: hub.facebookUrl ?? "",
-    instagram: hub.instagramUrl ?? "",
-    youtube: hub.youtubeUrl ?? "",
-    phone: hub.phoneNumber ?? "",
-  });
-  const [connectDraft, setConnectDraft] = useState<ConnectLinks>({
-    website: hub.website ?? "",
-    facebook: hub.facebookUrl ?? "",
-    instagram: hub.instagramUrl ?? "",
-    youtube: hub.youtubeUrl ?? "",
-    phone: hub.phoneNumber ?? "",
-  });
-
-  const [mediaError, setMediaError] = useState<string | null>(null);
-  const [mediaSuccess, setMediaSuccess] = useState<string | null>(null);
-  const [isUploadingDp, setIsUploadingDp] = useState(false);
-  const [isUploadingCover, setIsUploadingCover] = useState(false);
-  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
-  const [mediaChooserTarget, setMediaChooserTarget] = useState<"dp" | "cover" | null>(null);
-  const [isAlbumPickerOpen, setIsAlbumPickerOpen] = useState(false);
-  const [dpImageSrc, setDpImageSrc] = useState(normalizePublicSrc(hub.dpImage));
-  const [coverImageSrc, setCoverImageSrc] = useState(normalizePublicSrc(hub.heroImage));
-  const [galleryImages, setGalleryImages] = useState(() => (hub.galleryImages ?? []).map(normalizePublicSrc).filter(Boolean));
 
   const dpInputRef = useRef<HTMLInputElement | null>(null);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
-  const deetPhotoInputRef = useRef<HTMLInputElement | null>(null);
-
-  const recentPhotos = galleryImages.slice(0, 6);
-  const displayCoverImageSrc = galleryImages.find((image) => image && image !== coverImageSrc) || coverImageSrc;
-  const adminImages = (hub.adminImages ?? []).map(normalizePublicSrc).filter(Boolean);
   const isCreatorAdmin = Boolean(user?.id && hub.createdBy && user.id === hub.createdBy);
   const canAccessAdmins = isCreatorAdmin;
   const creatorMetadata = user?.user_metadata;
   const creatorDisplayName = isCreatorAdmin ? creatorMetadata?.full_name || creatorMetadata?.name || user?.email || "You" : "Hub Creator";
   const creatorDetail = isCreatorAdmin ? user?.email || "Admin" : hub.createdBy ? `Admin • ${compactId(hub.createdBy)}` : "Admin";
   const creatorAvatarSrc = isCreatorAdmin && typeof creatorMetadata?.avatar_url === "string" ? creatorMetadata.avatar_url : "";
+  const deetAuthorName =
+    creatorMetadata?.full_name ||
+    creatorMetadata?.name ||
+    user?.email?.split("@")[0] ||
+    "You";
+  const [isJoined, setIsJoined] = useState(isCreatorAdmin);
+  const { liveFeedItems, prependCreatedDeet } = useHubLiveFeed(hub.id);
+  const {
+    savedHubName,
+    savedHubCategory,
+    settingsHubName,
+    settingsCategory,
+    settingsDescription,
+    settingsLocation,
+    settingsVisibility,
+    settingsDiscoverable,
+    notificationsEnabled,
+    approvalSetting,
+    whoCanPost,
+    whoCanUpload,
+    isSavingSettings,
+    settingsSaveError,
+    settingsSaveSuccess,
+    isDirty,
+    setSettingsDescription,
+    setSettingsLocation,
+    setSettingsVisibility,
+    setSettingsDiscoverable,
+    setNotificationsEnabled,
+    setApprovalSetting,
+    setWhoCanPost,
+    setWhoCanUpload,
+    updateSettingsHubName,
+    updateSettingsCategory,
+    saveSettings,
+    resetSettings,
+  } = useHubSettingsFlow({
+    hub,
+    initialHubName,
+    hubDescription,
+    isCreatorAdmin,
+    onAfterSave: () => {
+      if (pendingNavigation) {
+        applyNavigation(pendingNavigation);
+        setPendingNavigation(null);
+        setIsUnsavedChangesOpen(false);
+      }
+    },
+  });
+  const hubName = savedHubName;
+  const {
+    isConnectEditorOpen,
+    isSavingConnect,
+    connectError,
+    connectSuccess,
+    connectLinks,
+    connectDraft,
+    openConnectEditor,
+    closeConnectEditor,
+    handleConnectChange,
+    saveConnect,
+  } = useHubConnectFlow(hub);
+  const {
+    mediaError,
+    mediaSuccess,
+    isUploadingDp,
+    isUploadingCover,
+    isUploadingGallery,
+    mediaChooserTarget,
+    isAlbumPickerOpen,
+    dpImageSrc,
+    coverImageSrc,
+    galleryImages,
+    setIsAlbumPickerOpen,
+    openMediaChooser,
+    closeMediaChooser,
+    handleChooseFromDevice,
+    handleChooseFromAlbums,
+    handleAlbumImageSelect,
+    handleMediaFileChange,
+  } = useHubMediaFlow({
+    hub,
+    isCreatorAdmin,
+    dpInputRef,
+    coverInputRef,
+  });
+  const recentPhotos = galleryImages.slice(0, 6);
+  const displayCoverImageSrc = galleryImages.find((image) => image && image !== coverImageSrc) || coverImageSrc;
+  const adminImages = (hub.adminImages ?? []).map(normalizePublicSrc).filter(Boolean);
   const albumChoices = galleryImages.filter((image) => image !== dpImageSrc && image !== coverImageSrc);
   const categoryMeta = categoryMetaFor(savedHubCategory);
   const CategoryIcon = categoryMeta.icon;
   const memberCount = Math.max(1, Number.parseInt(hub.membersLabel, 10) || 0);
   const headerHubName = hub.name?.trim() || hubName;
-  const visibleTabs = canAccessAdmins ? HUB_TABS : HUB_TABS.filter((tab) => tab !== "Admins");
-  const allFeedItems = [...publishedDeets, ...hubContent.feed];
+  const visibilityLabel: "Public" | "Private" = hub.visibility;
+  const visibleTabs = HUB_TABS;
+  const allFeedItems = [...liveFeedItems, ...hubContent.feed];
   const feedItemCount = allFeedItems.length;
   const totalEngagement = allFeedItems.reduce((sum, item) => sum + item.likes + item.comments, 0);
   const totalViews = allFeedItems.reduce((sum, item) => sum + item.views, 0);
@@ -241,111 +199,79 @@ export default function HubClient({
   const photoDeetCount = allFeedItems.filter((item) => item.kind === "photo").length;
   const activeAdminCount = 1;
   const knownActivityCount = feedItemCount + hubContent.events.length + recentPhotos.length;
-  const isDirty = settingsHubName.trim() !== savedHubName.trim() || settingsCategory !== savedHubCategory;
   const fileItems: string[] = [];
   const memberItems: string[] = [];
   const memberRoleItems: Array<{ name: string; role: string }> = [];
+  const {
+    activeSection,
+    setActiveSection,
+    activePanel,
+    membersPanelMode,
+    activePeopleView,
+    activeAttachmentView,
+    pendingNavigation,
+    setPendingNavigation,
+    isUnsavedChangesOpen,
+    setIsUnsavedChangesOpen,
+    applyNavigation,
+    requestNavigation,
+  } = useHubSectionState({
+    requestedTab,
+    canAccessAdmins,
+    isDirty,
+  });
+  const { viewer, openViewer, closeViewer, nextViewerImage, prevViewerImage } =
+    useHubViewerState();
+  const {
+    postSearchQuery,
+    setPostSearchQuery,
+    feedFilter,
+    isFeedSearchOpen,
+    isFeedFilterOpen,
+    normalizedPostSearch,
+    filteredFeedItems,
+    showDemoPostedText,
+    showDemoPoll,
+    toggleFeedSearch,
+    toggleFeedFilter,
+    selectFeedFilter,
+  } = useHubFilters({
+    allFeedItems,
+    demoPostedText,
+    demoPollEnabled,
+  });
 
-  const isComposerDirty =
-    modalDraftText.trim().length > 0 ||
-    attachedDeetItems.length > 0 ||
-    selectedPhotoPreviews.length > 0 ||
-    deetSettings.noticeEnabled ||
-    !deetSettings.commentsEnabled;
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const syncDeets = async () => {
-      try {
-        const items = await listDeets({ hubIds: [hub.id] });
-        if (!cancelled) {
-          setPublishedDeets(items.map(deetRecordToHubFeedItem));
-        }
-      } catch {
-        if (!cancelled) {
-          setPublishedDeets([]);
-        }
-      }
-    };
-
-    void syncDeets();
-    const unsubscribe = subscribeToDeets(() => {
-      void syncDeets();
-    }, { hubIds: [hub.id] });
-
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-  }, [hub.id]);
-
-  useEffect(() => {
-    setConnectLinks({ website: hub.website ?? "", facebook: hub.facebookUrl ?? "", instagram: hub.instagramUrl ?? "", youtube: hub.youtubeUrl ?? "", phone: hub.phoneNumber ?? "" });
-    setConnectDraft({ website: hub.website ?? "", facebook: hub.facebookUrl ?? "", instagram: hub.instagramUrl ?? "", youtube: hub.youtubeUrl ?? "", phone: hub.phoneNumber ?? "" });
-  }, [hub.facebookUrl, hub.instagramUrl, hub.phoneNumber, hub.website, hub.youtubeUrl]);
-
-  useEffect(() => {
-    if (!canAccessAdmins && activeSection === "Admins") setActiveSection("About");
-  }, [activeSection, canAccessAdmins]);
-
-  useEffect(() => {
-    if (!composerOpen) return;
-
-    setModalDraftText(demoComposerText);
-    setDeetFormatting({ fontSize: "small", bold: false, italic: false, underline: false, textColor: "#111111" });
-    setIsFontSizeMenuOpen(false);
-    setAttachedDeetItems([]);
-    setSelectedPhotoPreviews([]);
-    setSelectedPhotoFiles([]);
-    setDeetSettings({ noticeEnabled: false, commentsEnabled: true });
-  }, [composerOpen, demoComposerText]);
-
-  useEffect(() => {
-    if (!composerOpen) return;
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      if (isSubmittingDeet) return;
-      if (activeComposerChild && activeComposerChild !== "quit_confirm") {
-        setActiveComposerChild(null);
-        return;
-      }
-      if (isComposerDirty) {
-        setActiveComposerChild("quit_confirm");
-        return;
-      }
-      setComposerOpen(false);
-    };
-
-    window.addEventListener("keydown", handleEscape);
-    return () => window.removeEventListener("keydown", handleEscape);
-  }, [activeComposerChild, composerOpen, isComposerDirty, isSubmittingDeet]);
-
-  useEffect(() => {
-    setSavedHubName(initialHubName);
-    setSettingsHubName(initialHubName);
-    setSavedHubCategory(hub.category);
-    setSettingsCategory(hub.category);
-    setSettingsSaveError(null);
-    setSettingsSaveSuccess(null);
-  }, [hub.category, initialHubName]);
-
-  useEffect(() => {
-    setDpImageSrc(normalizePublicSrc(hub.dpImage));
-    setCoverImageSrc(normalizePublicSrc(hub.heroImage));
-    setGalleryImages((hub.galleryImages ?? []).map(normalizePublicSrc).filter(Boolean));
-  }, [hub.dpImage, hub.galleryImages, hub.heroImage]);
-
-  useEffect(() => {
-    if (!isDirty) return;
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [isDirty]);
+  const {
+    composerOpen,
+    activeComposerChild,
+    attachedDeetItems,
+    selectedPhotoPreviews,
+    selectedPhotoFiles,
+    modalDraftText,
+    isSubmittingDeet,
+    deetFormatting,
+    isFontSizeMenuOpen,
+    deetSettings,
+    deetPhotoInputRef,
+    setActiveComposerChild,
+    setModalDraftText,
+    setDeetFormatting,
+    setIsFontSizeMenuOpen,
+    setDeetSettings,
+    openDeetComposer,
+    closeDeetComposer,
+    discardDeetComposer,
+    attachDeetItem,
+    handleDeetPhotoFiles,
+    handleSubmitDeet,
+  } = useDeetComposer({
+    hubId: hub.id,
+    hubSlug: hub.slug,
+    demoComposerText,
+    isCreatorAdmin,
+    authorName: deetAuthorName,
+    onDeetCreated: prependCreatedDeet,
+  });
 
   useEffect(() => {
     if (!focusTarget) return;
@@ -359,34 +285,6 @@ export default function HubClient({
     return () => window.clearTimeout(timer);
   }, [activeSection, focusTarget]);
 
-  const openViewer = (images: string[], index: number, title: string, body: string, focusId?: string) => {
-    if (!images.length) return;
-    setViewer({ open: true, images, index, title, body, focusId });
-  };
-
-  const closeViewer = () => setViewer((current) => ({ ...current, open: false }));
-  const nextViewerImage = () => setViewer((current) => ({ ...current, index: (current.index + 1) % current.images.length }));
-  const prevViewerImage = () => setViewer((current) => ({ ...current, index: current.index === 0 ? current.images.length - 1 : current.index - 1 }));
-
-  const applyNavigation = ({ tab, panel, membersMode }: PendingNavigation) => {
-    setActiveSection(tab);
-    if (membersMode) setMembersPanelMode(membersMode);
-    setActivePanel(panel);
-  };
-
-  const requestNavigation = (next: PendingNavigation) => {
-    const sameSection = activeSection === next.tab;
-    const samePanel = activePanel === next.panel;
-    const sameMembersMode = next.membersMode ? membersPanelMode === next.membersMode : true;
-    if (sameSection && samePanel && sameMembersMode) return;
-    if (isDirty) {
-      setPendingNavigation(next);
-      setIsUnsavedChangesOpen(true);
-      return;
-    }
-    applyNavigation(next);
-  };
-
   const navigateToFocus = (focusId: string, tab?: HubTab) => {
     const params = new URLSearchParams();
     params.set("focus", focusId);
@@ -395,313 +293,84 @@ export default function HubClient({
     if (tab) setActiveSection(tab);
   };
 
-  const handleConnectChange = (field: keyof ConnectLinks) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    setConnectDraft((current) => ({ ...current, [field]: event.target.value }));
-  };
-
-  const handleSaveSettings = async () => {
-    if (!isCreatorAdmin || !isDirty) return;
-    setIsSavingSettings(true);
-    setSettingsSaveError(null);
-    setSettingsSaveSuccess(null);
-    try {
-      const updatedHub = await updateHub(hub.id, { name: settingsHubName, category: settingsCategory });
-      setSavedHubName(updatedHub.name);
-      setSettingsHubName(updatedHub.name);
-      setSavedHubCategory(updatedHub.category);
-      setSettingsCategory(updatedHub.category);
-      setSettingsSaveSuccess("Hub settings saved.");
-      if (pendingNavigation) {
-        applyNavigation(pendingNavigation);
-        setPendingNavigation(null);
-        setIsUnsavedChangesOpen(false);
-      }
-    } catch (error) {
-      setSettingsSaveError(error instanceof Error ? error.message : "Hub settings could not be saved.");
-    } finally {
-      setIsSavingSettings(false);
-    }
-  };
-
-  const handleCancelSettingsChanges = () => {
-    setSettingsHubName(savedHubName);
-    setSettingsCategory(savedHubCategory);
-    setSettingsSaveError(null);
-    setSettingsSaveSuccess(null);
-  };
-
-  const openConnectEditor = () => {
-    setConnectDraft(connectLinks);
-    setConnectError(null);
-    setConnectSuccess(null);
-    setIsConnectEditorOpen(true);
-  };
-
-  const handleSaveConnect = async () => {
-    setIsSavingConnect(true);
-    setConnectError(null);
-    setConnectSuccess(null);
-    try {
-      const updatedHub = await updateHub(hub.id, {
-        websiteUrl: connectDraft.website,
-        facebookUrl: connectDraft.facebook,
-        instagramUrl: connectDraft.instagram,
-        youtubeUrl: connectDraft.youtube,
-        phoneNumber: connectDraft.phone,
-      });
-
-      const nextConnectLinks = {
-        website: updatedHub.website_url ?? "",
-        facebook: updatedHub.facebook_url ?? "",
-        instagram: updatedHub.instagram_url ?? "",
-        youtube: updatedHub.youtube_url ?? "",
-        phone: updatedHub.phone_number ?? "",
-      };
-
-      setConnectLinks(nextConnectLinks);
-      setConnectDraft(nextConnectLinks);
-      setConnectSuccess("Connect links updated.");
-      setIsConnectEditorOpen(false);
-    } catch (error) {
-      setConnectError(error instanceof Error ? error.message : "Connect links could not be saved.");
-    } finally {
-      setIsSavingConnect(false);
-    }
-  };
-
-  const handleMediaUpload = async (kind: "dp" | "cover" | "gallery", file: File) => {
-    setMediaError(null);
-    setMediaSuccess(null);
-    if (kind === "dp") setIsUploadingDp(true);
-    if (kind === "cover") setIsUploadingCover(true);
-    if (kind === "gallery") setIsUploadingGallery(true);
-    try {
-      const uploadedUrl = await uploadHubMedia({ file, slug: hub.slug, kind });
-      const nextGallery = kind === "gallery" ? [...galleryImages, uploadedUrl] : galleryImages;
-      const updatedHub = await updateHub(hub.id, {
-        dpImageUrl: kind === "dp" ? uploadedUrl : undefined,
-        coverImageUrl: kind === "cover" ? uploadedUrl : undefined,
-        galleryImageUrls: kind === "gallery" ? nextGallery : undefined,
-      });
-      setDpImageSrc(normalizePublicSrc(updatedHub.dp_image_url || undefined));
-      setCoverImageSrc(normalizePublicSrc(updatedHub.cover_image_url || undefined));
-      setGalleryImages((updatedHub.gallery_image_urls ?? []).map(normalizePublicSrc).filter(Boolean));
-      setMediaSuccess(kind === "gallery" ? "Recent photos updated." : kind === "dp" ? "Display picture updated." : "Cover image updated.");
-    } catch (error) {
-      setMediaError(error instanceof Error ? error.message : "Hub media could not be updated.");
-    } finally {
-      if (kind === "dp") setIsUploadingDp(false);
-      if (kind === "cover") setIsUploadingCover(false);
-      if (kind === "gallery") setIsUploadingGallery(false);
-    }
-  };
-
-  const handleMediaFileChange = (kind: "dp" | "cover" | "gallery") => async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    await handleMediaUpload(kind, file);
-  };
-
   const openCenterMembers = (mode: "list" | "invite") => {
-    requestNavigation({ tab: "Members", panel: mode === "invite" ? "invite" : "members", membersMode: mode });
+    requestNavigation({
+      tab: "Members",
+      panel: mode === "invite" ? "invite" : "members",
+      membersMode: mode,
+      membersView: "members",
+    });
   };
 
-  const normalizedPostSearch = postSearchQuery.trim().toLowerCase();
-  const searchedFeedItems = allFeedItems.filter((item) => {
-    if (!normalizedPostSearch) return true;
-    return [item.title, item.body, item.author, item.time].some((value) => value.toLowerCase().includes(normalizedPostSearch));
-  });
-  const filteredFeedItems = searchedFeedItems.filter((item) => {
-    if (feedFilter === "Newest" || feedFilter === "Oldest") return true;
-    if (feedFilter === "Announcements") return item.kind === "announcement" || item.kind === "notice";
-    if (feedFilter === "Events") return item.kind === "event";
-    if (feedFilter === "Photos") return item.kind === "photo";
-    return false;
-  });
-  const showDemoPostedText = feedFilter !== "Events" && feedFilter !== "Polls" && feedFilter !== "Photos" && Boolean(demoPostedText) && (!normalizedPostSearch || demoPostedText.toLowerCase().includes(normalizedPostSearch));
-  const demoPollSearchText = "free pet check-up in mechanicsville would you attend the complimentary pet wellness check this saturday";
-  const showDemoPoll = (feedFilter === "Newest" || feedFilter === "Oldest" || feedFilter === "Polls" || feedFilter === "Events") && demoPollEnabled && (!normalizedPostSearch || demoPollSearchText.includes(normalizedPostSearch));
-
-  const openMediaChooser = (target: "dp" | "cover") => {
-    if (!isCreatorAdmin) return;
-    setMediaChooserTarget(target);
-    setIsAlbumPickerOpen(false);
-    setMediaError(null);
+  const openSettingsPanel = () => {
+    requestNavigation({ tab: activeSection, panel: "settings" });
   };
 
-  const closeMediaChooser = () => {
-    setMediaChooserTarget(null);
-    setIsAlbumPickerOpen(false);
-  };
-
-  const handleChooseFromDevice = () => {
-    if (!mediaChooserTarget) return;
-    closeMediaChooser();
-    if (mediaChooserTarget === "dp") {
-      dpInputRef.current?.click();
-      return;
-    }
-    coverInputRef.current?.click();
-  };
-
-  const handleChooseFromAlbums = () => {
-    if (!albumChoices.length) return;
-    setIsAlbumPickerOpen(true);
-  };
-
-  const handleAlbumImageSelect = async (imageUrl: string) => {
-    if (!mediaChooserTarget) return;
-    setMediaError(null);
-    setMediaSuccess(null);
-    if (mediaChooserTarget === "dp") setIsUploadingDp(true);
-    else setIsUploadingCover(true);
-
-    try {
-      const updatedHub = await updateHub(hub.id, {
-        dpImageUrl: mediaChooserTarget === "dp" ? imageUrl : undefined,
-        coverImageUrl: mediaChooserTarget === "cover" ? imageUrl : undefined,
-      });
-      setDpImageSrc(normalizePublicSrc(updatedHub.dp_image_url || undefined));
-      setCoverImageSrc(normalizePublicSrc(updatedHub.cover_image_url || undefined));
-      setMediaSuccess(mediaChooserTarget === "dp" ? "Display picture updated." : "Cover image updated.");
-      closeMediaChooser();
-    } catch (error) {
-      setMediaError(error instanceof Error ? error.message : "Hub media could not be updated.");
-    } finally {
-      setIsUploadingDp(false);
-      setIsUploadingCover(false);
-    }
-  };
-
-  const openDeetComposer = (child: ComposerChildFlow | null = null) => {
-    if (!isCreatorAdmin) return;
-    setComposerOpen(true);
-    setActiveComposerChild(child);
-  };
-
-  const resetDeetComposer = () => {
-    setComposerOpen(false);
-    setActiveComposerChild(null);
-    setAttachedDeetItems([]);
-    setSelectedPhotoPreviews([]);
-    setSelectedPhotoFiles([]);
-    setModalDraftText("");
-    setIsFontSizeMenuOpen(false);
-    setDeetFormatting({ fontSize: "small", bold: false, italic: false, underline: false, textColor: "#111111" });
-    setDeetSettings({ noticeEnabled: false, commentsEnabled: true });
-  };
-
-  const closeDeetComposer = () => {
-    if (isSubmittingDeet) return;
-    if (isComposerDirty) {
-      setActiveComposerChild("quit_confirm");
-      return;
-    }
-    setComposerOpen(false);
-    setActiveComposerChild(null);
-  };
-
-  const discardDeetComposer = () => {
-    if (isSubmittingDeet) return;
-    resetDeetComposer();
-  };
-
-  const attachDeetItem = (item: Omit<AttachedDeetItem, "id">) => {
-    setAttachedDeetItems((current) => [...current, { id: `${item.type}-${Date.now()}-${current.length}`, ...item }]);
-    setActiveComposerChild(null);
-  };
-
-  const handleDeetPhotoFiles = async (event: ChangeEvent<HTMLInputElement>) => {
-    const input = event.target;
-    const files = Array.from(input.files ?? []);
-    input.value = "";
-    if (!files.length) return;
-
-    try {
-      const previews = await Promise.all(files.map((file) => fileToDataUrl(file)));
-      setSelectedPhotoPreviews((current) => [...current, ...previews]);
-      setSelectedPhotoFiles((current) => [...current, ...files]);
-    } catch {
-      setActiveComposerChild(null);
-    }
-  };
-
-  const handleSubmitDeet = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (isSubmittingDeet) return;
-
-    const trimmedText = modalDraftText.trim();
-    const hasContent = Boolean(trimmedText || attachedDeetItems.length || selectedPhotoPreviews.length);
-    if (!hasContent) return;
-
-    setIsSubmittingDeet(true);
-
-    try {
-      const photoAttachment = attachedDeetItems.find((item) => item.type === "photo" && item.previews?.length);
-      const syntheticPhotoAttachment =
-        !photoAttachment && selectedPhotoPreviews.length
-          ? {
-              type: "photo" as const,
-              title: selectedPhotoPreviews.length === 1 ? "1 photo attached" : `${selectedPhotoPreviews.length} photos attached`,
-              detail: "Ready to post in this deet.",
-              previews: selectedPhotoPreviews,
-              files: selectedPhotoFiles,
-            }
-          : null;
-      const finalAttachments = [
-        ...attachedDeetItems,
-        ...(syntheticPhotoAttachment ? [syntheticPhotoAttachment] : []),
-      ];
-      const photoFiles = finalAttachments.flatMap((item) => (item.type === "photo" ? item.files ?? [] : []));
-      const uploadedPhotoAssets = await Promise.all(
-        photoFiles.map((file) =>
-          uploadDeetMedia({
-            file,
-            hubId: hub.id,
-            hubSlug: hub.slug,
-          })
-        )
-      );
-      const uploadedPhotoUrls = uploadedPhotoAssets.map((asset) => asset.publicUrl);
-      const uploadedPhotoPaths = uploadedPhotoAssets.map((asset) => asset.path);
-      const primaryImage = uploadedPhotoUrls[0];
-      const newestSticker = [...attachedDeetItems].reverse().find((item) => item.type === "sticker" && item.detail);
-      const authorName =
-        creatorMetadata?.full_name ||
-        creatorMetadata?.name ||
-        user?.email?.split("@")[0] ||
-        "You";
-
-      const createdDeet = await createDeet({
-        hubId: hub.id,
-        authorName,
-        title: deetSettings.noticeEnabled ? "Notice" : primaryImage ? "Photo" : "Deet",
-        body: trimmedText || newestSticker?.detail || "Shared a new update.",
-        kind: deetSettings.noticeEnabled ? "Notices" : primaryImage ? "Photos" : "Posts",
-        previewImageUrl: primaryImage,
-        previewImageUrls: uploadedPhotoUrls,
-        attachments: finalAttachments.map((item) => ({
-          type: item.type,
-          title: item.title,
-          detail: item.detail,
-          previews: item.type === "photo" ? uploadedPhotoUrls : item.previews,
-          storagePaths: item.type === "photo" ? uploadedPhotoPaths : undefined,
-        })),
-      });
-      setPublishedDeets((current) => [deetRecordToHubFeedItem(createdDeet), ...current.filter((item) => item.id !== createdDeet.id)]);
-      resetDeetComposer();
-    } finally {
-      setIsSubmittingDeet(false);
-    }
+  const handleMembershipAction = () => {
+    setIsJoined((current) => !current);
   };
 
   const renderMainContent = () => {
-    if (activeSection === "Events") {
-      return <EventsSection events={hubContent.events} highlightedItemId={highlightedItemId} onViewEventUpdate={(focusId) => navigateToFocus(focusId, "Posts")} />;
+    if (activePanel === "settings") {
+      return (
+        <SettingsSection
+          isDirty={isDirty}
+          isSavingSettings={isSavingSettings}
+          isCreatorAdmin={isCreatorAdmin}
+          onCancel={resetSettings}
+          onSave={() => void saveSettings()}
+          dpImageSrc={dpImageSrc}
+          coverImageSrc={coverImageSrc}
+          settingsHubName={settingsHubName}
+          onSettingsHubNameChange={updateSettingsHubName}
+          settingsDescription={settingsDescription}
+          onSettingsDescriptionChange={setSettingsDescription}
+          settingsCategory={settingsCategory}
+          onSettingsCategoryChange={updateSettingsCategory}
+          settingsLocation={settingsLocation}
+          onSettingsLocationChange={setSettingsLocation}
+          settingsVisibility={settingsVisibility}
+          onSettingsVisibilityChange={setSettingsVisibility}
+          settingsDiscoverable={settingsDiscoverable}
+          onSettingsDiscoverableChange={setSettingsDiscoverable}
+          notificationsEnabled={notificationsEnabled}
+          onNotificationsEnabledChange={setNotificationsEnabled}
+          memberRoleItems={memberRoleItems}
+          approvalSetting={approvalSetting}
+          onApprovalSettingChange={setApprovalSetting}
+          whoCanPost={whoCanPost}
+          onWhoCanPostChange={setWhoCanPost}
+          whoCanUpload={whoCanUpload}
+          onWhoCanUploadChange={setWhoCanUpload}
+          settingsSaveSuccess={settingsSaveSuccess}
+          settingsSaveError={settingsSaveError}
+        />
+      );
     }
     if (activeSection === "Members") {
-      return <MembersSection membersPanelMode={membersPanelMode} memberItems={memberItems} onInviteMembers={() => openCenterMembers("invite")} />;
+      return (
+        <MembersSection
+          activePeopleView={activePeopleView}
+          membersPanelMode={membersPanelMode}
+          memberItems={memberItems}
+          canAccessAdmins={canAccessAdmins}
+          headerHubName={headerHubName}
+          memberCount={memberCount}
+          knownActivityCount={knownActivityCount}
+          feedItemCount={feedItemCount}
+          announcementCount={announcementCount}
+          photoDeetCount={photoDeetCount}
+          totalViews={totalViews}
+          totalEngagement={totalEngagement}
+          activeAdminCount={activeAdminCount}
+          eventCount={hubContent.events.length}
+          recentPhotoCount={recentPhotos.length}
+          onInviteMembers={() => openCenterMembers("invite")}
+          onOpenSettings={openSettingsPanel}
+          onOpenAdminsEditor={() => setIsAdminsEditorOpen(true)}
+          onOpenPosts={() => setActiveSection("Posts")}
+        />
+      );
     }
     if (activeSection === "About") {
       return (
@@ -736,74 +405,14 @@ export default function HubClient({
         />
       );
     }
-    if (activeSection === "Photos") {
-      return <PhotosSection recentPhotos={recentPhotos} hubName={hubName} onOpenViewer={openViewer} />;
-    }
-    if (activeSection === "Files") {
-      return <FilesSection fileItems={fileItems} />;
-    }
-    if (activeSection === "Admins") {
-      return canAccessAdmins ? (
-        <AdminsSection
-          headerHubName={headerHubName}
-          memberCount={memberCount}
-          knownActivityCount={knownActivityCount}
-          feedItemCount={feedItemCount}
-          announcementCount={announcementCount}
-          photoDeetCount={photoDeetCount}
-          totalViews={totalViews}
-          totalEngagement={totalEngagement}
-          activeAdminCount={activeAdminCount}
-          eventCount={hubContent.events.length}
-          recentPhotoCount={recentPhotos.length}
-          onInviteMembers={() => openCenterMembers("invite")}
-          onOpenSettings={() => requestNavigation({ tab: "Settings", panel: "settings" })}
-          onOpenAdminsEditor={() => setIsAdminsEditorOpen(true)}
-          onOpenPosts={() => setActiveSection("Posts")}
-        />
-      ) : null;
-    }
-    if (activeSection === "Settings") {
+    if (activeSection === "Attachments") {
       return (
-        <SettingsSection
-          isDirty={isDirty}
-          isSavingSettings={isSavingSettings}
-          isCreatorAdmin={isCreatorAdmin}
-          onCancel={handleCancelSettingsChanges}
-          onSave={() => void handleSaveSettings()}
-          dpImageSrc={dpImageSrc}
-          coverImageSrc={coverImageSrc}
-          settingsHubName={settingsHubName}
-          onSettingsHubNameChange={(value) => {
-            setSettingsHubName(value);
-            setSettingsSaveError(null);
-            setSettingsSaveSuccess(null);
-          }}
-          settingsDescription={settingsDescription}
-          onSettingsDescriptionChange={setSettingsDescription}
-          settingsCategory={settingsCategory}
-          onSettingsCategoryChange={(value) => {
-            setSettingsCategory(value);
-            setSettingsSaveError(null);
-            setSettingsSaveSuccess(null);
-          }}
-          settingsLocation={settingsLocation}
-          onSettingsLocationChange={setSettingsLocation}
-          settingsVisibility={settingsVisibility}
-          onSettingsVisibilityChange={setSettingsVisibility}
-          settingsDiscoverable={settingsDiscoverable}
-          onSettingsDiscoverableChange={setSettingsDiscoverable}
-          notificationsEnabled={notificationsEnabled}
-          onNotificationsEnabledChange={setNotificationsEnabled}
-          memberRoleItems={memberRoleItems}
-          approvalSetting={approvalSetting}
-          onApprovalSettingChange={setApprovalSetting}
-          whoCanPost={whoCanPost}
-          onWhoCanPostChange={setWhoCanPost}
-          whoCanUpload={whoCanUpload}
-          onWhoCanUploadChange={setWhoCanUpload}
-          settingsSaveSuccess={settingsSaveSuccess}
-          settingsSaveError={settingsSaveError}
+        <AttachmentsSection
+          activeAttachmentView={activeAttachmentView}
+          recentPhotos={recentPhotos}
+          fileItems={fileItems}
+          hubName={hubName}
+          onOpenViewer={openViewer}
         />
       );
     }
@@ -813,20 +422,11 @@ export default function HubClient({
         postSearchQuery={postSearchQuery}
         onPostSearchQueryChange={setPostSearchQuery}
         isFeedSearchOpen={isFeedSearchOpen}
-        onToggleFeedSearch={() =>
-          setIsFeedSearchOpen((current) => {
-            const next = !current;
-            if (!next) setPostSearchQuery("");
-            return next;
-          })
-        }
+        onToggleFeedSearch={toggleFeedSearch}
         isFeedFilterOpen={isFeedFilterOpen}
-        onToggleFeedFilter={() => setIsFeedFilterOpen((current) => !current)}
+        onToggleFeedFilter={toggleFeedFilter}
         feedFilter={feedFilter}
-        onSelectFeedFilter={(value) => {
-          setFeedFilter(value);
-          setIsFeedFilterOpen(false);
-        }}
+        onSelectFeedFilter={selectFeedFilter}
         filteredFeedItems={filteredFeedItems}
         showDemoPostedText={showDemoPostedText}
         demoPostedText={demoPostedText}
@@ -867,9 +467,12 @@ export default function HubClient({
           headerHubName={headerHubName}
           hubName={hubName}
           memberCount={memberCount}
-          CategoryIcon={CategoryIcon}
+          visibilityLabel={visibilityLabel}
+          isJoined={isJoined}
+          onMembershipActionClick={handleMembershipAction}
+          onMembersClick={() => requestNavigation({ tab: "Members", panel: "members", membersMode: "list", membersView: "members" })}
           onInviteMembers={() => openCenterMembers("invite")}
-          onOpenSettings={() => requestNavigation({ tab: "Settings", panel: "settings" })}
+          onOpenSettings={openSettingsPanel}
         />
 
         {mediaSuccess ? <p className="mt-3 text-sm font-medium text-[#0C5C57]">{mediaSuccess}</p> : null}
@@ -880,6 +483,7 @@ export default function HubClient({
           activeSection={activeSection}
           activePanel={activePanel}
           membersPanelMode={membersPanelMode}
+          activePeopleView={activePeopleView}
           onNavigate={requestNavigation}
         />
 
@@ -926,7 +530,7 @@ export default function HubClient({
               <button
                 type="button"
                 onClick={() => {
-                  handleCancelSettingsChanges();
+                  resetSettings();
                   if (pendingNavigation) applyNavigation(pendingNavigation);
                   setPendingNavigation(null);
                   setIsUnsavedChangesOpen(false);
@@ -935,7 +539,7 @@ export default function HubClient({
               >
                 Discard
               </button>
-              <button type="button" onClick={() => void handleSaveSettings()} disabled={isSavingSettings} className={cn(BUTTON_PRIMARY, isSavingSettings && "cursor-not-allowed opacity-60")}>
+              <button type="button" onClick={() => void saveSettings()} disabled={isSavingSettings} className={cn(BUTTON_PRIMARY, isSavingSettings && "cursor-not-allowed opacity-60")}>
                 {isSavingSettings ? (
                   <span className="inline-flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -969,7 +573,7 @@ export default function HubClient({
               <div className="mt-5 space-y-3">
                 <button
                   type="button"
-                  onClick={handleChooseFromAlbums}
+                  onClick={() => handleChooseFromAlbums(albumChoices)}
                   disabled={!albumChoices.length}
                   className={cn(
                     "flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm font-medium transition",
@@ -1200,7 +804,7 @@ export default function HubClient({
                 <h3 className="text-lg font-serif font-semibold tracking-tight text-[#111111]">Edit Connect</h3>
                 <p className="mt-1 text-sm text-slate-600">Add or update the links shown in this section.</p>
               </div>
-              <button type="button" onClick={() => setIsConnectEditorOpen(false)} className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50" aria-label="Close connect editor">
+              <button type="button" onClick={closeConnectEditor} className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50" aria-label="Close connect editor">
                 <X className={ICON} />
               </button>
             </div>
@@ -1226,10 +830,10 @@ export default function HubClient({
             {connectError ? <p className="mt-4 text-sm text-[#B42318]">{connectError}</p> : null}
 
             <div className="mt-5 flex justify-end gap-3">
-              <button type="button" onClick={() => setIsConnectEditorOpen(false)} className={BUTTON_SECONDARY}>
+              <button type="button" onClick={closeConnectEditor} className={BUTTON_SECONDARY}>
                 Cancel
               </button>
-              <button type="button" onClick={handleSaveConnect} disabled={isSavingConnect} className={cn(BUTTON_PRIMARY, isSavingConnect && "cursor-not-allowed opacity-75")}>
+              <button type="button" onClick={saveConnect} disabled={isSavingConnect} className={cn(BUTTON_PRIMARY, isSavingConnect && "cursor-not-allowed opacity-75")}>
                 {isSavingConnect ? (
                   <span className="inline-flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />

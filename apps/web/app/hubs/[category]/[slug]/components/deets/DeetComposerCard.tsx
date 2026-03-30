@@ -22,7 +22,7 @@ export function DeetComposerCard({
   onOpenComposer: (child?: ComposerChildFlow | null) => void;
 }) {
   return (
-    <section className="rounded-[30px] border border-[#D8ECE7] bg-white p-4 shadow-sm sm:p-5">
+    <section className="w-full rounded-[30px] border border-[#D8ECE7] bg-white p-4 shadow-sm sm:p-5">
       <div data-demo-target={isDemoPreview ? "hub-composer-section" : undefined} className="flex items-start gap-4">
         <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-[#A9D1CA]">
           <ImageWithFallback

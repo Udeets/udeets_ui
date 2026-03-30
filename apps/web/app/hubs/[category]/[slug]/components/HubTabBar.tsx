@@ -8,12 +8,14 @@ export function HubTabBar({
   activeSection,
   activePanel,
   membersPanelMode,
+  activePeopleView,
   onNavigate,
 }: {
   visibleTabs: HubTab[];
   activeSection: HubTab;
   activePanel: HubPanel;
   membersPanelMode: "list" | "invite";
+  activePeopleView: "members" | "admins";
   onNavigate: (next: PendingNavigation) => void;
 }) {
   return (
@@ -21,21 +23,23 @@ export function HubTabBar({
       <div className="flex w-full items-center justify-between gap-1 whitespace-nowrap">
         {visibleTabs.map((tab) => {
           const isActive =
-            (tab === "Settings" && activePanel === "settings") ||
-            (tab === "Members" && (activePanel === "members" || activePanel === "invite") && membersPanelMode !== undefined) ||
-            (tab !== "Settings" && tab !== "Members" && activePanel === "posts" && activeSection === tab);
+            (tab === "Members" &&
+              (activePanel === "members" || activePanel === "invite") &&
+              membersPanelMode !== undefined &&
+              activePeopleView !== undefined) ||
+            (tab !== "Members" && activePanel === "posts" && activeSection === tab);
 
           return (
             <button
               key={tab}
               type="button"
               onClick={() => {
-                if (tab === "Settings") {
-                  onNavigate({ tab, panel: "settings" });
+                if (tab === "Members") {
+                  onNavigate({ tab, panel: "members", membersMode: "list", membersView: "members" });
                   return;
                 }
-                if (tab === "Members") {
-                  onNavigate({ tab, panel: "members", membersMode: "list" });
+                if (tab === "Attachments") {
+                  onNavigate({ tab, panel: "posts", attachmentsView: "photos" });
                   return;
                 }
                 onNavigate({ tab, panel: "posts" });

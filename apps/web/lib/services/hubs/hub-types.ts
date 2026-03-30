@@ -1,10 +1,59 @@
-export type HubCategory =
-  | "religious-places"
-  | "communities"
-  | "restaurants"
-  | "fitness"
-  | "pet-clubs"
-  | "hoa";
+export const HUB_VISIBILITIES = ["public", "private"] as const;
+export type HubVisibility = (typeof HUB_VISIBILITIES)[number];
+
+export const HUB_POSTING_PERMISSIONS = ["admins_only", "all_members"] as const;
+export type HubPostingPermission = (typeof HUB_POSTING_PERMISSIONS)[number];
+
+export const HUB_INTERACTION_PERMISSIONS = ["members_only", "everyone_with_access"] as const;
+export type HubInteractionPermission = (typeof HUB_INTERACTION_PERMISSIONS)[number];
+
+export const HUB_ROLES = ["creator", "admin", "member"] as const;
+export type HubRole = (typeof HUB_ROLES)[number];
+
+export type HubId = string;
+export type HubCategory = string;
+
+export interface HubConnectLinks {
+  website?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  instagram?: string | null;
+  facebook?: string | null;
+  youtube?: string | null;
+  whatsapp?: string | null;
+  x?: string | null;
+}
+
+export interface HubSettings {
+  visibility: HubVisibility;
+  postingPermission: HubPostingPermission;
+  interactionPermission: HubInteractionPermission;
+}
+
+export interface HubSummary {
+  id: HubId;
+  name: string;
+  slug: string;
+  category: HubCategory;
+  tagline?: string | null;
+  description?: string | null;
+  coverImageUrl?: string | null;
+  logoImageUrl?: string | null;
+  createdBy: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface Hub extends HubSummary {
+  settings: HubSettings;
+  connect?: HubConnectLinks | null;
+}
+
+export const DEFAULT_HUB_SETTINGS: HubSettings = {
+  visibility: "public",
+  postingPermission: "admins_only",
+  interactionPermission: "members_only",
+};
 
 export interface CreateHubInput {
   name: string;
@@ -33,7 +82,7 @@ export interface UpdateHubInput {
 }
 
 export interface HubRecord {
-  id: string;
+  id: HubId;
   name: string;
   slug: string;
   category: HubCategory;

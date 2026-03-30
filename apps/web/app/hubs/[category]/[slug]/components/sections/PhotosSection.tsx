@@ -15,14 +15,14 @@ export function PhotosSection({
   return (
     <SectionShell title="Photos" description="Recent images and visual moments shared by this hub.">
       {recentPhotos.length === 0 ? (
-        <div className="grid min-h-[240px] place-items-center text-center">
-          <div className="max-w-sm">
+        <div className="grid min-h-[240px] w-full place-items-center text-center">
+          <div className="w-full">
             <h3 className="text-xl font-serif font-semibold tracking-tight text-[#111111]">No photos yet</h3>
             <p className="mt-3 text-sm leading-relaxed text-slate-600">Add photos later to bring this hub to life.</p>
           </div>
         </div>
       ) : (
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <section className="grid w-full gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {recentPhotos.map((img, index) => (
             <button
               key={`${img}-${index}`}

@@ -31,7 +31,7 @@ export const ACTION_ICON = "h-4 w-4 stroke-[1.6]";
 export const ACTION_ICON_BUTTON = "inline-flex items-center text-[#111111]/78 transition hover:text-[#0C5C57]";
 export const PREMIUM_ICON_WRAPPER =
   "inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#F7FBFA] text-[#0C5C57]";
-export const HUB_TABS: HubTab[] = ["About", "Posts", "Events", "Members", "Photos", "Files", "Admins", "Settings"];
+export const HUB_TABS: HubTab[] = ["About", "Posts", "Attachments", "Members"];
 
 export function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");

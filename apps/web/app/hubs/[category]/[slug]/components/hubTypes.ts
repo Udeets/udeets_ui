@@ -1,7 +1,7 @@
 import type { HubContent } from "@/lib/hub-content";
 import type { HubRecord } from "@/lib/hubs";
 
-export type HubTab = "About" | "Posts" | "Events" | "Members" | "Photos" | "Files" | "Admins" | "Settings";
+export type HubTab = "About" | "Posts" | "Attachments" | "Members";
 export type HubPanel = "posts" | "challenges" | "settings" | "members" | "invite";
 
 export type ViewerState = {
@@ -17,6 +17,8 @@ export type PendingNavigation = {
   tab: HubTab;
   panel: HubPanel;
   membersMode?: "list" | "invite";
+  membersView?: "members" | "admins";
+  attachmentsView?: "photos" | "files";
 };
 
 export type ConnectLinks = {
