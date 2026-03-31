@@ -51,6 +51,7 @@ import {
   normalizePublicSrc,
 } from "./components/hubUtils";
 import { SectionShell } from "./components/SectionShell";
+import { listHubMembers } from "@/lib/services/members/list-members";
 
 export default function HubClient({
   hub,
@@ -200,7 +201,7 @@ export default function HubClient({
   const activeAdminCount = 1;
   const knownActivityCount = feedItemCount + hubContent.events.length + recentPhotos.length;
   const fileItems: string[] = [];
-  const memberItems: string[] = [];
+  const [memberItems, setMemberItems] = useState<string[]>([]);
   const memberRoleItems: Array<{ name: string; role: string }> = [];
   const {
     activeSection,

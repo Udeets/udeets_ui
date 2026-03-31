@@ -91,5 +91,20 @@ export async function createHub(input: CreateHubInput): Promise<HubRecord> {
     throw new Error("Failed to create hub: no hub was returned.");
   }
 
-  return data;
+  const createdHub = data;
+
+  const { error: memberError } = await supabase
+    .from("hub_members")
+    .insert({
+      hub_id: createdHub.id,
+      user_id: user.id,
+      role: "creator",
+      status: "active",
+    });
+
+  if (memberError) {
+    console.error("[create-hub] Failed to insert creator as member:", memberError);
+  }
+
+  return createdHub;
 }

@@ -9,7 +9,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
 import { isUdeetsLogoSrc } from "@/lib/branding";
-import { useAuthSession } from "@/services/auth/useAuthSession";
+import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import { listHubs } from "@/lib/services/hubs/list-hubs";
 import type { Hub as SupabaseHub } from "@/types/hub";
 
@@ -291,7 +291,7 @@ function CarouselSection({ title, hubs }: { title: string; hubs: Hub[] }) {
 
 function DiscoverPageContent() {
   const searchParams = useSearchParams();
-  const { isAuthenticated } = useAuthSession();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<Category>("All");
   const [nearMe, setNearMe] = useState<NearMeOption>("Any");
@@ -403,6 +403,10 @@ function DiscoverPageContent() {
     };
   }, [nearMeOpen]);
 
+  // Load public hubs immediately on mount — no auth required.
+  // Uses a one-shot anon client (requireAuth: false) so it never competes
+  // with the createBrowserClient auth lock. A 10s timeout prevents the UI
+  // from hanging if the Supabase project is unreachable.
   useEffect(() => {
     let cancelled = false;
 
@@ -411,7 +415,13 @@ function DiscoverPageContent() {
       setSupabaseLoadError(null);
 
       try {
-        const hubs = await listHubs();
+        const timeout = new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Hub loading timed out. Please refresh the page.")),
+            10_000,
+          ),
+        );
+        const hubs = await Promise.race([listHubs({ requireAuth: false }), timeout]);
         const mapped = hubs.map(toDiscoverHub);
 
         if (!cancelled) {
@@ -423,7 +433,7 @@ function DiscoverPageContent() {
           setSupabaseHubs([]);
           setSupabaseLoadState("error");
           setSupabaseLoadError(
-            error instanceof Error ? error.message : "Supabase-backed hubs could not be loaded."
+            error instanceof Error ? error.message : "Supabase-backed hubs could not be loaded.",
           );
         }
       }
@@ -435,6 +445,27 @@ function DiscoverPageContent() {
       cancelled = true;
     };
   }, []);
+
+  // Check auth state AFTER hubs finish loading so the auth lock cannot
+  // block the initial hub fetch. isAuthenticated is used for UI only
+  // (header link destination, Create Hub button routing).
+  useEffect(() => {
+    if (supabaseLoadState !== "success" && supabaseLoadState !== "error") return;
+
+    let cancelled = false;
+
+    getCurrentSession()
+      .then((session) => {
+        if (!cancelled) setIsAuthenticated(Boolean(session));
+      })
+      .catch(() => {
+        if (!cancelled) setIsAuthenticated(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [supabaseLoadState]);
 
   const allHubs = useMemo(() => supabaseHubs, [supabaseHubs]);
 
