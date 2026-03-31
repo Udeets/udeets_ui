@@ -4,13 +4,21 @@ import { UserPlus, UsersRound } from "lucide-react";
 import { BUTTON_PRIMARY, initials } from "../hubUtils";
 import { SectionShell } from "../SectionShell";
 
+export type MemberItem = {
+  userId: string;
+  role: string;
+  fullName: string;
+  avatarUrl: string | null;
+  email: string | null;
+};
+
 export function MembersSection({
   membersPanelMode,
   memberItems,
   onInviteMembers,
 }: {
   membersPanelMode: "list" | "invite";
-  memberItems: string[];
+  memberItems: MemberItem[];
   onInviteMembers: () => void;
 }) {
   return (
@@ -51,13 +59,17 @@ export function MembersSection({
         <div className="w-full rounded-[24px] bg-[#F7FBFA] p-6 shadow-sm ring-1 ring-[#0C5C57]/6">
           <div className="w-full space-y-3">
             {memberItems.map((member) => (
-              <div key={member} className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white p-4">
-                <span className="grid h-11 w-11 place-items-center rounded-full bg-[#A9D1CA] text-sm font-semibold text-[#111111]">
-                  {initials(member)}
-                </span>
+              <div key={member.userId} className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white p-4">
+                {member.avatarUrl ? (
+                  <img src={member.avatarUrl} alt={member.fullName} className="h-11 w-11 rounded-full object-cover" />
+                ) : (
+                  <span className="grid h-11 w-11 place-items-center rounded-full bg-[#A9D1CA] text-sm font-semibold text-[#111111]">
+                    {initials(member.fullName)}
+                  </span>
+                )}
                 <div>
-                  <p className="text-sm font-semibold text-[#111111]">{member}</p>
-                  <p className="text-xs text-slate-500">Member record</p>
+                  <p className="text-sm font-semibold text-[#111111]">{member.fullName}</p>
+                  <p className="text-xs text-slate-500 capitalize">{member.role}</p>
                 </div>
               </div>
             ))}

@@ -1,12 +1,12 @@
 "use client";
 
 import { AdminsSection } from "../sections/AdminsSection";
-import { MembersSection as HubMembersSection } from "../sections/MembersSection";
+import { MembersSection as HubMembersSection, type MemberItem } from "../sections/MembersSection";
 
 type MembersPeopleSectionProps = {
   activePeopleView: "members" | "admins";
   membersPanelMode: "list" | "invite";
-  memberItems: string[];
+  memberItems: MemberItem[];
   canAccessAdmins: boolean;
   headerHubName: string;
   memberCount: number;

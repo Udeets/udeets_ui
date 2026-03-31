@@ -51,7 +51,6 @@ import {
   normalizePublicSrc,
 } from "./components/hubUtils";
 import { SectionShell } from "./components/SectionShell";
-import { listHubMembers } from "@/lib/services/members/list-members";
 
 export default function HubClient({
   hub,
@@ -201,7 +200,61 @@ export default function HubClient({
   const activeAdminCount = 1;
   const knownActivityCount = feedItemCount + hubContent.events.length + recentPhotos.length;
   const fileItems: string[] = [];
-  const [memberItems, setMemberItems] = useState<string[]>([]);
+  const [memberItems, setMemberItems] = useState<Array<{ userId: string; role: string; fullName: string; avatarUrl: string | null; email: string | null }>>([]);
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadMembers() {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+
+      // Step 1: get members
+      const { data: members, error: membersError } = await supabase
+        .from("hub_members")
+        .select("user_id, role")
+        .eq("hub_id", hub.id)
+        .eq("status", "active");
+
+      if (membersError) { console.error("[members]", membersError); return; }
+      if (!members || members.length === 0) return;
+
+      // Step 2: get profiles for those user_ids
+      const userIds = members.map((m) => m.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name, avatar_url, email")
+        .in("id", userIds);
+
+      const profileMap = new Map(
+        (profiles ?? []).map((p) => [p.id, p])
+      );
+
+      if (!ignore) {
+        setMemberItems(members.map((m) => {
+          const profile = profileMap.get(m.user_id);
+          return {
+            userId: m.user_id,
+            role: m.role,
+            fullName: profile?.full_name ?? m.user_id.slice(0, 8),
+            avatarUrl: profile?.avatar_url ?? null,
+            email: profile?.email ?? null,
+          };
+        }));
+      }
+    }
+
+    async function init() {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token && !ignore) {
+        loadMembers();
+      }
+    }
+
+    init();
+    return () => { ignore = true; };
+  }, [hub.id]);
   const memberRoleItems: Array<{ name: string; role: string }> = [];
   const {
     activeSection,
@@ -451,7 +504,7 @@ export default function HubClient({
     <div className="min-h-screen bg-[#E3F1EF]">
       <UdeetsHeader />
 
-      <main className="mx-auto max-w-7xl px-4 pb-24 pt-6 sm:px-6 md:pb-8 lg:px-10">
+      <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 md:pb-8 lg:px-10">
         <HubHeroHeader
           dpInputRef={dpInputRef}
           coverInputRef={coverInputRef}

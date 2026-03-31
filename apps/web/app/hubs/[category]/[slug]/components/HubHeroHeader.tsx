@@ -49,7 +49,7 @@ export function HubHeroHeader({
   onOpenSettings: () => void;
 }) {
   return (
-    <section className="grid gap-4 md:grid-cols-[300px_minmax(0,1fr)] lg:grid-cols-[320px_minmax(0,1fr)]">
+    <section className="grid gap-4 md:grid-cols-[300px_minmax(0,1fr)] lg:grid-cols-[320px_minmax(0,1fr)] w-full">
       <div className={cn(CARD, "flex min-h-[340px] flex-col items-center justify-start p-6 pt-7 sm:min-h-[352px] sm:pt-8 md:h-[368px]")}>
         <div className="flex flex-col items-center gap-4 text-center">
           <input ref={dpInputRef} type="file" accept="image/*" onChange={onDpChange} className="hidden" />
@@ -92,7 +92,7 @@ export function HubHeroHeader({
         </div>
       </div>
 
-      <div className={cn(CARD, "relative overflow-hidden min-h-[340px] sm:min-h-[352px] md:h-[368px]")}>
+      <div className={cn(CARD, "relative overflow-hidden w-full min-h-[340px] sm:min-h-[352px] md:h-[368px]")}>
         <input ref={coverInputRef} type="file" accept="image/*" onChange={onCoverChange} className="hidden" />
         <button
           type="button"

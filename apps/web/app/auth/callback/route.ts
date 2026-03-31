@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { upsertProfile } from "@/lib/services/profile/upsert-profile";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -13,11 +14,21 @@ export async function GET(request: Request) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
     return NextResponse.redirect(
       new URL(`/auth?error=${encodeURIComponent(error.message)}`, requestUrl.origin),
+    );
+  }
+
+  const user = data.session?.user;
+  if (user) {
+    await upsertProfile(
+      user.id,
+      user.user_metadata?.full_name ?? null,
+      user.user_metadata?.avatar_url ?? null,
+      user.email ?? null,
     );
   }
 
