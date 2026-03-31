@@ -433,12 +433,17 @@ export default function HubClient({
           categoryLabel={categoryMeta.label}
           hubName={hubName}
           hubDescription={hubDescription}
+          hubTagline={hub.tagline ?? ""}
           settingsVisibility={settingsVisibility}
           memberCount={memberCount}
           settingsLocation={settingsLocation}
           hubLocationLabel={hub.locationLabel}
           connectLinks={connectLinks}
           isCreatorAdmin={isCreatorAdmin}
+          userRole={isCreatorAdmin ? "creator" : isJoined ? "member" : null}
+          onMembershipAction={handleMembershipAction}
+          onInviteMembers={() => openCenterMembers("invite")}
+          onOpenSettings={openSettingsPanel}
           onOpenConnectEditor={openConnectEditor}
           connectSuccess={connectSuccess}
           connectError={connectError}
@@ -451,7 +456,6 @@ export default function HubClient({
           creatorDisplayName={creatorDisplayName}
           creatorDetail={creatorDetail}
           status={status}
-          isAdminsEditorOpen={isAdminsEditorOpen}
           onOpenAdminsEditor={() => setIsAdminsEditorOpen(true)}
           adminImages={adminImages}
           dpImageSrc={dpImageSrc}
