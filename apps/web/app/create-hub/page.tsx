@@ -2,80 +2,78 @@
 
 export const dynamic = "force-dynamic";
 
-import { Suspense, useMemo, useState } from "react";
+import confetti from "canvas-confetti";
+import { ArrowLeft, CheckCircle, X } from "lucide-react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import MockAppShell from "@/components/mock-app-shell";
 import { createHub } from "@/lib/services/hubs/create-hub";
-import { StepPanel } from "./components/StepPanel";
-import { CATEGORY_GROUPS, VISIBILITY_OPTIONS } from "./constants";
-import { categoryFor, cn, descriptionFor, getInitialCategories, getInitialStep, getInitialVisibility, slugify } from "./helpers";
-import type { Step, Visibility } from "./types";
+import { categoryFor, cn, descriptionFor, slugify } from "./helpers";
+import type { Visibility } from "./types";
 
-const DEMO_SHARE_HUB_HREF =
-  "/hubs/communities/grtava?demo_preview=1&demo_name=Soccer%20GrassRoot&demo_tagline=Soccer%20GrassRoot&demo_description=Local%20youth%20soccer%20updates%2C%20training%20sessions%2C%20and%20match-day%20details%20in%20one%20place.";
+type Step = 1 | 2 | 3;
+type PostingPerm = "broadcast" | "admin_members" | "open";
+
+function StepDots({ current }: { current: Step }) {
+  return (
+    <div className="flex items-center justify-center gap-2">
+      {([1, 2, 3] as const).map((s) => (
+        <div
+          key={s}
+          className={cn(
+            "h-2 w-2 rounded-full transition-colors",
+            s <= current ? "bg-[#0C5C57]" : "bg-gray-300"
+          )}
+        />
+      ))}
+    </div>
+  );
+}
 
 function CreateHubPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isDemoPreview = searchParams.get("demo_preview") === "1";
-  const [step, setStep] = useState<Step>(getInitialStep(searchParams.get("demo_step")));
-  const [hubName, setHubName] = useState(searchParams.get("demo_hub_name") ?? "");
-  const [visibility, setVisibility] = useState<Visibility>(getInitialVisibility(searchParams.get("demo_visibility")));
-  const [discoverable, setDiscoverable] = useState(true);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(getInitialCategories(searchParams.get("demo_categories")));
+
+  const [step, setStep] = useState<Step>(1);
+  const [hubName, setHubName] = useState("");
+  const [visibility, setVisibility] = useState<Visibility>("Public");
+  const [postingPerm, setPostingPerm] = useState<PostingPerm>("admin_members");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [createdHubHref, setCreatedHubHref] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  const isNameValid = hubName.trim().length > 0;
-  const canContinueCategories = selectedCategories.length > 0;
-  const selectedVisibilityDescription = useMemo(
-    () =>
-      visibility === "Private"
-        ? "Only approved members can view posts, updates, and files."
-        : "Anyone can discover and view this hub's public updates.",
-    [visibility]
-  );
+  const trimmedName = hubName.trim();
+  const isNameValid = trimmedName.length > 0 && trimmedName.length <= 50;
 
-  const toggleCategory = (category: string) => {
-    setSelectedCategories((current) =>
-      current.includes(category) ? current.filter((item) => item !== category) : [...current, category]
-    );
-  };
+  const close = () => router.push("/dashboard");
 
   const handleCreate = async () => {
-    const normalizedName = hubName.trim();
-
     setIsSubmitting(true);
     setErrorMessage(null);
-    setSuccessMessage(null);
-    setCreatedHubHref(null);
 
     try {
       if (isDemoPreview) {
-        setSuccessMessage(`Hub created successfully for your account. Slug: ${slugify(normalizedName) || "kamath-cafe"}`);
-        setCreatedHubHref(DEMO_SHARE_HUB_HREF);
+        setCreatedHubHref("/hubs/communities/demo-hub");
+        setShowSuccess(true);
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ["#0C5C57", "#A9D1CA", "#E3F1EF", "#ffffff", "#1a8a82"] });
         return;
       }
 
       const timestamp = Date.now();
-      const slug = `${slugify(normalizedName)}-${timestamp}`;
+      const slug = `${slugify(trimmedName)}-${timestamp}`;
+      const category = categoryFor([]);
       const createdHub = await createHub({
-        name: normalizedName,
+        name: trimmedName,
         slug,
-        category: categoryFor(selectedCategories),
-        tagline: `${normalizedName} on uDeets`,
-        description: descriptionFor(selectedCategories),
-        city: undefined,
-        state: undefined,
-        country: undefined,
-        coverImageUrl: undefined,
-        dpImageUrl: undefined,
+        category,
+        tagline: `${trimmedName} on uDeets`,
+        description: descriptionFor([]),
       });
 
-      setSuccessMessage(`Hub created successfully for your account. Slug: ${createdHub.slug}`);
       setCreatedHubHref(`/hubs/${createdHub.category}/${createdHub.slug}`);
+      setShowSuccess(true);
+      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ["#0C5C57", "#A9D1CA", "#E3F1EF", "#ffffff", "#1a8a82"] });
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Failed to create hub.");
     } finally {
@@ -84,206 +82,176 @@ function CreateHubPageContent() {
   };
 
   return (
-    <MockAppShell activeNav="home">
-      {step === 1 ? (
-        <StepPanel title="Create a Hub">
-          <div data-demo-target="create-hub-name-section" className="rounded-[1.75rem] bg-[#F7FBFA] p-4 sm:p-5">
-            <label className="block">
-              <span className="mb-3 block text-sm font-semibold tracking-tight text-[#111111]">Hub Name</span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div
+        className="relative w-full max-w-md animate-[scaleIn_150ms_ease-out] rounded-2xl bg-white p-6 shadow-2xl"
+      >
+        {/* Header row */}
+        <div className="mb-5 flex items-center justify-between">
+          {step > 1 && !showSuccess ? (
+            <button type="button" onClick={() => setStep((s) => (s - 1) as Step)} className="text-gray-400 transition hover:text-gray-600">
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+          ) : (
+            <div className="w-5" />
+          )}
+          <StepDots current={showSuccess ? 3 : step} />
+          <button type="button" onClick={close} className="text-gray-400 transition hover:text-gray-600">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* SUCCESS STATE */}
+        {showSuccess ? (
+          <div className="flex flex-col items-center py-6 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#EAF6F3]">
+              <CheckCircle className="h-8 w-8 text-[#0C5C57]" />
+            </div>
+            <h2 className="mt-4 text-xl font-bold text-gray-900">{trimmedName} is ready!</h2>
+            <div className="mt-6 flex w-full flex-col gap-3">
+              {createdHubHref ? (
+                <button
+                  type="button"
+                  onClick={() => router.push(createdHubHref)}
+                  className="w-full rounded-xl bg-[#0C5C57] py-3 text-sm font-semibold text-white transition hover:bg-[#094a46]"
+                >
+                  Go to Hub
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={close}
+                className="text-sm font-medium text-gray-500 transition hover:text-gray-700"
+              >
+                Back to Dashboard
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {/* STEP 1 — Hub Name */}
+        {!showSuccess && step === 1 ? (
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Create a Hub</h2>
+            <div className="mt-5">
               <input
                 value={hubName}
-                onChange={(event) => setHubName(event.target.value)}
-                placeholder="Enter your hub name"
-                data-demo-target="create-hub-name"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none ring-[#A9D1CA] transition focus:ring-2"
+                onChange={(e) => setHubName(e.target.value.slice(0, 50))}
+                placeholder="e.g. HCV Temple, Richmond Foodies..."
+                autoFocus
+                className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-[#A9D1CA] focus:ring-2 focus:ring-[#A9D1CA]"
               />
-            </label>
-
-          </div>
-
-          <div className="mt-8 flex justify-end">
+              <p className="mt-2 text-right text-xs text-gray-400">{hubName.length}/50</p>
+            </div>
+            {errorMessage ? <p className="mt-3 text-sm text-rose-600">{errorMessage}</p> : null}
             <button
               type="button"
               disabled={!isNameValid}
               onClick={() => setStep(2)}
-              data-demo-target="create-hub-name-next"
               className={cn(
-                "rounded-full px-6 py-3 text-sm font-semibold transition",
+                "mt-4 w-full rounded-xl py-3 text-sm font-semibold transition",
                 isNameValid
                   ? "bg-[#0C5C57] text-white hover:bg-[#094a46]"
-                  : "cursor-not-allowed bg-slate-200 text-slate-400"
+                  : "cursor-not-allowed bg-gray-100 text-gray-400"
               )}
             >
-              Next
+              Next →
             </button>
           </div>
-        </StepPanel>
-      ) : null}
+        ) : null}
 
-      {step === 2 ? (
-        <StepPanel title="Hub Visibility" subtitle="Choose how people can access your hub on uDeets.">
-          <div data-demo-target="create-hub-visibility-section" className="rounded-[1.75rem] bg-[#F7FBFA] p-4 sm:p-5">
-            <div className="space-y-4">
-              {VISIBILITY_OPTIONS.map((option) => (
+        {/* STEP 2 — Visibility */}
+        {!showSuccess && step === 2 ? (
+          <div>
+            <p className="text-sm text-gray-400">{trimmedName}</p>
+            <h2 className="mt-1 text-xl font-bold text-gray-900">Who can find this hub?</h2>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              {([
+                { value: "Public" as const, icon: "🌐", label: "Public", desc: "Anyone can find and join this hub" },
+                { value: "Private" as const, icon: "🔒", label: "Private", desc: "Only invited members can join" },
+              ]).map((opt) => (
                 <button
-                  key={option.value}
+                  key={opt.value}
                   type="button"
-                  onClick={() => setVisibility(option.value)}
-                  data-demo-target={
-                    option.value === "Private"
-                      ? "create-hub-private"
-                      : option.value === "Public"
-                        ? "create-hub-public"
-                        : undefined
-                  }
+                  onClick={() => setVisibility(opt.value)}
                   className={cn(
-                    "w-full rounded-3xl border px-5 py-5 text-left transition",
-                    visibility === option.value
-                      ? "border-[#0C5C57] bg-[#EAF6F3] shadow-sm"
-                      : "border-slate-200 bg-white hover:border-[#A9D1CA] hover:bg-[#F7FBFA]"
+                    "flex flex-col items-center rounded-xl border px-4 py-5 text-center transition",
+                    visibility === opt.value
+                      ? "border-[#0C5C57] bg-[#f0faf8]"
+                      : "border-gray-200 bg-white hover:border-gray-300"
                   )}
                 >
-                  <p className="text-lg font-serif font-semibold text-[#111111]">{option.title}</p>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-600">{option.description}</p>
+                  <span className="text-2xl">{opt.icon}</span>
+                  <span className="mt-2 text-sm font-semibold text-gray-900">{opt.label}</span>
+                  <span className="mt-1 text-xs text-gray-500">{opt.desc}</span>
                 </button>
               ))}
             </div>
-
-            <label className="mt-5 flex items-center justify-between rounded-2xl bg-[#F7FBFA] px-4 py-3">
-              <div>
-                <p className="text-sm font-semibold text-[#111111]">Show this hub in Discover</p>
-                <p className="mt-1 text-xs text-slate-500">{selectedVisibilityDescription}</p>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={discoverable}
-                onClick={() => setDiscoverable((current) => !current)}
-                className={cn(
-                  "relative inline-flex h-7 w-12 shrink-0 rounded-full transition-all duration-200",
-                  discoverable ? "bg-[#A9D1CA] ring-1 ring-[#0C5C57]/15" : "bg-slate-300"
-                )}
-              >
-                <span
-                  className={cn(
-                    "absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-200",
-                    discoverable ? "left-6" : "left-1"
-                  )}
-                />
-              </button>
-            </label>
-
-            <div className="mt-8 flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                onClick={() => setStep(3)}
-                data-demo-target="create-hub-visibility-next"
-                className="rounded-full bg-[#0C5C57] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#094a46]"
-              >
-                Next
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setStep(3)}
+              className="mt-5 w-full rounded-xl bg-[#0C5C57] py-3 text-sm font-semibold text-white transition hover:bg-[#094a46]"
+            >
+              Next →
+            </button>
           </div>
-        </StepPanel>
-      ) : null}
+        ) : null}
 
-      {step === 3 ? (
-        <StepPanel
-          title="Choose hub categories"
-          subtitle="Select the categories that best describe your hub."
-        >
-          <div data-demo-target="create-hub-category-section" className="rounded-[1.75rem] bg-[#F7FBFA] p-4 sm:p-5">
-            <div className="space-y-6">
-              {CATEGORY_GROUPS.map((group) => (
-                <section key={group.title}>
-                  <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{group.title}</h2>
-                  <div className="mt-3 flex flex-wrap gap-3">
-                    {group.items.map((category) => {
-                      const selected = selectedCategories.includes(category);
-                      return (
-                        <button
-                          key={category}
-                          type="button"
-                          onClick={() => toggleCategory(category)}
-                          data-demo-target={category === "Restaurant" ? "create-hub-restaurant" : undefined}
-                          className={cn(
-                            "rounded-full px-4 py-2.5 text-sm font-semibold transition",
-                            selected
-                              ? "bg-[#A9D1CA] text-[#0C5C57]"
-                              : "border border-slate-200 bg-white text-slate-600 hover:bg-[#F7FBFA] hover:text-[#0C5C57]"
-                          )}
-                        >
-                          {category}
-                        </button>
-                      );
-                    })}
+        {/* STEP 3 — Posting Permissions */}
+        {!showSuccess && step === 3 ? (
+          <div>
+            <p className="text-sm text-gray-400">{trimmedName}</p>
+            <h2 className="mt-1 text-xl font-bold text-gray-900">Who can post in this hub?</h2>
+            <div className="mt-5 space-y-3">
+              {([
+                { value: "broadcast" as const, icon: "📢", label: "Broadcast Only", desc: "Only admins can post. Members read and react." },
+                { value: "admin_members" as const, icon: "👥", label: "Admin + Members", desc: "Admins and members can both post." },
+                { value: "open" as const, icon: "🌍", label: "Open Community", desc: "Everyone can post, comment, and share freely." },
+              ]).map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setPostingPerm(opt.value)}
+                  className={cn(
+                    "flex w-full items-start gap-3 rounded-xl border px-4 py-4 text-left transition",
+                    postingPerm === opt.value
+                      ? "border-[#0C5C57] bg-[#f0faf8]"
+                      : "border-gray-200 bg-white hover:border-gray-300"
+                  )}
+                >
+                  <span className="mt-0.5 text-xl">{opt.icon}</span>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{opt.label}</p>
+                    <p className="mt-0.5 text-xs text-gray-500">{opt.desc}</p>
                   </div>
-                </section>
+                </button>
               ))}
             </div>
-
-            <div className="mt-8 flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() => router.push("/dashboard")}
-                className="rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={!canContinueCategories}
-                onClick={handleCreate}
-                data-demo-target="create-hub-save"
-                className={cn(
-                  "rounded-full px-6 py-3 text-sm font-semibold transition",
-                  canContinueCategories
-                    ? "bg-[#0C5C57] text-white hover:bg-[#094a46]"
-                    : "cursor-not-allowed bg-slate-200 text-slate-400"
-                )}
-              >
-                {isSubmitting ? "Saving..." : "Save & Continue"}
-              </button>
-            </div>
-
-            {errorMessage || successMessage ? (
-              <div
-                className={cn(
-                  "mt-6 rounded-2xl border px-4 py-3 text-sm",
-                  errorMessage
-                    ? "border-rose-200 bg-rose-50 text-rose-700"
-                    : successMessage
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                      : "border-slate-200 bg-white text-slate-600"
-                )}
-              >
-                {errorMessage || successMessage}
-
-                {successMessage && createdHubHref ? (
-                  <div className="mt-4">
-                    <button
-                      type="button"
-                      onClick={() => router.push(createdHubHref)}
-                      data-demo-target="create-hub-view-hub"
-                      className="rounded-full bg-[#0C5C57] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#094a46]"
-                    >
-                      View Hub
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
+            {errorMessage ? <p className="mt-3 text-sm text-rose-600">{errorMessage}</p> : null}
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={handleCreate}
+              className={cn(
+                "mt-5 w-full rounded-xl py-3 text-sm font-semibold transition",
+                isSubmitting
+                  ? "cursor-not-allowed bg-gray-200 text-gray-400"
+                  : "bg-[#0C5C57] text-white hover:bg-[#094a46]"
+              )}
+            >
+              {isSubmitting ? "Creating..." : "Create Hub →"}
+            </button>
           </div>
-        </StepPanel>
-      ) : null}
-    </MockAppShell>
+        ) : null}
+      </div>
+
+      <style jsx>{`
+        @keyframes scaleIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
+    </div>
   );
 }
 
