@@ -1,7 +1,8 @@
 "use client";
 
-import { HubHeaderActions } from "./header/HubHeaderActions";
-import { CARD, EMPTY_MEDIA_BG, ImageWithFallback, MediaEmptyState, cn, initials } from "./hubUtils";
+/* eslint-disable @next/next/no-img-element */
+import { Globe, Lock } from "lucide-react";
+import { ImageWithFallback, cn, initials } from "./hubUtils";
 
 export function HubHeroHeader({
   dpInputRef,
@@ -19,12 +20,8 @@ export function HubHeroHeader({
   headerHubName,
   hubName,
   memberCount,
+  categoryLabel,
   visibilityLabel,
-  isJoined,
-  onMembershipActionClick,
-  onMembersClick,
-  onInviteMembers,
-  onOpenSettings,
 }: {
   dpInputRef: React.RefObject<HTMLInputElement | null>;
   coverInputRef: React.RefObject<HTMLInputElement | null>;
@@ -41,65 +38,58 @@ export function HubHeroHeader({
   headerHubName: string;
   hubName: string;
   memberCount: number;
+  categoryLabel: string;
   visibilityLabel: "Public" | "Private";
-  isJoined: boolean;
-  onMembershipActionClick: () => void;
-  onMembersClick: () => void;
-  onInviteMembers: () => void;
-  onOpenSettings: () => void;
 }) {
-  return (
-    <section className="grid gap-4 md:grid-cols-[300px_minmax(0,1fr)] lg:grid-cols-[320px_minmax(0,1fr)] w-full">
-      <div className={cn(CARD, "flex min-h-[340px] flex-col items-center justify-start p-6 pt-7 sm:min-h-[352px] sm:pt-8 md:h-[368px]")}>
-        <div className="flex flex-col items-center gap-4 text-center">
-          <input ref={dpInputRef} type="file" accept="image/*" onChange={onDpChange} className="hidden" />
-          <button
-            type="button"
-            onClick={onOpenDpChooser}
-            disabled={!isCreatorAdmin || isUploadingDp}
-            className={cn(
-              "h-[210.375px] w-[210.375px] overflow-hidden rounded-full border-[3px] border-white bg-[#A9D1CA] shadow-[0_10px_24px_rgba(15,23,42,0.12)] sm:h-[245.4375px] sm:w-[245.4375px]",
-              isCreatorAdmin && "cursor-pointer"
-            )}
-          >
-            {dpImageSrc ? (
-              <ImageWithFallback
-                src={dpImageSrc}
-                sources={[dpImageSrc]}
-                alt={`${headerHubName} display`}
-                className="h-full w-full object-cover"
-                fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA] text-2xl font-semibold text-[#111111]"
-                fallback={initials(headerHubName)}
-              />
-            ) : (
-              <MediaEmptyState />
-            )}
-          </button>
+  const VisibilityIcon = visibilityLabel === "Public" ? Globe : Lock;
 
-          <div className="w-full min-w-0 space-y-3 pt-2">
-            <h1 className="truncate text-lg font-serif font-semibold tracking-tight text-[#111111] sm:text-xl">{headerHubName}</h1>
-            <HubHeaderActions
-              memberCount={memberCount}
-              visibilityLabel={visibilityLabel}
-              canManageHub={isCreatorAdmin}
-              isJoined={isJoined}
-              onMembersClick={onMembersClick}
-              onInviteClick={onInviteMembers}
-              onSettingsClick={onOpenSettings}
-              onMembershipActionClick={onMembershipActionClick}
+  return (
+    <div className="grid w-full grid-cols-[240px_1fr]">
+      {/* Left panel — DP, name, meta, CTAs */}
+      <div className="relative flex min-h-[260px] flex-col items-center justify-between border-r border-slate-100 bg-white px-4 py-4">
+        <input ref={dpInputRef} type="file" accept="image/*" onChange={onDpChange} className="hidden" />
+
+        <VisibilityIcon className="absolute right-3 top-3 text-[#1a3a35]" style={{ width: 15, height: 15 }} />
+
+        <button
+          type="button"
+          onClick={onOpenDpChooser}
+          disabled={!isCreatorAdmin || isUploadingDp}
+          className={cn(
+            "h-40 w-40 shrink-0 overflow-hidden rounded-full bg-[#E3F1EF]",
+            isCreatorAdmin && "cursor-pointer"
+          )}
+        >
+          {dpImageSrc ? (
+            <ImageWithFallback
+              src={dpImageSrc}
+              sources={[dpImageSrc]}
+              alt={`${headerHubName} display`}
+              className="h-full w-full object-cover"
+              fallbackClassName="grid h-full w-full place-items-center bg-[#E3F1EF] text-6xl font-semibold text-[#0C5C57]"
+              fallback={headerHubName.charAt(0).toUpperCase()}
             />
-          </div>
+          ) : (
+            <div className="grid h-full w-full place-items-center bg-[#E3F1EF]">
+              <span className="text-6xl font-semibold text-[#0C5C57]">{headerHubName.charAt(0).toUpperCase()}</span>
+            </div>
+          )}
+        </button>
+
+        <div className="w-full text-center">
+          <h1 className="break-words text-center text-[15px] font-bold text-gray-900">{headerHubName}</h1>
+          <p className="mt-1 text-center text-[12px] text-gray-500">{categoryLabel} · {memberCount} {memberCount === 1 ? "Member" : "Members"}</p>
         </div>
       </div>
 
-      <div className={cn(CARD, "relative overflow-hidden w-full min-h-[340px] sm:min-h-[352px] md:h-[368px]")}>
+      {/* Right panel — cover image */}
+      <div className="relative h-[260px] overflow-hidden">
         <input ref={coverInputRef} type="file" accept="image/*" onChange={onCoverChange} className="hidden" />
         <button
           type="button"
           onClick={onOpenCoverChooser}
           disabled={!isCreatorAdmin || isUploadingCover}
-          className={cn("relative z-0 h-full min-h-[340px] w-full sm:min-h-[352px] md:min-h-[368px]", isCreatorAdmin && "cursor-pointer")}
-          style={!displayCoverImageSrc ? { backgroundColor: EMPTY_MEDIA_BG } : undefined}
+          className={cn("h-full w-full", isCreatorAdmin && "cursor-pointer")}
         >
           {displayCoverImageSrc ? (
             <ImageWithFallback
@@ -107,14 +97,14 @@ export function HubHeroHeader({
               sources={[displayCoverImageSrc, coverImageSrc].filter(Boolean)}
               alt={`${hubName} cover`}
               className="h-full w-full object-cover"
-              fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA]/35 text-sm font-medium text-[#0C5C57]"
-              fallback="Cover photo"
+              fallbackClassName="h-full w-full bg-[#A9D1CA]"
+              fallback=""
             />
           ) : (
-            <MediaEmptyState />
+            <div className="h-full w-full bg-[#A9D1CA]" />
           )}
         </button>
       </div>
-    </section>
+    </div>
   );
 }

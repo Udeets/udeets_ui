@@ -8,7 +8,6 @@ import {
   Loader2,
   MessageSquare,
   Plus,
-  Target,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -20,7 +19,7 @@ import type { HubRecord } from "@/lib/hubs";
 import { useAuthSession } from "@/services/auth/useAuthSession";
 import { AttachmentsSection } from "./components/attachments/AttachmentsSection";
 import { HubHeroHeader } from "./components/HubHeroHeader";
-import { HubTabBar } from "./components/HubTabBar";
+import { HubSidebarNav } from "./components/HubSidebarNav";
 import { MembersSection } from "./components/members/MembersSection";
 import { AboutSection } from "./components/sections/AboutSection";
 import { DeetsSection } from "./components/sections/DeetsSection";
@@ -41,7 +40,6 @@ import {
   BUTTON_PRIMARY,
   BUTTON_SECONDARY,
   CARD,
-  HUB_TABS,
   ICON,
   ImageWithFallback,
   SettingField,
@@ -50,7 +48,7 @@ import {
   compactId,
   normalizePublicSrc,
 } from "./components/hubUtils";
-import { SectionShell } from "./components/SectionShell";
+
 
 export default function HubClient({
   hub,
@@ -190,7 +188,7 @@ export default function HubClient({
   const memberCount = Math.max(1, Number.parseInt(hub.membersLabel, 10) || 0);
   const headerHubName = hub.name?.trim() || hubName;
   const visibilityLabel: "Public" | "Private" = hub.visibility;
-  const visibleTabs = HUB_TABS;
+
   const allFeedItems = [...liveFeedItems, ...hubContent.feed];
   const feedItemCount = allFeedItems.length;
   const totalEngagement = allFeedItems.reduce((sum, item) => sum + item.likes + item.comments, 0);
@@ -508,7 +506,8 @@ export default function HubClient({
     <div className="min-h-screen bg-white">
       <UdeetsHeader />
 
-      <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 md:pb-8 lg:px-10">
+      <div className="mx-auto w-full max-w-7xl">
+        {/* Top header — 2-column: DP panel + cover image */}
         <HubHeroHeader
           dpInputRef={dpInputRef}
           coverInputRef={coverInputRef}
@@ -525,51 +524,30 @@ export default function HubClient({
           headerHubName={headerHubName}
           hubName={hubName}
           memberCount={memberCount}
+          categoryLabel={categoryMeta.label}
           visibilityLabel={visibilityLabel}
-          isJoined={isJoined}
-          onMembershipActionClick={handleMembershipAction}
-          onMembersClick={() => requestNavigation({ tab: "Members", panel: "members", membersMode: "list", membersView: "members" })}
-          onInviteMembers={() => openCenterMembers("invite")}
-          onOpenSettings={openSettingsPanel}
         />
 
-        {mediaSuccess ? <p className="mt-3 text-sm font-medium text-[#0C5C57]">{mediaSuccess}</p> : null}
-        {mediaError ? <p className="mt-3 text-sm font-medium text-[#B42318]">{mediaError}</p> : null}
+        {mediaSuccess ? <p className="px-4 pt-3 text-sm font-medium text-[#0C5C57]">{mediaSuccess}</p> : null}
+        {mediaError ? <p className="px-4 pt-3 text-sm font-medium text-[#B42318]">{mediaError}</p> : null}
 
-        <HubTabBar
-          visibleTabs={visibleTabs}
-          activeSection={activeSection}
-          activePanel={activePanel}
-          membersPanelMode={membersPanelMode}
-          activePeopleView={activePeopleView}
-          onNavigate={requestNavigation}
-        />
+        {/* Below header — 2-column: sidebar + content */}
+        <div className="grid grid-cols-[240px_1fr]">
+          {/* Left sidebar */}
+          <aside className="border-r border-slate-100 bg-white">
+            <HubSidebarNav
+              activeSection={activeSection}
+              isCreatorAdmin={isCreatorAdmin}
+              onNavigate={requestNavigation}
+            />
+          </aside>
 
-        <section className="mt-6">
-          {activePanel === "posts" ? renderMainContent() : null}
-          {activePanel === "challenges" ? (
-            <SectionShell title="Challenges" description="Plan shared goals, participation drives, and engagement activities for your hub.">
-              <div className="grid min-h-[320px] place-items-center text-center">
-                <div className="max-w-lg">
-                  <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#EAF6F3] text-[#0C5C57]">
-                    <Target className="h-7 w-7 stroke-[1.8]" />
-                  </div>
-                  <h3 className="mt-6 text-3xl font-serif font-semibold tracking-tight text-[#111111]">What are Challenges?</h3>
-                  <p className="mt-4 text-sm leading-relaxed text-slate-600">
-                    Challenges help your community stay engaged by working toward shared goals such as events, volunteering, or participation activities.
-                  </p>
-                  <button type="button" className={cn(BUTTON_PRIMARY, "mt-8 px-6 py-3 text-sm")}>
-                    Create a Challenge
-                  </button>
-                </div>
-              </div>
-            </SectionShell>
-          ) : null}
-          {activePanel === "settings" ? renderMainContent() : null}
-          {activePanel === "members" ? renderMainContent() : null}
-          {activePanel === "invite" ? renderMainContent() : null}
-        </section>
-      </main>
+          {/* Right content area */}
+          <main className="min-h-[calc(100vh-200px)] bg-[#fafafa] p-6">
+            {renderMainContent()}
+          </main>
+        </div>
+      </div>
 
       {!isDemoPreview ? <UdeetsFooter /> : null}
       {!isDemoPreview ? <UdeetsBottomNav activeNav="home" /> : null}

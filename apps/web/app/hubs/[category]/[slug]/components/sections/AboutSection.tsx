@@ -98,16 +98,16 @@ export function AboutSection({
                 <button
                   type="button"
                   onClick={onMembershipAction}
-                  className="rounded-xl border border-[#0C5C57] px-3 py-1 text-xs font-semibold text-[#0C5C57] transition hover:bg-[#EAF6F3]"
+                  className="rounded-lg bg-[#0C5C57] px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-[#094a46]"
                 >
                   Join
                 </button>
               ) : null}
-              {isCreatorAdmin ? (
+              {userRole === "creator" || userRole === "admin" ? (
                 <button
                   type="button"
                   onClick={onInviteMembers}
-                  className="rounded-xl px-3 py-1 text-xs font-semibold text-slate-500 transition hover:bg-[#F7FBFA] hover:text-[#0C5C57]"
+                  className="rounded-lg border border-[#0C5C57] px-4 py-1.5 text-sm font-medium text-[#0C5C57] transition hover:bg-[#f0faf8]"
                 >
                   Invite
                 </button>
