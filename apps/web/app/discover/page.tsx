@@ -111,7 +111,7 @@ function normalizePublicSrc(src?: string) {
 }
 
 function locationLabelFor(hub: SupabaseHub) {
-  return [hub.city, hub.state, hub.country].filter(Boolean).join(", ") || "Location coming soon";
+  return [hub.city, hub.state, hub.country].filter(Boolean).join(", ") || "";
 }
 
 function toDiscoverHub(hub: SupabaseHub): Hub {
@@ -501,7 +501,7 @@ function DiscoverPageContent() {
 
   const nearby = useMemo(() => {
     if (activeCategory !== "All") return [];
-    return baseFiltered.filter((h) => h.locationLabel !== "Location coming soon");
+    return baseFiltered.filter((h) => h.locationLabel);
   }, [activeCategory, baseFiltered]);
 
   // ✅ RESULTS MODE:

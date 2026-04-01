@@ -77,7 +77,7 @@ export function AboutSection({
     { icon: Youtube,   label: "YouTube",   value: connectLinks.youtube,   href: connectLinks.youtube },
   ].filter((item) => item.value);
 
-  const locationValue = settingsLocation || (hubLocationLabel !== "Location coming soon" ? hubLocationLabel : "");
+  const locationValue = settingsLocation || hubLocationLabel;
   const photoStack = recentPhotos.slice(0, 4);
   const extraPhotos = recentPhotos.length > 4 ? recentPhotos.length - 4 : 0;
   const rotations = ["-rotate-2", "rotate-1", "-rotate-1", "rotate-2"];

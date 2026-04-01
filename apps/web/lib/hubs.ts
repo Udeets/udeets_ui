@@ -66,7 +66,7 @@ export function normalizePublicSrc(src?: string | null) {
 }
 
 export function locationLabelForDbHub(hub: DbHubRecord) {
-  return [hub.city, hub.state, hub.country].filter(Boolean).join(", ") || "Location coming soon";
+  return [hub.city, hub.state, hub.country].filter(Boolean).join(", ") || "";
 }
 
 export function toHubRecord(hub: DbHubRecord): HubRecord {
