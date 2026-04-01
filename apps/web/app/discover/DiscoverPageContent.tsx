@@ -225,8 +225,8 @@ function HubCard({ hub }: { hub: Hub }) {
           onError={() => setImageFailed(true)}
         />
       ) : (
-        <div className="grid h-44 w-full place-items-center bg-[#A9D1CA]/35 text-center">
-          <span className="px-4 text-sm font-semibold text-[#0C5C57]">Image Coming Soon</span>
+        <div className="h-44 w-full bg-gradient-to-br from-[#0C5C57] to-[#1a8a82] flex items-center justify-center">
+          <span className="text-white/40 text-sm font-medium">{hub.name?.charAt(0)?.toUpperCase()}</span>
         </div>
       )}
       <div className="min-w-0 p-6">
