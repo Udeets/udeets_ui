@@ -10,7 +10,6 @@ import {
   LogOut,
   Search,
   Settings,
-  SquarePen,
   UserRound,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -48,9 +47,8 @@ const PRIMARY_ITEMS = [
 
 const PROFILE_ITEMS = [
   { href: "/profile", label: "Profile", icon: UserRound },
-  { href: "/my-posts", label: "My Posts", icon: SquarePen },
-  { href: "/create-hub", label: "Create Hub", icon: CirclePlus },
   { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/create-hub", label: "Create Hub", icon: CirclePlus },
 ];
 
 const FILTERS = ["All", "Tagged", "New Posts", "Activity"] as const;
@@ -285,27 +283,52 @@ function EventsPanel() {
   );
 }
 
-function ProfilePanel({ onLogout }: { onLogout: () => void }) {
+function ProfilePanel({ user, onLogout }: { user: { email?: string; user_metadata?: Record<string, unknown> } | null; onLogout: () => void }) {
+  const displayName = (user?.user_metadata?.full_name as string) || user?.email || "uDeets User";
+  const displayEmail = user?.email || "";
+  const avatarUrl = (user?.user_metadata?.avatar_url as string) || "";
+
   return (
-    <div className="absolute right-0 top-full z-[120] mt-3 w-[144px]">
-      <div className="space-y-2">
+    <div className="absolute right-0 top-full z-[120] mt-3 min-w-[220px] overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg">
+      {/* User identity card */}
+      <div className="flex items-center gap-3 rounded-t-xl bg-gray-50 px-4 py-3">
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover" />
+        ) : (
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#0C5C57] to-[#1a8a82]">
+            <span className="text-sm font-semibold text-white/80">{displayName.charAt(0).toUpperCase()}</span>
+          </div>
+        )}
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-gray-900">{displayName}</p>
+          <p className="truncate text-xs text-gray-500">{displayEmail}</p>
+        </div>
+      </div>
+
+      {/* Menu items */}
+      <div className="border-t border-gray-100 py-1">
         {PROFILE_ITEMS.map((item) => {
           const Icon = item.icon;
           return (
             <Link
               key={item.href}
               href={item.href}
-              className="flex items-center gap-2 whitespace-nowrap rounded-2xl bg-white px-3 py-2.5 text-sm font-medium text-black shadow-[0_6px_14px_rgba(15,23,42,0.10)] transition hover:bg-slate-50"
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition hover:bg-gray-50"
             >
-              <Icon className="h-4 w-4 stroke-[1.8]" />
+              <Icon className="h-4 w-4 stroke-[1.8] text-gray-400" />
               <span>{item.label}</span>
             </Link>
           );
         })}
+      </div>
+
+      {/* Logout */}
+      <div className="border-t border-gray-100 py-1">
         <button
           type="button"
           onClick={onLogout}
-          className="flex w-full items-center gap-2 whitespace-nowrap rounded-2xl bg-white px-3 py-2.5 text-sm font-medium text-black shadow-[0_6px_14px_rgba(15,23,42,0.10)] transition hover:bg-slate-50"
+          className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-rose-600 transition hover:bg-rose-50"
         >
           <LogOut className="h-4 w-4 stroke-[1.8]" />
           <span>Logout</span>
@@ -448,7 +471,7 @@ function UdeetsHeaderContent() {
 
           {openPanel === "alerts" ? <NotificationsPanel /> : null}
           {openPanel === "events" ? <EventsPanel /> : null}
-          {openPanel === "profile" && isAuthenticated ? <ProfilePanel onLogout={handleLogout} /> : null}
+          {openPanel === "profile" && isAuthenticated ? <ProfilePanel user={user} onLogout={handleLogout} /> : null}
         </div>
       </div>
     </header>

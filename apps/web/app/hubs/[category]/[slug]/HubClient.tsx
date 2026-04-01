@@ -537,6 +537,7 @@ export default function HubClient({
           <aside className="border-r border-slate-100 bg-white">
             <HubSidebarNav
               activeSection={activeSection}
+              activePanel={activePanel}
               isCreatorAdmin={isCreatorAdmin}
               onNavigate={requestNavigation}
             />

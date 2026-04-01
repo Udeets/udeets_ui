@@ -13,17 +13,19 @@ const NAV_ITEMS: Array<{ tab: HubTab; label: string; icon: typeof Home }> = [
 
 export function HubSidebarNav({
   activeSection,
+  activePanel,
   isCreatorAdmin,
   onNavigate,
 }: {
   activeSection: HubTab;
+  activePanel: string;
   isCreatorAdmin: boolean;
   onNavigate: (next: PendingNavigation) => void;
 }) {
   return (
     <nav className="flex flex-col py-2">
       {NAV_ITEMS.map(({ tab, label, icon: Icon }) => {
-        const isActive = activeSection === tab;
+        const isActive = activeSection === tab && activePanel !== "settings";
         return (
           <button
             key={tab}
@@ -55,7 +57,11 @@ export function HubSidebarNav({
           <button
             type="button"
             onClick={() => onNavigate({ tab: activeSection, panel: "settings" })}
-            className="flex items-center gap-3 border-l-2 border-transparent px-4 py-2.5 text-[13px] text-gray-500 transition hover:bg-gray-50 hover:text-gray-700"
+            className={
+              activePanel === "settings"
+                ? "flex items-center gap-3 border-l-2 border-[#0C5C57] bg-[#f0faf8] px-4 py-2.5 text-[13px] font-medium text-[#0C5C57]"
+                : "flex items-center gap-3 border-l-2 border-transparent px-4 py-2.5 text-[13px] text-gray-500 transition hover:bg-gray-50 hover:text-gray-700"
+            }
           >
             <Settings className="h-4 w-4 shrink-0" />
             Settings
