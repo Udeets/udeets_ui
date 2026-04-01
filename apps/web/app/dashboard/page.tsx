@@ -2,11 +2,11 @@
 
 export const dynamic = "force-dynamic";
 
+import { Heart, MessageCircle, Share2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
-import { UDEETS_LOGO_SRC } from "@/lib/branding";
 import { mapDeetToDashboardCard } from "@/lib/mappers/deets/map-deet-to-dashboard-card";
 import { listDeets, subscribeToDeets } from "@/lib/services/deets/list-deets";
 import type { DeetRecord } from "@/lib/services/deets/deet-types";
@@ -46,7 +46,7 @@ function cn(...classes: Array<string | false | null | undefined>) {
 }
 
 function normalizePublicSrc(src?: string | null) {
-  if (!src) return UDEETS_LOGO_SRC;
+  if (!src) return "";
   if (src.startsWith("http://") || src.startsWith("https://")) return src;
   if (src.startsWith("/")) return src;
   return `/${src}`;
@@ -101,7 +101,7 @@ function DashboardDeetImage({ src, alt }: { src?: string; alt: string }) {
   if (!src || imageFailed) return null;
 
   return (
-    <div className="mt-4 overflow-hidden rounded-[20px] border border-[#D6E8E4] bg-[#EAF4F1]">
+    <div className="mt-3 overflow-hidden rounded-2xl border border-slate-100">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
@@ -162,14 +162,10 @@ function HubLauncher({
   selectedView,
   onSelectView,
   hubs,
-  onInvite,
-  copiedInviteHubId,
 }: {
   selectedView: HubView;
   onSelectView: (view: HubView) => void;
   hubs: DashboardHub[];
-  onInvite: (hub: DashboardHubCardData) => void;
-  copiedInviteHubId: string | null;
 }) {
   return (
     <section className={cn(CARD, "p-4 sm:p-5")}>
@@ -202,7 +198,7 @@ function HubLauncher({
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
           <CreateHubTile />
           {hubs.map((hub) => (
-            <DashboardHubCard key={hub.id} hub={hub} onInvite={onInvite} copiedInviteHubId={copiedInviteHubId} />
+            <DashboardHubCard key={hub.id} hub={hub} hasUnread={false} />
           ))}
         </div>
       ) : (
@@ -242,11 +238,20 @@ function DashboardPageContent() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
-  const [copiedInviteHubId, setCopiedInviteHubId] = useState<string | null>(null);
+
   const [hubs, setHubs] = useState<DashboardHub[]>([]);
   const [isLoadingHubs, setIsLoadingHubs] = useState(true);
   const [hubsLoadError, setHubsLoadError] = useState<string | null>(null);
   const [myDeetsItems, setMyDeetsItems] = useState<FeedItem[]>([]);
+  const [likedDeets, setLikedDeets] = useState<Set<string>>(new Set());
+  const toggleLike = (deetId: string) => {
+    setLikedDeets(prev => {
+      const next = new Set(prev);
+      if (next.has(deetId)) next.delete(deetId);
+      else next.add(deetId);
+      return next;
+    });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -396,23 +401,6 @@ function DashboardPageContent() {
     });
   }, [myDeetsItems, relevantHubIds, searchQuery, selectedFeedFilter]);
 
-  useEffect(() => {
-    if (!copiedInviteHubId) return;
-
-    const timer = window.setTimeout(() => setCopiedInviteHubId(null), 1800);
-    return () => window.clearTimeout(timer);
-  }, [copiedInviteHubId]);
-
-  const handleInvite = async (hub: DashboardHubCardData) => {
-    try {
-      const shareUrl =
-        typeof window === "undefined" ? hub.href : new URL(hub.href, window.location.origin).toString();
-      await navigator.clipboard.writeText(shareUrl);
-      setCopiedInviteHubId(hub.id);
-    } catch {
-      setCopiedInviteHubId(null);
-    }
-  };
 
   if (authStatus === "checking" && searchParams.get("demo_preview") !== "1") {
     return (
@@ -481,8 +469,6 @@ function DashboardPageContent() {
               selectedView={selectedHubView}
               onSelectView={setSelectedHubView}
               hubs={visibleHubs}
-              onInvite={handleInvite}
-              copiedInviteHubId={copiedInviteHubId}
             />
 
             <section className={cn(CARD, "p-4 sm:p-5")}>
@@ -566,37 +552,65 @@ function DashboardPageContent() {
               <div className="mt-5">
                 {filteredDeetsItems.length ? (
                   <div className="space-y-3">
-                    {filteredDeetsItems.map((item) =>
-                      item.href ? (
+                    {filteredDeetsItems.map((item) => {
+                      const cardContent = (
+                        <>
+                          <div className="flex items-start gap-3">
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#0C5C57] to-[#1a8a82]">
+                              <span className="text-xs font-semibold text-white/80">{item.hubName?.charAt(0)?.toUpperCase() ?? "H"}</span>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="truncate text-sm font-semibold text-[#12312D]">{item.hubName || "Hub"}</p>
+                                <span className="shrink-0 text-xs text-gray-400">{item.timeLabel}</span>
+                              </div>
+                              <p className="text-xs text-gray-400">Posted by: Hub Member</p>
+                            </div>
+                          </div>
+                          {item.title ? <h3 className={cn("mt-3 text-base font-semibold", TEXT_DARK)}>{item.title}</h3> : null}
+                          {item.body ? <p className={cn("mt-1 text-sm leading-6", TEXT_MUTED)}>{item.body}</p> : null}
+                          <DashboardDeetImage src={item.previewImage || item.previewImages[0]} alt={item.title} />
+                          <div className="mt-3 flex items-center gap-6 border-t border-gray-100 pt-3">
+                            <button
+                              type="button"
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleLike(item.id); }}
+                              className="flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-[#0C5C57]"
+                            >
+                              <Heart
+                                className="h-4 w-4"
+                                fill={likedDeets.has(item.id) ? "#0C5C57" : "none"}
+                                stroke={likedDeets.has(item.id) ? "#0C5C57" : "currentColor"}
+                              />
+                              <span>{likedDeets.has(item.id) ? 1 : 0}</span>
+                              <span>Like</span>
+                            </button>
+                            <button type="button" className="flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-[#0C5C57]">
+                              <MessageCircle className="h-4 w-4" />
+                              <span>0</span>
+                              <span>Comment</span>
+                            </button>
+                            <button type="button" className="flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-[#0C5C57]">
+                              <Share2 className="h-4 w-4" />
+                              <span>Share</span>
+                            </button>
+                          </div>
+                        </>
+                      );
+
+                      return item.href ? (
                         <Link
                           key={item.id}
                           href={item.href}
-                          className="block rounded-[24px] bg-[#F6FBFA] p-5 transition hover:bg-[#EFF7F5]"
+                          className="block rounded-2xl border border-slate-100 bg-white p-4 transition hover:border-slate-200"
                         >
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5F807A]">{item.type}</p>
-                            <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[#0C5C57]">
-                              {item.hubName}
-                            </span>
-                          </div>
-                          <h3 className={cn("mt-2 text-lg font-semibold", TEXT_DARK)}>{item.title}</h3>
-                          <p className={cn("mt-2 text-sm leading-6", TEXT_MUTED)}>{item.body}</p>
-                          <DashboardDeetImage src={item.previewImage || item.previewImages[0]} alt={item.title} />
+                          {cardContent}
                         </Link>
                       ) : (
-                        <article key={item.id} className="rounded-[24px] bg-[#F6FBFA] p-5">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5F807A]">{item.type}</p>
-                            <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[#0C5C57]">
-                              {item.hubName}
-                            </span>
-                          </div>
-                          <h3 className={cn("mt-2 text-lg font-semibold", TEXT_DARK)}>{item.title}</h3>
-                          <p className={cn("mt-2 text-sm leading-6", TEXT_MUTED)}>{item.body}</p>
-                          <DashboardDeetImage src={item.previewImage || item.previewImages[0]} alt={item.title} />
+                        <article key={item.id} className="rounded-2xl border border-slate-100 bg-white p-4">
+                          {cardContent}
                         </article>
-                      ),
-                    )}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="rounded-[24px] bg-[#F6FBFA] px-6 py-10 text-center">
