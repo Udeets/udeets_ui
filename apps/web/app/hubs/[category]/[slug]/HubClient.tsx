@@ -505,7 +505,7 @@ export default function HubClient({
   };
 
   return (
-    <div className="min-h-screen bg-[#E3F1EF]">
+    <div className="min-h-screen bg-white">
       <UdeetsHeader />
 
       <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 md:pb-8 lg:px-10">

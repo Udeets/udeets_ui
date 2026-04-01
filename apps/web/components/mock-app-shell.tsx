@@ -9,7 +9,7 @@ function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-const PAGE_BG = "bg-[#E3F1EF]";
+const PAGE_BG = "bg-white";
 const TEXT_DARK = "text-[#111111]";
 
 export function cardClass(extra?: string) {

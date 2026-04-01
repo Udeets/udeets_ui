@@ -33,7 +33,7 @@ type FeedItem = {
   href?: string;
 };
 
-const PAGE_BG = "bg-[#E3F1EF]";
+const PAGE_BG = "bg-white";
 const CARD = "rounded-[28px] border border-[#D6E8E4] bg-white shadow-[0_14px_34px_rgba(12,92,87,0.08)]";
 const TEXT_DARK = "text-[#12312D]";
 const TEXT_MUTED = "text-[#58706B]";

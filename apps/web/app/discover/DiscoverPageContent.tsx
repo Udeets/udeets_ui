@@ -12,8 +12,8 @@ import type { Hub as SupabaseHub } from "@/types/hub";
 
 const HEADER_BG = "bg-white border-b border-slate-200/60";
 const FOOTER_BG = "bg-[#0C5C57]";
-const PAGE_BG = "bg-[#E3F1EF]";
-const SECTION_MINT_BG = "bg-[#E3F1EF]";
+const PAGE_BG = "bg-white";
+const SECTION_MINT_BG = "bg-white";
 const HERO_ACCENT_BG = SECTION_MINT_BG;
 const NAV_TEXT = "text-[#111111]";
 const BRAND_TEXT_STYLE = "text-xl sm:text-2xl";

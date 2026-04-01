@@ -9,7 +9,7 @@ import { HowItWorksAnimated } from "@/components/home/how-it-works-animated";
 import { listHubs } from "@/lib/services/hubs/list-hubs";
 import type { Hub as SupabaseHub } from "@/types/hub";
 
-const PAGE_BG = "bg-[#E3F1EF]";
+const PAGE_BG = "bg-white";
 const HEADER_BG = "bg-white border-b border-slate-200/60";
 const FOOTER_BG = "bg-[#0C5C57]";
 const TEXT_PRIMARY = "text-[#111111]";
