@@ -17,7 +17,7 @@ export function MyPostCard({ post }: { post: MyPost }) {
             </span>
             <span className="text-xs text-slate-500">{post.dateLabel}</span>
           </div>
-          <h2 className="mt-3 text-xl font-serif font-semibold text-[#111111]">{post.title}</h2>
+          <h2 className="mt-3 text-xl font-semibold text-[#111111]">{post.title}</h2>
           <p className="mt-2 text-sm leading-relaxed text-slate-600">{post.body}</p>
           <p className="mt-3 text-sm text-slate-500">Audience: {post.audience}</p>
         </div>

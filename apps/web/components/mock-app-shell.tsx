@@ -17,7 +17,7 @@ export function cardClass(extra?: string) {
 }
 
 export function sectionTitleClass(extra?: string) {
-  return cn("text-xl font-serif font-semibold tracking-tight sm:text-2xl", TEXT_DARK, extra);
+  return cn("text-xl font-semibold tracking-tight sm:text-2xl", TEXT_DARK, extra);
 }
 
 function MockAppShellContent({
@@ -43,7 +43,7 @@ function MockAppShellContent({
         <UdeetsHeader />
         <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 md:pb-6 lg:px-10">
           <section className={cardClass("p-6 text-center")}>
-            <h1 className="text-2xl font-serif font-semibold tracking-tight text-[#111111]">Loading...</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-[#111111]">Loading...</h1>
             <p className="mt-3 text-sm leading-relaxed text-slate-600">
               We&apos;re checking your session.
             </p>

@@ -15,7 +15,7 @@ export function EventCard({ event }: EventCardProps) {
           {event.badge}
         </span>
       </div>
-      <h3 className="mt-3 text-xl font-serif font-semibold text-[#111111]">{event.title}</h3>
+      <h3 className="mt-3 text-xl font-semibold text-[#111111]">{event.title}</h3>
       <p className="mt-1 text-sm font-medium text-slate-700">{event.hub}</p>
       <div className="mt-3 space-y-1 text-sm text-slate-600">
         <p>{event.dateLabel}</p>

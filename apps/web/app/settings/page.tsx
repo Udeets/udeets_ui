@@ -157,7 +157,7 @@ export default function SettingsPage() {
         {/* Sidebar */}
         <aside className={cardClass("h-fit p-5")}>
           <div className="mb-4">
-            <h1 className="text-xl font-serif font-semibold tracking-tight text-[#111111]">Settings</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-[#111111]">Settings</h1>
           </div>
           <nav className="space-y-1">
             {NAV_ITEMS.map((item) => {

@@ -45,7 +45,7 @@ type UdeetsBrandLockupProps = {
   showIcon?: boolean;
 };
 
-const BRAND_WORDMARK_STYLE = "truncate font-serif font-semibold leading-none tracking-tight text-[#0C5C57]";
+const BRAND_WORDMARK_STYLE = "truncate font-semibold leading-none tracking-tight text-[#0C5C57]";
 
 export function UdeetsBrandLockup({
   className,

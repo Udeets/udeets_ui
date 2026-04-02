@@ -104,7 +104,7 @@ function CreateScene({ progress }: { progress: number }) {
       <div className="border-b border-[#DDEBE7] bg-white/95 px-4 py-3.5">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#0C5C57]/70">Create Hub</p>
-          <h4 className="mt-1 text-lg font-serif font-semibold tracking-tight text-[#12312D]">Build your community home</h4>
+          <h4 className="mt-1 text-lg font-semibold tracking-tight text-[#12312D]">Build your community home</h4>
         </div>
       </div>
 
@@ -176,7 +176,7 @@ function ShareScene({ progress }: { progress: number }) {
       <div className="border-b border-[#DDEBE7] bg-white/95 px-4 py-3.5">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#0C5C57]/70">Share Updates</p>
-          <h4 className="mt-1 text-lg font-serif font-semibold tracking-tight text-[#12312D]">Post one update for everyone</h4>
+          <h4 className="mt-1 text-lg font-semibold tracking-tight text-[#12312D]">Post one update for everyone</h4>
         </div>
       </div>
 
@@ -240,7 +240,7 @@ function InformScene({ progress }: { progress: number }) {
       <div className="border-b border-[#DDEBE7] bg-white/95 px-4 py-3.5">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#0C5C57]/70">Stay Informed</p>
-          <h4 className="mt-1 text-lg font-serif font-semibold tracking-tight text-[#12312D]">Keep every important detail in view</h4>
+          <h4 className="mt-1 text-lg font-semibold tracking-tight text-[#12312D]">Keep every important detail in view</h4>
         </div>
       </div>
 
@@ -249,7 +249,7 @@ function InformScene({ progress }: { progress: number }) {
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Subscribed hubs</p>
-              <p className="mt-1 text-lg font-serif font-semibold text-[#12312D]">Soccer GrassRoot</p>
+              <p className="mt-1 text-lg font-semibold text-[#12312D]">Soccer GrassRoot</p>
             </div>
             <span className="rounded-full bg-[#EAF6F3] px-3 py-1 text-xs font-semibold text-[#0C5C57]">Following</span>
           </div>
@@ -357,7 +357,7 @@ export function HowItWorksAnimated() {
     <section ref={sectionRef} className="py-20">
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 sm:px-6 lg:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)] lg:gap-12 lg:px-10">
         <div className="min-w-0">
-          <h2 className="flex-none whitespace-nowrap leading-none text-[1.85rem] font-serif font-semibold tracking-tight text-[#111111] sm:text-[2.2rem] lg:text-[2.5rem]">
+          <h2 className="flex-none whitespace-nowrap leading-none text-[1.85rem] font-semibold tracking-tight text-[#111111] sm:text-[2.2rem] lg:text-[2.5rem]">
             How It Works
           </h2>
 
@@ -394,7 +394,7 @@ export function HowItWorksAnimated() {
                       0{index + 1}
                     </div>
                     <div className="min-w-0">
-                      <h3 className="text-xl font-serif font-semibold tracking-tight text-[#111111]">{step.title}</h3>
+                      <h3 className="text-xl font-semibold tracking-tight text-[#111111]">{step.title}</h3>
                       <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-[15px]">{step.description}</p>
                     </div>
                   </div>

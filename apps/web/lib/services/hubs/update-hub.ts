@@ -51,6 +51,10 @@ export async function updateHub(hubId: string, input: UpdateHubInput): Promise<H
     payload.name = normalizeText(input.name);
   }
 
+  if (input.description !== undefined) {
+    payload.description = normalizeText(input.description);
+  }
+
   if (input.category !== undefined) {
     payload.category = input.category;
   }

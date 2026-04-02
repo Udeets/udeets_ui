@@ -46,7 +46,7 @@ function FeatureCard({ icon: Icon, title, description }: { icon: typeof Zap; tit
       <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#EAF6F3]">
         <Icon className="h-5 w-5 text-[#0C5C57]" />
       </div>
-      <h3 className="font-serif text-lg font-semibold tracking-tight text-[#111111]">{title}</h3>
+      <h3 className="text-lg font-semibold tracking-tight text-[#111111]">{title}</h3>
       <p className="mt-2 text-sm leading-relaxed text-slate-500">{description}</p>
     </div>
   );
@@ -63,7 +63,7 @@ function StepCard({ number, title, description }: { number: number; title: strin
         {number < 3 && <div className="mt-2 h-full w-px bg-gradient-to-b from-[#A9D1CA] to-transparent" />}
       </div>
       <div className="pb-10">
-        <h3 className="font-serif text-lg font-semibold tracking-tight text-[#111111]">{title}</h3>
+        <h3 className="text-lg font-semibold tracking-tight text-[#111111]">{title}</h3>
         <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{description}</p>
       </div>
     </div>
@@ -98,7 +98,7 @@ function HubCard({ hub }: { hub: TopHub }) {
         )}
       </div>
       <div className="flex flex-1 flex-col p-4">
-        <h3 className="font-serif text-base font-semibold tracking-tight text-[#111111] group-hover:text-[#0C5C57] transition">
+        <h3 className="text-base font-semibold tracking-tight text-[#111111] group-hover:text-[#0C5C57] transition">
           {hub.name}
         </h3>
         <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500">{hub.intro}</p>
@@ -210,7 +210,7 @@ export default function Page() {
               </div>
 
               {/* Heading */}
-              <h1 className="font-serif text-5xl font-semibold leading-[1.1] tracking-tight text-[#111111] sm:text-6xl lg:text-7xl">
+              <h1 className="text-5xl font-semibold leading-[1.1] tracking-tight text-[#111111] sm:text-6xl lg:text-7xl">
                 Deets that matter.
                 <br />
                 <span className="text-[#0C5C57]">Organized beautifully.</span>
@@ -255,7 +255,7 @@ export default function Page() {
         <section className="border-t border-slate-100 bg-[#FAFBFC] py-20 sm:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
             <div className="mx-auto max-w-2xl text-center">
-              <h2 className="font-serif text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
+              <h2 className="text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
                 Everything your community needs
               </h2>
               <p className="mt-4 text-base leading-relaxed text-slate-500">
@@ -303,7 +303,7 @@ export default function Page() {
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
             <div className="grid gap-16 lg:grid-cols-2 lg:gap-20">
               <div>
-                <h2 className="font-serif text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
+                <h2 className="text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
                   Up and running in minutes
                 </h2>
                 <p className="mt-4 text-base leading-relaxed text-slate-500">
@@ -338,7 +338,7 @@ export default function Page() {
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
               <div className="mb-12 flex items-end justify-between gap-4">
                 <div>
-                  <h2 className="font-serif text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
+                  <h2 className="text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
                     Explore hubs
                   </h2>
                   <p className="mt-2 text-base text-slate-500">See what communities are building on uDeets.</p>
@@ -375,7 +375,7 @@ export default function Page() {
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_80%,rgba(255,255,255,0.05),transparent_50%)]" />
 
               <div className="relative">
-                <h2 className="font-serif text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
+                <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
                   Ready to build your hub?
                 </h2>
                 <p className="mx-auto mt-4 max-w-lg text-base leading-relaxed text-white/70 sm:text-lg">
@@ -402,7 +402,7 @@ export default function Page() {
           <div className="flex flex-col items-center justify-between gap-6 py-10 sm:flex-row">
             <div className="flex items-center gap-3">
               <UdeetsLogoIcon className="h-7 w-7 text-white/80" alt="uDeets" />
-              <span className="font-serif text-lg font-semibold text-white">uDeets</span>
+              <span className="text-lg font-semibold text-white">uDeets</span>
             </div>
 
             <div className="flex items-center gap-8">

@@ -58,7 +58,7 @@ export function CreateDeetModal({
       <div className="w-full rounded-[28px] border border-white/70 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.28)]" style={{ maxWidth: "560px" }}>
         <div className="flex items-center justify-between px-5 pb-2 pt-5">
           <div className="w-10" />
-          <h3 className="text-[20px] font-serif font-semibold tracking-tight text-[#111111]">Create Deet</h3>
+          <h3 className="text-[20px] font-semibold tracking-tight text-[#111111]">Create Deet</h3>
           <button
             type="button"
             onClick={onClose}

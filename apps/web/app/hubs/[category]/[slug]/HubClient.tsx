@@ -4,10 +4,12 @@
 import {
   ChevronLeft,
   ChevronRight,
+  Eye,
   Heart,
   Loader2,
   MessageSquare,
   Plus,
+  Share2,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -25,7 +27,10 @@ import { MembersSection } from "./components/members/MembersSection";
 import { AboutSection } from "./components/sections/AboutSection";
 import { CTADisplay } from "./components/ctas/CTADisplay";
 import { CTAEditorModal } from "./components/ctas/CTAEditorModal";
+import { CustomSectionEditorModal } from "./components/sections/custom/CustomSectionEditorModal";
 import { DeetsSection } from "./components/sections/DeetsSection";
+import { EventsSection } from "./components/sections/EventsSection";
+import { ReviewsSection } from "./components/sections/ReviewsSection";
 import { SettingsSection } from "./components/sections/SettingsSection";
 import { CreateDeetModal } from "./components/deets/CreateDeetModal";
 import { DeetChildModal } from "./components/deets/DeetChildModal";
@@ -159,6 +164,21 @@ export default function HubClient({
     return () => { ignore = true; };
   }, [hub.id]);
 
+  // Custom sections state
+  const [customSections, setCustomSections] = useState<import("@/lib/services/sections/section-types").HubSection[]>([]);
+  const [isSectionEditorOpen, setIsSectionEditorOpen] = useState(false);
+
+  useEffect(() => {
+    let ignore = false;
+    async function loadSections() {
+      const { listHubSections } = await import("@/lib/services/sections/list-sections");
+      const sections = await listHubSections(hub.id);
+      if (!ignore) setCustomSections(sections);
+    }
+    void loadSections();
+    return () => { ignore = true; };
+  }, [hub.id]);
+
   const { liveFeedItems, prependCreatedDeet } = useHubLiveFeed(hub.id);
   const {
     savedHubName,
@@ -240,7 +260,7 @@ export default function HubClient({
     coverInputRef,
   });
   const recentPhotos = galleryImages.slice(0, 6);
-  const displayCoverImageSrc = galleryImages.find((image) => image && image !== coverImageSrc) || coverImageSrc;
+  const displayCoverImageSrc = coverImageSrc;
   const adminImages = (hub.adminImages ?? []).map(normalizePublicSrc).filter(Boolean);
   const albumChoices = galleryImages.filter((image) => image !== dpImageSrc && image !== coverImageSrc);
   const categoryMeta = categoryMetaFor(savedHubCategory);
@@ -424,7 +444,10 @@ export default function HubClient({
   const [isJoining, setIsJoining] = useState(false);
 
   const handleMembershipAction = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      router.push(`/auth?redirect=${encodeURIComponent(hubBaseHref)}`);
+      return;
+    }
     setIsJoining(true);
     try {
       const { createClient } = await import("@/lib/supabase/client");
@@ -470,7 +493,7 @@ export default function HubClient({
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
           </div>
-          <h3 className="text-lg font-serif font-semibold text-[#12312D]">
+          <h3 className="text-lg font-semibold text-[#12312D]">
             {isPending ? "Request Pending" : "Members Only"}
           </h3>
           <p className="mx-auto mt-2 max-w-sm text-sm text-[#58706B]">
@@ -598,6 +621,13 @@ export default function HubClient({
           coverImageSrc={coverImageSrc}
           hubCTAs={hubCTAs}
           onOpenCTAEditor={() => setIsCTAEditorOpen(true)}
+          onSaveDescription={async (desc: string) => {
+            const { updateHub } = await import("@/lib/services/hubs/update-hub");
+            await updateHub(hub.id, { description: desc });
+          }}
+          onOpenViewer={openViewer}
+          customSections={customSections}
+          onOpenSectionEditor={() => setIsSectionEditorOpen(true)}
         />
       );
     }
@@ -609,6 +639,28 @@ export default function HubClient({
           fileItems={fileItems}
           hubName={hubName}
           onOpenViewer={openViewer}
+          isCreatorAdmin={isCreatorAdmin}
+          isUploadingGallery={isUploadingGallery}
+          onOpenGalleryUpload={() => galleryInputRef.current?.click()}
+          galleryInputRef={galleryInputRef}
+          onGalleryChange={handleMediaFileChange("gallery")}
+        />
+      );
+    }
+    if (activeSection === "Events") {
+      return (
+        <EventsSection
+          events={hubContent.events}
+          highlightedItemId={highlightedItemId}
+          onViewEventUpdate={(focusId) => navigateToFocus(focusId, "Posts")}
+        />
+      );
+    }
+    if (activeSection === "Reviews") {
+      return (
+        <ReviewsSection
+          hubName={hubName}
+          isCreatorAdmin={isCreatorAdmin}
         />
       );
     }
@@ -761,7 +813,7 @@ export default function HubClient({
                 </svg>
               )}
             </div>
-            <h3 className="text-center text-lg font-serif font-semibold text-[#12312D]">
+            <h3 className="text-center text-lg font-semibold text-[#12312D]">
               {isPending ? "Request Sent!" : "Welcome to " + hubName + "!"}
             </h3>
             <p className="mx-auto mt-2 max-w-xs text-center text-sm text-[#58706B]">
@@ -798,7 +850,7 @@ export default function HubClient({
         <div className="fixed inset-0 z-[118] flex items-center justify-center bg-[#111111]/45 p-4">
           <div className={cn(CARD, "w-full max-w-md p-5")}>
             <div>
-              <h3 className="text-lg font-serif font-semibold tracking-tight text-[#111111]">You have unsaved changes</h3>
+              <h3 className="text-lg font-semibold tracking-tight text-[#111111]">You have unsaved changes</h3>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">Save your hub settings before switching tabs, or discard your edits.</p>
             </div>
 
@@ -837,7 +889,7 @@ export default function HubClient({
           <div className={cn(CARD, "w-full max-w-md p-5")}>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-lg font-serif font-semibold tracking-tight text-[#111111]">
+                <h3 className="text-lg font-semibold tracking-tight text-[#111111]">
                   {mediaChooserTarget === "dp" ? "Change Display Picture" : "Change Cover Image"}
                 </h3>
                 <p className="mt-1 text-sm text-slate-600">Choose an existing album photo or upload a new one.</p>
@@ -1009,7 +1061,7 @@ export default function HubClient({
         ? createPortal(
             <div className="fixed inset-0 z-[230] flex items-center justify-center bg-[rgba(15,23,42,0.72)] p-4">
               <div className={cn(CARD, "w-full max-w-sm p-5")}>
-                <h4 className="text-xl font-serif font-semibold tracking-tight text-[#111111]">Discard this deet?</h4>
+                <h4 className="text-xl font-semibold tracking-tight text-[#111111]">Discard this deet?</h4>
                 <p className="mt-2 text-sm leading-relaxed text-slate-600">You have unsaved text or attached content. If you leave now, those changes will be lost.</p>
                 <div className="mt-5 flex justify-end gap-3">
                   <button type="button" onClick={() => setActiveComposerChild(null)} className={BUTTON_SECONDARY}>
@@ -1026,33 +1078,60 @@ export default function HubClient({
         : null}
 
       {viewer.open ? (
-        <div className="fixed inset-0 z-[120] flex bg-black/85">
-          <div className="relative flex min-w-0 flex-1 items-center justify-center p-6">
-            <button type="button" onClick={closeViewer} className="absolute right-6 top-6 z-20 rounded-full bg-white/15 p-2 text-white transition hover:bg-white/25">
+        <div className="fixed inset-0 z-[120] flex flex-col bg-black/90 lg:flex-row">
+          {/* Image area */}
+          <div className="relative flex min-h-0 flex-1 items-center justify-center p-4 lg:p-6">
+            {/* Close button */}
+            <button type="button" onClick={closeViewer} className="absolute right-4 top-4 z-20 rounded-full bg-white/15 p-2 text-white transition hover:bg-white/25 lg:right-6 lg:top-6">
               <X className="h-5 w-5 stroke-[1.8]" />
             </button>
+
+            {/* Image counter */}
+            {viewer.images.length > 1 ? (
+              <div className="absolute left-4 top-4 z-20 rounded-full bg-black/50 px-3 py-1 text-xs font-medium text-white lg:left-6 lg:top-6">
+                {viewer.index + 1} / {viewer.images.length}
+              </div>
+            ) : null}
+
+            {/* Navigation arrows */}
             {viewer.images.length > 1 ? (
               <>
-                <button type="button" onClick={prevViewerImage} className="absolute left-6 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/15 text-white transition hover:bg-white/25">
+                <button type="button" onClick={prevViewerImage} className="absolute left-3 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/15 text-white transition hover:bg-white/25 lg:left-6">
                   <ChevronLeft className="h-5 w-5 stroke-[1.8]" />
                 </button>
-                <button type="button" onClick={nextViewerImage} className="absolute right-[376px] top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/15 text-white transition hover:bg-white/25">
+                <button type="button" onClick={nextViewerImage} className="absolute right-3 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/15 text-white transition hover:bg-white/25 lg:right-6">
                   <ChevronRight className="h-5 w-5 stroke-[1.8]" />
                 </button>
               </>
             ) : null}
-            <img src={viewer.images[viewer.index]} alt="Hub photo" className="max-h-[85vh] max-w-[65vw] rounded-3xl object-contain" />
+
+            {/* Image */}
+            <img src={viewer.images[viewer.index]} alt="Hub photo" className="max-h-[60vh] max-w-full rounded-2xl object-contain lg:max-h-[85vh] lg:max-w-[65vw] lg:rounded-3xl" />
           </div>
 
-          <aside className="hidden w-[360px] shrink-0 flex-col border-l border-white/20 bg-white p-5 lg:flex">
+          {/* Engagement panel — bottom sheet on mobile, sidebar on desktop */}
+          <div className="shrink-0 rounded-t-2xl bg-white p-4 lg:flex lg:w-[360px] lg:flex-col lg:rounded-none lg:border-l lg:border-white/20 lg:p-5">
             <h3 className="text-base font-semibold tracking-tight text-[#111111]">{viewer.title || "Photo"}</h3>
-            <p className="mt-2 text-sm text-slate-600">{viewer.body || "Shared from this hub."}</p>
-            <div className="mt-4 space-y-2 rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">
-              <p>Comments</p>
-              <p>• Great update from the hub team.</p>
-              <p>• Looking forward to this event.</p>
+            <p className="mt-1 text-sm text-slate-600 lg:mt-2">{viewer.body || "Shared from this hub."}</p>
+
+            {/* Engagement metrics */}
+            <div className="mt-3 flex items-center gap-4 text-sm text-slate-500 lg:mt-4">
+              <span className="inline-flex items-center gap-1">
+                <Eye className="h-3.5 w-3.5" />
+                0 views
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Heart className="h-3.5 w-3.5" />
+                0 likes
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <MessageSquare className="h-3.5 w-3.5" />
+                0 comments
+              </span>
             </div>
-            <div className="mt-4 flex items-center gap-4 text-sm text-slate-600">
+
+            {/* Action buttons */}
+            <div className="mt-3 flex items-center gap-3 border-t border-slate-100 pt-3 text-sm text-slate-600 lg:mt-4 lg:pt-4">
               <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[#0C5C57]">
                 <Heart className={ICON} />
                 Like
@@ -1061,18 +1140,32 @@ export default function HubClient({
                 <MessageSquare className={ICON} />
                 Comment
               </button>
+              <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[#0C5C57]">
+                <Share2 className={ICON} />
+                Share
+              </button>
             </div>
-            <button
-              type="button"
-              className={cn(BUTTON_PRIMARY, "mt-auto w-full")}
-              onClick={() => {
-                closeViewer();
-                if (viewer.focusId) navigateToFocus(viewer.focusId, "Posts");
-              }}
-            >
-              Show the post
-            </button>
-          </aside>
+
+            {/* Comments area — hidden on mobile for compact view */}
+            <div className="mt-3 hidden max-h-[200px] overflow-y-auto rounded-xl bg-slate-50 p-3 text-sm text-slate-500 lg:mt-4 lg:block">
+              <p className="font-medium text-slate-600">Comments</p>
+              <p className="mt-2 italic text-slate-400">No comments yet. Be the first to comment.</p>
+            </div>
+
+            {/* Show the post button */}
+            {viewer.focusId ? (
+              <button
+                type="button"
+                className={cn(BUTTON_PRIMARY, "mt-3 w-full lg:mt-auto")}
+                onClick={() => {
+                  closeViewer();
+                  navigateToFocus(viewer.focusId!, "Posts");
+                }}
+              >
+                Show the post
+              </button>
+            ) : null}
+          </div>
         </div>
       ) : null}
 
@@ -1081,7 +1174,7 @@ export default function HubClient({
           <div className={cn(CARD, "w-full max-w-md p-5")}>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-lg font-serif font-semibold tracking-tight text-[#111111]">Edit Connect</h3>
+                <h3 className="text-lg font-semibold tracking-tight text-[#111111]">Edit Connect</h3>
                 <p className="mt-1 text-sm text-slate-600">Add or update the links shown in this section.</p>
               </div>
               <button type="button" onClick={closeConnectEditor} className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50" aria-label="Close connect editor">
@@ -1133,7 +1226,7 @@ export default function HubClient({
           <div className={cn(CARD, "w-full max-w-md p-5")}>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-lg font-serif font-semibold tracking-tight text-[#111111]">Hub Admin Tools</h3>
+                <h3 className="text-lg font-semibold tracking-tight text-[#111111]">Hub Admin Tools</h3>
                 <p className="mt-1 text-sm text-slate-600">This is a simple first pass for future admin management.</p>
               </div>
               <button type="button" onClick={() => setIsAdminsEditorOpen(false)} className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50" aria-label="Close admin tools">
@@ -1166,6 +1259,16 @@ export default function HubClient({
           existingCTAs={hubCTAs}
           onClose={() => setIsCTAEditorOpen(false)}
           onSaved={(saved) => setHubCTAs(saved)}
+        />
+      ) : null}
+
+      {/* Custom Section Editor Modal */}
+      {isSectionEditorOpen ? (
+        <CustomSectionEditorModal
+          hubId={hub.id}
+          sections={customSections}
+          onClose={() => setIsSectionEditorOpen(false)}
+          onSaved={(saved) => setCustomSections(saved)}
         />
       ) : null}
     </div>

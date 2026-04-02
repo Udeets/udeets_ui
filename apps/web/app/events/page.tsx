@@ -23,7 +23,7 @@ export default function EventsPage() {
   return (
     <MockAppShell activeNav="events">
       <section className="mb-4">
-        <h1 className="text-3xl font-serif font-semibold tracking-tight text-[#111111]">Events</h1>
+        <h1 className="text-3xl font-semibold tracking-tight text-[#111111]">Events</h1>
         <p className="mt-2 text-sm leading-relaxed text-slate-600">
           Discover events across your hubs, communities, and favorite local places.
         </p>
@@ -69,7 +69,7 @@ export default function EventsPage() {
             filteredEvents.map((event) => <EventCard key={event.id} event={event} />)
           ) : (
             <div className={cardClass("p-6 text-center lg:col-span-2")}>
-              <h3 className="text-xl font-serif font-semibold text-[#111111]">No events yet</h3>
+              <h3 className="text-xl font-semibold text-[#111111]">No events yet</h3>
               <p className="mt-3 text-sm leading-relaxed text-slate-600">
                 Events will appear here once hubs start publishing them.
               </p>

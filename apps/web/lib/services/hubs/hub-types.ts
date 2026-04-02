@@ -59,6 +59,7 @@ export interface CreateHubInput {
   name: string;
   slug: string;
   category: HubCategory;
+  visibility?: HubVisibility;
   tagline?: string;
   description?: string;
   city?: string;
@@ -70,6 +71,7 @@ export interface CreateHubInput {
 
 export interface UpdateHubInput {
   name?: string | null;
+  description?: string | null;
   category?: HubCategory;
   websiteUrl?: string | null;
   facebookUrl?: string | null;
@@ -99,6 +101,7 @@ export interface HubRecord {
   instagram_url: string | null;
   youtube_url: string | null;
   phone_number?: string | null;
+  visibility?: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;

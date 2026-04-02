@@ -56,7 +56,7 @@ export function AdminsSection({
                 <UserCog className="h-3.5 w-3.5" />
                 Admin workspace
               </div>
-              <h3 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-[#111111] sm:text-4xl">Keep {headerHubName} running smoothly</h3>
+              <h3 className="mt-4 text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">Keep {headerHubName} running smoothly</h3>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
                 Review the current community footprint, see what activity is already happening, and jump into the most useful management actions for this hub.
               </p>
@@ -87,7 +87,7 @@ export function AdminsSection({
 
         <section>
           <div className="mb-4">
-            <h3 className="text-2xl font-serif font-semibold tracking-tight text-[#111111]">Operational snapshot</h3>
+            <h3 className="text-2xl font-semibold tracking-tight text-[#111111]">Operational snapshot</h3>
             <p className="mt-1 text-sm text-slate-600">A quick KPI view built from the hub data that is available right now.</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -102,7 +102,7 @@ export function AdminsSection({
                   <StatIcon className={ICON} />
                 </span>
                 <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-                <p className="mt-2 text-3xl font-serif font-semibold tracking-tight text-[#111111]">{value}</p>
+                <p className="mt-2 text-3xl font-semibold tracking-tight text-[#111111]">{value}</p>
                 <p className="mt-2 text-sm leading-relaxed text-slate-500">{helper}</p>
               </article>
             ))}
@@ -111,7 +111,7 @@ export function AdminsSection({
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
           <div className="rounded-[24px] bg-[#F7FBFA] p-6 shadow-sm ring-1 ring-[#0C5C57]/6">
-            <h3 className="text-2xl font-serif font-semibold tracking-tight text-[#111111]">Engagement overview</h3>
+            <h3 className="text-2xl font-semibold tracking-tight text-[#111111]">Engagement overview</h3>
             <p className="mt-1 text-sm text-slate-600">Track what is already happening in deets, announcements, and community interactions.</p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               {[
@@ -136,16 +136,16 @@ export function AdminsSection({
           </div>
 
           <div className="rounded-[24px] bg-[#F7FBFA] p-6 shadow-sm ring-1 ring-[#0C5C57]/6">
-            <h3 className="text-2xl font-serif font-semibold tracking-tight text-[#111111]">Reach and participation</h3>
+            <h3 className="text-2xl font-semibold tracking-tight text-[#111111]">Reach and participation</h3>
             <p className="mt-1 text-sm text-slate-600">A quick read on how visible and active this hub currently appears.</p>
             <div className="mt-5 grid gap-3">
               <div className="rounded-[20px] bg-white p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Events in motion</p>
-                <p className="mt-2 text-2xl font-serif font-semibold tracking-tight text-[#111111]">{eventCount}</p>
+                <p className="mt-2 text-2xl font-semibold tracking-tight text-[#111111]">{eventCount}</p>
               </div>
               <div className="rounded-[20px] bg-white p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Recent gallery activity</p>
-                <p className="mt-2 text-2xl font-serif font-semibold tracking-tight text-[#111111]">{recentPhotoCount}</p>
+                <p className="mt-2 text-2xl font-semibold tracking-tight text-[#111111]">{recentPhotoCount}</p>
               </div>
               <div className="rounded-[20px] bg-white p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Pending admin workflows</p>
@@ -157,7 +157,7 @@ export function AdminsSection({
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.8fr)]">
           <div className="rounded-[24px] bg-[#F7FBFA] p-6 shadow-sm ring-1 ring-[#0C5C57]/6">
-            <h3 className="text-2xl font-serif font-semibold tracking-tight text-[#111111]">Admin tools</h3>
+            <h3 className="text-2xl font-semibold tracking-tight text-[#111111]">Admin tools</h3>
             <p className="mt-1 text-sm text-slate-600">Shortcuts into the management actions that already exist today.</p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <button type="button" onClick={onInviteMembers} className="rounded-[20px] bg-white p-4 text-left transition hover:-translate-y-0.5 hover:shadow-sm">
@@ -208,7 +208,7 @@ export function AdminsSection({
           </div>
 
           <div className="rounded-[24px] bg-[#F7FBFA] p-6 shadow-sm ring-1 ring-[#0C5C57]/6">
-            <h3 className="text-2xl font-serif font-semibold tracking-tight text-[#111111]">Operational notes</h3>
+            <h3 className="text-2xl font-semibold tracking-tight text-[#111111]">Operational notes</h3>
             <p className="mt-1 text-sm text-slate-600">Areas that can evolve as deeper admin analytics are added later.</p>
             <div className="mt-5 space-y-3">
               {[

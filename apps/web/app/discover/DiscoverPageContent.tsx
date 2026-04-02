@@ -17,10 +17,10 @@ const SECTION_MINT_BG = "bg-white";
 const HERO_ACCENT_BG = SECTION_MINT_BG;
 const NAV_TEXT = "text-[#111111]";
 const BRAND_TEXT_STYLE = "text-xl sm:text-2xl";
-const DISPLAY_HEADING = "font-serif font-semibold tracking-tight text-[#111111]";
-const FILTER_TEXT = "font-serif font-semibold tracking-tight";
-const ACTION_TEXT = "font-serif font-semibold tracking-tight text-[#111111]";
-const BUTTON_PRIMARY = "rounded-full bg-[#0C5C57] px-6 py-3 text-sm font-serif font-semibold tracking-tight text-white hover:bg-[#094a46]";
+const DISPLAY_HEADING = "font-semibold tracking-tight text-[#111111]";
+const FILTER_TEXT = "font-semibold tracking-tight";
+const ACTION_TEXT = "font-semibold tracking-tight text-[#111111]";
+const BUTTON_PRIMARY = "rounded-full bg-[#0C5C57] px-6 py-3 text-sm font-semibold tracking-tight text-white hover:bg-[#094a46]";
 const ACTIVE_CHIP = "bg-[#0C5C57] text-white border-transparent";
 
 const ROUTE_AUTH = "/auth";
@@ -274,7 +274,7 @@ function CarouselSection({ title, hubs }: { title: string; hubs: Hub[] }) {
           hubs.map((h) => <HubCard key={h.id} hub={h} />)
         ) : (
           <div className="w-full rounded-xl border border-slate-100 bg-white p-8 text-center shadow-sm">
-            <h3 className="text-xl font-serif font-semibold tracking-tight text-[#111111]">No hubs yet</h3>
+            <h3 className="text-xl font-semibold tracking-tight text-[#111111]">No hubs yet</h3>
             <p className="mt-3 text-sm leading-relaxed text-slate-600">
               Create the first hub to see it appear here.
             </p>

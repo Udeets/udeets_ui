@@ -1,9 +1,12 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { Camera, Facebook, Globe, Instagram, Loader2, MapPin, Phone, Pencil, Settings, UsersRound, Youtube } from "lucide-react";
+import { Camera, Check, Facebook, Globe, Instagram, Loader2, MapPin, Pencil, Phone, Settings, UsersRound, X, Youtube } from "lucide-react";
+import { useState } from "react";
 import type { HubCTARecord } from "@/lib/services/ctas/cta-types";
+import type { HubSection } from "@/lib/services/sections/section-types";
 import { CTADisplay } from "../ctas/CTADisplay";
+import { CustomSectionDisplay } from "./custom/CustomSectionDisplay";
 import { ACTION_ICON, ACTION_ICON_BUTTON, CARD, displayLinkValue, ImageWithFallback, initials, cn } from "../hubUtils";
 
 export function AboutSection({
@@ -40,6 +43,10 @@ export function AboutSection({
   coverImageSrc,
   hubCTAs,
   onOpenCTAEditor,
+  onSaveDescription,
+  onOpenViewer,
+  customSections,
+  onOpenSectionEditor,
 }: {
   CategoryIcon: LucideIcon;
   categoryLabel: string;
@@ -74,7 +81,35 @@ export function AboutSection({
   coverImageSrc: string;
   hubCTAs?: HubCTARecord[];
   onOpenCTAEditor?: () => void;
+  onSaveDescription?: (description: string) => Promise<void>;
+  onOpenViewer?: (images: string[], index: number, title: string, body: string) => void;
+  customSections?: HubSection[];
+  onOpenSectionEditor?: () => void;
 }) {
+  const [isEditingDesc, setIsEditingDesc] = useState(false);
+  const [draftDesc, setDraftDesc] = useState(hubDescription);
+  const [isSavingDesc, setIsSavingDesc] = useState(false);
+
+  const handleStartEditDesc = () => {
+    setDraftDesc(hubDescription || "");
+    setIsEditingDesc(true);
+  };
+
+  const handleSaveDesc = async () => {
+    if (!onSaveDescription) return;
+    setIsSavingDesc(true);
+    try {
+      await onSaveDescription(draftDesc);
+      setIsEditingDesc(false);
+    } finally {
+      setIsSavingDesc(false);
+    }
+  };
+
+  const handleCancelEditDesc = () => {
+    setDraftDesc(hubDescription || "");
+    setIsEditingDesc(false);
+  };
   const connectItems = [
     { icon: Globe,     label: "Website",   value: connectLinks.website,   href: connectLinks.website },
     { icon: Phone,     label: "Phone",     value: connectLinks.phone,     href: connectLinks.phone ? `tel:${connectLinks.phone}` : "" },
@@ -120,22 +155,49 @@ export function AboutSection({
               ) : null}
             </div>
           </div>
-          <div className="mt-1.5">
-            {hubDescription ? (
-              <p className="truncate text-sm text-slate-500">{hubDescription}</p>
-            ) : null}
-            {!hubDescription && !hubTagline && isCreatorAdmin ? (
-              <div className="mt-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                <span className="font-medium text-[#111111]">Add a description</span>
-                {" — "}Tell people what {hubName} is about, who it&apos;s for, and what they can expect.{" "}
-                <button
-                  type="button"
-                  onClick={onOpenSettings}
-                  className="text-[#0C5C57] underline underline-offset-2 transition hover:opacity-80"
-                >
-                  Add now →
-                </button>
+
+          {/* Editable description */}
+          <div className="mt-2">
+            {isEditingDesc ? (
+              <div className="space-y-2">
+                <textarea
+                  value={draftDesc}
+                  onChange={(e) => setDraftDesc(e.target.value.slice(0, 300))}
+                  placeholder={`Tell people what ${hubName} is about, who it's for, and what they can expect...`}
+                  rows={3}
+                  autoFocus
+                  className="w-full rounded-lg border border-[#A9D1CA] bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:ring-2 focus:ring-[#A9D1CA]"
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-400">{draftDesc.length}/300</span>
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={handleCancelEditDesc} disabled={isSavingDesc} className="rounded-lg border border-slate-200 p-1.5 text-slate-500 transition hover:bg-slate-50">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                    <button type="button" onClick={handleSaveDesc} disabled={isSavingDesc} className="rounded-lg bg-[#0C5C57] p-1.5 text-white transition hover:bg-[#094a46]">
+                      {isSavingDesc ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                    </button>
+                  </div>
+                </div>
               </div>
+            ) : hubDescription ? (
+              <div className="group flex items-start gap-2">
+                <p className="text-sm leading-relaxed text-slate-600">{hubDescription}</p>
+                {isCreatorAdmin ? (
+                  <button type="button" onClick={handleStartEditDesc} className="shrink-0 rounded p-1 text-slate-400 opacity-0 transition hover:text-[#0C5C57] group-hover:opacity-100" aria-label="Edit description">
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                ) : null}
+              </div>
+            ) : isCreatorAdmin ? (
+              <button
+                type="button"
+                onClick={handleStartEditDesc}
+                className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm text-slate-500 transition hover:border-[#A9D1CA]"
+              >
+                <span className="font-medium text-[#111111]">Add a description</span>
+                {" — "}Tell people what {hubName} is about, who it&apos;s for, and what they can expect.
+              </button>
             ) : null}
           </div>
         </div>
@@ -241,7 +303,11 @@ export function AboutSection({
                 <input ref={galleryInputRef} type="file" accept="image/*" onChange={onGalleryChange} className="hidden" />
 
                 {photoStack.length > 0 ? (
-                  <div className="mt-3 flex items-center justify-start">
+                  <button
+                    type="button"
+                    onClick={() => onOpenViewer?.(recentPhotos, 0, `${hubName} Album`, "Recent photos from this hub.")}
+                    className="mt-3 flex items-center justify-start"
+                  >
                     <div className="relative h-36 w-36">
                       {photoStack.map((photo, i) => (
                         <div
@@ -268,7 +334,7 @@ export function AboutSection({
                         </div>
                       ) : null}
                     </div>
-                  </div>
+                  </button>
                 ) : (
                   <div className="mt-3 flex items-center gap-3 rounded-xl bg-[#F7FBFA] px-4 py-3">
                     <Camera className="h-4 w-4 shrink-0 text-slate-400" />
@@ -283,6 +349,17 @@ export function AboutSection({
                 )}
               </div>
             ) : null}
+          </div>
+        ) : null}
+
+        {/* BLOCK 2.5 — Custom sections */}
+        {((customSections && customSections.length > 0) || isCreatorAdmin) ? (
+          <div className="border-b border-slate-100 pb-5">
+            <CustomSectionDisplay
+              sections={customSections ?? []}
+              isCreatorAdmin={isCreatorAdmin}
+              onEdit={onOpenSectionEditor}
+            />
           </div>
         ) : null}
 

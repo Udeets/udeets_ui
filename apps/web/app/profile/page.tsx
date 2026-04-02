@@ -274,7 +274,7 @@ export default function ProfilePage() {
         <aside className={cardClass("h-fit p-5 sm:p-6")}>
           <div className="mb-5">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Profile Menu</p>
-            <h1 className="mt-2 text-2xl font-serif font-semibold tracking-tight text-[#111111]">{activeTab}</h1>
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[#111111]">{activeTab}</h1>
           </div>
           <nav className="space-y-2">
             {SIDEBAR_ITEMS.map((item) => {
@@ -335,7 +335,7 @@ export default function ProfilePage() {
                     </button>
                   </div>
                   <div className="min-w-0 pt-1">
-                    <h2 className="text-2xl font-serif font-semibold tracking-tight text-[#111111]">
+                    <h2 className="text-2xl font-semibold tracking-tight text-[#111111]">
                       {isLoadingProfile ? "Loading..." : displayName}
                     </h2>
                     <p className="mt-1 text-sm text-slate-500">{displayEmail}</p>

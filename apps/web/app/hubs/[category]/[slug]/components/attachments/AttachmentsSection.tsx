@@ -1,8 +1,8 @@
 "use client";
 
-import { Images, Paperclip } from "lucide-react";
+import { Images, Loader2, Paperclip, Plus } from "lucide-react";
 import { SectionShell } from "../SectionShell";
-import { ICON, ImageWithFallback, PREMIUM_ICON_WRAPPER } from "../hubUtils";
+import { cn, ImageWithFallback } from "../hubUtils";
 
 export function AttachmentsSection({
   activeAttachmentView,
@@ -10,127 +10,104 @@ export function AttachmentsSection({
   fileItems,
   hubName,
   onOpenViewer,
+  isCreatorAdmin,
+  isUploadingGallery,
+  onOpenGalleryUpload,
+  galleryInputRef,
+  onGalleryChange,
 }: {
   activeAttachmentView: "photos" | "files";
   recentPhotos: string[];
   fileItems: string[];
   hubName: string;
   onOpenViewer: (images: string[], index: number, title: string, body: string) => void;
+  isCreatorAdmin?: boolean;
+  isUploadingGallery?: boolean;
+  onOpenGalleryUpload?: () => void;
+  galleryInputRef?: React.RefObject<HTMLInputElement | null>;
+  onGalleryChange?: React.ChangeEventHandler<HTMLInputElement>;
 }) {
-  const blocks =
-    activeAttachmentView === "files"
-      ? [
-          {
-            key: "files" as const,
-            title: "Files",
-            description: "Shared guides, forms, and reference files for this hub.",
-          },
-          {
-            key: "photos" as const,
-            title: "Photos",
-            description: "Recent images and visual moments shared by this hub.",
-          },
-        ]
-      : [
-          {
-            key: "photos" as const,
-            title: "Photos",
-            description: "Recent images and visual moments shared by this hub.",
-          },
-          {
-            key: "files" as const,
-            title: "Files",
-            description: "Shared guides, forms, and reference files for this hub.",
-          },
-        ];
-
   return (
-    <SectionShell title="Attachments" description="Photos and files connected to this hub, gathered in one place.">
-      <div className="w-full space-y-4">
-        {blocks.map((block) =>
-          block.key === "photos" ? (
-            <section key={block.key} className="rounded-[24px] bg-[#F7FBFA] p-6 shadow-sm ring-1 ring-[#0C5C57]/6">
-              <div>
-                <div className="flex items-center gap-3">
-                  <span className={PREMIUM_ICON_WRAPPER}>
-                    <Images className={ICON} />
-                  </span>
-                  <div>
-                    <h3 className="text-2xl font-serif font-semibold tracking-tight text-[#111111]">{block.title}</h3>
-                    <p className="mt-1 text-sm text-slate-600">{block.description}</p>
-                  </div>
+    <SectionShell
+      title="Attachments"
+      description="Photos and files shared in this hub."
+      actions={
+        isCreatorAdmin && onOpenGalleryUpload ? (
+          <>
+            {galleryInputRef ? <input ref={galleryInputRef} type="file" accept="image/*" onChange={onGalleryChange} className="hidden" /> : null}
+            <button
+              type="button"
+              onClick={onOpenGalleryUpload}
+              disabled={isUploadingGallery}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-[#A9D1CA] hover:text-[#0C5C57]",
+                isUploadingGallery && "cursor-not-allowed opacity-60"
+              )}
+            >
+              {isUploadingGallery ? <><Loader2 className="h-3 w-3 animate-spin" /> Uploading</> : <><Plus className="h-3 w-3" /> Add Photo</>}
+            </button>
+          </>
+        ) : undefined
+      }
+    >
+      {/* Photos grid */}
+      <div>
+        <div className="flex items-center gap-2 pb-3">
+          <Images className="h-4 w-4 text-slate-400" />
+          <span className="text-sm font-medium text-[#111111]">Photos</span>
+          <span className="text-xs text-slate-400">{recentPhotos.length}</span>
+        </div>
+
+        {recentPhotos.length > 0 ? (
+          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-5">
+            {recentPhotos.map((img, index) => (
+              <button
+                key={`${img}-${index}`}
+                type="button"
+                onClick={() => onOpenViewer(recentPhotos, index, `${hubName} Album`, "Recent photos from this hub.")}
+                className="group relative aspect-square overflow-hidden rounded-lg bg-slate-100"
+              >
+                <ImageWithFallback
+                  src={img}
+                  sources={[img]}
+                  alt={`${hubName} photo ${index + 1}`}
+                  className="h-full w-full object-cover transition group-hover:scale-105"
+                  fallbackClassName="grid h-full w-full place-items-center bg-slate-100 text-xs text-slate-400"
+                  fallback="Photo"
+                />
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl bg-slate-50 px-4 py-8 text-center">
+            <p className="text-sm text-slate-500">No photos yet</p>
+          </div>
+        )}
+      </div>
+
+      {/* Files */}
+      <div className="mt-6">
+        <div className="flex items-center gap-2 pb-3">
+          <Paperclip className="h-4 w-4 text-slate-400" />
+          <span className="text-sm font-medium text-[#111111]">Files</span>
+          <span className="text-xs text-slate-400">{fileItems.length}</span>
+        </div>
+
+        {fileItems.length > 0 ? (
+          <div className="space-y-2">
+            {fileItems.map((file) => (
+              <div key={file} className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5">
+                <Paperclip className="h-4 w-4 shrink-0 text-slate-400" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-[#111111]">{file}</p>
                 </div>
               </div>
-
-              {recentPhotos.length ? (
-                <div className="mt-5 grid w-full gap-3 sm:grid-cols-2">
-                  {recentPhotos.map((img, index) => (
-                    <button
-                      key={`${img}-${index}`}
-                      type="button"
-                      className="overflow-hidden rounded-2xl border border-slate-100 bg-white p-0"
-                      onClick={() => onOpenViewer(recentPhotos, index, `${hubName} Album`, "Recent photos from this hub.")}
-                    >
-                      <div className="aspect-square">
-                        <ImageWithFallback
-                          src={img}
-                          sources={[img, ...recentPhotos.filter((photo) => photo !== img)]}
-                          alt={`${hubName} album ${index + 1}`}
-                          className="h-full w-full object-cover"
-                          fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA]/25 text-sm font-medium text-[#0C5C57]"
-                          fallback="Photo"
-                        />
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-5 grid min-h-[240px] w-full place-items-center text-center">
-                  <div className="w-full">
-                    <h4 className="text-xl font-serif font-semibold tracking-tight text-[#111111]">No photos yet</h4>
-                    <p className="mt-3 text-sm leading-relaxed text-slate-600">Add photos later to bring this hub to life.</p>
-                  </div>
-                </div>
-              )}
-            </section>
-          ) : (
-            <section key={block.key} className="rounded-[24px] bg-[#F7FBFA] p-6 shadow-sm ring-1 ring-[#0C5C57]/6">
-              <div className="flex items-center gap-3">
-                <span className={PREMIUM_ICON_WRAPPER}>
-                  <Paperclip className={ICON} />
-                </span>
-                <div>
-                  <h3 className="text-2xl font-serif font-semibold tracking-tight text-[#111111]">{block.title}</h3>
-                  <p className="mt-1 text-sm text-slate-600">{block.description}</p>
-                </div>
-              </div>
-
-              {fileItems.length ? (
-                <div className="mt-5 w-full space-y-3">
-                  {fileItems.map((file) => (
-                    <div key={file} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white p-4">
-                      <div className="flex items-center gap-3">
-                        <span className={PREMIUM_ICON_WRAPPER}>
-                          <Paperclip className={ICON} />
-                        </span>
-                        <div>
-                          <p className="text-sm font-semibold text-[#111111]">{file}</p>
-                          <p className="text-xs text-slate-500">Mock shared file</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-5 grid min-h-[240px] w-full place-items-center text-center">
-                  <div className="w-full">
-                    <h4 className="text-xl font-serif font-semibold tracking-tight text-[#111111]">No files yet</h4>
-                    <p className="mt-3 text-sm leading-relaxed text-slate-600">Shared guides, forms, and resources will appear here.</p>
-                  </div>
-                </div>
-              )}
-            </section>
-          )
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl bg-slate-50 px-4 py-8 text-center">
+            <p className="text-sm text-slate-500">No files yet</p>
+          </div>
         )}
       </div>
     </SectionShell>

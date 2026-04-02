@@ -86,7 +86,7 @@ export function toHubRecord(hub: DbHubRecord): HubRecord {
     locationLabel,
     distanceMi: 0,
     membersLabel: String(membersCount),
-    visibility: "Public",
+    visibility: hub.visibility === "private" ? "Private" : "Public",
     description,
     tagline: hub.tagline || `${hub.name} on uDeets`,
     intro: description,

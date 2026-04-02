@@ -246,7 +246,7 @@ function HubLauncher({
             </div>
           ) : null}
           <div className="mt-5 rounded-[24px] bg-[#F6FBFA] px-6 py-10 text-center">
-            <h3 className={cn("text-xl font-serif font-semibold tracking-tight", TEXT_DARK)}>
+            <h3 className={cn("text-xl font-semibold tracking-tight", TEXT_DARK)}>
               {empty.title}
             </h3>
             <p className={cn("mx-auto mt-3 max-w-xl text-sm leading-6 sm:text-base", TEXT_MUTED)}>
@@ -476,7 +476,7 @@ function DashboardPageContent() {
         <UdeetsHeader />
         <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 md:pb-6 lg:px-10">
           <section className={cn(CARD, "p-6 text-center")}>
-            <h1 className={cn("text-2xl font-serif font-semibold tracking-tight", TEXT_DARK)}>Loading dashboard...</h1>
+            <h1 className={cn("text-2xl font-semibold tracking-tight", TEXT_DARK)}>Loading dashboard...</h1>
             <p className={cn("mt-3 text-sm leading-relaxed", TEXT_MUTED)}>
               We&apos;re checking your session and loading your hubs.
             </p>
@@ -494,7 +494,7 @@ function DashboardPageContent() {
         <UdeetsHeader />
         <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 md:pb-6 lg:px-10">
           <section className={cn(CARD, "p-6 text-center")}>
-            <h1 className={cn("text-2xl font-serif font-semibold tracking-tight", TEXT_DARK)}>
+            <h1 className={cn("text-2xl font-semibold tracking-tight", TEXT_DARK)}>
               Redirecting to sign in...
             </h1>
             <p className={cn("mt-3 text-sm leading-relaxed", TEXT_MUTED)}>
@@ -515,7 +515,7 @@ function DashboardPageContent() {
       <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 md:pb-6 lg:px-10">
         {isLoadingHubs ? (
           <section className={cn(CARD, "mt-6 p-6 text-center sm:p-8")}>
-            <h2 className={cn("text-2xl font-serif font-semibold tracking-tight", TEXT_DARK)}>Loading your hubs...</h2>
+            <h2 className={cn("text-2xl font-semibold tracking-tight", TEXT_DARK)}>Loading your hubs...</h2>
             <p className={cn("mt-3 text-sm leading-6 sm:text-base", TEXT_MUTED)}>
               We&apos;re organizing your dashboard now.
             </p>
@@ -524,7 +524,7 @@ function DashboardPageContent() {
 
         {hubsLoadError ? (
           <section className={cn(CARD, "mt-6 p-6 text-center sm:p-8")}>
-            <h2 className={cn("text-2xl font-serif font-semibold tracking-tight", TEXT_DARK)}>
+            <h2 className={cn("text-2xl font-semibold tracking-tight", TEXT_DARK)}>
               We couldn&apos;t load your dashboard
             </h2>
             <p className="mt-3 text-sm leading-6 text-rose-700 sm:text-base">{hubsLoadError}</p>
@@ -543,7 +543,7 @@ function DashboardPageContent() {
             <section className={cn(CARD, "p-4 sm:p-5")}>
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className={cn("text-2xl font-serif font-semibold tracking-tight", TEXT_DARK)}>My Deets</h2>
+                  <h2 className={cn("text-2xl font-semibold tracking-tight", TEXT_DARK)}>My Deets</h2>
                 </div>
 
                 <div className="relative flex items-center gap-2">
@@ -683,7 +683,7 @@ function DashboardPageContent() {
                   </div>
                 ) : (
                   <div className="rounded-[24px] bg-[#F6FBFA] px-6 py-10 text-center">
-                    <h3 className={cn("text-xl font-serif font-semibold tracking-tight", TEXT_DARK)}>
+                    <h3 className={cn("text-xl font-semibold tracking-tight", TEXT_DARK)}>
                       No {selectedFeedFilter === "All" ? "deets" : selectedFeedFilter.toLowerCase()} yet
                     </h3>
                     <p className={cn("mx-auto mt-3 max-w-2xl text-sm leading-6 sm:text-base", TEXT_MUTED)}>

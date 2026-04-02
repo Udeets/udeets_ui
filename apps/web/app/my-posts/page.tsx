@@ -11,7 +11,7 @@ export default function MyPostsPage() {
   return (
     <MockAppShell activeNav="home">
       <section className="mb-4">
-        <h1 className="text-3xl font-serif font-semibold tracking-tight text-[#111111]">My Posts</h1>
+        <h1 className="text-3xl font-semibold tracking-tight text-[#111111]">My Posts</h1>
         <p className="mt-2 text-sm leading-relaxed text-slate-600">
           Manage the mock posts you have created for communities, events, and updates.
         </p>

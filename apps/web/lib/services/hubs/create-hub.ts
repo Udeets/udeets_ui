@@ -46,6 +46,7 @@ export async function createHub(input: CreateHubInput): Promise<HubRecord> {
     name,
     slug,
     category,
+    visibility: input.visibility ?? "public",
     tagline: normalizeText(input.tagline),
     description: normalizeText(input.description),
     city: normalizeText(input.city),

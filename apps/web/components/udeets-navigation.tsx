@@ -118,7 +118,7 @@ function NotificationsPanel() {
       className="absolute right-16 top-full z-[120] mt-3 w-[360px] rounded-3xl border border-slate-100 bg-white p-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)]"
     >
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-serif font-semibold text-[#111111]">Notifications</h3>
+        <h3 className="text-lg font-semibold text-[#111111]">Notifications</h3>
         <button type="button" className="text-sm font-medium text-[#0C5C57] hover:opacity-80">
           Mark all as read
         </button>
@@ -208,7 +208,7 @@ function EventsPanel() {
   return (
     <div className="absolute right-16 top-full z-[120] mt-3 w-[380px] rounded-3xl border border-slate-100 bg-white p-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-serif font-semibold text-[#111111]">Events</h3>
+        <h3 className="text-lg font-semibold text-[#111111]">Events</h3>
         <Link href="/events" className="text-sm font-medium text-[#0C5C57] hover:opacity-80">
           View all
         </Link>

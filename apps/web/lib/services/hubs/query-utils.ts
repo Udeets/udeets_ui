@@ -15,6 +15,7 @@ const HUB_COLUMNS_BASE = `
   facebook_url,
   instagram_url,
   youtube_url,
+  visibility,
   created_by,
   created_at,
   updated_at

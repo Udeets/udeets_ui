@@ -10,7 +10,7 @@ export function FilesSection({ fileItems }: { fileItems: string[] }) {
       {fileItems.length === 0 ? (
         <div className="grid min-h-[240px] w-full place-items-center text-center">
           <div className="w-full">
-            <h3 className="text-xl font-serif font-semibold tracking-tight text-[#111111]">No files yet</h3>
+            <h3 className="text-xl font-semibold tracking-tight text-[#111111]">No files yet</h3>
             <p className="mt-3 text-sm leading-relaxed text-slate-600">Shared guides, forms, and resources will appear here.</p>
           </div>
         </div>

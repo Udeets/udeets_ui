@@ -1,7 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { GripVertical, Loader2, Plus, Trash2, X } from "lucide-react";
+import {
+  ExternalLink,
+  FileText,
+  GripVertical,
+  Instagram,
+  Loader2,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Phone,
+  Plus,
+  Trash2,
+  UtensilsCrossed,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import {
   CTA_ACTION_TYPES,
   MAX_CTAS_PER_HUB,
@@ -19,30 +34,17 @@ interface CTADraft {
   is_visible: boolean;
 }
 
-const ACTION_LABELS: Record<CTAActionType, string> = {
-  url: "URL",
-  whatsapp: "WhatsApp",
-  phone: "Phone",
-  maps: "Maps / Address",
-  email: "Email",
-  doordash: "DoorDash",
-  ubereats: "UberEats",
-  opentable: "OpenTable",
-  instagram: "Instagram",
-  pdf: "PDF Link",
-};
-
-const ACTION_PLACEHOLDERS: Record<CTAActionType, string> = {
-  url: "https://example.com",
-  whatsapp: "+1234567890",
-  phone: "+1234567890",
-  maps: "123 Main St, City, ST",
-  email: "hello@example.com",
-  doordash: "https://doordash.com/store/...",
-  ubereats: "https://ubereats.com/store/...",
-  opentable: "https://opentable.com/...",
-  instagram: "https://instagram.com/handle",
-  pdf: "https://example.com/menu.pdf",
+const ACTION_CONFIG: Record<CTAActionType, { label: string; defaultCTALabel: string; placeholder: string; icon: LucideIcon }> = {
+  url: { label: "Website", defaultCTALabel: "Visit Website", placeholder: "https://example.com", icon: ExternalLink },
+  whatsapp: { label: "WhatsApp", defaultCTALabel: "Chat on WhatsApp", placeholder: "+1234567890", icon: MessageCircle },
+  phone: { label: "Call Us", defaultCTALabel: "Call Us", placeholder: "+1234567890", icon: Phone },
+  maps: { label: "Directions", defaultCTALabel: "Get Directions", placeholder: "123 Main St, City, ST", icon: MapPin },
+  email: { label: "Email", defaultCTALabel: "Send Email", placeholder: "hello@example.com", icon: Mail },
+  doordash: { label: "DoorDash", defaultCTALabel: "Order on DoorDash", placeholder: "https://doordash.com/store/...", icon: UtensilsCrossed },
+  ubereats: { label: "UberEats", defaultCTALabel: "Order on UberEats", placeholder: "https://ubereats.com/store/...", icon: UtensilsCrossed },
+  opentable: { label: "OpenTable", defaultCTALabel: "Reserve on OpenTable", placeholder: "https://opentable.com/...", icon: UtensilsCrossed },
+  instagram: { label: "Instagram", defaultCTALabel: "Follow on Instagram", placeholder: "https://instagram.com/handle", icon: Instagram },
+  pdf: { label: "PDF / Menu", defaultCTALabel: "View Menu", placeholder: "https://example.com/menu.pdf", icon: FileText },
 };
 
 function blankCTA(): CTADraft {
@@ -83,7 +85,18 @@ export function CTAEditorModal({
   const canAdd = drafts.length < MAX_CTAS_PER_HUB;
 
   const updateDraft = useCallback((index: number, patch: Partial<CTADraft>) => {
-    setDrafts((prev) => prev.map((d, i) => (i === index ? { ...d, ...patch } : d)));
+    setDrafts((prev) => prev.map((d, i) => {
+      if (i !== index) return d;
+      const updated = { ...d, ...patch };
+      // Auto-populate label when action type changes and label is empty or was auto-generated
+      if (patch.action_type && patch.action_type !== d.action_type) {
+        const oldDefault = ACTION_CONFIG[d.action_type].defaultCTALabel;
+        if (!d.label || d.label === oldDefault) {
+          updated.label = ACTION_CONFIG[patch.action_type].defaultCTALabel;
+        }
+      }
+      return updated;
+    }));
   }, []);
 
   const removeDraft = useCallback((index: number) => {
@@ -150,81 +163,88 @@ export function CTAEditorModal({
 
         {/* CTA list */}
         <div className="mt-4 max-h-[50vh] space-y-3 overflow-y-auto">
-          {drafts.map((draft, index) => (
-            <div
-              key={index}
-              className="rounded-xl border border-slate-200 bg-[#F7FBFA] p-3"
-            >
-              <div className="flex items-center gap-2">
-                {/* Reorder handle */}
-                <div className="flex flex-col gap-0.5">
+          {drafts.map((draft, index) => {
+            const config = ACTION_CONFIG[draft.action_type];
+            const TypeIcon = config.icon;
+            return (
+              <div
+                key={index}
+                className="rounded-xl border border-slate-200 bg-[#F7FBFA] p-3"
+              >
+                <div className="flex items-start gap-2">
+                  {/* Reorder handle */}
                   <button
                     type="button"
                     disabled={index === 0}
                     onClick={() => moveDraft(index, index - 1)}
-                    className="rounded p-0.5 text-slate-400 hover:text-slate-600 disabled:opacity-30"
+                    className="mt-2.5 rounded p-0.5 text-slate-400 hover:text-slate-600 disabled:opacity-30"
                     aria-label="Move up"
                   >
                     <GripVertical className="h-3.5 w-3.5" />
                   </button>
-                </div>
 
-                <div className="min-w-0 flex-1 space-y-2">
-                  {/* Label + type row */}
-                  <div className="flex gap-2">
+                  <div className="min-w-0 flex-1 space-y-2">
+                    {/* Action type selector with icon preview */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#EAF6F3]">
+                        <TypeIcon className="h-4 w-4 text-[#0C5C57]" />
+                      </div>
+                      <select
+                        value={draft.action_type}
+                        onChange={(e) =>
+                          updateDraft(index, { action_type: e.target.value as CTAActionType })
+                        }
+                        className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-[#A9D1CA] focus:ring-2"
+                      >
+                        {CTA_ACTION_TYPES.map((t) => (
+                          <option key={t} value={t}>
+                            {ACTION_CONFIG[t].label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Auto-populated label (editable) */}
                     <input
                       value={draft.label}
                       onChange={(e) => updateDraft(index, { label: e.target.value })}
                       placeholder="Button label"
-                      className="w-1/2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-[#A9D1CA] focus:ring-2"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-[#A9D1CA] focus:ring-2"
                     />
-                    <select
-                      value={draft.action_type}
-                      onChange={(e) =>
-                        updateDraft(index, { action_type: e.target.value as CTAActionType })
-                      }
-                      className="w-1/2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-[#A9D1CA] focus:ring-2"
-                    >
-                      {CTA_ACTION_TYPES.map((t) => (
-                        <option key={t} value={t}>
-                          {ACTION_LABELS[t]}
-                        </option>
-                      ))}
-                    </select>
+
+                    {/* Value — the only field user must fill */}
+                    <input
+                      value={draft.action_value}
+                      onChange={(e) => updateDraft(index, { action_value: e.target.value })}
+                      placeholder={config.placeholder}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-[#A9D1CA] focus:ring-2"
+                    />
+
+                    {/* Visibility toggle */}
+                    <label className="flex items-center gap-2 text-xs text-slate-500">
+                      <input
+                        type="checkbox"
+                        checked={draft.is_visible}
+                        onChange={(e) => updateDraft(index, { is_visible: e.target.checked })}
+                        className="h-3.5 w-3.5 rounded border-slate-300 text-[#0C5C57] focus:ring-[#A9D1CA]"
+                      />
+                      Visible
+                    </label>
                   </div>
 
-                  {/* Value */}
-                  <input
-                    value={draft.action_value}
-                    onChange={(e) => updateDraft(index, { action_value: e.target.value })}
-                    placeholder={ACTION_PLACEHOLDERS[draft.action_type]}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-[#A9D1CA] focus:ring-2"
-                  />
-
-                  {/* Visibility toggle */}
-                  <label className="flex items-center gap-2 text-xs text-slate-500">
-                    <input
-                      type="checkbox"
-                      checked={draft.is_visible}
-                      onChange={(e) => updateDraft(index, { is_visible: e.target.checked })}
-                      className="h-3.5 w-3.5 rounded border-slate-300 text-[#0C5C57] focus:ring-[#A9D1CA]"
-                    />
-                    Visible
-                  </label>
+                  {/* Delete */}
+                  <button
+                    type="button"
+                    onClick={() => removeDraft(index)}
+                    className="mt-2.5 rounded-lg p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-500"
+                    aria-label="Remove CTA"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
-
-                {/* Delete */}
-                <button
-                  type="button"
-                  onClick={() => removeDraft(index)}
-                  className="rounded-lg p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-500"
-                  aria-label="Remove CTA"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {drafts.length === 0 && (
             <p className="py-6 text-center text-sm text-slate-400">

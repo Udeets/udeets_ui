@@ -7,16 +7,19 @@ import { ArrowLeft, CheckCircle, X } from "lucide-react";
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createHub } from "@/lib/services/hubs/create-hub";
-import { categoryFor, cn, descriptionFor, slugify } from "./helpers";
+import { cn, descriptionFor, slugify } from "./helpers";
 import type { Visibility } from "./types";
+import { HUB_CATEGORY_OPTIONS } from "./types";
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
 type PostingPerm = "broadcast" | "admin_members" | "open";
+
+const TOTAL_STEPS = 4;
 
 function StepDots({ current }: { current: Step }) {
   return (
     <div className="flex items-center justify-center gap-2">
-      {([1, 2, 3] as const).map((s) => (
+      {([1, 2, 3, 4] as const).map((s) => (
         <div
           key={s}
           className={cn(
@@ -36,6 +39,7 @@ function CreateHubPageContent() {
 
   const [step, setStep] = useState<Step>(1);
   const [hubName, setHubName] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [visibility, setVisibility] = useState<Visibility>("Public");
   const [postingPerm, setPostingPerm] = useState<PostingPerm>("admin_members");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,6 +52,14 @@ function CreateHubPageContent() {
 
   const close = () => router.push("/dashboard");
 
+  const fireConfetti = () => {
+    const confettiColors = ["#0C5C57", "#A9D1CA", "#E3F1EF", "#ffffff", "#1a8a82", "#FFD700", "#FFC107"];
+    confetti({ particleCount: 80, spread: 70, origin: { x: 0.5, y: 0.6 }, colors: confettiColors });
+    setTimeout(() => confetti({ particleCount: 60, spread: 90, origin: { x: 0.3, y: 0.5 }, colors: confettiColors }), 150);
+    setTimeout(() => confetti({ particleCount: 60, spread: 90, origin: { x: 0.7, y: 0.5 }, colors: confettiColors }), 300);
+    setTimeout(() => confetti({ particleCount: 40, spread: 120, origin: { x: 0.5, y: 0.4 }, colors: confettiColors }), 500);
+  };
+
   const handleCreate = async () => {
     setIsSubmitting(true);
     setErrorMessage(null);
@@ -56,34 +68,25 @@ function CreateHubPageContent() {
       if (isDemoPreview) {
         setCreatedHubHref("/hubs/communities/demo-hub");
         setShowSuccess(true);
-                // Staggered "pop pop pop" confetti bursts from multiple origins
-        const confettiColors = ["#0C5C57", "#A9D1CA", "#E3F1EF", "#ffffff", "#1a8a82", "#FFD700", "#FFC107"];
-        confetti({ particleCount: 80, spread: 70, origin: { x: 0.5, y: 0.6 }, colors: confettiColors });
-        setTimeout(() => confetti({ particleCount: 60, spread: 90, origin: { x: 0.3, y: 0.5 }, colors: confettiColors }), 150);
-        setTimeout(() => confetti({ particleCount: 60, spread: 90, origin: { x: 0.7, y: 0.5 }, colors: confettiColors }), 300);
-        setTimeout(() => confetti({ particleCount: 40, spread: 120, origin: { x: 0.5, y: 0.4 }, colors: confettiColors }), 500);
+        fireConfetti();
         return;
       }
 
       const timestamp = Date.now();
       const slug = `${slugify(trimmedName)}-${timestamp}`;
-      const category = categoryFor([]);
+      const category = selectedCategory || "communities";
       const createdHub = await createHub({
         name: trimmedName,
         slug,
         category,
+        visibility: visibility === "Private" ? "private" : "public",
         tagline: `${trimmedName} on uDeets`,
         description: descriptionFor([]),
       });
 
       setCreatedHubHref(`/hubs/${createdHub.category}/${createdHub.slug}`);
       setShowSuccess(true);
-              // Staggered "pop pop pop" confetti bursts from multiple origins
-        const confettiColors = ["#0C5C57", "#A9D1CA", "#E3F1EF", "#ffffff", "#1a8a82", "#FFD700", "#FFC107"];
-        confetti({ particleCount: 80, spread: 70, origin: { x: 0.5, y: 0.6 }, colors: confettiColors });
-        setTimeout(() => confetti({ particleCount: 60, spread: 90, origin: { x: 0.3, y: 0.5 }, colors: confettiColors }), 150);
-        setTimeout(() => confetti({ particleCount: 60, spread: 90, origin: { x: 0.7, y: 0.5 }, colors: confettiColors }), 300);
-        setTimeout(() => confetti({ particleCount: 40, spread: 120, origin: { x: 0.5, y: 0.4 }, colors: confettiColors }), 500);
+      fireConfetti();
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Failed to create hub.");
     } finally {
@@ -105,7 +108,7 @@ function CreateHubPageContent() {
           ) : (
             <div className="w-5" />
           )}
-          <StepDots current={showSuccess ? 3 : step} />
+          <StepDots current={showSuccess ? (TOTAL_STEPS as Step) : step} />
           <button type="button" onClick={close} className="text-gray-400 transition hover:text-gray-600">
             <X className="h-5 w-5" />
           </button>
@@ -170,8 +173,50 @@ function CreateHubPageContent() {
           </div>
         ) : null}
 
-        {/* STEP 2 — Visibility */}
+        {/* STEP 2 — Category */}
         {!showSuccess && step === 2 ? (
+          <div>
+            <p className="text-sm text-gray-400">{trimmedName}</p>
+            <h2 className="mt-1 text-xl font-bold text-gray-900">What type of hub is this?</h2>
+            <div className="mt-4 max-h-[320px] space-y-2 overflow-y-auto pr-1">
+              {HUB_CATEGORY_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setSelectedCategory(opt.value)}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition",
+                    selectedCategory === opt.value
+                      ? "border-[#0C5C57] bg-[#f0faf8]"
+                      : "border-gray-200 bg-white hover:border-gray-300"
+                  )}
+                >
+                  <span className="text-xl">{opt.emoji}</span>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{opt.label}</p>
+                    <p className="text-xs text-gray-500">{opt.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              disabled={!selectedCategory}
+              onClick={() => setStep(3)}
+              className={cn(
+                "mt-4 w-full rounded-xl py-3 text-sm font-semibold transition",
+                selectedCategory
+                  ? "bg-[#0C5C57] text-white hover:bg-[#094a46]"
+                  : "cursor-not-allowed bg-gray-100 text-gray-400"
+              )}
+            >
+              Next →
+            </button>
+          </div>
+        ) : null}
+
+        {/* STEP 3 — Visibility */}
+        {!showSuccess && step === 3 ? (
           <div>
             <p className="text-sm text-gray-400">{trimmedName}</p>
             <h2 className="mt-1 text-xl font-bold text-gray-900">Who can find this hub?</h2>
@@ -199,7 +244,7 @@ function CreateHubPageContent() {
             </div>
             <button
               type="button"
-              onClick={() => setStep(3)}
+              onClick={() => setStep(4)}
               className="mt-5 w-full rounded-xl bg-[#0C5C57] py-3 text-sm font-semibold text-white transition hover:bg-[#094a46]"
             >
               Next →
@@ -207,8 +252,8 @@ function CreateHubPageContent() {
           </div>
         ) : null}
 
-        {/* STEP 3 — Posting Permissions */}
-        {!showSuccess && step === 3 ? (
+        {/* STEP 4 — Posting Permissions */}
+        {!showSuccess && step === 4 ? (
           <div>
             <p className="text-sm text-gray-400">{trimmedName}</p>
             <h2 className="mt-1 text-xl font-bold text-gray-900">Who can post in this hub?</h2>
