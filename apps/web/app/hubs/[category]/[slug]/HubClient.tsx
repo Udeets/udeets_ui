@@ -16,12 +16,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
 import type { HubContent } from "@/lib/hub-content";
 import type { HubRecord } from "@/lib/hubs";
+import { getHubConfigByCategory } from "@/lib/hub-templates";
 import { useAuthSession } from "@/services/auth/useAuthSession";
 import { AttachmentsSection } from "./components/attachments/AttachmentsSection";
 import { HubHeroHeader } from "./components/HubHeroHeader";
 import { HubSidebarNav } from "./components/HubSidebarNav";
 import { MembersSection } from "./components/members/MembersSection";
 import { AboutSection } from "./components/sections/AboutSection";
+import { CTADisplay } from "./components/ctas/CTADisplay";
+import { CTAEditorModal } from "./components/ctas/CTAEditorModal";
 import { DeetsSection } from "./components/sections/DeetsSection";
 import { SettingsSection } from "./components/sections/SettingsSection";
 import { CreateDeetModal } from "./components/deets/CreateDeetModal";
@@ -99,6 +102,63 @@ export default function HubClient({
     user?.email?.split("@")[0] ||
     "You";
   const [isJoined, setIsJoined] = useState(isCreatorAdmin);
+  const [isMember, setIsMember] = useState(isCreatorAdmin);
+  const [isPending, setIsPending] = useState(false);
+  const [membershipLoaded, setMembershipLoaded] = useState(isCreatorAdmin);
+
+  // Check actual membership status from DB
+  useEffect(() => {
+    if (isCreatorAdmin || !user?.id) return;
+    let ignore = false;
+
+    async function checkMembership() {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("hub_members")
+        .select("role, status")
+        .eq("hub_id", hub.id)
+        .eq("user_id", user!.id)
+        .maybeSingle();
+
+      if (ignore) return;
+      if (data) {
+        if (data.status === "active") {
+          setIsMember(true);
+          setIsJoined(true);
+          setIsPending(false);
+        } else if (data.status === "pending") {
+          setIsMember(false);
+          setIsJoined(false);
+          setIsPending(true);
+        }
+      }
+      setMembershipLoaded(true);
+    }
+
+    void checkMembership();
+    return () => { ignore = true; };
+  }, [hub.id, user?.id, isCreatorAdmin]);
+
+  const isPublicHub = hub.visibility === "Public";
+  // Content gating: non-members see Header + About only
+  const canAccessFullContent = isMember || isCreatorAdmin;
+
+  // CTA state
+  const [hubCTAs, setHubCTAs] = useState<import("@/lib/services/ctas/cta-types").HubCTARecord[]>([]);
+  const [isCTAEditorOpen, setIsCTAEditorOpen] = useState(false);
+
+  useEffect(() => {
+    let ignore = false;
+    async function loadCTAs() {
+      const { listHubCTAs } = await import("@/lib/services/ctas/list-ctas");
+      const ctas = await listHubCTAs(hub.id);
+      if (!ignore) setHubCTAs(ctas);
+    }
+    void loadCTAs();
+    return () => { ignore = true; };
+  }, [hub.id]);
+
   const { liveFeedItems, prependCreatedDeet } = useHubLiveFeed(hub.id);
   const {
     savedHubName,
@@ -185,6 +245,7 @@ export default function HubClient({
   const albumChoices = galleryImages.filter((image) => image !== dpImageSrc && image !== coverImageSrc);
   const categoryMeta = categoryMetaFor(savedHubCategory);
   const CategoryIcon = categoryMeta.icon;
+  const hubTemplateConfig = useMemo(() => getHubConfigByCategory(savedHubCategory), [savedHubCategory]);
   const memberCount = Math.max(1, Number.parseInt(hub.membersLabel, 10) || 0);
   const headerHubName = hub.name?.trim() || hubName;
   const visibilityLabel: "Public" | "Private" = hub.visibility;
@@ -314,6 +375,7 @@ export default function HubClient({
     closeDeetComposer,
     discardDeetComposer,
     attachDeetItem,
+    removePhoto,
     handleDeetPhotoFiles,
     handleSubmitDeet,
   } = useDeetComposer({
@@ -358,11 +420,87 @@ export default function HubClient({
     requestNavigation({ tab: activeSection, panel: "settings" });
   };
 
-  const handleMembershipAction = () => {
-    setIsJoined((current) => !current);
+  const [showJoinConfirm, setShowJoinConfirm] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+
+  const handleMembershipAction = async () => {
+    if (!user?.id) return;
+    setIsJoining(true);
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+
+      if (isPublicHub) {
+        // Public hub: join immediately with active status
+        await supabase.from("hub_members").upsert({
+          hub_id: hub.id,
+          user_id: user.id,
+          role: "member",
+          status: "active",
+        }, { onConflict: "hub_id,user_id" });
+        setIsMember(true);
+        setIsJoined(true);
+        setShowJoinConfirm(true);
+      } else {
+        // Private hub: create pending request
+        await supabase.from("hub_members").upsert({
+          hub_id: hub.id,
+          user_id: user.id,
+          role: "member",
+          status: "pending",
+        }, { onConflict: "hub_id,user_id" });
+        setIsPending(true);
+        setShowJoinConfirm(true);
+      }
+    } catch (err) {
+      console.error("[join-hub] error:", err);
+    } finally {
+      setIsJoining(false);
+    }
   };
 
   const renderMainContent = () => {
+    // Content gating: non-members only see About
+    if (!canAccessFullContent && activeSection !== "About") {
+      return (
+        <div className={cn(CARD, "p-8 text-center")}>
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#E3F1EF]">
+            <svg viewBox="0 0 24 24" className="h-6 w-6 text-[#0C5C57]" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-serif font-semibold text-[#12312D]">
+            {isPending ? "Request Pending" : "Members Only"}
+          </h3>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-[#58706B]">
+            {isPending
+              ? "Your request to join this hub is awaiting approval from the admin."
+              : isPublicHub
+                ? "Join this hub to access all content, posts, and community features."
+                : "Request access to this private hub to see posts and more."}
+          </p>
+          {!isPending ? (
+            <button
+              type="button"
+              className={cn(BUTTON_PRIMARY, "mt-5")}
+              onClick={handleMembershipAction}
+            >
+              {isPublicHub ? "Join Hub" : "Request to Join"}
+            </button>
+          ) : (
+            <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700">
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              Awaiting Approval
+            </div>
+          )}
+        </div>
+      );
+    }
+
     if (activePanel === "settings") {
       return (
         <SettingsSection
@@ -458,6 +596,8 @@ export default function HubClient({
           adminImages={adminImages}
           dpImageSrc={dpImageSrc}
           coverImageSrc={coverImageSrc}
+          hubCTAs={hubCTAs}
+          onOpenCTAEditor={() => setIsCTAEditorOpen(true)}
         />
       );
     }
@@ -503,7 +643,7 @@ export default function HubClient({
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white pb-16 md:pb-0">
       <UdeetsHeader />
 
       <div className="mx-auto w-full max-w-7xl">
@@ -531,20 +671,71 @@ export default function HubClient({
         {mediaSuccess ? <p className="px-4 pt-3 text-sm font-medium text-[#0C5C57]">{mediaSuccess}</p> : null}
         {mediaError ? <p className="px-4 pt-3 text-sm font-medium text-[#B42318]">{mediaError}</p> : null}
 
-        {/* Below header — 2-column: sidebar + content */}
-        <div className="grid grid-cols-[240px_1fr]">
-          {/* Left sidebar */}
-          <aside className="border-r border-slate-100 bg-white">
+        {/* Mobile horizontal tab bar — visible below lg */}
+        <div className="flex overflow-x-auto border-b border-slate-100 bg-white lg:hidden" style={{ scrollbarWidth: "none" as never }}>
+          {(hubTemplateConfig.tabs.filter((t) => t !== "Settings") as string[])
+            .filter((tab) => canAccessFullContent || tab === "About")
+            .map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => {
+                  if (tab === "Members") {
+                    requestNavigation({ tab: tab as HubTab, panel: "members", membersMode: "list", membersView: "members" });
+                  } else if (tab === "Attachments") {
+                    requestNavigation({ tab: tab as HubTab, panel: "posts", attachmentsView: "photos" });
+                  } else {
+                    requestNavigation({ tab: tab as HubTab, panel: "posts" });
+                  }
+                }}
+                className={cn(
+                  "shrink-0 border-b-2 px-4 py-3 text-sm font-medium transition",
+                  activeSection === tab && activePanel !== "settings"
+                    ? "border-[#0C5C57] text-[#0C5C57]"
+                    : "border-transparent text-slate-500 hover:text-slate-700"
+                )}
+              >
+                {tab === "About"
+                  ? hubTemplateConfig.terminology.about
+                  : tab === "Posts"
+                    ? hubTemplateConfig.terminology.deets
+                    : tab === "Members"
+                      ? hubTemplateConfig.terminology.members
+                      : tab}
+              </button>
+            ))}
+          {isCreatorAdmin && (
+            <button
+              type="button"
+              onClick={() => requestNavigation({ tab: activeSection, panel: "settings" })}
+              className={cn(
+                "shrink-0 border-b-2 px-4 py-3 text-sm font-medium transition",
+                activePanel === "settings"
+                  ? "border-[#0C5C57] text-[#0C5C57]"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+              )}
+            >
+              Settings
+            </button>
+          )}
+        </div>
+
+        {/* Below header — 2-column on desktop, single column on mobile */}
+        <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr]">
+          {/* Left sidebar — hidden on mobile */}
+          <aside className="hidden border-r border-slate-100 bg-white lg:block">
             <HubSidebarNav
               activeSection={activeSection}
               activePanel={activePanel}
               isCreatorAdmin={isCreatorAdmin}
+              canAccessFullContent={canAccessFullContent}
+              templateConfig={hubTemplateConfig}
               onNavigate={requestNavigation}
             />
           </aside>
 
-          {/* Right content area */}
-          <main className="min-h-[calc(100vh-200px)] bg-[#fafafa] p-6">
+          {/* Content area */}
+          <main className="min-h-[calc(100vh-200px)] bg-[#fafafa] p-4 sm:p-6">
             {renderMainContent()}
           </main>
         </div>
@@ -552,6 +743,56 @@ export default function HubClient({
 
       {!isDemoPreview ? <UdeetsFooter /> : null}
       {!isDemoPreview ? <UdeetsBottomNav activeNav="home" /> : null}
+
+      {/* Join Hub Confirmation Modal */}
+      {showJoinConfirm ? (
+        <div className="fixed inset-0 z-[200] flex items-end justify-center bg-[#111111]/45 sm:items-center">
+          <div className={cn(CARD, "w-full max-w-md animate-[slideUp_200ms_ease-out] rounded-t-[28px] p-6 sm:rounded-[28px]")}>
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#E3F1EF]">
+              {isPending ? (
+                <svg viewBox="0 0 24 24" className="h-6 w-6 text-amber-600" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" className="h-6 w-6 text-[#0C5C57]" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+              )}
+            </div>
+            <h3 className="text-center text-lg font-serif font-semibold text-[#12312D]">
+              {isPending ? "Request Sent!" : "Welcome to " + hubName + "!"}
+            </h3>
+            <p className="mx-auto mt-2 max-w-xs text-center text-sm text-[#58706B]">
+              {isPending
+                ? "Your request has been sent to the hub admin. You'll get access once they approve it."
+                : "You're now a member. Check out the latest deets from this hub."}
+            </p>
+            <div className="mt-6 flex flex-col gap-2">
+              {!isPending ? (
+                <button
+                  type="button"
+                  className={cn(BUTTON_PRIMARY, "w-full justify-center")}
+                  onClick={() => {
+                    setShowJoinConfirm(false);
+                    requestNavigation({ tab: "Posts", panel: "posts" });
+                  }}
+                >
+                  View Deets
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="w-full rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-[#12312D] transition hover:bg-slate-50"
+                onClick={() => setShowJoinConfirm(false)}
+              >
+                {isPending ? "Got it" : "Stay on About"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {isUnsavedChangesOpen ? (
         <div className="fixed inset-0 z-[118] flex items-center justify-center bg-[#111111]/45 p-4">
@@ -673,6 +914,8 @@ export default function HubClient({
               onToggleFontSizeMenu={() => setIsFontSizeMenuOpen((current) => !current)}
               onCloseFontSizeMenu={() => setIsFontSizeMenuOpen(false)}
               attachedItems={attachedDeetItems}
+              selectedPhotoPreviews={selectedPhotoPreviews}
+              onRemovePhoto={removePhoto}
               onClose={closeDeetComposer}
               onOpenChild={setActiveComposerChild}
               onSubmit={handleSubmitDeet}
@@ -914,6 +1157,16 @@ export default function HubClient({
             </div>
           </div>
         </div>
+      ) : null}
+
+      {/* CTA Editor Modal */}
+      {isCTAEditorOpen ? (
+        <CTAEditorModal
+          hubId={hub.id}
+          existingCTAs={hubCTAs}
+          onClose={() => setIsCTAEditorOpen(false)}
+          onSaved={(saved) => setHubCTAs(saved)}
+        />
       ) : null}
     </div>
   );

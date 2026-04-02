@@ -56,6 +56,24 @@ export function useHubMediaFlow({
       setDpImageSrc(normalizePublicSrc(updatedHub.dp_image_url || undefined));
       setCoverImageSrc(normalizePublicSrc(updatedHub.cover_image_url || undefined));
       setGalleryImages((updatedHub.gallery_image_urls ?? []).map(normalizePublicSrc).filter(Boolean));
+
+      // Auto-populate Photos section: insert attachment record for DP/cover uploads
+      if (kind === "dp" || kind === "cover") {
+        try {
+          const { createClient } = await import("@/lib/supabase/client");
+          const supabase = createClient();
+          const fileType = file.type.startsWith("image/") ? "image" : "file";
+          await supabase.from("attachments").insert({
+            hub_id: hub.id,
+            file_url: uploadedUrl,
+            file_type: fileType,
+            source: kind,
+          });
+        } catch (err) {
+          console.error("[auto-photo] attachment insert failed:", err);
+        }
+      }
+
       setMediaSuccess(kind === "gallery" ? "Recent photos updated." : kind === "dp" ? "Display picture updated." : "Cover image updated.");
     } catch (error) {
       setMediaError(error instanceof Error ? error.message : "Hub media could not be updated.");

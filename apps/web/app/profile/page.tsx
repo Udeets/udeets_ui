@@ -309,7 +309,7 @@ export default function ProfilePage() {
                 <div className="flex items-start gap-5">
                   <div className="shrink-0">
                     <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
-                    <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={isUploadingAvatar} className="relative h-20 w-20 overflow-hidden rounded-full">
+                    <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={isUploadingAvatar} className="group relative h-20 w-20 overflow-hidden rounded-full">
                       {avatarUrl ? (
                         <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" />
                       ) : (
@@ -321,10 +321,17 @@ export default function ProfilePage() {
                         <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                           <Loader2 className="h-5 w-5 animate-spin text-white" />
                         </div>
-                      ) : null}
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/40">
+                          <svg viewBox="0 0 24 24" className="h-6 w-6 text-white opacity-0 transition-opacity group-hover:opacity-100" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                            <circle cx="12" cy="13" r="4" />
+                          </svg>
+                        </div>
+                      )}
                     </button>
                     <button type="button" onClick={() => avatarInputRef.current?.click()} className="mt-2 block w-full text-center text-xs text-[#0C5C57] hover:underline">
-                      Edit photo
+                      Change photo
                     </button>
                   </div>
                   <div className="min-w-0 pt-1">

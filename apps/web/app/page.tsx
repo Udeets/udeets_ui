@@ -2,36 +2,15 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Bell, CalendarDays, Clapperboard, ImageIcon, MapPin, Megaphone, Search, Users } from "lucide-react";
+import { ArrowRight, Bell, Globe, MapPin, Megaphone, Shield, Sparkles, Users, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { UdeetsBrandLockup, UdeetsLogoIcon } from "@/components/brand-logo";
-import { HowItWorksAnimated } from "@/components/home/how-it-works-animated";
 import { listHubs } from "@/lib/services/hubs/list-hubs";
 import type { Hub as SupabaseHub } from "@/types/hub";
 
-const PAGE_BG = "bg-white";
-const HEADER_BG = "bg-white border-b border-slate-200/60";
-const FOOTER_BG = "bg-[#0C5C57]";
-const TEXT_PRIMARY = "text-[#111111]";
-const NAV_TEXT = "text-[#111111]";
-const BRAND_TEXT_STYLE = `text-xl sm:text-2xl`;
-const DISPLAY_HEADING = `font-serif font-semibold tracking-tight ${TEXT_PRIMARY}`;
-const SECTION_HEADING = `font-serif font-semibold tracking-tight ${TEXT_PRIMARY}`;
-const BODY_TEXT = "font-sans leading-relaxed text-slate-600";
-const BUTTON_PRIMARY = "rounded-full bg-[#0C5C57] px-6 py-3 text-sm font-medium text-white hover:bg-[#094a46]";
-const HEADER_ACTION = `rounded-full px-4 py-2 text-sm font-medium ${NAV_TEXT} hover:bg-slate-100 sm:px-5 sm:py-2.5`;
-const HERO_HEADING_LINE_ONE = "Deets that matter.";
-const HERO_HEADING_LINE_TWO = "Simplified and organized.";
-const HERO_TAGLINE = "Create hubs or subscribe to stay on top of deets that matter. Powered by uDeets.";
-
-type TopHub = {
-  id: string;
-  name: string;
-  intro: string;
-  href: string;
-  image: string;
-  visibility: "Public" | "Private";
-};
+function cn(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
 
 function normalizePublicSrc(src?: string) {
   if (!src) return "";
@@ -40,17 +19,95 @@ function normalizePublicSrc(src?: string) {
   return `/${src}`;
 }
 
+type TopHub = {
+  id: string;
+  name: string;
+  intro: string;
+  href: string;
+  image: string;
+  category: string;
+};
+
 function toTopHub(hub: SupabaseHub): TopHub {
   return {
     id: hub.id,
     name: hub.name,
-    intro: hub.description || "A new uDeets hub is getting set up.",
+    intro: hub.description || "A community hub on uDeets.",
     href: `/hubs/${hub.category}/${hub.slug}`,
     image: normalizePublicSrc(hub.dp_image_url || hub.cover_image_url || undefined),
-    visibility: "Public",
+    category: hub.category,
   };
 }
 
+/* ─── Feature card ─── */
+function FeatureCard({ icon: Icon, title, description }: { icon: typeof Zap; title: string; description: string }) {
+  return (
+    <div className="group rounded-2xl border border-slate-100 bg-white p-6 transition duration-300 hover:border-[#A9D1CA] hover:shadow-lg hover:shadow-[#0C5C57]/5">
+      <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#EAF6F3]">
+        <Icon className="h-5 w-5 text-[#0C5C57]" />
+      </div>
+      <h3 className="font-serif text-lg font-semibold tracking-tight text-[#111111]">{title}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-slate-500">{description}</p>
+    </div>
+  );
+}
+
+/* ─── Step card ─── */
+function StepCard({ number, title, description }: { number: number; title: string; description: string }) {
+  return (
+    <div className="relative flex gap-5">
+      <div className="flex flex-col items-center">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0C5C57] text-sm font-bold text-white">
+          {number}
+        </div>
+        {number < 3 && <div className="mt-2 h-full w-px bg-gradient-to-b from-[#A9D1CA] to-transparent" />}
+      </div>
+      <div className="pb-10">
+        <h3 className="font-serif text-lg font-semibold tracking-tight text-[#111111]">{title}</h3>
+        <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Hub card ─── */
+function HubCard({ hub }: { hub: TopHub }) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  return (
+    <Link
+      href={hub.href}
+      className="group flex w-[300px] shrink-0 flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white transition duration-300 hover:border-slate-200 hover:shadow-lg hover:shadow-slate-200/50"
+    >
+      <div className="relative h-[160px] overflow-hidden bg-[#EAF6F3]">
+        {hub.image && !imageFailed ? (
+          <Image
+            src={hub.image}
+            alt={hub.name}
+            fill
+            unoptimized
+            loader={({ src }) => src}
+            className="object-cover transition duration-500 group-hover:scale-105"
+            sizes="300px"
+            onError={() => setImageFailed(true)}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <UdeetsLogoIcon className="h-12 w-12 text-[#0C5C57]/20" alt="" />
+          </div>
+        )}
+      </div>
+      <div className="flex flex-1 flex-col p-4">
+        <h3 className="font-serif text-base font-semibold tracking-tight text-[#111111] group-hover:text-[#0C5C57] transition">
+          {hub.name}
+        </h3>
+        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500">{hub.intro}</p>
+      </div>
+    </Link>
+  );
+}
+
+/* ─── Social icons ─── */
 function IconFacebook(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -77,136 +134,6 @@ function IconYouTube(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-function IconChevronLeft(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
-      <path d="M12.5 15l-5-5 5-5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function IconChevronRight(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
-      <path d="M7.5 15l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function TopHubCard({ hub }: { hub: TopHub }) {
-  const [imageFailed, setImageFailed] = useState(false);
-
-  return (
-    <Link
-      href={hub.href}
-      className="group relative flex h-[260px] w-[min(360px,calc(100vw-2rem))] flex-shrink-0 min-w-0 overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition hover:border-slate-300 sm:w-[360px]"
-    >
-      {hub.image && !imageFailed ? (
-        <Image
-          src={hub.image}
-          alt={hub.name}
-          fill
-          unoptimized
-          loader={({ src }) => src}
-          className="absolute inset-0 h-full w-full object-cover"
-          sizes="(max-width: 640px) calc(100vw - 2rem), 360px"
-          onError={() => setImageFailed(true)}
-        />
-      ) : (
-        <div className="absolute inset-0 grid place-items-center bg-[#A9D1CA]/35">
-          <span className="px-4 text-sm font-semibold text-[#0C5C57]">Hub Image Coming Soon</span>
-        </div>
-      )}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#111111]/75 via-[#111111]/35 to-transparent" />
-      <div className="relative mt-auto w-full p-6">
-        <div className="mb-3 flex items-start justify-between gap-4">
-          <h3 className={cn("min-w-0 break-words text-2xl leading-tight text-white", SECTION_HEADING)}>
-            {hub.name}
-          </h3>
-          <span className="shrink-0 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-[#111111]">
-            {hub.visibility}
-          </span>
-        </div>
-        <p className="line-clamp-2 break-words text-sm text-white/90">{hub.intro}</p>
-      </div>
-    </Link>
-  );
-}
-
-function HeroBrandVisual() {
-  const pillGroups = [
-    {
-      className: "left-[9%] top-[11%]",
-      pills: [
-        { Icon: ImageIcon, label: "Photo", className: "relative z-10 w-[5.6rem] sm:w-[6.2rem]" },
-        { Icon: Clapperboard, label: "Video", className: "relative -mt-3 ml-6 w-[5.5rem] sm:-mt-3.5 sm:ml-7 sm:w-[6.1rem]" },
-      ],
-    },
-    {
-      className: "right-[8%] top-[14%]",
-      pills: [
-        { Icon: Search, label: "Search", className: "relative z-10 w-[5.8rem] sm:w-[6.4rem]" },
-        { Icon: Users, label: "Members", className: "relative -mt-3 mr-6 w-[6.2rem] sm:-mt-3.5 sm:mr-7 sm:w-[6.9rem]" },
-      ],
-    },
-    {
-      className: "left-[10%] bottom-[16%]",
-      pills: [
-        { Icon: Megaphone, label: "Updates", className: "relative z-10 w-[6.1rem] sm:w-[6.7rem]" },
-        { Icon: Bell, label: "Alerts", className: "relative -mt-3 ml-6 w-[5.7rem] sm:-mt-3.5 sm:ml-7 sm:w-[6.3rem]" },
-      ],
-    },
-    {
-      className: "right-[9%] bottom-[17%]",
-      pills: [
-        { Icon: CalendarDays, label: "Events", className: "relative z-10 w-[5.8rem] sm:w-[6.4rem]" },
-        { Icon: MapPin, label: "Map", className: "relative -mt-3 mr-6 w-[5rem] sm:-mt-3.5 sm:mr-7 sm:w-[5.6rem]" },
-      ],
-    },
-  ] as const;
-
-  return (
-    <div className="relative h-[280px] w-full sm:h-[420px] lg:h-[540px]">
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <div className="h-[18rem] w-[18rem] rounded-full bg-white/60 blur-3xl sm:h-[23rem] sm:w-[23rem] lg:h-[27rem] lg:w-[27rem]" />
-      </div>
-
-      <div className="relative flex h-full items-center justify-center p-4 sm:p-6">
-        <div className="relative flex aspect-square w-full max-w-[29rem] items-center justify-center overflow-hidden rounded-[2rem] bg-[#0C5C57] shadow-[0_24px_60px_rgba(12,92,87,0.18)]">
-          {pillGroups.map(({ className, pills }, index) => (
-            <div
-              key={index}
-              className={`pointer-events-none absolute z-0 flex flex-col items-center gap-1.5 sm:gap-2 ${className}`}
-            >
-              {pills.map(({ Icon, label, className: pillClassName }) => (
-                <div
-                  key={label}
-                  className={`rounded-2xl border border-white/12 bg-white/[0.12] px-3 py-1.5 shadow-[0_12px_30px_rgba(4,24,22,0.16)] backdrop-blur-md sm:px-3.5 sm:py-1.5 ${pillClassName}`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Icon strokeWidth={2} className="h-4 w-4 shrink-0 text-white/92 sm:h-[1.05rem] sm:w-[1.05rem]" />
-                    <span className="text-[10px] font-medium tracking-[0.14em] text-white/78 uppercase sm:text-[11px]">
-                      {label}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
-
-          <div className="relative z-10 flex items-center justify-center">
-            <div className="pointer-events-none absolute h-24 w-24 rounded-full bg-white/30 blur-2xl sm:h-32 sm:w-32 lg:h-40 lg:w-40" />
-            <UdeetsLogoIcon
-              className="h-28 w-28 text-white/80 opacity-90 drop-shadow-[0_8px_20px_rgba(255,255,255,0.14)] sm:h-40 sm:w-40 lg:h-52 lg:w-52"
-              alt="uDeets logo"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function Page() {
   const hubsRowRef = useRef<HTMLDivElement | null>(null);
   const [pauseAutoScroll, setPauseAutoScroll] = useState(false);
@@ -218,15 +145,12 @@ export default function Page() {
 
     const timer = window.setInterval(() => {
       if (pauseAutoScroll) return;
-
       const maxScroll = el.scrollWidth - el.clientWidth;
       if (maxScroll <= 0) return;
-
       if (el.scrollLeft >= maxScroll - 2) {
         el.scrollTo({ left: 0, behavior: "smooth" });
         return;
       }
-
       el.scrollBy({ left: 1, behavior: "auto" });
     }, 28);
 
@@ -235,163 +159,273 @@ export default function Page() {
 
   useEffect(() => {
     let cancelled = false;
-
     async function loadTopHubs() {
       try {
         const hubs = await listHubs();
-        if (!cancelled) {
-          setTopHubs(hubs.slice(0, 8).map(toTopHub));
-        }
+        if (!cancelled) setTopHubs(hubs.slice(0, 8).map(toTopHub));
       } catch {
-        if (!cancelled) {
-          setTopHubs([]);
-        }
+        if (!cancelled) setTopHubs([]);
       }
     }
-
     void loadTopHubs();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
-  const scrollHubsBy = (delta: number) => {
-    const el = hubsRowRef.current;
-    if (!el) return;
-    el.scrollBy({ left: delta, behavior: "smooth" });
-  };
-
   return (
-    <div className={cn("min-h-screen", PAGE_BG)}>
-      {/* HEADER */}
-      <header className={cn("sticky top-0 z-50", HEADER_BG)}>
-        <div className="flex min-h-16 w-full items-center justify-between px-4 py-2 sm:px-6 lg:px-10">
-          <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <UdeetsBrandLockup textClassName={BRAND_TEXT_STYLE} priority />
+    <div className="min-h-screen bg-white">
+      {/* ─── HEADER ─── */}
+      <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/80 backdrop-blur-lg">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
+          <Link href="/" className="flex items-center gap-2">
+            <UdeetsBrandLockup textClassName="text-xl sm:text-2xl" priority />
           </Link>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Link
-              href="/auth"
-              className={HEADER_ACTION}
-            >
+          <nav className="flex items-center gap-1 sm:gap-2">
+            <Link href="/discover" className="rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-[#111111]">
+              Discover
+            </Link>
+            <Link href="/auth" className="rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-[#111111]">
               Sign in
             </Link>
-            <Link
-              href="/auth"
-              className={BUTTON_PRIMARY}
-            >
+            <Link href="/auth" className="rounded-full bg-[#0C5C57] px-5 py-2 text-sm font-medium text-white transition hover:bg-[#094a46]">
               Get started
             </Link>
-          </div>
+          </nav>
         </div>
       </header>
 
-      <main className={PAGE_BG}>
-        {/* HERO */}
+      <main>
+        {/* ─── HERO ─── */}
         <section className="relative overflow-hidden">
-          <div className="pointer-events-none absolute -top-20 right-0 h-72 w-72 rounded-full bg-emerald-100/70 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-20 left-0 h-60 w-60 rounded-full bg-cyan-100/50 blur-3xl" />
+          {/* Subtle gradient orbs */}
+          <div className="pointer-events-none absolute -top-40 right-1/4 h-[500px] w-[500px] rounded-full bg-[#EAF6F3]/60 blur-[120px]" />
+          <div className="pointer-events-none absolute -bottom-20 left-1/4 h-[400px] w-[400px] rounded-full bg-[#A9D1CA]/20 blur-[100px]" />
 
-          <div className="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-2 lg:gap-12 lg:px-10">
-            {/* LEFT CONTENT */}
-            <div className="max-w-3xl space-y-6 text-slate-900 sm:space-y-7">
-              <h1 className={cn("break-words text-4xl leading-[0.95] sm:text-5xl lg:text-6xl", DISPLAY_HEADING)}>
-                <span className="block">{HERO_HEADING_LINE_ONE}</span>
-                <span className="block">{HERO_HEADING_LINE_TWO}</span>
+          <div className="relative mx-auto max-w-7xl px-4 pb-20 pt-20 sm:px-6 sm:pb-28 sm:pt-28 lg:px-10 lg:pb-32 lg:pt-32">
+            <div className="mx-auto max-w-3xl text-center">
+              {/* Badge */}
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#A9D1CA]/50 bg-[#EAF6F3] px-4 py-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-[#0C5C57]" />
+                <span className="text-xs font-medium text-[#0C5C57]">Your community, simplified</span>
+              </div>
+
+              {/* Heading */}
+              <h1 className="font-serif text-5xl font-semibold leading-[1.1] tracking-tight text-[#111111] sm:text-6xl lg:text-7xl">
+                Deets that matter.
+                <br />
+                <span className="text-[#0C5C57]">Organized beautifully.</span>
               </h1>
 
-              <p className={cn("max-w-2xl text-base sm:text-lg lg:text-xl", BODY_TEXT)}>{HERO_TAGLINE}</p>
+              <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-slate-500 sm:text-xl">
+                Create hubs for your community, business, or organization. Share updates, events, and important details — all in one place.
+              </p>
 
-              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:gap-4 sm:pt-4">
+              {/* CTAs */}
+              <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Link
                   href="/auth"
-                  className={cn(BUTTON_PRIMARY, "text-center")}
+                  className="inline-flex items-center gap-2 rounded-full bg-[#0C5C57] px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-[#0C5C57]/20 transition hover:bg-[#094a46] hover:shadow-xl hover:shadow-[#0C5C57]/25"
                 >
                   Get Started Free
+                  <ArrowRight className="h-4 w-4" />
                 </Link>
-
                 <Link
                   href="/discover"
-                  className="rounded-full border border-slate-300 px-6 py-3 text-center text-sm font-medium text-slate-700 hover:bg-slate-100"
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-7 py-3.5 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                 >
-                  Discover
+                  Explore Hubs
                 </Link>
               </div>
             </div>
 
-            {/* RIGHT VISUAL */}
-            <div className="flex justify-center">
-              <div className="w-full max-w-2xl">
-                <HeroBrandVisual />
+            {/* Hero visual */}
+            <div className="mt-16 flex justify-center sm:mt-20">
+              <div className="relative flex h-64 w-64 items-center justify-center rounded-[2.5rem] bg-gradient-to-br from-[#0C5C57] to-[#0a4e4a] shadow-2xl shadow-[#0C5C57]/25 sm:h-80 sm:w-80 lg:h-96 lg:w-96">
+                <div className="pointer-events-none absolute inset-0 rounded-[2.5rem] bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.1),transparent_60%)]" />
+                <UdeetsLogoIcon
+                  className="h-32 w-32 text-white/80 drop-shadow-[0_4px_24px_rgba(255,255,255,0.1)] sm:h-40 sm:w-40 lg:h-48 lg:w-48"
+                  alt="uDeets logo"
+                />
               </div>
             </div>
           </div>
         </section>
 
-        <HowItWorksAnimated />
-
-        {/* TOP HUBS */}
-        <section className="py-20">
+        {/* ─── FEATURES ─── */}
+        <section className="border-t border-slate-100 bg-[#FAFBFC] py-20 sm:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
-            <div className="mb-10 flex items-center justify-between gap-4">
-              <h2 className={cn("text-3xl sm:text-4xl", SECTION_HEADING)}>Our Top Hubs</h2>
-              <div className="hidden items-center gap-2 sm:flex">
-                <button
-                  type="button"
-                  aria-label="Scroll hubs left"
-                  onClick={() => scrollHubsBy(-380)}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
-                >
-                  <IconChevronLeft className="h-5 w-5" />
-                </button>
-                <button
-                  type="button"
-                  aria-label="Scroll hubs right"
-                  onClick={() => scrollHubsBy(380)}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
-                >
-                  <IconChevronRight className="h-5 w-5" />
-                </button>
-              </div>
+            <div className="mx-auto max-w-2xl text-center">
+              <h2 className="font-serif text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
+                Everything your community needs
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-slate-500">
+                From local businesses to neighborhoods, uDeets gives you the tools to stay connected and informed.
+              </p>
             </div>
 
-            <div
-              ref={hubsRowRef}
-              onMouseEnter={() => setPauseAutoScroll(true)}
-              onMouseLeave={() => setPauseAutoScroll(false)}
-              className="flex gap-6 overflow-x-auto pb-2"
-              style={{ scrollbarWidth: "none" as never }}
-            >
-              {topHubs.length ? (
-                topHubs.map((hub) => <TopHubCard key={hub.id} hub={hub} />)
-              ) : (
-                <div className="w-full rounded-xl border border-slate-100 bg-white p-8 text-center shadow-sm">
-                  <h3 className={cn("text-2xl", SECTION_HEADING)}>No hubs yet</h3>
-                  <p className="mt-3 text-sm text-slate-600">Create the first hub to see it featured here.</p>
-                </div>
-              )}
+            <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <FeatureCard
+                icon={Megaphone}
+                title="Real-time Updates"
+                description="Post announcements, events, deals, and alerts. Your community sees them instantly."
+              />
+              <FeatureCard
+                icon={Users}
+                title="Membership & Roles"
+                description="Manage members with roles like admin, moderator, and member. Control who can post and view."
+              />
+              <FeatureCard
+                icon={Globe}
+                title="Public or Private"
+                description="Choose who can find and join your hub. Public hubs are discoverable; private hubs are invite-only."
+              />
+              <FeatureCard
+                icon={Bell}
+                title="Smart Notifications"
+                description="Members get notified about the deets that matter to them — no noise, just signal."
+              />
+              <FeatureCard
+                icon={MapPin}
+                title="Local Discovery"
+                description="Discover hubs near you. Find restaurants, communities, and organizations in your neighborhood."
+              />
+              <FeatureCard
+                icon={Shield}
+                title="Template System"
+                description="Pre-configured templates for restaurants, HOAs, schools, fitness clubs, and more. Get started in seconds."
+              />
             </div>
           </div>
         </section>
 
-        {/* FOOTER */}
-        <footer className={FOOTER_BG}>
-          <div className="flex min-h-16 w-full flex-col items-center justify-between gap-2 px-4 py-3 text-center text-white sm:flex-row sm:px-6 sm:text-left lg:px-10">
-            <p className="text-sm sm:text-base">© uDeets. All rights reserved.</p>
-            <div className="flex gap-5">
-              <IconFacebook className="h-6 w-6 cursor-pointer text-white/90 hover:text-white" />
-              <IconInstagram className="h-6 w-6 cursor-pointer text-white/90 hover:text-white" />
-              <IconYouTube className="h-6 w-6 cursor-pointer text-white/90 hover:text-white" />
+        {/* ─── HOW IT WORKS ─── */}
+        <section className="py-20 sm:py-28">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
+            <div className="grid gap-16 lg:grid-cols-2 lg:gap-20">
+              <div>
+                <h2 className="font-serif text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
+                  Up and running in minutes
+                </h2>
+                <p className="mt-4 text-base leading-relaxed text-slate-500">
+                  No technical setup needed. Create your hub, customize it, and start sharing with your community.
+                </p>
+              </div>
+
+              <div className="space-y-0">
+                <StepCard
+                  number={1}
+                  title="Create your hub"
+                  description="Pick a template that fits — restaurant, HOA, community group, or start from scratch. Name it, set visibility, and you're live."
+                />
+                <StepCard
+                  number={2}
+                  title="Share deets"
+                  description="Post updates, events, specials, alerts, and photos. Add CTA buttons so your community can order, RSVP, or contact you directly."
+                />
+                <StepCard
+                  number={3}
+                  title="Grow your community"
+                  description="Members join, subscribe, and stay informed. Everything they need — in one clean, organized hub."
+                />
+              </div>
             </div>
           </div>
-        </footer>
+        </section>
+
+        {/* ─── TOP HUBS ─── */}
+        {topHubs.length > 0 && (
+          <section className="border-t border-slate-100 bg-[#FAFBFC] py-20 sm:py-28">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
+              <div className="mb-12 flex items-end justify-between gap-4">
+                <div>
+                  <h2 className="font-serif text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
+                    Explore hubs
+                  </h2>
+                  <p className="mt-2 text-base text-slate-500">See what communities are building on uDeets.</p>
+                </div>
+                <Link
+                  href="/discover"
+                  className="hidden shrink-0 items-center gap-1.5 text-sm font-medium text-[#0C5C57] transition hover:underline sm:inline-flex"
+                >
+                  View all
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+
+              <div
+                ref={hubsRowRef}
+                onMouseEnter={() => setPauseAutoScroll(true)}
+                onMouseLeave={() => setPauseAutoScroll(false)}
+                className="flex gap-5 overflow-x-auto pb-4"
+                style={{ scrollbarWidth: "none" as never }}
+              >
+                {topHubs.map((hub) => (
+                  <HubCard key={hub.id} hub={hub} />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ─── CTA BANNER ─── */}
+        <section className="py-20 sm:py-28">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0C5C57] to-[#094a46] px-8 py-16 text-center shadow-2xl shadow-[#0C5C57]/20 sm:px-16 sm:py-20">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(169,209,202,0.15),transparent_50%)]" />
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_80%,rgba(255,255,255,0.05),transparent_50%)]" />
+
+              <div className="relative">
+                <h2 className="font-serif text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
+                  Ready to build your hub?
+                </h2>
+                <p className="mx-auto mt-4 max-w-lg text-base leading-relaxed text-white/70 sm:text-lg">
+                  Join thousands of communities using uDeets to stay connected. It takes less than 60 seconds to get started.
+                </p>
+                <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+                  <Link
+                    href="/auth"
+                    className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3.5 text-sm font-semibold text-[#0C5C57] shadow-lg transition hover:bg-slate-50"
+                  >
+                    Get Started Free
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
+
+      {/* ─── FOOTER ─── */}
+      <footer className="border-t border-slate-100 bg-[#111111]">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
+          <div className="flex flex-col items-center justify-between gap-6 py-10 sm:flex-row">
+            <div className="flex items-center gap-3">
+              <UdeetsLogoIcon className="h-7 w-7 text-white/80" alt="uDeets" />
+              <span className="font-serif text-lg font-semibold text-white">uDeets</span>
+            </div>
+
+            <div className="flex items-center gap-8">
+              <Link href="/discover" className="text-sm text-white/60 transition hover:text-white">
+                Discover
+              </Link>
+              <Link href="/auth" className="text-sm text-white/60 transition hover:text-white">
+                Sign in
+              </Link>
+            </div>
+
+            <div className="flex gap-4">
+              <IconFacebook className="h-5 w-5 text-white/40 transition hover:text-white/80" />
+              <IconInstagram className="h-5 w-5 text-white/40 transition hover:text-white/80" />
+              <IconYouTube className="h-5 w-5 text-white/40 transition hover:text-white/80" />
+            </div>
+          </div>
+
+          <div className="border-t border-white/10 py-6 text-center">
+            <p className="text-xs text-white/40">&copy; {new Date().getFullYear()} uDeets. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
-}
-
-function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
 }

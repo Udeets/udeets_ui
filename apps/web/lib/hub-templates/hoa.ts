@@ -1,0 +1,63 @@
+import type { HubTemplateConfig } from "./types";
+
+export const hoaConfig: HubTemplateConfig = {
+  template: "hoa",
+  layout: "community",
+  variants: ["HOA", "Apartment/Condo", "Neighborhood"],
+  terminology: {
+    hub: "Community",
+    deets: "Notices",
+    members: "Residents",
+    admin: "Board Member",
+    about: "Community Info",
+  },
+  tabs: ["About", "Posts", "Events", "Members", "Polls", "Settings"],
+  postTypes: [
+    { type: "notice", icon: "📢", description: "Official board announcement" },
+    { type: "maintenance", icon: "🔧", description: "Scheduled work, outages" },
+    { type: "event", icon: "📅", description: "Community events, meetings" },
+    { type: "poll", icon: "🗳️", description: "Community voting" },
+    { type: "alert", icon: "⚠️", description: "Emergency, urgent notice" },
+    { type: "dues_reminder", icon: "💰", description: "Payment reminders" },
+    { type: "community_post", icon: "🏘️", description: "General community sharing" },
+  ],
+  aboutSections: [
+    "Hero Block",
+    "Quick Info Strip",
+    "Board & Leadership",
+    "Community Rules & Docs",
+    "Amenities",
+    "Important Contacts",
+    "Upcoming Events",
+    "Location & Map",
+  ],
+  defaultCTAs: [
+    { label: "Pay Dues", actionType: "url", actionValue: "" },
+    { label: "Submit Request", actionType: "whatsapp", actionValue: "" },
+    { label: "Contact Board", actionType: "email", actionValue: "" },
+    { label: "Community Docs", actionType: "pdf", actionValue: "" },
+  ],
+  keyFields: [
+    "HOA / community name",
+    "Management company (optional)",
+    "Total units / homes",
+    "Year established",
+    "Monthly dues amount",
+    "Dues due date",
+    "Emergency contact number",
+    "Amenities (multi-select)",
+    "Documents (PDF uploads — CC&Rs, rules, minutes)",
+  ],
+  memberRoles: [
+    { role: "Board Member", who: "Admin", permissions: "All — post, manage members, upload docs" },
+    { role: "Property Manager", who: "Special admin", permissions: "Same as board, manages settings" },
+    { role: "Resident", who: "Member", permissions: "View all, post community posts, submit requests" },
+  ],
+  discoverCard: {
+    showCover: true,
+    badges: ["Amenities"],
+    showRating: false,
+    showButton: true,
+    buttonLabel: "Request to Join",
+  },
+};

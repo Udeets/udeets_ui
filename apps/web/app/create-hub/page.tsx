@@ -56,7 +56,12 @@ function CreateHubPageContent() {
       if (isDemoPreview) {
         setCreatedHubHref("/hubs/communities/demo-hub");
         setShowSuccess(true);
-        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ["#0C5C57", "#A9D1CA", "#E3F1EF", "#ffffff", "#1a8a82"] });
+                // Staggered "pop pop pop" confetti bursts from multiple origins
+        const confettiColors = ["#0C5C57", "#A9D1CA", "#E3F1EF", "#ffffff", "#1a8a82", "#FFD700", "#FFC107"];
+        confetti({ particleCount: 80, spread: 70, origin: { x: 0.5, y: 0.6 }, colors: confettiColors });
+        setTimeout(() => confetti({ particleCount: 60, spread: 90, origin: { x: 0.3, y: 0.5 }, colors: confettiColors }), 150);
+        setTimeout(() => confetti({ particleCount: 60, spread: 90, origin: { x: 0.7, y: 0.5 }, colors: confettiColors }), 300);
+        setTimeout(() => confetti({ particleCount: 40, spread: 120, origin: { x: 0.5, y: 0.4 }, colors: confettiColors }), 500);
         return;
       }
 
@@ -73,7 +78,12 @@ function CreateHubPageContent() {
 
       setCreatedHubHref(`/hubs/${createdHub.category}/${createdHub.slug}`);
       setShowSuccess(true);
-      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ["#0C5C57", "#A9D1CA", "#E3F1EF", "#ffffff", "#1a8a82"] });
+              // Staggered "pop pop pop" confetti bursts from multiple origins
+        const confettiColors = ["#0C5C57", "#A9D1CA", "#E3F1EF", "#ffffff", "#1a8a82", "#FFD700", "#FFC107"];
+        confetti({ particleCount: 80, spread: 70, origin: { x: 0.5, y: 0.6 }, colors: confettiColors });
+        setTimeout(() => confetti({ particleCount: 60, spread: 90, origin: { x: 0.3, y: 0.5 }, colors: confettiColors }), 150);
+        setTimeout(() => confetti({ particleCount: 60, spread: 90, origin: { x: 0.7, y: 0.5 }, colors: confettiColors }), 300);
+        setTimeout(() => confetti({ particleCount: 40, spread: 120, origin: { x: 0.5, y: 0.4 }, colors: confettiColors }), 500);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Failed to create hub.");
     } finally {

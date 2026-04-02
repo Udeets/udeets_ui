@@ -15,6 +15,8 @@ export function CreateDeetModal({
   isFontSizeMenuOpen,
   onToggleFontSizeMenu,
   attachedItems,
+  selectedPhotoPreviews = [],
+  onRemovePhoto,
   onClose,
   onOpenChild,
   onSubmit,
@@ -28,6 +30,8 @@ export function CreateDeetModal({
   isFontSizeMenuOpen: boolean;
   onToggleFontSizeMenu: () => void;
   attachedItems: AttachedDeetItem[];
+  selectedPhotoPreviews?: string[];
+  onRemovePhoto?: (index: number) => void;
   onClose: () => void;
   onOpenChild: (child: Exclude<ComposerChildFlow, "quit_confirm">) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -141,7 +145,8 @@ export function CreateDeetModal({
               onChange={(event) => onDraftTextChange(event.target.value)}
               placeholder="What&apos;s on your mind?"
               className={cn(
-                "h-[180px] w-full resize-none bg-transparent outline-none placeholder:text-slate-400",
+                "w-full resize-none bg-transparent outline-none placeholder:text-slate-400",
+                selectedPhotoPreviews.length > 0 ? "h-[120px]" : "h-[180px]",
                 formatting.fontSize === "small" && "text-sm",
                 formatting.fontSize === "medium" && "text-base",
                 formatting.fontSize === "large" && "text-lg",
@@ -151,6 +156,32 @@ export function CreateDeetModal({
               )}
               style={{ color: formatting.textColor }}
             />
+
+            {/* Photo thumbnail strip */}
+            {selectedPhotoPreviews.length > 0 ? (
+              <div className="mt-3 border-t border-slate-100 pt-3">
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {selectedPhotoPreviews.map((preview, index) => (
+                    <div key={`preview-${index}`} className="relative shrink-0">
+                      <img
+                        src={preview}
+                        alt={`Photo ${index + 1}`}
+                        className="h-20 w-20 rounded-xl object-cover"
+                      />
+                      {onRemovePhoto ? (
+                        <button
+                          type="button"
+                          onClick={() => onRemovePhoto(index)}
+                          className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#111111]/70 text-white transition hover:bg-[#111111]/90"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {attachedItems.length ? (

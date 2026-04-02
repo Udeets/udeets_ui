@@ -12,14 +12,15 @@ import { listDeets, subscribeToDeets } from "@/lib/services/deets/list-deets";
 import type { DeetRecord } from "@/lib/services/deets/deet-types";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import { listHubs } from "@/lib/services/hubs/list-hubs";
+import { listMyMemberships, type MyMembership } from "@/lib/services/members/list-my-memberships";
 import type { Hub as SupabaseHub } from "@/types/hub";
 import { DashboardHubCard, type DashboardHubCardData } from "./components/DashboardHubCard";
 
 type DashboardHub = DashboardHubCardData & { createdBy: string };
 
 type AuthStatus = "checking" | "authenticated" | "unauthenticated";
-type HubView = "my-hubs" | "following";
-type FeedFilter = "All" | "Posts" | "Notices" | "Deals" | "Announcements" | "Polls" | "Photos" | "Videos";
+type HubView = "my-hubs" | "joined" | "requested";
+type FeedFilter = "All" | "Posts" | "Notices" | "Deals" | "Announcements" | "Polls" | "Photos" | "Videos" | "News" | "Hazards" | "Alerts";
 type FeedItem = {
   id: string;
   title: string;
@@ -101,12 +102,12 @@ function DashboardDeetImage({ src, alt }: { src?: string; alt: string }) {
   if (!src || imageFailed) return null;
 
   return (
-    <div className="mt-3 overflow-hidden rounded-2xl border border-slate-100">
+    <div className="mt-3 aspect-video max-h-[280px] overflow-hidden rounded-2xl border border-slate-100">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
         alt={alt}
-        className="max-h-[28rem] w-full object-contain"
+        className="h-full w-full object-cover"
         loading="lazy"
         onError={() => setImageFailed(true)}
       />
@@ -162,68 +163,103 @@ function HubLauncher({
   selectedView,
   onSelectView,
   hubs,
+  requestedCount,
 }: {
   selectedView: HubView;
   onSelectView: (view: HubView) => void;
   hubs: DashboardHub[];
+  requestedCount: number;
 }) {
+  const emptyMessages: Record<HubView, { title: string; description: string; ctaLabel: string; ctaHref: string }> = {
+    "my-hubs": {
+      title: "No hubs to manage yet",
+      description: "Create your first hub to make this launcher feel like home.",
+      ctaLabel: "Create Hub",
+      ctaHref: "/create-hub",
+    },
+    joined: {
+      title: "No joined hubs yet",
+      description: "Discover hubs to join and they will appear here for quick access.",
+      ctaLabel: "Discover Hubs",
+      ctaHref: "/discover",
+    },
+    requested: {
+      title: "No pending requests",
+      description: "When you request to join a private hub, it will show up here until the admin approves.",
+      ctaLabel: "Discover Hubs",
+      ctaHref: "/discover",
+    },
+  };
+
+  const empty = emptyMessages[selectedView];
+
   return (
     <section className={cn(CARD, "p-4 sm:p-5")}>
       <div className="flex justify-start">
         <div className="inline-flex rounded-full bg-[#ECF6F3] p-1.5 shadow-[inset_0_1px_2px_rgba(12,92,87,0.08)]">
-          <button
-            type="button"
-            onClick={() => onSelectView("my-hubs")}
-            className={cn(
-              "rounded-full px-4 py-2 text-sm font-semibold transition",
-              selectedView === "my-hubs" ? "bg-white text-[#12312D] shadow-sm" : "text-[#58706B] hover:text-[#12312D]",
-            )}
-          >
-            My Hubs
-          </button>
-          <button
-            type="button"
-            onClick={() => onSelectView("following")}
-            className={cn(
-              "rounded-full px-4 py-2 text-sm font-semibold transition",
-              selectedView === "following" ? "bg-white text-[#12312D] shadow-sm" : "text-[#58706B] hover:text-[#12312D]",
-            )}
-          >
-            Following
-          </button>
+          {(
+            [
+              { key: "my-hubs" as HubView, label: "My Hubs" },
+              { key: "joined" as HubView, label: "Joined" },
+              { key: "requested" as HubView, label: "Requested" },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => onSelectView(tab.key)}
+              className={cn(
+                "relative rounded-full px-4 py-2 text-sm font-semibold transition",
+                selectedView === tab.key
+                  ? "bg-white text-[#12312D] shadow-sm"
+                  : "text-[#58706B] hover:text-[#12312D]",
+              )}
+            >
+              {tab.label}
+              {tab.key === "requested" && requestedCount > 0 ? (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#0C5C57] px-1 text-[10px] font-bold text-white">
+                  {requestedCount}
+                </span>
+              ) : null}
+            </button>
+          ))}
         </div>
       </div>
 
       {hubs.length ? (
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
-          <CreateHubTile />
+          {selectedView === "my-hubs" ? <CreateHubTile /> : null}
           {hubs.map((hub) => (
-            <DashboardHubCard key={hub.id} hub={hub} hasUnread={false} />
+            <DashboardHubCard
+              key={hub.id}
+              hub={hub}
+              hasUnread={false}
+              isPending={selectedView === "requested"}
+            />
           ))}
         </div>
       ) : (
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
-          <CreateHubTile />
-        </div>
-      )}
-
-      {!hubs.length ? (
-        <div className="mt-5 rounded-[24px] bg-[#F6FBFA] px-6 py-10 text-center">
-          <h3 className={cn("text-xl font-serif font-semibold tracking-tight", TEXT_DARK)}>
-            {selectedView === "my-hubs" ? "No hubs to manage yet" : "No followed hubs yet"}
-          </h3>
-          <p className={cn("mx-auto mt-3 max-w-xl text-sm leading-6 sm:text-base", TEXT_MUTED)}>
-            {selectedView === "my-hubs"
-              ? "Create your first hub to make this launcher feel like home."
-              : "Discover hubs to follow and they will appear here for quick switching."}
-          </p>
-          <div className="mt-6">
-            <Link href={selectedView === "my-hubs" ? "/create-hub" : "/discover"} className={PRIMARY_BUTTON}>
-              {selectedView === "my-hubs" ? "Create Hub" : "Discover Hubs"}
-            </Link>
+        <>
+          {selectedView === "my-hubs" ? (
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
+              <CreateHubTile />
+            </div>
+          ) : null}
+          <div className="mt-5 rounded-[24px] bg-[#F6FBFA] px-6 py-10 text-center">
+            <h3 className={cn("text-xl font-serif font-semibold tracking-tight", TEXT_DARK)}>
+              {empty.title}
+            </h3>
+            <p className={cn("mx-auto mt-3 max-w-xl text-sm leading-6 sm:text-base", TEXT_MUTED)}>
+              {empty.description}
+            </p>
+            <div className="mt-6">
+              <Link href={empty.ctaHref} className={PRIMARY_BUTTON}>
+                {empty.ctaLabel}
+              </Link>
+            </div>
           </div>
-        </div>
-      ) : null}
+        </>
+      )}
     </section>
   );
 }
@@ -240,6 +276,7 @@ function DashboardPageContent() {
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
 
   const [hubs, setHubs] = useState<DashboardHub[]>([]);
+  const [memberships, setMemberships] = useState<MyMembership[]>([]);
   const [isLoadingHubs, setIsLoadingHubs] = useState(true);
   const [hubsLoadError, setHubsLoadError] = useState<string | null>(null);
   const [myDeetsItems, setMyDeetsItems] = useState<FeedItem[]>([]);
@@ -300,13 +337,18 @@ function DashboardPageContent() {
       setHubsLoadError(null);
 
       try {
-        const dbHubs = await listHubs();
+        const [dbHubs, myMemberships] = await Promise.all([
+          listHubs(),
+          listMyMemberships(),
+        ]);
         if (!cancelled) {
           setHubs(dbHubs.map(toDashboardHub));
+          setMemberships(myMemberships);
         }
       } catch (error) {
         if (!cancelled) {
           setHubs([]);
+          setMemberships([]);
           setHubsLoadError(error instanceof Error ? error.message : "Hubs could not be loaded.");
         }
       } finally {
@@ -323,15 +365,41 @@ function DashboardPageContent() {
     };
   }, [authStatus]);
 
+  const membershipByHubId = useMemo(() => {
+    const map = new Map<string, MyMembership>();
+    for (const m of memberships) map.set(m.hubId, m);
+    return map;
+  }, [memberships]);
+
   const myHubs = useMemo(
-    () => hubs.filter((hub) => Boolean(currentUserId && hub.createdBy === currentUserId)),
-    [currentUserId, hubs],
+    () => hubs.filter((hub) => {
+      const m = membershipByHubId.get(hub.id);
+      return m?.role === "creator" && m.status === "active";
+    }),
+    [hubs, membershipByHubId],
   );
-  const followingHubs = useMemo(
-    () => hubs.filter((hub) => !currentUserId || hub.createdBy !== currentUserId),
-    [currentUserId, hubs],
+
+  const joinedHubs = useMemo(
+    () => hubs.filter((hub) => {
+      const m = membershipByHubId.get(hub.id);
+      return m && (m.role === "admin" || m.role === "member") && m.status === "active";
+    }),
+    [hubs, membershipByHubId],
   );
-  const visibleHubs = selectedHubView === "my-hubs" ? myHubs : followingHubs;
+
+  const requestedHubs = useMemo(
+    () => hubs.filter((hub) => {
+      const m = membershipByHubId.get(hub.id);
+      return m?.status === "pending";
+    }),
+    [hubs, membershipByHubId],
+  );
+
+  const visibleHubs = selectedHubView === "my-hubs"
+    ? myHubs
+    : selectedHubView === "joined"
+      ? joinedHubs
+      : requestedHubs;
   const relevantHubIds = useMemo(() => new Set(visibleHubs.map((hub) => hub.id)), [visibleHubs]);
   useEffect(() => {
     if (authStatus !== "authenticated") {
@@ -469,6 +537,7 @@ function DashboardPageContent() {
               selectedView={selectedHubView}
               onSelectView={setSelectedHubView}
               hubs={visibleHubs}
+              requestedCount={requestedHubs.length}
             />
 
             <section className={cn(CARD, "p-4 sm:p-5")}>
@@ -625,7 +694,7 @@ function DashboardPageContent() {
                       <div className="rounded-[22px] bg-white px-5 py-4 text-left shadow-[0_8px_20px_rgba(12,92,87,0.05)]">
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5F807A]">Current view</p>
                         <p className={cn("mt-2 text-base font-semibold", TEXT_DARK)}>
-                          {selectedHubView === "my-hubs" ? "My Hubs" : "Following"}
+                          {selectedHubView === "my-hubs" ? "My Hubs" : selectedHubView === "joined" ? "Joined Hubs" : "Requested Hubs"}
                         </p>
                         <p className={cn("mt-1 text-sm", TEXT_MUTED)}>
                           {searchQuery ? `Searching for "${searchQuery}".` : "Search and filter controls are ready here."}

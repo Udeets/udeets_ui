@@ -14,7 +14,7 @@ export function useHubFilters({
 }) {
   const [postSearchQuery, setPostSearchQuery] = useState("");
   const [feedFilter, setFeedFilter] = useState<
-    "Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos"
+    "Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos" | "News" | "Deals" | "Alerts"
   >("Newest");
   const [isFeedSearchOpen, setIsFeedSearchOpen] = useState(false);
   const [isFeedFilterOpen, setIsFeedFilterOpen] = useState(false);
@@ -36,6 +36,9 @@ export function useHubFilters({
       }
       if (feedFilter === "Events") return item.kind === "event";
       if (feedFilter === "Photos") return item.kind === "photo";
+      if (feedFilter === "News") return item.kind === "news";
+      if (feedFilter === "Deals") return item.kind === "deal";
+      if (feedFilter === "Alerts") return item.kind === "alert" || item.kind === "hazard";
       return false;
     });
   }, [allFeedItems, feedFilter, normalizedPostSearch]);
@@ -70,7 +73,7 @@ export function useHubFilters({
   };
 
   const selectFeedFilter = (
-    value: "Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos",
+    value: "Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos" | "News" | "Deals" | "Alerts",
   ) => {
     setFeedFilter(value);
     setIsFeedFilterOpen(false);

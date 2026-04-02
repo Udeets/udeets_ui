@@ -1,7 +1,9 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { Camera, Facebook, Globe, Instagram, Loader2, MapPin, Phone, Settings, UsersRound, Youtube } from "lucide-react";
+import { Camera, Facebook, Globe, Instagram, Loader2, MapPin, Phone, Pencil, Settings, UsersRound, Youtube } from "lucide-react";
+import type { HubCTARecord } from "@/lib/services/ctas/cta-types";
+import { CTADisplay } from "../ctas/CTADisplay";
 import { ACTION_ICON, ACTION_ICON_BUTTON, CARD, displayLinkValue, ImageWithFallback, initials, cn } from "../hubUtils";
 
 export function AboutSection({
@@ -36,6 +38,8 @@ export function AboutSection({
   adminImages,
   dpImageSrc,
   coverImageSrc,
+  hubCTAs,
+  onOpenCTAEditor,
 }: {
   CategoryIcon: LucideIcon;
   categoryLabel: string;
@@ -68,6 +72,8 @@ export function AboutSection({
   adminImages: string[];
   dpImageSrc: string;
   coverImageSrc: string;
+  hubCTAs?: HubCTARecord[];
+  onOpenCTAEditor?: () => void;
 }) {
   const connectItems = [
     { icon: Globe,     label: "Website",   value: connectLinks.website,   href: connectLinks.website },
@@ -133,6 +139,31 @@ export function AboutSection({
             ) : null}
           </div>
         </div>
+
+        {/* BLOCK 1.5 — CTA Buttons */}
+        {((hubCTAs && hubCTAs.length > 0) || isCreatorAdmin) ? (
+          <div className="border-b border-slate-100 pb-5">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <p className="text-sm font-medium text-slate-500">Quick Actions</p>
+              {isCreatorAdmin && onOpenCTAEditor ? (
+                <button type="button" onClick={onOpenCTAEditor} className={ACTION_ICON_BUTTON} aria-label="Edit CTAs" title="Edit CTA buttons">
+                  <Pencil className={ACTION_ICON} />
+                </button>
+              ) : null}
+            </div>
+            {hubCTAs && hubCTAs.length > 0 ? (
+              <CTADisplay ctas={hubCTAs} />
+            ) : isCreatorAdmin && onOpenCTAEditor ? (
+              <button
+                type="button"
+                onClick={onOpenCTAEditor}
+                className="text-sm text-[#0C5C57] transition hover:underline"
+              >
+                Add call-to-action buttons →
+              </button>
+            ) : null}
+          </div>
+        ) : null}
 
         {/* BLOCK 2 — Connect + Photos */}
         {(showConnectCard || showPhotosCard) ? (

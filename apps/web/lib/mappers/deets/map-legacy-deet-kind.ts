@@ -4,6 +4,10 @@ export const LEGACY_DEET_KIND_TO_TYPE: Record<DeetKind, DeetType> = {
   Posts: "update",
   Notices: "announcement",
   Photos: "media",
+  News: "update",
+  Deals: "update",
+  Hazards: "alert",
+  Alerts: "alert",
 };
 
 export const DEET_TYPE_TO_LEGACY_BUCKET: Partial<Record<DeetType, DeetKind>> = {

@@ -47,17 +47,28 @@ function DashboardImage({
 export function DashboardHubCard({
   hub,
   hasUnread = false,
+  isPending = false,
 }: {
   hub: DashboardHubCardData;
   hasUnread?: boolean;
+  isPending?: boolean;
 }) {
   return (
     <Link
       href={hub.href}
-      className="relative block overflow-hidden rounded-[24px] bg-white shadow-[0_10px_26px_rgba(12,92,87,0.06)] transition-transform duration-200 hover:-translate-y-0.5"
+      className={cn(
+        "relative block overflow-hidden rounded-[24px] bg-white shadow-[0_10px_26px_rgba(12,92,87,0.06)] transition-transform duration-200 hover:-translate-y-0.5",
+        isPending && "opacity-75",
+      )}
     >
       {hasUnread ? (
         <div className="absolute right-1.5 top-1.5 z-10 h-2.5 w-2.5 rounded-full bg-red-500" />
+      ) : null}
+
+      {isPending ? (
+        <div className="absolute left-1.5 top-1.5 z-10 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+          Awaiting Approval
+        </div>
       ) : null}
 
       <div className="relative overflow-visible rounded-t-[24px]">
@@ -78,7 +89,9 @@ export function DashboardHubCard({
         >
           {hub.name}
         </h3>
-        <p className="mt-1.5 text-xs text-[#58706B]">{hub.membersLabel}</p>
+        <p className="mt-1.5 text-xs text-[#58706B]">
+          {isPending ? "Request pending" : hub.membersLabel}
+        </p>
       </div>
     </Link>
   );

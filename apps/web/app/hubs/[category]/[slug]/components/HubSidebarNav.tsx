@@ -1,10 +1,24 @@
 "use client";
 
-import { Home, MessageSquare, Paperclip, Settings, Users } from "lucide-react";
+import { Home, MessageSquare, Paperclip, Settings, Users, Calendar, Star, FileText, BarChart3 } from "lucide-react";
 import type { HubTab } from "./hubTypes";
 import type { PendingNavigation } from "./hubTypes";
+import type { HubTemplateConfig } from "@/lib/hub-templates";
 
-const NAV_ITEMS: Array<{ tab: HubTab; label: string; icon: typeof Home }> = [
+const TAB_ICON_MAP: Record<string, typeof Home> = {
+  About: Home,
+  Posts: MessageSquare,
+  Attachments: Paperclip,
+  Members: Users,
+  Events: Calendar,
+  Reviews: Star,
+  Documents: FileText,
+  Polls: BarChart3,
+  Notices: MessageSquare,
+  Settings: Settings,
+};
+
+const DEFAULT_NAV_ITEMS: Array<{ tab: HubTab; label: string; icon: typeof Home }> = [
   { tab: "About", label: "About", icon: Home },
   { tab: "Posts", label: "Deets", icon: MessageSquare },
   { tab: "Attachments", label: "Attachments", icon: Paperclip },
@@ -15,16 +29,42 @@ export function HubSidebarNav({
   activeSection,
   activePanel,
   isCreatorAdmin,
+  canAccessFullContent = true,
+  templateConfig,
   onNavigate,
 }: {
   activeSection: HubTab;
   activePanel: string;
   isCreatorAdmin: boolean;
+  canAccessFullContent?: boolean;
+  templateConfig?: HubTemplateConfig;
   onNavigate: (next: PendingNavigation) => void;
 }) {
+  // Build nav items from template config, or use defaults
+  const navItems = templateConfig
+    ? templateConfig.tabs
+        .filter((tab) => tab !== "Settings") // Settings is handled separately
+        .map((tab) => ({
+          tab,
+          label:
+            tab === "About"
+              ? templateConfig.terminology.about
+              : tab === "Posts"
+                ? templateConfig.terminology.deets
+                : tab === "Members"
+                  ? templateConfig.terminology.members
+                  : tab,
+          icon: TAB_ICON_MAP[tab] ?? MessageSquare,
+        }))
+    : DEFAULT_NAV_ITEMS;
+
+  const visibleItems = canAccessFullContent
+    ? navItems
+    : navItems.filter((item) => item.tab === "About");
+
   return (
     <nav className="flex flex-col py-2">
-      {NAV_ITEMS.map(({ tab, label, icon: Icon }) => {
+      {visibleItems.map(({ tab, label, icon: Icon }) => {
         const isActive = activeSection === tab && activePanel !== "settings";
         return (
           <button

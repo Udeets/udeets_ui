@@ -19,7 +19,10 @@ export type DeetFormattingState = {
   textColor: string;
 };
 
+export type DeetPostType = "post" | "notice" | "news" | "deal" | "hazard" | "alert";
+
 export type DeetSettingsState = {
   noticeEnabled: boolean;
   commentsEnabled: boolean;
+  postType: DeetPostType;
 };

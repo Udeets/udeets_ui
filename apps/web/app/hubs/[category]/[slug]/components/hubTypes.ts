@@ -1,7 +1,7 @@
 import type { HubContent } from "@/lib/hub-content";
 import type { HubRecord } from "@/lib/hubs";
 
-export type HubTab = "About" | "Posts" | "Attachments" | "Members";
+export type HubTab = "About" | "Posts" | "Attachments" | "Members" | "Menu" | "Events" | "Reviews" | "Schedule" | "Notices" | "Requests" | "Documents" | "Polls" | "Settings";
 export type HubPanel = "posts" | "challenges" | "settings" | "members" | "invite";
 
 export type ViewerState = {

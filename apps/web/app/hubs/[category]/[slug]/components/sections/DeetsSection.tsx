@@ -40,8 +40,8 @@ export function DeetsSection({
   onToggleFeedSearch: () => void;
   isFeedFilterOpen: boolean;
   onToggleFeedFilter: () => void;
-  feedFilter: "Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos";
-  onSelectFeedFilter: (value: "Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos") => void;
+  feedFilter: "Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos" | "News" | "Deals" | "Alerts";
+  onSelectFeedFilter: (value: "Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos" | "News" | "Deals" | "Alerts") => void;
   filteredFeedItems: HubContent["feed"];
   showDemoPostedText: boolean;
   demoPostedText: string;
@@ -103,11 +103,11 @@ export function DeetsSection({
             </button>
             {isFeedFilterOpen ? (
               <div className="absolute right-0 top-12 z-20 min-w-[180px] rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
-                {["Newest", "Oldest", "Announcements", "Events", "Polls", "Photos"].map((option) => (
+                {["Newest", "Oldest", "Announcements", "Events", "Polls", "Photos", "News", "Deals", "Alerts"].map((option) => (
                   <button
                     key={option}
                     type="button"
-                    onClick={() => onSelectFeedFilter(option as "Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos")}
+                    onClick={() => onSelectFeedFilter(option as typeof feedFilter)}
                     className={cn(
                       "flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm transition",
                       feedFilter === option ? "bg-[#EAF6F3] text-[#0C5C57]" : "text-slate-600 hover:bg-slate-50 hover:text-[#0C5C57]"
@@ -223,7 +223,8 @@ export function DeetsSection({
                 key={item.id}
                 className={cn(
                   "w-full rounded-[28px] border border-[#DCECE7] bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FCFB_100%)] p-5 shadow-sm transition",
-                  highlightedItemId === item.id && "ring-2 ring-[#A9D1CA] ring-offset-2 ring-offset-white"
+                  highlightedItemId === item.id && "ring-2 ring-[#A9D1CA] ring-offset-2 ring-offset-white",
+                  (item.kind === "hazard" || item.kind === "alert") && "border-l-4 border-l-red-500"
                 )}
               >
                 <div className="flex items-start gap-3">
@@ -265,12 +266,12 @@ export function DeetsSection({
                           )
                         }
                       >
-                        <div className="w-full bg-[#EAF4F1]">
+                        <div className="aspect-video max-h-[280px] w-full bg-[#EAF4F1]">
                           <ImageWithFallback
                             src={item.image}
                             sources={item.images?.length ? item.images : [item.image, coverImageSrc]}
                             alt={item.title}
-                            className="max-h-[28rem] w-full object-contain"
+                            className="h-full w-full object-cover"
                             fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA]/25 text-sm font-medium text-[#0C5C57]"
                             fallback="Image unavailable"
                             loading="lazy"

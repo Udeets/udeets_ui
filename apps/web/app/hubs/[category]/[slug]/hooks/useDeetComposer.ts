@@ -18,6 +18,7 @@ const INITIAL_DEET_FORMATTING: DeetFormattingState = {
 const INITIAL_DEET_SETTINGS: DeetSettingsState = {
   noticeEnabled: false,
   commentsEnabled: true,
+  postType: "post",
 };
 
 function fileToDataUrl(file: File) {
@@ -70,7 +71,8 @@ export function useDeetComposer({
     attachedDeetItems.length > 0 ||
     selectedPhotoPreviews.length > 0 ||
     deetSettings.noticeEnabled ||
-    !deetSettings.commentsEnabled;
+    !deetSettings.commentsEnabled ||
+    deetSettings.postType !== "post";
 
   useEffect(() => {
     if (!composerOpen) return;
@@ -143,6 +145,11 @@ export function useDeetComposer({
     setActiveComposerChild(null);
   };
 
+  const removePhoto = (index: number) => {
+    setSelectedPhotoPreviews((current) => current.filter((_, i) => i !== index));
+    setSelectedPhotoFiles((current) => current.filter((_, i) => i !== index));
+  };
+
   const handleDeetPhotoFiles = async (event: ChangeEvent<HTMLInputElement>) => {
     const input = event.target;
     const files = Array.from(input.files ?? []);
@@ -198,12 +205,31 @@ export function useDeetComposer({
       const primaryImage = uploadedPhotoUrls[0];
       const newestSticker = [...attachedDeetItems].reverse().find((item) => item.type === "sticker" && item.detail);
 
+      const postTypeToKind: Record<string, string> = {
+        post: primaryImage ? "Photos" : "Posts",
+        notice: "Notices",
+        news: "News",
+        deal: "Deals",
+        hazard: "Hazards",
+        alert: "Alerts",
+      };
+      const postTypeToTitle: Record<string, string> = {
+        post: primaryImage ? "Photo" : "Deet",
+        notice: "Notice",
+        news: "News",
+        deal: "Deal",
+        hazard: "Hazard",
+        alert: "Alert",
+      };
+      const resolvedKind = (deetSettings.noticeEnabled ? "Notices" : postTypeToKind[deetSettings.postType] || "Posts") as import("@/lib/services/deets/deet-types").DeetKind;
+      const resolvedTitle = deetSettings.noticeEnabled ? "Notice" : postTypeToTitle[deetSettings.postType] || "Deet";
+
       const createdDeet = await createDeet({
         hubId,
         authorName,
-        title: deetSettings.noticeEnabled ? "Notice" : primaryImage ? "Photo" : "Deet",
+        title: resolvedTitle,
         body: trimmedText || newestSticker?.detail || "Shared a new update.",
-        kind: deetSettings.noticeEnabled ? "Notices" : primaryImage ? "Photos" : "Posts",
+        kind: resolvedKind,
         previewImageUrl: primaryImage,
         previewImageUrls: uploadedPhotoUrls,
         attachments: finalAttachments.map((item) => ({
@@ -245,6 +271,7 @@ export function useDeetComposer({
     closeDeetComposer,
     discardDeetComposer,
     attachDeetItem,
+    removePhoto,
     handleDeetPhotoFiles,
     handleSubmitDeet,
   };
