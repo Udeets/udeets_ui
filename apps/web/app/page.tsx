@@ -2,7 +2,28 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Bell, Globe, MapPin, Megaphone, Shield, Sparkles, Users, Zap } from "lucide-react";
+import {
+  ArrowRight,
+  Bell,
+  BookOpen,
+  Calendar,
+  ChevronDown,
+  Church,
+  Dumbbell,
+  Globe,
+  HelpCircle,
+  Home,
+  MapPin,
+  Megaphone,
+  MessageSquare,
+  PawPrint,
+  Shield,
+  Sparkles,
+  Store,
+  Users,
+  UtensilsCrossed,
+  Zap,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { UdeetsBrandLockup, UdeetsLogoIcon } from "@/components/brand-logo";
 import { listHubs } from "@/lib/services/hubs/list-hubs";
@@ -26,6 +47,7 @@ type TopHub = {
   href: string;
   image: string;
   category: string;
+  locationLabel: string;
 };
 
 function toTopHub(hub: SupabaseHub): TopHub {
@@ -36,6 +58,7 @@ function toTopHub(hub: SupabaseHub): TopHub {
     href: `/hubs/${hub.category}/${hub.slug}`,
     image: normalizePublicSrc(hub.dp_image_url || hub.cover_image_url || undefined),
     category: hub.category,
+    locationLabel: [hub.city, hub.state].filter(Boolean).join(", "),
   };
 }
 
@@ -70,40 +93,107 @@ function StepCard({ number, title, description }: { number: number; title: strin
   );
 }
 
-/* ─── Hub card ─── */
-function HubCard({ hub }: { hub: TopHub }) {
+/* ─── Discover-style hub list item (horizontal scroll version) ─── */
+function HubListItemHorizontal({ hub }: { hub: TopHub }) {
   const [imageFailed, setImageFailed] = useState(false);
 
   return (
     <Link
       href={hub.href}
-      className="group flex w-[300px] shrink-0 flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white transition duration-300 hover:border-slate-200 hover:shadow-lg hover:shadow-slate-200/50"
+      className="flex w-[320px] shrink-0 items-start gap-4 rounded-xl bg-white p-3 transition duration-200 hover:shadow-md border border-slate-100 hover:border-slate-200"
     >
-      <div className="relative h-[160px] overflow-hidden bg-[#EAF6F3]">
+      <div className="h-[72px] w-[72px] flex-shrink-0 overflow-hidden rounded-lg">
         {hub.image && !imageFailed ? (
-          <Image
+          <img
             src={hub.image}
             alt={hub.name}
-            fill
-            unoptimized
-            loader={({ src }) => src}
-            className="object-cover transition duration-500 group-hover:scale-105"
-            sizes="300px"
+            className="h-full w-full object-cover"
+            loading="lazy"
             onError={() => setImageFailed(true)}
           />
         ) : (
-          <div className="flex h-full items-center justify-center">
-            <UdeetsLogoIcon className="h-12 w-12 text-[#0C5C57]/20" alt="" />
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#0C5C57] to-[#1a8a82]">
+            <span className="text-2xl font-semibold text-white/70">{hub.name?.charAt(0)?.toUpperCase()}</span>
           </div>
         )}
       </div>
-      <div className="flex flex-1 flex-col p-4">
-        <h3 className="text-base font-semibold tracking-tight text-[#111111] group-hover:text-[#0C5C57] transition">
-          {hub.name}
-        </h3>
-        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500">{hub.intro}</p>
+      <div className="min-w-0 flex-1 pt-0.5">
+        <h3 className="truncate text-[15px] font-semibold tracking-tight text-[#111111]">{hub.name}</h3>
+        <p className="mt-1 line-clamp-2 text-[13px] leading-snug text-gray-500">{hub.intro}</p>
+        {hub.locationLabel && (
+          <p className="mt-1.5 text-[12px] text-gray-400 truncate">{hub.locationLabel}</p>
+        )}
       </div>
     </Link>
+  );
+}
+
+/* ─── Use-case card ─── */
+function UseCaseCard({
+  icon: Icon,
+  title,
+  description,
+  href,
+}: {
+  icon: typeof Zap;
+  title: string;
+  description: string;
+  href: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group flex flex-col rounded-2xl border border-slate-100 bg-white p-6 transition duration-300 hover:border-[#A9D1CA] hover:shadow-lg hover:shadow-[#0C5C57]/5"
+    >
+      <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#EAF6F3] to-[#d4ece7]">
+        <Icon className="h-6 w-6 text-[#0C5C57]" />
+      </div>
+      <h3 className="text-lg font-semibold tracking-tight text-[#111111] group-hover:text-[#0C5C57] transition">{title}</h3>
+      <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-500">{description}</p>
+      <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#0C5C57]">
+        Learn more <ArrowRight className="h-3.5 w-3.5" />
+      </span>
+    </Link>
+  );
+}
+
+/* ─── FAQ item ─── */
+function FAQItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b border-slate-100 last:border-b-0">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between gap-4 py-5 text-left"
+      >
+        <span className="text-[15px] font-medium text-[#111111]">{question}</span>
+        <ChevronDown
+          className={cn(
+            "h-5 w-5 shrink-0 text-slate-400 transition-transform duration-200",
+            open && "rotate-180"
+          )}
+        />
+      </button>
+      <div
+        className={cn(
+          "overflow-hidden transition-all duration-200",
+          open ? "max-h-96 pb-5" : "max-h-0"
+        )}
+      >
+        <p className="text-sm leading-relaxed text-slate-500">{answer}</p>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Stat card ─── */
+function StatCard({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="text-center">
+      <div className="text-4xl font-bold tracking-tight text-[#0C5C57] sm:text-5xl">{value}</div>
+      <div className="mt-2 text-sm font-medium text-slate-500">{label}</div>
+    </div>
   );
 }
 
@@ -134,6 +224,106 @@ function IconYouTube(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+/* ─── Header dropdown ─── */
+function NavDropdown({ label, items }: { label: string; items: { label: string; href: string; description?: string }[] }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1 rounded-full px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-[#111111]"
+      >
+        {label}
+        <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-xl border border-slate-100 bg-white p-2 shadow-xl shadow-slate-200/50">
+          {items.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setOpen(false)}
+              className="block rounded-lg px-3 py-2.5 transition hover:bg-slate-50"
+            >
+              <div className="text-sm font-medium text-[#111111]">{item.label}</div>
+              {item.description && (
+                <div className="mt-0.5 text-xs text-slate-500">{item.description}</div>
+              )}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── FAQ data ─── */
+const FAQ_ITEMS = [
+  {
+    question: "What is a hub?",
+    answer:
+      "A hub is your community's home on uDeets. It's a dedicated space where you can share updates (called deets), events, photos, and important information with your members. Think of it as a modern replacement for group chats, Facebook groups, and community bulletin boards — all in one clean, organized place.",
+  },
+  {
+    question: "Is uDeets free to use?",
+    answer:
+      "Yes! Creating a hub and joining hubs is completely free. We believe every community deserves a great tool to stay connected. Premium features for larger organizations will be available in the future.",
+  },
+  {
+    question: "What types of communities can use uDeets?",
+    answer:
+      "uDeets works for any group that needs to share information and stay connected. Popular use cases include restaurants sharing daily specials, HOAs posting community updates, religious organizations coordinating events, fitness clubs managing schedules, pet clubs organizing meetups, and neighborhood groups staying informed.",
+  },
+  {
+    question: "How is uDeets different from WhatsApp groups or Facebook groups?",
+    answer:
+      "Unlike chat apps where important information gets buried in conversations, uDeets organizes everything by type — announcements, events, photos, files. Members can find what they need without scrolling through hundreds of messages. Plus, hub creators get professional tools like custom branding, event RSVPs, and role-based access control.",
+  },
+  {
+    question: "Can I make my hub private?",
+    answer:
+      "Absolutely. When creating a hub, you can choose between public (discoverable by anyone) or private (invite-only). Private hubs require an admin to approve join requests, giving you full control over who can see your content.",
+  },
+  {
+    question: "What are templates and how do they work?",
+    answer:
+      "Templates are pre-configured hub setups designed for specific types of communities. For example, the Restaurant template comes with sections for menu, specials, and hours, while the HOA template includes sections for rules, maintenance, and community events. Templates save you setup time — you can always customize them later.",
+  },
+  {
+    question: "How do members join my hub?",
+    answer:
+      "Members can join by searching for your hub on the Discover page, through a direct invite link you share, or by visiting your hub's custom URL (yourhub.udeets.com). For private hubs, members request to join and an admin approves the request.",
+  },
+  {
+    question: "Can I customize my hub's appearance?",
+    answer:
+      "Yes! You can upload a display picture and cover photo, choose from 6 accent color themes, and organize your sections however you like. Your hub gets its own custom URL (yourhub.udeets.com) for easy sharing.",
+  },
+];
+
+/* ─── Template data ─── */
+const TEMPLATES = [
+  { icon: UtensilsCrossed, name: "Restaurants", description: "Menus, daily specials, hours, and online ordering links", slug: "restaurants" },
+  { icon: Home, name: "HOA", description: "Community rules, maintenance updates, and resident communication", slug: "hoa" },
+  { icon: Church, name: "Religious Places", description: "Service times, event calendars, and congregation updates", slug: "religious-places" },
+  { icon: Dumbbell, name: "Fitness", description: "Class schedules, member workouts, and club announcements", slug: "fitness" },
+  { icon: PawPrint, name: "Pet Clubs", description: "Meetup coordination, pet galleries, and community events", slug: "pet-clubs" },
+  { icon: Users, name: "Communities", description: "Neighborhood groups, alumni networks, and social clubs", slug: "communities" },
+  { icon: Calendar, name: "Events", description: "Event planning, RSVPs, calendars, and attendee management", slug: "events" },
+  { icon: Store, name: "Retail", description: "Product updates, promotions, loyalty programs, and store info", slug: "retail" },
+];
+
 export default function Page() {
   const hubsRowRef = useRef<HTMLDivElement | null>(null);
   const [pauseAutoScroll, setPauseAutoScroll] = useState(false);
@@ -162,25 +352,61 @@ export default function Page() {
     async function loadTopHubs() {
       try {
         const hubs = await listHubs();
-        if (!cancelled) setTopHubs(hubs.slice(0, 8).map(toTopHub));
+        if (!cancelled) setTopHubs(hubs.slice(0, 12).map(toTopHub));
       } catch {
         if (!cancelled) setTopHubs([]);
       }
     }
     void loadTopHubs();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
     <div className="min-h-screen bg-white">
       {/* ─── HEADER ─── */}
-      <header className="sticky top-0 z-50 border-b border-[#d4ece7]/60 bg-[#EAF6F3]/90 backdrop-blur-lg">
+      <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/80 backdrop-blur-lg">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
-          <Link href="/" className="flex items-center gap-2">
-            <UdeetsBrandLockup textClassName="text-xl sm:text-2xl" priority />
-          </Link>
+          {/* Left: Logo + nav links */}
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Link href="/" className="flex items-center gap-2 mr-4">
+              <UdeetsBrandLockup textClassName="text-xl sm:text-2xl" priority />
+            </Link>
 
-          <nav className="flex items-center gap-2 sm:gap-3">
+            <nav className="hidden items-center gap-0.5 md:flex">
+              <Link
+                href="/about"
+                className="rounded-full px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-[#111111]"
+              >
+                About
+              </Link>
+
+              <NavDropdown
+                label="Use Cases"
+                items={[
+                  { label: "Restaurants", href: "/use-cases#restaurants", description: "Menus, specials & online ordering" },
+                  { label: "HOA & Communities", href: "/use-cases#hoa", description: "Updates, rules & resident comms" },
+                  { label: "Religious Places", href: "/use-cases#religious", description: "Services, events & outreach" },
+                  { label: "Fitness & Sports", href: "/use-cases#fitness", description: "Schedules, classes & clubs" },
+                  { label: "All Use Cases", href: "/use-cases", description: "See all templates and use cases" },
+                ]}
+              />
+
+              <NavDropdown
+                label="Resources"
+                items={[
+                  { label: "FAQ", href: "/resources#faq", description: "Frequently asked questions" },
+                  { label: "Blog", href: "/resources#blog", description: "Tips, updates & community stories" },
+                  { label: "Tutorials", href: "/resources#tutorials", description: "Step-by-step guides" },
+                  { label: "Help Centre", href: "/resources#help", description: "Get support" },
+                ]}
+              />
+            </nav>
+          </div>
+
+          {/* Right: Search + Sign in */}
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/discover"
               className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-[#111111]"
@@ -198,26 +424,23 @@ export default function Page() {
             >
               Sign in
             </Link>
-          </nav>
+          </div>
         </div>
       </header>
 
       <main>
         {/* ─── HERO ─── */}
         <section className="relative overflow-hidden">
-          {/* Subtle gradient orbs */}
           <div className="pointer-events-none absolute -top-40 right-1/4 h-[500px] w-[500px] rounded-full bg-[#EAF6F3]/60 blur-[120px]" />
           <div className="pointer-events-none absolute -bottom-20 left-1/4 h-[400px] w-[400px] rounded-full bg-[#A9D1CA]/20 blur-[100px]" />
 
           <div className="relative mx-auto max-w-7xl px-4 pb-20 pt-20 sm:px-6 sm:pb-28 sm:pt-28 lg:px-10 lg:pb-32 lg:pt-32">
             <div className="mx-auto max-w-3xl text-center">
-              {/* Badge */}
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#A9D1CA]/50 bg-[#EAF6F3] px-4 py-1.5">
                 <Sparkles className="h-3.5 w-3.5 text-[#0C5C57]" />
                 <span className="text-xs font-medium text-[#0C5C57]">Your community, simplified</span>
               </div>
 
-              {/* Heading */}
               <h1 className="text-5xl font-semibold leading-[1.1] tracking-tight text-[#111111] sm:text-6xl lg:text-7xl">
                 Deets that matter.
                 <br />
@@ -228,7 +451,6 @@ export default function Page() {
                 Create hubs for your community, business, or organization. Share updates, events, and important details — all in one place.
               </p>
 
-              {/* CTAs */}
               <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Link
                   href="/auth"
@@ -246,7 +468,6 @@ export default function Page() {
               </div>
             </div>
 
-            {/* Hero visual */}
             <div className="mt-16 flex justify-center sm:mt-20">
               <div className="relative flex h-64 w-64 items-center justify-center rounded-[2.5rem] bg-gradient-to-br from-[#0C5C57] to-[#1a8a82] shadow-2xl shadow-teal-900/25 sm:h-80 sm:w-80 lg:h-96 lg:w-96">
                 <div className="pointer-events-none absolute inset-0 rounded-[2.5rem] bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.1),transparent_60%)]" />
@@ -259,8 +480,18 @@ export default function Page() {
           </div>
         </section>
 
+        {/* ─── STATS ─── */}
+        <section className="border-y border-slate-100 bg-white py-14 sm:py-16">
+          <div className="mx-auto grid max-w-4xl grid-cols-2 gap-8 px-4 sm:grid-cols-4 sm:px-6">
+            <StatCard value="500+" label="Active Hubs" />
+            <StatCard value="10K+" label="Community Members" />
+            <StatCard value="8" label="Hub Templates" />
+            <StatCard value="99.9%" label="Uptime" />
+          </div>
+        </section>
+
         {/* ─── FEATURES ─── */}
-        <section className="border-t border-slate-100 bg-[#FAFBFC] py-20 sm:py-28">
+        <section className="bg-[#FAFBFC] py-20 sm:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
             <div className="mx-auto max-w-2xl text-center">
               <h2 className="text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
@@ -306,8 +537,44 @@ export default function Page() {
           </div>
         </section>
 
-        {/* ─── HOW IT WORKS ─── */}
+        {/* ─── USE CASES / TEMPLATES ─── */}
         <section className="py-20 sm:py-28">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
+            <div className="mx-auto max-w-2xl text-center">
+              <h2 className="text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
+                Built for every type of community
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-slate-500">
+                Choose a template to get started in seconds, or build your hub from scratch. Each template comes with sections, labels, and layouts designed for your specific use case.
+              </p>
+            </div>
+
+            <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {TEMPLATES.map((t) => (
+                <UseCaseCard
+                  key={t.slug}
+                  icon={t.icon}
+                  title={t.name}
+                  description={t.description}
+                  href={`/use-cases#${t.slug}`}
+                />
+              ))}
+            </div>
+
+            <div className="mt-10 text-center">
+              <Link
+                href="/use-cases"
+                className="inline-flex items-center gap-2 text-sm font-medium text-[#0C5C57] transition hover:underline"
+              >
+                See all use cases and templates
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── HOW IT WORKS ─── */}
+        <section className="border-t border-slate-100 bg-[#FAFBFC] py-20 sm:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
             <div className="grid gap-16 lg:grid-cols-2 lg:gap-20">
               <div>
@@ -340,11 +607,11 @@ export default function Page() {
           </div>
         </section>
 
-        {/* ─── TOP HUBS ─── */}
+        {/* ─── EXPLORE HUBS (Discover-style horizontal scroll) ─── */}
         {topHubs.length > 0 && (
-          <section className="border-t border-slate-100 bg-[#FAFBFC] py-20 sm:py-28">
+          <section className="py-20 sm:py-28">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
-              <div className="mb-12 flex items-end justify-between gap-4">
+              <div className="mb-10 flex items-end justify-between gap-4">
                 <div>
                   <h2 className="text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
                     Explore hubs
@@ -364,16 +631,97 @@ export default function Page() {
                 ref={hubsRowRef}
                 onMouseEnter={() => setPauseAutoScroll(true)}
                 onMouseLeave={() => setPauseAutoScroll(false)}
-                className="flex gap-5 overflow-x-auto pb-4"
+                className="flex gap-4 overflow-x-auto pb-4"
                 style={{ scrollbarWidth: "none" as never }}
               >
                 {topHubs.map((hub) => (
-                  <HubCard key={hub.id} hub={hub} />
+                  <HubListItemHorizontal key={hub.id} hub={hub} />
                 ))}
+              </div>
+
+              <div className="mt-6 text-center sm:hidden">
+                <Link href="/discover" className="text-sm font-medium text-[#0C5C57]">
+                  View all hubs →
+                </Link>
               </div>
             </div>
           </section>
         )}
+
+        {/* ─── TESTIMONIALS ─── */}
+        <section className="border-t border-slate-100 bg-[#FAFBFC] py-20 sm:py-28">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
+            <div className="mx-auto max-w-2xl text-center">
+              <h2 className="text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
+                Loved by communities everywhere
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-slate-500">
+                See how organizations are using uDeets to stay connected.
+              </p>
+            </div>
+
+            <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                {
+                  quote: "uDeets replaced our WhatsApp group chaos. Now our HOA members actually find the information they need.",
+                  name: "Sarah K.",
+                  role: "HOA President, Lakewood Estates",
+                },
+                {
+                  quote: "We post our daily specials on our hub and customers check it every morning. It's become part of their routine.",
+                  name: "Marco T.",
+                  role: "Owner, Bella Cucina Restaurant",
+                },
+                {
+                  quote: "Our congregation loves the event calendar and announcements. It keeps everyone in the loop without group chat overload.",
+                  name: "Pastor James W.",
+                  role: "Grace Community Church",
+                },
+              ].map((t) => (
+                <div
+                  key={t.name}
+                  className="rounded-2xl border border-slate-100 bg-white p-6"
+                >
+                  <MessageSquare className="mb-4 h-5 w-5 text-[#A9D1CA]" />
+                  <p className="text-sm leading-relaxed text-slate-600 italic">&ldquo;{t.quote}&rdquo;</p>
+                  <div className="mt-5 border-t border-slate-50 pt-4">
+                    <p className="text-sm font-semibold text-[#111111]">{t.name}</p>
+                    <p className="text-xs text-slate-500">{t.role}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ─── FAQ ─── */}
+        <section className="py-20 sm:py-28" id="faq">
+          <div className="mx-auto max-w-3xl px-4 sm:px-6">
+            <div className="text-center">
+              <h2 className="text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
+                Frequently asked questions
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-slate-500">
+                Everything you need to know about uDeets and hubs.
+              </p>
+            </div>
+
+            <div className="mt-12 rounded-2xl border border-slate-100 bg-white px-6 sm:px-8">
+              {FAQ_ITEMS.map((item) => (
+                <FAQItem key={item.question} question={item.question} answer={item.answer} />
+              ))}
+            </div>
+
+            <div className="mt-8 text-center">
+              <p className="text-sm text-slate-500">
+                Still have questions?{" "}
+                <Link href="/resources#help" className="font-medium text-[#0C5C57] hover:underline">
+                  Visit our Help Centre
+                </Link>
+              </p>
+            </div>
+          </div>
+        </section>
 
         {/* ─── CTA BANNER ─── */}
         <section className="py-20 sm:py-28">
@@ -407,25 +755,51 @@ export default function Page() {
       {/* ─── FOOTER ─── */}
       <footer className="border-t border-slate-100 bg-[#111111]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
-          <div className="flex flex-col items-center justify-between gap-6 py-10 sm:flex-row">
-            <div className="flex items-center gap-3">
-              <UdeetsLogoIcon className="h-7 w-7 text-white/80" alt="uDeets" />
-              <span className="text-lg font-semibold text-white">uDeets</span>
+          <div className="grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Brand */}
+            <div>
+              <div className="flex items-center gap-3">
+                <UdeetsLogoIcon className="h-7 w-7 text-white/80" alt="uDeets" />
+                <span className="text-lg font-semibold text-white">uDeets</span>
+              </div>
+              <p className="mt-3 text-sm leading-relaxed text-white/50">
+                The modern community hub for businesses, organizations, and neighborhoods.
+              </p>
             </div>
 
-            <div className="flex items-center gap-8">
-              <Link href="/discover" className="text-sm text-white/60 transition hover:text-white">
-                Discover
-              </Link>
-              <Link href="/auth" className="text-sm text-white/60 transition hover:text-white">
-                Sign in
-              </Link>
+            {/* Product */}
+            <div>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-white/40">Product</h4>
+              <div className="mt-4 flex flex-col gap-2.5">
+                <Link href="/discover" className="text-sm text-white/60 transition hover:text-white">Discover</Link>
+                <Link href="/create-hub" className="text-sm text-white/60 transition hover:text-white">Create a Hub</Link>
+                <Link href="/use-cases" className="text-sm text-white/60 transition hover:text-white">Use Cases</Link>
+              </div>
             </div>
 
-            <div className="flex gap-4">
-              <IconFacebook className="h-5 w-5 text-white/40 transition hover:text-white/80" />
-              <IconInstagram className="h-5 w-5 text-white/40 transition hover:text-white/80" />
-              <IconYouTube className="h-5 w-5 text-white/40 transition hover:text-white/80" />
+            {/* Resources */}
+            <div>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-white/40">Resources</h4>
+              <div className="mt-4 flex flex-col gap-2.5">
+                <Link href="/resources#faq" className="text-sm text-white/60 transition hover:text-white">FAQ</Link>
+                <Link href="/resources#blog" className="text-sm text-white/60 transition hover:text-white">Blog</Link>
+                <Link href="/resources#tutorials" className="text-sm text-white/60 transition hover:text-white">Tutorials</Link>
+                <Link href="/resources#help" className="text-sm text-white/60 transition hover:text-white">Help Centre</Link>
+              </div>
+            </div>
+
+            {/* Company */}
+            <div>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-white/40">Company</h4>
+              <div className="mt-4 flex flex-col gap-2.5">
+                <Link href="/about" className="text-sm text-white/60 transition hover:text-white">About</Link>
+                <Link href="/auth" className="text-sm text-white/60 transition hover:text-white">Sign In</Link>
+              </div>
+              <div className="mt-6 flex gap-4">
+                <IconFacebook className="h-5 w-5 text-white/40 transition hover:text-white/80" />
+                <IconInstagram className="h-5 w-5 text-white/40 transition hover:text-white/80" />
+                <IconYouTube className="h-5 w-5 text-white/40 transition hover:text-white/80" />
+              </div>
             </div>
           </div>
 
