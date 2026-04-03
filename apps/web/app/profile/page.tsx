@@ -275,7 +275,7 @@ export default function ProfilePage() {
         <aside className={cardClass("h-fit p-5 sm:p-6")}>
           <div className="mb-5">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Profile Menu</p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[#111111]">{activeTab}</h1>
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--ud-text-primary)]">{activeTab}</h1>
           </div>
           <nav className="space-y-2">
             {SIDEBAR_ITEMS.map((item) => {
@@ -288,12 +288,12 @@ export default function ProfilePage() {
                   className={cn(
                     "flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-sm font-medium transition",
                     active
-                      ? "bg-[#A9D1CA]/55 text-[#0C5C57] shadow-sm"
+                      ? "bg-[var(--ud-brand-light)]/55 text-[var(--ud-brand-primary)] shadow-sm"
                       : "text-slate-600 hover:bg-[#F7FBFA]"
                   )}
                 >
                   <span>{item}</span>
-                  {active ? <span className="h-2.5 w-2.5 rounded-full bg-[#0C5C57]" /> : null}
+                  {active ? <span className="h-2.5 w-2.5 rounded-full bg-[var(--ud-brand-primary)]" /> : null}
                 </button>
               );
             })}
@@ -314,7 +314,7 @@ export default function ProfilePage() {
                       {avatarUrl ? (
                         <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#0C5C57] to-[#1a8a82]">
+                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)]">
                           <span className="text-2xl font-semibold text-white/80">{displayName.charAt(0).toUpperCase()}</span>
                         </div>
                       )}
@@ -331,12 +331,12 @@ export default function ProfilePage() {
                         </div>
                       )}
                     </button>
-                    <button type="button" onClick={() => avatarInputRef.current?.click()} className="mt-2 block w-full text-center text-xs text-[#0C5C57] hover:underline">
+                    <button type="button" onClick={() => avatarInputRef.current?.click()} className="mt-2 block w-full text-center text-xs text-[var(--ud-brand-primary)] hover:underline">
                       Change photo
                     </button>
                   </div>
                   <div className="min-w-0 pt-1">
-                    <h2 className="text-2xl font-semibold tracking-tight text-[#111111]">
+                    <h2 className="text-2xl font-semibold tracking-tight text-[var(--ud-text-primary)]">
                       {isLoadingProfile ? "Loading..." : displayName}
                     </h2>
                     <p className="mt-1 text-sm text-slate-500">{displayEmail}</p>
@@ -358,12 +358,12 @@ export default function ProfilePage() {
                       {editingField === field && editable ? (
                         <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
                           <p className="w-32 shrink-0 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-                          <input value={editDraft} onChange={(e) => setEditDraft(e.target.value)} className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm text-[#111111] outline-none ring-[#A9D1CA] focus:ring-2" autoFocus />
+                          <input value={editDraft} onChange={(e) => setEditDraft(e.target.value)} className="flex-1 rounded-xl border border-[var(--ud-border)] px-3 py-2 text-sm text-[var(--ud-text-primary)] outline-none ring-[#A9D1CA] focus:ring-2" autoFocus />
                           <div className="flex gap-2">
-                            <button type="button" onClick={() => saveField(field)} disabled={isSaving} className="rounded-lg bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-4 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60">
+                            <button type="button" onClick={() => saveField(field)} disabled={isSaving} className="rounded-lg bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-4 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60">
                               {isSaving ? "Saving..." : "Save"}
                             </button>
-                            <button type="button" onClick={cancelEditing} className="rounded-lg border border-slate-200 px-4 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                            <button type="button" onClick={cancelEditing} className="rounded-lg border border-[var(--ud-border)] px-4 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
                               Cancel
                             </button>
                           </div>
@@ -372,7 +372,7 @@ export default function ProfilePage() {
                         <>
                           <div className="min-w-0">
                             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-                            <p className="mt-1 text-sm font-medium text-[#111111]">{value || "Not set"}</p>
+                            <p className="mt-1 text-sm font-medium text-[var(--ud-text-primary)]">{value || "Not set"}</p>
                           </div>
                           {editable ? (
                             <button type="button" onClick={() => startEditing(field, value)} className="shrink-0 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
@@ -403,11 +403,11 @@ export default function ProfilePage() {
                         </svg>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-[#111111]">Google</p>
+                        <p className="text-sm font-medium text-[var(--ud-text-primary)]">Google</p>
                         <p className="text-xs text-slate-500">{displayEmail}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5 text-sm font-medium text-[#0C5C57]">
+                    <div className="flex items-center gap-1.5 text-sm font-medium text-[var(--ud-brand-primary)]">
                       <Check className="h-4 w-4" />
                       Connected
                     </div>
@@ -420,7 +420,7 @@ export default function ProfilePage() {
                         </svg>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-[#111111]">Apple</p>
+                        <p className="text-sm font-medium text-[var(--ud-text-primary)]">Apple</p>
                         <p className="text-xs text-slate-500">Not connected</p>
                       </div>
                     </div>
@@ -441,9 +441,9 @@ export default function ProfilePage() {
               {isLoadingHubs ? (
                 <div className="flex items-center gap-2 py-8 text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Loading hubs...</div>
               ) : userHubs.length === 0 ? (
-                <div className="rounded-xl border border-slate-100 px-6 py-10 text-center">
+                <div className="rounded-xl border border-[var(--ud-border-subtle)] px-6 py-10 text-center">
                   <p className="text-sm text-slate-500">You haven't joined any hubs yet.</p>
-                  <Link href="/discover" className="mt-3 inline-block text-sm font-medium text-[#0C5C57] hover:underline">
+                  <Link href="/discover" className="mt-3 inline-block text-sm font-medium text-[var(--ud-brand-primary)] hover:underline">
                     Discover hubs →
                   </Link>
                 </div>
@@ -453,22 +453,22 @@ export default function ProfilePage() {
                     <Link
                       key={hub.hubId}
                       href={`/hubs/${hub.hubCategory}/${hub.hubSlug}`}
-                      className="flex items-center gap-3 rounded-xl border border-slate-100 p-4 transition hover:border-slate-200 hover:bg-gray-50"
+                      className="flex items-center gap-3 rounded-xl border border-[var(--ud-border-subtle)] p-4 transition hover:border-[var(--ud-border)] hover:bg-gray-50"
                     >
                       {hub.dpImage ? (
                         <img src={hub.dpImage} alt="" className="h-10 w-10 rounded-full object-cover" />
                       ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#0C5C57] to-[#1a8a82]">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)]">
                           <span className="text-sm font-semibold text-white/80">{hub.hubName.charAt(0).toUpperCase()}</span>
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-[#111111]">{hub.hubName}</p>
+                        <p className="truncate text-sm font-semibold text-[var(--ud-text-primary)]">{hub.hubName}</p>
                         <p className="text-xs text-slate-500">{hub.hubCategory}</p>
                       </div>
                       <span className={cn(
                         "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize",
-                        hub.role === "creator" ? "bg-[#EAF6F3] text-[#0C5C57]"
+                        hub.role === "creator" ? "bg-[var(--ud-brand-light)] text-[var(--ud-brand-primary)]"
                           : hub.role === "admin" ? "bg-blue-50 text-blue-600"
                           : "bg-slate-100 text-slate-600"
                       )}>
@@ -489,18 +489,18 @@ export default function ProfilePage() {
               {isLoadingDeets ? (
                 <div className="flex items-center gap-2 py-8 text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Loading posts...</div>
               ) : userDeets.length === 0 ? (
-                <div className="rounded-xl border border-slate-100 px-6 py-10 text-center">
+                <div className="rounded-xl border border-[var(--ud-border-subtle)] px-6 py-10 text-center">
                   <p className="text-sm text-slate-500">No posts yet.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {userDeets.map((deet) => (
-                    <article key={deet.id} className="rounded-xl border border-slate-100 p-4">
+                    <article key={deet.id} className="rounded-xl border border-[var(--ud-border-subtle)] p-4">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="rounded-full bg-[#EAF6F3] px-2.5 py-0.5 text-[11px] font-semibold text-[#0C5C57]">{deet.hubName}</span>
+                        <span className="rounded-full bg-[var(--ud-brand-light)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--ud-brand-primary)]">{deet.hubName}</span>
                         <span className="text-xs text-slate-400">{formatTimeAgo(deet.createdAt)}</span>
                       </div>
-                      {deet.title ? <p className="mt-2 text-sm font-semibold text-[#111111]">{deet.title}</p> : null}
+                      {deet.title ? <p className="mt-2 text-sm font-semibold text-[var(--ud-text-primary)]">{deet.title}</p> : null}
                       {deet.body ? <p className="mt-1 line-clamp-2 text-sm text-slate-600">{deet.body}</p> : null}
                     </article>
                   ))}
@@ -513,7 +513,7 @@ export default function ProfilePage() {
           {activeTab === "Requests" ? (
             <section className={cardClass("p-6 sm:p-8")}>
               <h2 className={sectionTitleClass()}>Requests</h2>
-              <div className="mt-5 rounded-xl border border-slate-100 px-6 py-10 text-center">
+              <div className="mt-5 rounded-xl border border-[var(--ud-border-subtle)] px-6 py-10 text-center">
                 <p className="text-sm text-slate-500">Coming soon</p>
                 <p className="mt-1 text-xs text-slate-400">Membership requests will appear here.</p>
               </div>
@@ -524,7 +524,7 @@ export default function ProfilePage() {
           {activeTab === "Invitations" ? (
             <section className={cardClass("p-6 sm:p-8")}>
               <h2 className={sectionTitleClass()}>Invitations</h2>
-              <div className="mt-5 rounded-xl border border-slate-100 px-6 py-10 text-center">
+              <div className="mt-5 rounded-xl border border-[var(--ud-border-subtle)] px-6 py-10 text-center">
                 <p className="text-sm text-slate-500">Coming soon</p>
                 <p className="mt-1 text-xs text-slate-400">Hub invitations will appear here.</p>
               </div>

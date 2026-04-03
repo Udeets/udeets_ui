@@ -15,6 +15,7 @@ import {
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
+import { ThemeToggle } from "@/components/theme-provider";
 import { HOME_EVENTS, HOME_NOTIFICATIONS } from "@/lib/hub-content";
 import { isUdeetsLogoSrc, UDEETS_LOGO_SRC } from "@/lib/branding";
 import { signOut } from "@/services/auth/signOut";
@@ -33,7 +34,7 @@ export type NavKey = "home" | "alerts" | "events";
 
 type OpenPanel = "alerts" | "events" | "profile" | null;
 
-const HEADER_BG = "bg-white border-b border-slate-200/70";
+const HEADER_BG = "bg-[var(--ud-bg-card)] border-b border-[var(--ud-border-subtle)]";
 const FOOTER_BG = "bg-[#0C5C57]";
 const BOTTOM_NAV_BG = "bg-[#A9D1CA]";
 const TEXT_DARK_GREEN = "text-[#0C5C57]";
@@ -68,7 +69,7 @@ function NavIconButton({
       type="button"
       className={cn(
         "relative rounded-full p-2 transition",
-        active ? "bg-[#A9D1CA] text-[#0C5C57]" : "text-slate-700 hover:bg-[#E3F1EF]",
+        active ? "bg-[#A9D1CA] text-[#0C5C57]" : "text-[var(--ud-text-secondary)] hover:bg-[#E3F1EF]",
         className
       )}
       {...props}
@@ -97,7 +98,7 @@ function NavIconLink({
       aria-label={ariaLabel}
       className={cn(
         "relative rounded-full p-2 transition",
-        active ? "bg-[#A9D1CA] text-[#0C5C57]" : "text-slate-700 hover:bg-[#E3F1EF]",
+        active ? "bg-[#A9D1CA] text-[#0C5C57]" : "text-[var(--ud-text-secondary)] hover:bg-[#E3F1EF]",
         className
       )}
     >
@@ -115,10 +116,10 @@ function NotificationsPanel() {
   return (
     <div
       data-demo-target={isDemoPreview ? "dashboard-alerts-dropdown" : undefined}
-      className="absolute right-16 top-full z-[120] mt-3 w-[360px] rounded-3xl border border-slate-100 bg-white p-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)]"
+      className="absolute right-16 top-full z-[120] mt-3 w-[360px] rounded-3xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] p-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)]"
     >
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-[#111111]">Notifications</h3>
+        <h3 className="text-lg font-semibold text-[var(--ud-text-primary)]">Notifications</h3>
         <button type="button" className="text-sm font-medium text-[#0C5C57] hover:opacity-80">
           Mark all as read
         </button>
@@ -172,7 +173,7 @@ function NotificationsPanel() {
                       sizes="36px"
                     />
                   </div>
-                  <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[#111111]">
+                  <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--ud-text-primary)]">
                     {`${item.hub} — ${item.title}`}
                   </p>
                   <span className="shrink-0 text-[11px] font-medium text-slate-500">{item.meta}</span>
@@ -206,9 +207,9 @@ function EventsPanel() {
   }, {});
 
   return (
-    <div className="absolute right-16 top-full z-[120] mt-3 w-[380px] rounded-3xl border border-slate-100 bg-white p-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
+    <div className="absolute right-16 top-full z-[120] mt-3 w-[380px] rounded-3xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] p-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-[#111111]">Events</h3>
+        <h3 className="text-lg font-semibold text-[var(--ud-text-primary)]">Events</h3>
         <Link href="/events" className="text-sm font-medium text-[#0C5C57] hover:opacity-80">
           View all
         </Link>
@@ -261,7 +262,7 @@ function EventsPanel() {
                             sizes="36px"
                           />
                         </div>
-                        <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[#111111]">
+                        <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--ud-text-primary)]">
                           {`${event.hub} — ${event.title}`}
                         </p>
                         <span className="shrink-0 text-[11px] font-medium text-slate-500">{event.dateLabel}</span>
@@ -289,9 +290,9 @@ function ProfilePanel({ user, onLogout }: { user: { email?: string; user_metadat
   const avatarUrl = (user?.user_metadata?.avatar_url as string) || "";
 
   return (
-    <div className="absolute right-0 top-full z-[120] mt-3 min-w-[220px] overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg">
+    <div className="absolute right-0 top-full z-[120] mt-3 min-w-[220px] overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-lg">
       {/* User identity card */}
-      <div className="flex items-center gap-3 rounded-t-xl bg-gray-50 px-4 py-3">
+      <div className="flex items-center gap-3 rounded-t-xl bg-[var(--ud-bg-subtle)] px-4 py-3">
         <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-[#0C5C57] to-[#1a8a82]">
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -303,20 +304,20 @@ function ProfilePanel({ user, onLogout }: { user: { email?: string; user_metadat
           )}
         </div>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-gray-900">{displayName}</p>
+          <p className="truncate text-sm font-semibold text-[var(--ud-text-primary)]">{displayName}</p>
           <p className="truncate text-xs text-gray-500">{displayEmail}</p>
         </div>
       </div>
 
       {/* Menu items */}
-      <div className="border-t border-gray-100 py-1">
+      <div className="border-t border-[var(--ud-border-subtle)] py-1">
         {PROFILE_ITEMS.map((item) => {
           const Icon = item.icon;
           return (
             <Link
               key={item.href}
               href={item.href}
-              className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition hover:bg-gray-50"
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)]"
             >
               <Icon className="h-4 w-4 stroke-[1.8] text-gray-400" />
               <span>{item.label}</span>
@@ -326,7 +327,7 @@ function ProfilePanel({ user, onLogout }: { user: { email?: string; user_metadat
       </div>
 
       {/* Logout */}
-      <div className="border-t border-gray-100 py-1">
+      <div className="border-t border-[var(--ud-border-subtle)] py-1">
         <button
           type="button"
           onClick={onLogout}
@@ -442,6 +443,8 @@ function UdeetsHeaderContent() {
             <Search className={ICON_BASE} />
           </NavIconLink>
 
+          <ThemeToggle />
+
           {isAuthenticated ? (
             <button
               type="button"
@@ -458,14 +461,14 @@ function UdeetsHeaderContent() {
                   sizes="40px"
                 />
               ) : (
-                <UserRound className="h-5 w-5 text-slate-700" />
+                <UserRound className="h-5 w-5 text-[var(--ud-text-secondary)]" />
               )}
             </button>
           ) : (
             <Link
               href="/auth"
               aria-label="Sign in"
-              className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-[#E3F1EF]"
+              className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-[var(--ud-text-secondary)] transition hover:bg-[#E3F1EF]"
             >
               {status === "loading" ? "..." : "Sign in"}
             </Link>

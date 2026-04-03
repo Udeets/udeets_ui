@@ -9,11 +9,11 @@ function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-const PAGE_BG = "bg-white";
-const TEXT_DARK = "text-[#111111]";
+const PAGE_BG = "bg-[var(--ud-bg-page)]";
+const TEXT_DARK = "text-[var(--ud-text-primary)]";
 
 export function cardClass(extra?: string) {
-  return cn("rounded-3xl border border-slate-100 bg-white shadow-sm", extra);
+  return cn("rounded-3xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-sm", extra);
 }
 
 export function sectionTitleClass(extra?: string) {
@@ -43,7 +43,7 @@ function MockAppShellContent({
         <UdeetsHeader />
         <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 md:pb-6 lg:px-10">
           <section className={cardClass("p-6 text-center")}>
-            <h1 className="text-2xl font-semibold tracking-tight text-[#111111]">Loading...</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-[var(--ud-text-primary)]">Loading...</h1>
             <p className="mt-3 text-sm leading-relaxed text-slate-600">
               We&apos;re checking your session.
             </p>

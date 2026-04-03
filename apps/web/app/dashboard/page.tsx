@@ -36,12 +36,12 @@ type FeedItem = {
   href?: string;
 };
 
-const PAGE_BG = "bg-white";
-const CARD = "rounded-xl border border-slate-100 bg-white shadow-sm";
-const TEXT_DARK = "text-[#111111]";
-const TEXT_MUTED = "text-[#6b7280]";
+const PAGE_BG = "bg-[var(--ud-bg-page)]";
+const CARD = "rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-sm";
+const TEXT_DARK = "text-[var(--ud-text-primary)]";
+const TEXT_MUTED = "text-[var(--ud-text-secondary)]";
 const PRIMARY_BUTTON =
-  "inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-5 py-3 text-sm font-semibold text-white transition-colors duration-150 hover:opacity-90";
+  "inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-5 py-3 text-sm font-semibold text-white transition-colors duration-150 hover:opacity-90";
 const FEED_FILTERS: FeedFilter[] = ["All", "Posts", "Notices", "Deals", "Announcements", "Polls", "Photos", "Videos"];
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -104,7 +104,7 @@ function DashboardDeetImage({ src, alt }: { src?: string; alt: string }) {
   if (!src || imageFailed) return null;
 
   return (
-    <div className="mt-3 aspect-video max-h-[280px] overflow-hidden rounded-2xl border border-slate-100">
+    <div className="mt-3 aspect-video max-h-[280px] overflow-hidden rounded-2xl border border-[var(--ud-border-subtle)]">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
@@ -135,19 +135,19 @@ function CreateHubTile() {
     <Link
       href="/create-hub"
       className={cn(
-        "block h-full w-full overflow-hidden rounded-[24px] bg-[#DCEDEA] shadow-[0_10px_26px_rgba(12,92,87,0.06)] transition-transform duration-200 hover:-translate-y-0.5",
+        "block h-full w-full overflow-hidden rounded-[24px] bg-[var(--ud-brand-light)] shadow-[0_10px_26px_rgba(12,92,87,0.06)] transition-transform duration-200 hover:-translate-y-0.5",
       )}
     >
-      <div className="relative h-full w-full overflow-hidden rounded-t-[24px] bg-[#DCEDEA]">
+      <div className="relative h-full w-full overflow-hidden rounded-t-[24px] bg-[var(--ud-brand-light)]">
         <div className="flex h-full w-full flex-col items-center justify-center gap-2">
-            <svg viewBox="0 0 24 24" className="h-9 w-9 text-[#0C5C57]" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <svg viewBox="0 0 24 24" className="h-9 w-9 text-[var(--ud-brand-primary)]" fill="none" stroke="currentColor" strokeWidth="2.2">
               <path d="M12 5v14M5 12h14" strokeLinecap="round" />
             </svg>
             <h3 className={cn("text-[15px] font-semibold tracking-tight leading-5", TEXT_DARK)}>Create Hub</h3>
         </div>
       </div>
 
-      <div className="bg-[#DCEDEA] px-3.5 pb-3 pt-5">
+      <div className="bg-[var(--ud-brand-light)] px-3.5 pb-3 pt-5">
         <div className="flex items-start justify-between gap-3">
           <span className="text-[15px] leading-5 opacity-0">Create Hub</span>
           <span className="mt-0.5 h-4.5 w-4.5 shrink-0" aria-hidden="true" />
@@ -198,7 +198,7 @@ function HubLauncher({
   return (
     <section className={cn(CARD, "p-4 sm:p-5")}>
       <div className="flex justify-start">
-        <div className="inline-flex rounded-full bg-[#ECF6F3] p-1.5 shadow-[inset_0_1px_2px_rgba(12,92,87,0.08)]">
+        <div className="inline-flex rounded-full bg-[var(--ud-brand-light)] p-1.5 shadow-[inset_0_1px_2px_rgba(12,92,87,0.08)]">
           {(
             [
               { key: "my-hubs" as HubView, label: "My Hubs" },
@@ -213,13 +213,13 @@ function HubLauncher({
               className={cn(
                 "relative rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-150",
                 selectedView === tab.key
-                  ? "bg-white text-[#111111] shadow-sm"
-                  : "text-[#6b7280] hover:text-[#111111]",
+                  ? "bg-white text-[var(--ud-text-primary)] shadow-sm"
+                  : "text-[var(--ud-text-secondary)] hover:text-[var(--ud-text-primary)]",
               )}
             >
               {tab.label}
               {tab.key === "requested" && requestedCount > 0 ? (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#0C5C57] px-1 text-[10px] font-bold text-white">
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[var(--ud-brand-primary)] px-1 text-[10px] font-bold text-white">
                   {requestedCount}
                 </span>
               ) : null}
@@ -247,7 +247,7 @@ function HubLauncher({
               <CreateHubTile />
             </div>
           ) : null}
-          <div className="mt-5 rounded-[24px] bg-[#F6FBFA] px-6 py-10 text-center">
+          <div className="mt-5 rounded-[24px] bg-[var(--ud-brand-light)] px-6 py-10 text-center">
             <h3 className={cn("text-xl font-semibold tracking-tight", TEXT_DARK)}>
               {empty.title}
             </h3>
@@ -614,7 +614,7 @@ function DashboardPageContent() {
                 <div className="relative flex items-center gap-2">
                   <div
                     className={cn(
-                      "overflow-hidden rounded-full bg-[#fafafa] transition-all duration-300",
+                      "overflow-hidden rounded-full bg-[var(--ud-bg-subtle)] transition-all duration-300",
                       isSearchOpen ? "w-56 px-3 py-2 opacity-100 sm:w-72" : "w-0 px-0 py-0 opacity-0",
                     )}
                   >
@@ -622,15 +622,15 @@ function DashboardPageContent() {
                       value={searchQuery}
                       onChange={(event) => setSearchQuery(event.target.value)}
                       placeholder="Search posts"
-                      className="w-full bg-transparent text-sm text-[#111111] outline-none placeholder:text-[#9ca3af]"
+                      className="w-full bg-transparent text-sm text-[var(--ud-text-primary)] outline-none placeholder:text-[var(--ud-text-muted)]"
                       aria-label="Search posts"
                     />
                   </div>
                   <button
                     type="button"
                     className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-full bg-[#fafafa] text-[#111111] transition-colors duration-150 hover:bg-[#f0faf8]",
-                      isSearchOpen && "bg-[#f0faf8]",
+                      "flex h-10 w-10 items-center justify-center rounded-full bg-[var(--ud-bg-subtle)] text-[var(--ud-text-primary)] transition-colors duration-150 hover:bg-[var(--ud-bg-subtle)]",
+                      isSearchOpen && "bg-[var(--ud-bg-subtle)]",
                     )}
                     onClick={() => setIsSearchOpen((current) => !current)}
                     aria-label="Toggle search"
@@ -644,8 +644,8 @@ function DashboardPageContent() {
                   <button
                     type="button"
                     className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-full bg-[#fafafa] text-[#111111] transition-colors duration-150 hover:bg-[#f0faf8]",
-                      isFilterMenuOpen && "bg-[#f0faf8]",
+                      "flex h-10 w-10 items-center justify-center rounded-full bg-[var(--ud-bg-subtle)] text-[var(--ud-text-primary)] transition-colors duration-150 hover:bg-[var(--ud-bg-subtle)]",
+                      isFilterMenuOpen && "bg-[var(--ud-bg-subtle)]",
                     )}
                     onClick={() => setIsFilterMenuOpen((current) => !current)}
                     aria-label="Open filters"
@@ -662,8 +662,8 @@ function DashboardPageContent() {
                       ref={eventsButtonRef}
                       type="button"
                       className={cn(
-                        "flex h-10 w-10 items-center justify-center rounded-full bg-[#fafafa] text-[#111111] transition-colors duration-150 hover:bg-[#f0faf8]",
-                        isEventsDropdownOpen && "bg-[#f0faf8]",
+                        "flex h-10 w-10 items-center justify-center rounded-full bg-[var(--ud-bg-subtle)] text-[var(--ud-text-primary)] transition-colors duration-150 hover:bg-[var(--ud-bg-subtle)]",
+                        isEventsDropdownOpen && "bg-[var(--ud-bg-subtle)]",
                       )}
                       onClick={() => setIsEventsDropdownOpen((current) => !current)}
                       aria-label="Show upcoming events"
@@ -672,7 +672,7 @@ function DashboardPageContent() {
                     </button>
 
                     {isEventsDropdownOpen ? (
-                      <div className="absolute right-0 top-12 z-10 w-64 rounded-xl bg-white shadow-lg border border-slate-100">
+                      <div className="absolute right-0 top-12 z-10 w-64 rounded-xl bg-white shadow-lg border border-[var(--ud-border-subtle)]">
                         <div className="p-3">
                           {isLoadingEvents ? (
                             <p className="text-center text-sm text-slate-500 py-4">Loading events…</p>
@@ -685,7 +685,7 @@ function DashboardPageContent() {
                                   className="block rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-slate-50"
                                   onClick={() => setIsEventsDropdownOpen(false)}
                                 >
-                                  <p className="font-semibold text-[#111111] truncate">{event.title}</p>
+                                  <p className="font-semibold text-[var(--ud-text-primary)] truncate">{event.title}</p>
                                   <p className="text-xs text-slate-500 mt-0.5">{event.hubName}</p>
                                   <p className="text-xs text-slate-400 mt-1">
                                     {new Date(event.eventDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: event.eventDate.startsWith(new Date().getFullYear().toString()) ? undefined : "numeric" })}
@@ -702,7 +702,7 @@ function DashboardPageContent() {
                   </div>
 
                   {isFilterMenuOpen ? (
-                    <div className="absolute right-0 top-12 z-10 w-48 rounded-xl bg-white p-2 shadow-sm border border-slate-100">
+                    <div className="absolute right-0 top-12 z-10 w-48 rounded-xl bg-white p-2 shadow-sm border border-[var(--ud-border-subtle)]">
                       {FEED_FILTERS.map((filter) => (
                         <button
                           key={filter}
@@ -714,12 +714,12 @@ function DashboardPageContent() {
                           className={cn(
                             "flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm transition-colors duration-150",
                             selectedFeedFilter === filter
-                              ? "bg-[#E3F1EF] font-semibold text-[#111111]"
-                              : "text-[#6b7280] hover:bg-[#fafafa] hover:text-[#111111]",
+                              ? "bg-[var(--ud-brand-light)] font-semibold text-[var(--ud-text-primary)]"
+                              : "text-[var(--ud-text-secondary)] hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]",
                           )}
                         >
                           <span>{filter}</span>
-                          {selectedFeedFilter === filter ? <span className="h-2 w-2 rounded-full bg-[#0C5C57]" /> : null}
+                          {selectedFeedFilter === filter ? <span className="h-2 w-2 rounded-full bg-[var(--ud-brand-primary)]" /> : null}
                         </button>
                       ))}
                     </div>
@@ -734,40 +734,40 @@ function DashboardPageContent() {
                       const cardContent = (
                         <>
                           <div className="flex items-start gap-3">
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#A9D1CA]">
-                              <span className="text-xs font-semibold text-[#0C5C57]">{item.hubName?.charAt(0)?.toUpperCase() ?? "H"}</span>
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--ud-brand-light)]">
+                              <span className="text-xs font-semibold text-[var(--ud-brand-primary)]">{item.hubName?.charAt(0)?.toUpperCase() ?? "H"}</span>
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center justify-between gap-2">
-                                <p className="truncate text-sm font-semibold text-[#111111]">{item.hubName || "Hub"}</p>
-                                <span className="shrink-0 text-xs text-[#9ca3af]">{item.timeLabel}</span>
+                                <p className="truncate text-sm font-semibold text-[var(--ud-text-primary)]">{item.hubName || "Hub"}</p>
+                                <span className="shrink-0 text-xs text-[var(--ud-text-muted)]">{item.timeLabel}</span>
                               </div>
-                              <p className="text-xs text-[#9ca3af]">Posted by: Hub Member</p>
+                              <p className="text-xs text-[var(--ud-text-muted)]">Posted by: Hub Member</p>
                             </div>
                           </div>
                           {item.title ? <h3 className={cn("mt-3 text-base font-semibold tracking-tight", TEXT_DARK)}>{item.title}</h3> : null}
                           {item.body ? <p className={cn("mt-1 text-sm leading-6", TEXT_MUTED)}>{item.body}</p> : null}
                           <DashboardDeetImage src={item.previewImage || item.previewImages[0]} alt={item.title} />
-                          <div className="mt-3 flex items-center gap-6 border-t border-slate-100 pt-3">
+                          <div className="mt-3 flex items-center gap-6 border-t border-[var(--ud-border-subtle)] pt-3">
                             <button
                               type="button"
                               onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleLike(item.id); }}
-                              className="flex items-center gap-1.5 text-sm text-[#9ca3af] transition-colors duration-150 hover:text-[#0C5C57]"
+                              className="flex items-center gap-1.5 text-sm text-[var(--ud-text-muted)] transition-colors duration-150 hover:text-[var(--ud-brand-primary)]"
                             >
                               <Heart
                                 className="h-4 w-4 stroke-2"
-                                fill={likedDeets.has(item.id) ? "#0C5C57" : "none"}
-                                stroke={likedDeets.has(item.id) ? "#0C5C57" : "currentColor"}
+                                fill={likedDeets.has(item.id) ? "var(--ud-brand-primary)" : "none"}
+                                stroke={likedDeets.has(item.id) ? "var(--ud-brand-primary)" : "currentColor"}
                               />
                               <span>{likedDeets.has(item.id) ? 1 : 0}</span>
                               <span>Like</span>
                             </button>
-                            <button type="button" className="flex items-center gap-1.5 text-sm text-[#9ca3af] transition-colors duration-150 hover:text-[#0C5C57]">
+                            <button type="button" className="flex items-center gap-1.5 text-sm text-[var(--ud-text-muted)] transition-colors duration-150 hover:text-[var(--ud-brand-primary)]">
                               <MessageCircle className="h-4 w-4 stroke-2" />
                               <span>0</span>
                               <span>Comment</span>
                             </button>
-                            <button type="button" className="flex items-center gap-1.5 text-sm text-[#9ca3af] transition-colors duration-150 hover:text-[#0C5C57]">
+                            <button type="button" className="flex items-center gap-1.5 text-sm text-[var(--ud-text-muted)] transition-colors duration-150 hover:text-[var(--ud-brand-primary)]">
                               <Share2 className="h-4 w-4 stroke-2" />
                               <span>Share</span>
                             </button>
@@ -779,19 +779,19 @@ function DashboardPageContent() {
                         <Link
                           key={item.id}
                           href={item.href}
-                          className="block rounded-lg border border-slate-100 bg-white p-4 transition-colors duration-150 hover:border-slate-200"
+                          className="block rounded-lg border border-[var(--ud-border-subtle)] bg-white p-4 transition-colors duration-150 hover:border-[var(--ud-border)]"
                         >
                           {cardContent}
                         </Link>
                       ) : (
-                        <article key={item.id} className="rounded-lg border border-slate-100 bg-white p-4">
+                        <article key={item.id} className="rounded-lg border border-[var(--ud-border-subtle)] bg-white p-4">
                           {cardContent}
                         </article>
                       );
                     })}
                   </div>
                 ) : (
-                  <div className="rounded-xl bg-[#fafafa] px-6 py-10 text-center border border-slate-100">
+                  <div className="rounded-xl bg-[var(--ud-bg-subtle)] px-6 py-10 text-center border border-[var(--ud-border-subtle)]">
                     <h3 className={cn("text-xl font-semibold tracking-tight", TEXT_DARK)}>
                       No {selectedFeedFilter === "All" ? "deets" : selectedFeedFilter.toLowerCase()} yet
                     </h3>
@@ -800,8 +800,8 @@ function DashboardPageContent() {
                       your hubs, they will appear here in one combined feed.
                     </p>
                     <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-lg bg-white px-5 py-4 text-left shadow-sm border border-slate-100">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6b7280]">Current view</p>
+                      <div className="rounded-lg bg-white px-5 py-4 text-left shadow-sm border border-[var(--ud-border-subtle)]">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--ud-text-secondary)]">Current view</p>
                         <p className={cn("mt-2 text-base font-semibold tracking-tight", TEXT_DARK)}>
                           {selectedHubView === "my-hubs" ? "My Hubs" : selectedHubView === "joined" ? "Joined Hubs" : "Requested Hubs"}
                         </p>
@@ -809,8 +809,8 @@ function DashboardPageContent() {
                           {searchQuery ? `Searching for "${searchQuery}".` : "Search and filter controls are ready here."}
                         </p>
                       </div>
-                      <div className="rounded-lg bg-white px-5 py-4 text-left shadow-sm border border-slate-100">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6b7280]">Next step</p>
+                      <div className="rounded-lg bg-white px-5 py-4 text-left shadow-sm border border-[var(--ud-border-subtle)]">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--ud-text-secondary)]">Next step</p>
                         <p className={cn("mt-2 text-base font-semibold tracking-tight", TEXT_DARK)}>
                           {selectedFeedFilter === "All" ? "Browse all activity" : `Filtered by ${selectedFeedFilter}`}
                         </p>

@@ -14,6 +14,7 @@ import {
   Search,
 } from "lucide-react";
 import { UdeetsBrandLockup, UdeetsLogoIcon } from "@/components/brand-logo";
+import { ThemeToggle } from "@/components/theme-provider";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -23,13 +24,13 @@ function cn(...classes: Array<string | false | null | undefined>) {
 function FAQItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="border-b border-slate-100 last:border-b-0">
+    <div className="border-b border-[var(--ud-border-subtle)] last:border-b-0">
       <button
         type="button"
         onClick={() => setOpen(!open)}
         className="flex w-full items-center justify-between gap-4 py-5 text-left"
       >
-        <span className="text-[15px] font-medium text-[#111111]">{question}</span>
+        <span className="text-[15px] font-medium text-[var(--ud-text-primary)]">{question}</span>
         <ChevronDown
           className={cn(
             "h-5 w-5 shrink-0 text-slate-400 transition-transform duration-200",
@@ -176,18 +177,19 @@ const BLOG_POSTS = [
 
 export default function ResourcesPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[var(--ud-bg-page)]">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/80 backdrop-blur-lg">
+      <header className="sticky top-0 z-50 border-b border-[var(--ud-border-subtle)] bg-[var(--ud-bg-page)]/80 backdrop-blur-lg">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
           <Link href="/" className="flex items-center gap-2">
             <UdeetsBrandLockup textClassName="text-xl sm:text-2xl" priority />
           </Link>
           <nav className="flex items-center gap-2 sm:gap-3">
-            <Link href="/discover" className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-[#111111]" aria-label="Discover">
+            <ThemeToggle />
+            <Link href="/discover" className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]" aria-label="Discover">
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 21l-4.3-4.3" /><circle cx="11" cy="11" r="7" /></svg>
             </Link>
-            <Link href="/auth" className="inline-flex items-center rounded-full bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-5 py-2 text-sm font-medium text-white transition hover:opacity-90">
+            <Link href="/auth" className="inline-flex items-center rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-5 py-2 text-sm font-medium text-white transition hover:opacity-90">
               Sign in
             </Link>
           </nav>
@@ -198,9 +200,9 @@ export default function ResourcesPage() {
         {/* Hero */}
         <section className="bg-gradient-to-b from-[#EAF6F3]/40 to-white py-20 sm:py-28">
           <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
-            <h1 className="text-4xl font-semibold tracking-tight text-[#111111] sm:text-5xl">
+            <h1 className="text-4xl font-semibold tracking-tight text-[var(--ud-text-primary)] sm:text-5xl">
               Resources &{" "}
-              <span className="text-[#0C5C57]">help</span>
+              <span className="text-[var(--ud-brand-primary)]">help</span>
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-slate-500">
               Everything you need to get the most out of uDeets — guides, tutorials, FAQs, and more.
@@ -208,16 +210,16 @@ export default function ResourcesPage() {
 
             {/* Quick nav pills */}
             <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
-              <a href="#faq" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-[#A9D1CA] hover:text-[#0C5C57]">
+              <a href="#faq" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-[var(--ud-bg-page)] px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-[#A9D1CA] hover:text-[var(--ud-brand-primary)]">
                 <HelpCircle className="h-4 w-4" /> FAQ
               </a>
-              <a href="#blog" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-[#A9D1CA] hover:text-[#0C5C57]">
+              <a href="#blog" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-[var(--ud-bg-page)] px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-[#A9D1CA] hover:text-[var(--ud-brand-primary)]">
                 <FileText className="h-4 w-4" /> Blog
               </a>
-              <a href="#tutorials" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-[#A9D1CA] hover:text-[#0C5C57]">
+              <a href="#tutorials" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-[var(--ud-bg-page)] px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-[#A9D1CA] hover:text-[var(--ud-brand-primary)]">
                 <BookOpen className="h-4 w-4" /> Tutorials
               </a>
-              <a href="#help" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-[#A9D1CA] hover:text-[#0C5C57]">
+              <a href="#help" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-[var(--ud-bg-page)] px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-[#A9D1CA] hover:text-[var(--ud-brand-primary)]">
                 <MessageCircle className="h-4 w-4" /> Help Centre
               </a>
             </div>
@@ -228,10 +230,10 @@ export default function ResourcesPage() {
         <section className="py-20 sm:py-28" id="faq">
           <div className="mx-auto max-w-3xl px-4 sm:px-6">
             <div className="flex items-center gap-3">
-              <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#EAF6F3]">
-                <HelpCircle className="h-5 w-5 text-[#0C5C57]" />
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--ud-brand-light)]">
+                <HelpCircle className="h-5 w-5 text-[var(--ud-brand-primary)]" />
               </div>
-              <h2 className="text-2xl font-semibold tracking-tight text-[#111111] sm:text-3xl">
+              <h2 className="text-2xl font-semibold tracking-tight text-[var(--ud-text-primary)] sm:text-3xl">
                 Frequently asked questions
               </h2>
             </div>
@@ -239,7 +241,7 @@ export default function ResourcesPage() {
               Quick answers to the most common questions about uDeets.
             </p>
 
-            <div className="mt-10 rounded-2xl border border-slate-100 bg-white px-6 sm:px-8">
+            <div className="mt-10 rounded-2xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-page)] px-6 sm:px-8">
               {FAQ_ITEMS.map((item) => (
                 <FAQItem key={item.question} question={item.question} answer={item.answer} />
               ))}
@@ -248,13 +250,13 @@ export default function ResourcesPage() {
         </section>
 
         {/* ─── BLOG ─── */}
-        <section className="border-t border-slate-100 bg-[#FAFBFC] py-20 sm:py-28" id="blog">
+        <section className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] py-20 sm:py-28" id="blog">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
             <div className="flex items-center gap-3">
-              <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#EAF6F3]">
-                <FileText className="h-5 w-5 text-[#0C5C57]" />
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--ud-brand-light)]">
+                <FileText className="h-5 w-5 text-[var(--ud-brand-primary)]" />
               </div>
-              <h2 className="text-2xl font-semibold tracking-tight text-[#111111] sm:text-3xl">
+              <h2 className="text-2xl font-semibold tracking-tight text-[var(--ud-text-primary)] sm:text-3xl">
                 Blog
               </h2>
             </div>
@@ -266,17 +268,17 @@ export default function ResourcesPage() {
               {BLOG_POSTS.map((post) => (
                 <article
                   key={post.title}
-                  className="group cursor-pointer rounded-2xl border border-slate-100 bg-white p-6 transition duration-300 hover:border-slate-200 hover:shadow-md"
+                  className="group cursor-pointer rounded-2xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-page)] p-6 transition duration-300 hover:border-slate-200 hover:shadow-md"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="rounded-full bg-[#EAF6F3] px-2.5 py-0.5 text-xs font-medium text-[#0C5C57]">{post.tag}</span>
+                    <span className="rounded-full bg-[var(--ud-brand-light)] px-2.5 py-0.5 text-xs font-medium text-[var(--ud-brand-primary)]">{post.tag}</span>
                     <span className="text-xs text-slate-400">{post.date}</span>
                   </div>
-                  <h3 className="mt-3 text-lg font-semibold tracking-tight text-[#111111] group-hover:text-[#0C5C57] transition">
+                  <h3 className="mt-3 text-lg font-semibold tracking-tight text-[var(--ud-text-primary)] group-hover:text-[var(--ud-brand-primary)] transition">
                     {post.title}
                   </h3>
                   <p className="mt-2 text-sm leading-relaxed text-slate-500">{post.excerpt}</p>
-                  <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#0C5C57]">
+                  <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[var(--ud-brand-primary)]">
                     Read more <ArrowRight className="h-3.5 w-3.5" />
                   </span>
                 </article>
@@ -289,10 +291,10 @@ export default function ResourcesPage() {
         <section className="py-20 sm:py-28" id="tutorials">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
             <div className="flex items-center gap-3">
-              <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#EAF6F3]">
-                <BookOpen className="h-5 w-5 text-[#0C5C57]" />
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--ud-brand-light)]">
+                <BookOpen className="h-5 w-5 text-[var(--ud-brand-primary)]" />
               </div>
-              <h2 className="text-2xl font-semibold tracking-tight text-[#111111] sm:text-3xl">
+              <h2 className="text-2xl font-semibold tracking-tight text-[var(--ud-text-primary)] sm:text-3xl">
                 Tutorials
               </h2>
             </div>
@@ -304,12 +306,12 @@ export default function ResourcesPage() {
               {TUTORIALS.map((tut) => (
                 <div
                   key={tut.title}
-                  className="group cursor-pointer rounded-2xl border border-slate-100 bg-white p-6 transition duration-300 hover:border-[#A9D1CA] hover:shadow-md"
+                  className="group cursor-pointer rounded-2xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-page)] p-6 transition duration-300 hover:border-[#A9D1CA] hover:shadow-md"
                 >
-                  <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#EAF6F3]">
-                    <tut.icon className="h-5 w-5 text-[#0C5C57]" />
+                  <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--ud-brand-light)]">
+                    <tut.icon className="h-5 w-5 text-[var(--ud-brand-primary)]" />
                   </div>
-                  <h3 className="text-base font-semibold tracking-tight text-[#111111] group-hover:text-[#0C5C57] transition">
+                  <h3 className="text-base font-semibold tracking-tight text-[var(--ud-text-primary)] group-hover:text-[var(--ud-brand-primary)] transition">
                     {tut.title}
                   </h3>
                   <p className="mt-2 text-sm leading-relaxed text-slate-500">{tut.description}</p>
@@ -323,12 +325,12 @@ export default function ResourcesPage() {
         </section>
 
         {/* ─── HELP CENTRE ─── */}
-        <section className="border-t border-slate-100 bg-[#FAFBFC] py-20 sm:py-28" id="help">
+        <section className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] py-20 sm:py-28" id="help">
           <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
-            <div className="mx-auto mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0C5C57] to-[#1a8a82]">
+            <div className="mx-auto mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)]">
               <MessageCircle className="h-7 w-7 text-white" />
             </div>
-            <h2 className="text-2xl font-semibold tracking-tight text-[#111111] sm:text-3xl">
+            <h2 className="text-2xl font-semibold tracking-tight text-[var(--ud-text-primary)] sm:text-3xl">
               Help Centre
             </h2>
             <p className="mt-4 text-base leading-relaxed text-slate-500">
@@ -336,22 +338,22 @@ export default function ResourcesPage() {
             </p>
 
             <div className="mt-10 grid gap-5 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-100 bg-white p-6 text-left">
-                <Search className="mb-3 h-5 w-5 text-[#0C5C57]" />
-                <h3 className="text-base font-semibold text-[#111111]">Search for answers</h3>
+              <div className="rounded-2xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-page)] p-6 text-left">
+                <Search className="mb-3 h-5 w-5 text-[var(--ud-brand-primary)]" />
+                <h3 className="text-base font-semibold text-[var(--ud-text-primary)]">Search for answers</h3>
                 <p className="mt-2 text-sm text-slate-500">
                   Browse our FAQ above or search through our knowledge base for detailed guides and troubleshooting steps.
                 </p>
               </div>
-              <div className="rounded-2xl border border-slate-100 bg-white p-6 text-left">
-                <MessageCircle className="mb-3 h-5 w-5 text-[#0C5C57]" />
-                <h3 className="text-base font-semibold text-[#111111]">Contact support</h3>
+              <div className="rounded-2xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-page)] p-6 text-left">
+                <MessageCircle className="mb-3 h-5 w-5 text-[var(--ud-brand-primary)]" />
+                <h3 className="text-base font-semibold text-[var(--ud-text-primary)]">Contact support</h3>
                 <p className="mt-2 text-sm text-slate-500">
                   Need direct assistance? Reach out to our support team and we&apos;ll get back to you within 24 hours.
                 </p>
                 <a
                   href="mailto:support@udeets.com"
-                  className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#0C5C57] hover:underline"
+                  className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[var(--ud-brand-primary)] hover:underline"
                 >
                   support@udeets.com <ArrowRight className="h-3.5 w-3.5" />
                 </a>
@@ -362,7 +364,7 @@ export default function ResourcesPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-100 bg-[#111111]">
+      <footer className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)]">
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-10">
           <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
             <div className="flex items-center gap-3">

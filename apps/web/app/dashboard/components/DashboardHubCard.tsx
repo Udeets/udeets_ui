@@ -34,7 +34,7 @@ function DashboardImage({
 
   if (!src || imageFailed || isLogo) {
     return (
-      <div className={cn("flex items-center justify-center bg-gradient-to-br from-[#0C5C57] to-[#1a8a82]", className)}>
+      <div className={cn("flex items-center justify-center bg-gradient-to-br from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)]", className)}>
         <span className="text-2xl font-semibold text-white/60">{hubName?.charAt(0)?.toUpperCase() ?? "H"}</span>
       </div>
     );
@@ -57,7 +57,7 @@ export function DashboardHubCard({
     <Link
       href={hub.href}
       className={cn(
-        "relative block overflow-hidden rounded-[24px] bg-white shadow-[0_10px_26px_rgba(12,92,87,0.06)] transition-transform duration-200 hover:-translate-y-0.5",
+        "relative block overflow-hidden rounded-[24px] bg-[var(--ud-bg-card)] shadow-[0_10px_26px_rgba(12,92,87,0.06)] transition-transform duration-200 hover:-translate-y-0.5",
         isPending && "opacity-75",
       )}
     >
@@ -75,7 +75,7 @@ export function DashboardHubCard({
         <div className="aspect-[3/2] w-full">
           <DashboardImage src={hub.coverImage} alt={`${hub.name} hub image`} hubName={hub.name} className="h-full w-full" />
         </div>
-        <div className="absolute bottom-0 left-3 z-10 h-10 w-10 translate-y-[30%] overflow-hidden rounded-full border-2 border-white bg-white p-0.5 shadow-sm">
+        <div className="absolute bottom-0 left-3 z-10 h-10 w-10 translate-y-[30%] overflow-hidden rounded-full border-2 border-white bg-[var(--ud-bg-card)] p-0.5 shadow-sm">
           <div className="h-full w-full overflow-hidden rounded-full">
             <DashboardImage src={hub.dpImage} alt={`${hub.name} avatar`} hubName={hub.name} className="h-full w-full" />
           </div>
@@ -85,11 +85,11 @@ export function DashboardHubCard({
       <div className="px-3.5 pb-3 pt-5">
         <h3
           title={hub.name}
-          className="truncate overflow-hidden whitespace-nowrap text-[15px] font-semibold leading-5 text-[#12312D]"
+          className="truncate overflow-hidden whitespace-nowrap text-[15px] font-semibold leading-5 text-[var(--ud-text-primary)]"
         >
           {hub.name}
         </h3>
-        <p className="mt-1.5 text-xs text-[#58706B]">
+        <p className="mt-1.5 text-xs text-[var(--ud-text-secondary)]">
           {isPending ? "Request pending" : hub.membersLabel}
         </p>
       </div>

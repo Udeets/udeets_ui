@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { UdeetsBrandLockup, UdeetsLogoIcon } from "@/components/brand-logo";
+import { ThemeToggle } from "@/components/theme-provider";
 import { listHubs } from "@/lib/services/hubs/list-hubs";
 import type { Hub as SupabaseHub } from "@/types/hub";
 
@@ -63,12 +64,12 @@ function toTopHub(hub: SupabaseHub): TopHub {
 /* ─── Feature card ─── */
 function FeatureCard({ icon: Icon, title, description }: { icon: typeof Zap; title: string; description: string }) {
   return (
-    <div className="group rounded-2xl border border-slate-100 bg-white p-6 transition duration-300 hover:border-[#A9D1CA] hover:shadow-lg hover:shadow-[#0C5C57]/5">
-      <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#EAF6F3]">
-        <Icon className="h-5 w-5 text-[#0C5C57]" />
+    <div className="group rounded-2xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] p-6 transition duration-300 hover:border-[#A9D1CA] hover:shadow-lg hover:shadow-[#0C5C57]/5">
+      <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--ud-brand-light)]">
+        <Icon className="h-5 w-5 text-[var(--ud-brand-primary)]" />
       </div>
-      <h3 className="text-lg font-semibold tracking-tight text-[#111111]">{title}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-slate-500">{description}</p>
+      <h3 className="text-lg font-semibold tracking-tight text-[var(--ud-text-primary)]">{title}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-[var(--ud-text-secondary)]">{description}</p>
     </div>
   );
 }
@@ -78,14 +79,14 @@ function StepCard({ number, title, description }: { number: number; title: strin
   return (
     <div className="relative flex gap-5">
       <div className="flex flex-col items-center">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] text-sm font-bold text-white">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] text-sm font-bold text-white">
           {number}
         </div>
         {number < 3 && <div className="mt-2 h-full w-px bg-gradient-to-b from-[#A9D1CA] to-transparent" />}
       </div>
       <div className="pb-10">
-        <h3 className="text-lg font-semibold tracking-tight text-[#111111]">{title}</h3>
-        <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{description}</p>
+        <h3 className="text-lg font-semibold tracking-tight text-[var(--ud-text-primary)]">{title}</h3>
+        <p className="mt-1.5 text-sm leading-relaxed text-[var(--ud-text-secondary)]">{description}</p>
       </div>
     </div>
   );
@@ -98,7 +99,7 @@ function HubListItemHorizontal({ hub }: { hub: TopHub }) {
   return (
     <Link
       href={hub.href}
-      className="flex w-[320px] shrink-0 items-start gap-4 rounded-xl bg-white p-3 transition duration-200 hover:shadow-md border border-slate-100 hover:border-slate-200"
+      className="flex w-[320px] shrink-0 items-start gap-4 rounded-xl bg-[var(--ud-bg-card)] p-3 transition duration-200 hover:shadow-md border border-[var(--ud-border-subtle)] hover:border-[var(--ud-border)]"
     >
       <div className="h-[72px] w-[72px] flex-shrink-0 overflow-hidden rounded-lg">
         {hub.image && !imageFailed ? (
@@ -110,16 +111,16 @@ function HubListItemHorizontal({ hub }: { hub: TopHub }) {
             onError={() => setImageFailed(true)}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#0C5C57] to-[#1a8a82]">
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)]">
             <span className="text-2xl font-semibold text-white/70">{hub.name?.charAt(0)?.toUpperCase()}</span>
           </div>
         )}
       </div>
       <div className="min-w-0 flex-1 pt-0.5">
-        <h3 className="truncate text-[15px] font-semibold tracking-tight text-[#111111]">{hub.name}</h3>
-        <p className="mt-1 line-clamp-2 text-[13px] leading-snug text-gray-500">{hub.intro}</p>
+        <h3 className="truncate text-[15px] font-semibold tracking-tight text-[var(--ud-text-primary)]">{hub.name}</h3>
+        <p className="mt-1 line-clamp-2 text-[13px] leading-snug text-[var(--ud-text-secondary)]">{hub.intro}</p>
         {hub.locationLabel && (
-          <p className="mt-1.5 text-[12px] text-gray-400 truncate">{hub.locationLabel}</p>
+          <p className="mt-1.5 text-[12px] text-[var(--ud-text-muted)] truncate">{hub.locationLabel}</p>
         )}
       </div>
     </Link>
@@ -141,14 +142,14 @@ function UseCaseCard({
   return (
     <Link
       href={href}
-      className="group flex flex-col rounded-2xl border border-slate-100 bg-white p-6 transition duration-300 hover:border-[#A9D1CA] hover:shadow-lg hover:shadow-[#0C5C57]/5"
+      className="group flex flex-col rounded-2xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] p-6 transition duration-300 hover:border-[#A9D1CA] hover:shadow-lg hover:shadow-[#0C5C57]/5"
     >
       <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#EAF6F3] to-[#d4ece7]">
-        <Icon className="h-6 w-6 text-[#0C5C57]" />
+        <Icon className="h-6 w-6 text-[var(--ud-brand-primary)]" />
       </div>
-      <h3 className="text-lg font-semibold tracking-tight text-[#111111] group-hover:text-[#0C5C57] transition">{title}</h3>
-      <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-500">{description}</p>
-      <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#0C5C57]">
+      <h3 className="text-lg font-semibold tracking-tight text-[var(--ud-text-primary)] group-hover:text-[var(--ud-brand-primary)] transition">{title}</h3>
+      <p className="mt-2 flex-1 text-sm leading-relaxed text-[var(--ud-text-secondary)]">{description}</p>
+      <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[var(--ud-brand-primary)]">
         Learn more <ArrowRight className="h-3.5 w-3.5" />
       </span>
     </Link>
@@ -159,16 +160,16 @@ function UseCaseCard({
 function FAQItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="border-b border-slate-100 last:border-b-0">
+    <div className="border-b border-[var(--ud-border-subtle)] last:border-b-0">
       <button
         type="button"
         onClick={() => setOpen(!open)}
         className="flex w-full items-center justify-between gap-4 py-5 text-left"
       >
-        <span className="text-[15px] font-medium text-[#111111]">{question}</span>
+        <span className="text-[15px] font-medium text-[var(--ud-text-primary)]">{question}</span>
         <ChevronDown
           className={cn(
-            "h-5 w-5 shrink-0 text-slate-400 transition-transform duration-200",
+            "h-5 w-5 shrink-0 text-[var(--ud-text-muted)] transition-transform duration-200",
             open && "rotate-180"
           )}
         />
@@ -179,7 +180,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
           open ? "max-h-96 pb-5" : "max-h-0"
         )}
       >
-        <p className="text-sm leading-relaxed text-slate-500">{answer}</p>
+        <p className="text-sm leading-relaxed text-[var(--ud-text-secondary)]">{answer}</p>
       </div>
     </div>
   );
@@ -189,7 +190,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
 function HeroPhoneMockup() {
   const [activeScreen, setActiveScreen] = useState(0);
   const screens = [
-    { icon: Megaphone, label: "Announcements", color: "from-[#0C5C57] to-[#1a8a82]" },
+    { icon: Megaphone, label: "Announcements", color: "from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)]" },
     { icon: Calendar, label: "Events", color: "from-blue-500 to-blue-600" },
     { icon: Users, label: "Members", color: "from-purple-500 to-purple-600" },
     { icon: MapPin, label: "Discover", color: "from-amber-500 to-amber-600" },
@@ -203,7 +204,7 @@ function HeroPhoneMockup() {
   return (
     <div className="relative mx-auto w-[280px] sm:w-[320px]">
       {/* Phone frame */}
-      <div className="relative overflow-hidden rounded-[2.5rem] border-[8px] border-[#111111] bg-white shadow-2xl shadow-slate-900/20">
+      <div className="relative overflow-hidden rounded-[2.5rem] border-[8px] border-[#111111] bg-[var(--ud-bg-card)] shadow-2xl shadow-slate-900/20">
         {/* Status bar */}
         <div className="flex items-center justify-between bg-[#111111] px-6 py-2">
           <span className="text-[10px] font-medium text-white/60">9:41</span>
@@ -214,7 +215,7 @@ function HeroPhoneMockup() {
         </div>
 
         {/* App header */}
-        <div className="bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-5 py-4">
+        <div className="bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-5 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
               <UdeetsLogoIcon className="h-6 w-6 text-white" alt="" />
@@ -241,7 +242,7 @@ function HeroPhoneMockup() {
                 <screen.icon className="h-8 w-8 text-white" />
               </div>
               <div className="text-center">
-                <div className="text-lg font-semibold text-[#111111]">{screen.label}</div>
+                <div className="text-lg font-semibold text-[var(--ud-text-primary)]">{screen.label}</div>
                 <div className="mt-2 space-y-2">
                   <div className="mx-auto h-2.5 w-48 rounded-full bg-slate-100" />
                   <div className="mx-auto h-2.5 w-36 rounded-full bg-slate-100" />
@@ -250,14 +251,14 @@ function HeroPhoneMockup() {
               </div>
               {/* Fake cards */}
               <div className="mt-6 w-full space-y-3">
-                <div className="flex items-center gap-3 rounded-xl bg-[#FAFBFC] p-3">
+                <div className="flex items-center gap-3 rounded-xl bg-[var(--ud-bg-subtle)] p-3">
                   <div className="h-10 w-10 rounded-lg bg-slate-200" />
                   <div className="flex-1 space-y-1.5">
                     <div className="h-2 w-24 rounded-full bg-slate-200" />
                     <div className="h-2 w-16 rounded-full bg-slate-100" />
                   </div>
                 </div>
-                <div className="flex items-center gap-3 rounded-xl bg-[#FAFBFC] p-3">
+                <div className="flex items-center gap-3 rounded-xl bg-[var(--ud-bg-subtle)] p-3">
                   <div className="h-10 w-10 rounded-lg bg-slate-200" />
                   <div className="flex-1 space-y-1.5">
                     <div className="h-2 w-20 rounded-full bg-slate-200" />
@@ -270,14 +271,14 @@ function HeroPhoneMockup() {
         </div>
 
         {/* Bottom nav */}
-        <div className="flex items-center justify-around border-t border-slate-100 bg-white px-4 py-3">
+        <div className="flex items-center justify-around border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] px-4 py-3">
           {screens.map((s, i) => (
             <button
               key={s.label}
               onClick={() => setActiveScreen(i)}
               className="flex flex-col items-center gap-1"
             >
-              <s.icon className={cn("h-4 w-4 transition", activeScreen === i ? "text-[#0C5C57]" : "text-slate-300")} />
+              <s.icon className={cn("h-4 w-4 transition", activeScreen === i ? "text-[var(--ud-brand-primary)]" : "text-[var(--ud-border)]")} />
               <div className={cn("h-1 w-1 rounded-full transition", activeScreen === i ? "bg-[#0C5C57]" : "bg-transparent")} />
             </button>
           ))}
@@ -285,20 +286,20 @@ function HeroPhoneMockup() {
       </div>
 
       {/* Floating badges */}
-      <div className="absolute -left-8 top-1/4 animate-[float_3s_ease-in-out_infinite] rounded-xl border border-slate-100 bg-white px-3 py-2 shadow-lg sm:-left-16">
+      <div className="absolute -left-8 top-1/4 animate-[float_3s_ease-in-out_infinite] rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] px-3 py-2 shadow-lg sm:-left-16">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#EAF6F3]">
-            <Bell className="h-3.5 w-3.5 text-[#0C5C57]" />
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--ud-brand-light)]">
+            <Bell className="h-3.5 w-3.5 text-[var(--ud-brand-primary)]" />
           </div>
-          <div className="text-xs font-medium text-[#111111]">New deet!</div>
+          <div className="text-xs font-medium text-[var(--ud-text-primary)]">New deet!</div>
         </div>
       </div>
-      <div className="absolute -right-6 top-2/3 animate-[float_3s_ease-in-out_infinite_1.5s] rounded-xl border border-slate-100 bg-white px-3 py-2 shadow-lg sm:-right-14">
+      <div className="absolute -right-6 top-2/3 animate-[float_3s_ease-in-out_infinite_1.5s] rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] px-3 py-2 shadow-lg sm:-right-14">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#EAF6F3]">
-            <Users className="h-3.5 w-3.5 text-[#0C5C57]" />
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--ud-brand-light)]">
+            <Users className="h-3.5 w-3.5 text-[var(--ud-brand-primary)]" />
           </div>
-          <div className="text-xs font-medium text-[#111111]">+3 joined</div>
+          <div className="text-xs font-medium text-[var(--ud-text-primary)]">+3 joined</div>
         </div>
       </div>
     </div>
@@ -381,23 +382,23 @@ function NavDropdown({ label, items }: { label: string; items: { label: string; 
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 rounded-full px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-[#111111]"
+        className="flex items-center gap-1 rounded-full px-3 py-2 text-sm font-medium text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
       >
         {label}
         <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} />
       </button>
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-xl border border-slate-100 bg-white p-2 shadow-xl shadow-slate-200/50">
+        <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-elevated)] p-2 shadow-xl shadow-slate-200/50">
           {items.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               onClick={() => setOpen(false)}
-              className="block rounded-lg px-3 py-2.5 transition hover:bg-slate-50"
+              className="block rounded-lg px-3 py-2.5 transition hover:bg-[var(--ud-bg-subtle)]"
             >
-              <div className="text-sm font-medium text-[#111111]">{item.label}</div>
+              <div className="text-sm font-medium text-[var(--ud-text-primary)]">{item.label}</div>
               {item.description && (
-                <div className="mt-0.5 text-xs text-slate-500">{item.description}</div>
+                <div className="mt-0.5 text-xs text-[var(--ud-text-secondary)]">{item.description}</div>
               )}
             </Link>
           ))}
@@ -503,9 +504,9 @@ export default function Page() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[var(--ud-bg-page)]">
       {/* ─── HEADER ─── */}
-      <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/80 backdrop-blur-lg">
+      <header className="sticky top-0 z-50 border-b border-[var(--ud-border-subtle)] bg-[var(--ud-bg-page)]/80 backdrop-blur-lg">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
           {/* Left: Logo + nav links */}
           <div className="flex items-center gap-1 sm:gap-2">
@@ -516,7 +517,7 @@ export default function Page() {
             <nav className="hidden items-center gap-0.5 md:flex">
               <Link
                 href="/about"
-                className="rounded-full px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-[#111111]"
+                className="rounded-full px-3 py-2 text-sm font-medium text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
               >
                 About
               </Link>
@@ -544,11 +545,11 @@ export default function Page() {
             </nav>
           </div>
 
-          {/* Right: Search + Sign in */}
+          {/* Right: Search + Theme Toggle + Sign in */}
           <div className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/discover"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-[#111111]"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
               aria-label="Discover"
               title="Discover"
             >
@@ -557,9 +558,10 @@ export default function Page() {
                 <circle cx="11" cy="11" r="7" />
               </svg>
             </Link>
+            <ThemeToggle />
             <Link
               href="/auth"
-              className="inline-flex items-center rounded-full bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-5 py-2 text-sm font-medium text-white transition hover:opacity-90"
+              className="inline-flex items-center rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-5 py-2 text-sm font-medium text-white transition hover:opacity-90"
             >
               Sign in
             </Link>
@@ -570,37 +572,37 @@ export default function Page() {
       <main>
         {/* ─── HERO ─── */}
         <section className="relative overflow-hidden">
-          <div className="pointer-events-none absolute -top-40 right-1/4 h-[500px] w-[500px] rounded-full bg-[#EAF6F3]/60 blur-[120px]" />
+          <div className="pointer-events-none absolute -top-40 right-1/4 h-[500px] w-[500px] rounded-full bg-[var(--ud-brand-light)]/60 blur-[120px]" />
           <div className="pointer-events-none absolute -bottom-20 left-1/4 h-[400px] w-[400px] rounded-full bg-[#A9D1CA]/20 blur-[100px]" />
 
           <div className="relative mx-auto max-w-7xl px-4 pb-20 pt-20 sm:px-6 sm:pb-28 sm:pt-28 lg:px-10 lg:pb-32 lg:pt-32">
             <div className="mx-auto max-w-3xl text-center">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#A9D1CA]/50 bg-[#EAF6F3] px-4 py-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-[#0C5C57]" />
-                <span className="text-xs font-medium text-[#0C5C57]">Your community, simplified</span>
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#A9D1CA]/50 bg-[var(--ud-brand-light)] px-4 py-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-[var(--ud-brand-primary)]" />
+                <span className="text-xs font-medium text-[var(--ud-brand-primary)]">Your community, simplified</span>
               </div>
 
-              <h1 className="text-5xl font-semibold leading-[1.1] tracking-tight text-[#111111] sm:text-6xl lg:text-7xl">
+              <h1 className="text-5xl font-semibold leading-[1.1] tracking-tight text-[var(--ud-text-primary)] sm:text-6xl lg:text-7xl">
                 Deets that matter.
                 <br />
-                <span className="text-[#0C5C57]">Organized beautifully.</span>
+                <span className="text-[var(--ud-brand-primary)]">Organized beautifully.</span>
               </h1>
 
-              <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-slate-500 sm:text-xl">
+              <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[var(--ud-text-secondary)] sm:text-xl">
                 Create hubs for your community, business, or organization. Share updates, events, and important details — all in one place.
               </p>
 
               <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Link
                   href="/auth"
-                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-teal-900/20 transition hover:opacity-90 hover:shadow-xl hover:shadow-teal-900/25"
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-teal-900/20 transition hover:opacity-90 hover:shadow-xl hover:shadow-teal-900/25"
                 >
                   Get Started Free
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
                   href="/discover"
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-7 py-3.5 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                  className="inline-flex items-center gap-2 rounded-full border border-[var(--ud-border)] px-7 py-3.5 text-sm font-medium text-[var(--ud-text-primary)] transition hover:border-[var(--ud-border)] hover:bg-[var(--ud-bg-subtle)]"
                 >
                   Explore Hubs
                 </Link>
@@ -614,13 +616,13 @@ export default function Page() {
         </section>
 
         {/* ─── FEATURES ─── */}
-        <section className="border-t border-slate-100 bg-[#FAFBFC] py-20 sm:py-28">
+        <section className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] py-20 sm:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
             <AnimateOnScroll className="mx-auto max-w-2xl text-center">
-              <h2 className="text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
+              <h2 className="text-3xl font-semibold tracking-tight text-[var(--ud-text-primary)] sm:text-4xl">
                 Everything your community needs
               </h2>
-              <p className="mt-4 text-base leading-relaxed text-slate-500">
+              <p className="mt-4 text-base leading-relaxed text-[var(--ud-text-secondary)]">
                 From local businesses to neighborhoods, uDeets gives you the tools to stay connected and informed.
               </p>
             </AnimateOnScroll>
@@ -646,10 +648,10 @@ export default function Page() {
         <section className="py-20 sm:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
             <AnimateOnScroll className="mx-auto max-w-2xl text-center">
-              <h2 className="text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
+              <h2 className="text-3xl font-semibold tracking-tight text-[var(--ud-text-primary)] sm:text-4xl">
                 Built for every type of community
               </h2>
-              <p className="mt-4 text-base leading-relaxed text-slate-500">
+              <p className="mt-4 text-base leading-relaxed text-[var(--ud-text-secondary)]">
                 Choose a template to get started in seconds, or build your hub from scratch. Each template comes with sections, labels, and layouts designed for your specific use case.
               </p>
             </AnimateOnScroll>
@@ -670,7 +672,7 @@ export default function Page() {
             <div className="mt-10 text-center">
               <Link
                 href="/use-cases"
-                className="inline-flex items-center gap-2 text-sm font-medium text-[#0C5C57] transition hover:underline"
+                className="inline-flex items-center gap-2 text-sm font-medium text-[var(--ud-brand-primary)] transition hover:underline"
               >
                 See all use cases and templates
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -680,14 +682,14 @@ export default function Page() {
         </section>
 
         {/* ─── HOW IT WORKS ─── */}
-        <section className="border-t border-slate-100 bg-[#FAFBFC] py-20 sm:py-28">
+        <section className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] py-20 sm:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
             <div className="grid gap-16 lg:grid-cols-2 lg:gap-20">
               <AnimateOnScroll>
-                <h2 className="text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
+                <h2 className="text-3xl font-semibold tracking-tight text-[var(--ud-text-primary)] sm:text-4xl">
                   Up and running in minutes
                 </h2>
-                <p className="mt-4 text-base leading-relaxed text-slate-500">
+                <p className="mt-4 text-base leading-relaxed text-[var(--ud-text-secondary)]">
                   No technical setup needed. Create your hub, customize it, and start sharing with your community.
                 </p>
               </AnimateOnScroll>
@@ -719,14 +721,14 @@ export default function Page() {
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
               <AnimateOnScroll className="mb-10 flex items-end justify-between gap-4">
                 <div>
-                  <h2 className="text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
+                  <h2 className="text-3xl font-semibold tracking-tight text-[var(--ud-text-primary)] sm:text-4xl">
                     Explore hubs
                   </h2>
-                  <p className="mt-2 text-base text-slate-500">See what communities are building on uDeets.</p>
+                  <p className="mt-2 text-base text-[var(--ud-text-secondary)]">See what communities are building on uDeets.</p>
                 </div>
                 <Link
                   href="/discover"
-                  className="hidden shrink-0 items-center gap-1.5 text-sm font-medium text-[#0C5C57] transition hover:underline sm:inline-flex"
+                  className="hidden shrink-0 items-center gap-1.5 text-sm font-medium text-[var(--ud-brand-primary)] transition hover:underline sm:inline-flex"
                 >
                   View all
                   <ArrowRight className="h-3.5 w-3.5" />
@@ -746,7 +748,7 @@ export default function Page() {
               </div>
 
               <div className="mt-6 text-center sm:hidden">
-                <Link href="/discover" className="text-sm font-medium text-[#0C5C57]">
+                <Link href="/discover" className="text-sm font-medium text-[var(--ud-brand-primary)]">
                   View all hubs →
                 </Link>
               </div>
@@ -755,13 +757,13 @@ export default function Page() {
         )}
 
         {/* ─── TESTIMONIALS ─── */}
-        <section className="border-t border-slate-100 bg-[#FAFBFC] py-20 sm:py-28">
+        <section className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] py-20 sm:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
             <AnimateOnScroll className="mx-auto max-w-2xl text-center">
-              <h2 className="text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
+              <h2 className="text-3xl font-semibold tracking-tight text-[var(--ud-text-primary)] sm:text-4xl">
                 Loved by communities everywhere
               </h2>
-              <p className="mt-4 text-base leading-relaxed text-slate-500">
+              <p className="mt-4 text-base leading-relaxed text-[var(--ud-text-secondary)]">
                 See how organizations are using uDeets to stay connected.
               </p>
             </AnimateOnScroll>
@@ -787,13 +789,13 @@ export default function Page() {
                 <AnimateOnScroll
                   key={t.name}
                   delay={i * 150}
-                  className="rounded-2xl border border-slate-100 bg-white p-6"
+                  className="rounded-2xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] p-6"
                 >
                   <MessageSquare className="mb-4 h-5 w-5 text-[#A9D1CA]" />
-                  <p className="text-sm leading-relaxed text-slate-600 italic">&ldquo;{t.quote}&rdquo;</p>
-                  <div className="mt-5 border-t border-slate-50 pt-4">
-                    <p className="text-sm font-semibold text-[#111111]">{t.name}</p>
-                    <p className="text-xs text-slate-500">{t.role}</p>
+                  <p className="text-sm leading-relaxed text-[var(--ud-text-secondary)] italic">&ldquo;{t.quote}&rdquo;</p>
+                  <div className="mt-5 border-t border-[var(--ud-border-subtle)] pt-4">
+                    <p className="text-sm font-semibold text-[var(--ud-text-primary)]">{t.name}</p>
+                    <p className="text-xs text-[var(--ud-text-secondary)]">{t.role}</p>
                   </div>
                 </AnimateOnScroll>
               ))}
@@ -805,24 +807,24 @@ export default function Page() {
         <section className="py-20 sm:py-28" id="faq">
           <div className="mx-auto max-w-3xl px-4 sm:px-6">
             <AnimateOnScroll className="text-center">
-              <h2 className="text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
+              <h2 className="text-3xl font-semibold tracking-tight text-[var(--ud-text-primary)] sm:text-4xl">
                 Frequently asked questions
               </h2>
-              <p className="mt-4 text-base leading-relaxed text-slate-500">
+              <p className="mt-4 text-base leading-relaxed text-[var(--ud-text-secondary)]">
                 Everything you need to know about uDeets and hubs.
               </p>
             </AnimateOnScroll>
 
-            <AnimateOnScroll delay={200} className="mt-12 rounded-2xl border border-slate-100 bg-white px-6 sm:px-8">
+            <AnimateOnScroll delay={200} className="mt-12 rounded-2xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] px-6 sm:px-8">
               {FAQ_ITEMS.map((item) => (
                 <FAQItem key={item.question} question={item.question} answer={item.answer} />
               ))}
             </AnimateOnScroll>
 
             <div className="mt-8 text-center">
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-[var(--ud-text-secondary)]">
                 Still have questions?{" "}
-                <Link href="/resources#help" className="font-medium text-[#0C5C57] hover:underline">
+                <Link href="/resources#help" className="font-medium text-[var(--ud-brand-primary)] hover:underline">
                   Visit our Help Centre
                 </Link>
               </p>
@@ -833,7 +835,7 @@ export default function Page() {
         {/* ─── CTA BANNER ─── */}
         <section className="py-20 sm:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0C5C57] to-[#1a8a82] px-8 py-16 text-center shadow-2xl shadow-teal-900/20 sm:px-16 sm:py-20">
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-8 py-16 text-center shadow-2xl shadow-teal-900/20 sm:px-16 sm:py-20">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(169,209,202,0.15),transparent_50%)]" />
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_80%,rgba(255,255,255,0.05),transparent_50%)]" />
 
@@ -847,7 +849,7 @@ export default function Page() {
                 <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
                   <Link
                     href="/auth"
-                    className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3.5 text-sm font-semibold text-[#0C5C57] shadow-lg transition hover:bg-slate-50"
+                    className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3.5 text-sm font-semibold text-[var(--ud-brand-primary)] shadow-lg transition hover:bg-white/90"
                   >
                     Get Started Free
                     <ArrowRight className="h-4 w-4" />
@@ -860,7 +862,7 @@ export default function Page() {
       </main>
 
       {/* ─── FOOTER ─── */}
-      <footer className="border-t border-slate-100 bg-[#111111]">
+      <footer className="border-t border-[var(--ud-border-subtle)] bg-[#111111]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
           <div className="grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-4">
             {/* Brand */}

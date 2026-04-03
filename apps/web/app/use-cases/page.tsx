@@ -13,6 +13,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { UdeetsBrandLockup, UdeetsLogoIcon } from "@/components/brand-logo";
+import { ThemeToggle } from "@/components/theme-provider";
 
 export const metadata = {
   title: "Use Cases & Templates | uDeets",
@@ -152,18 +153,19 @@ const USE_CASES = [
 
 export default function UseCasesPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[var(--ud-bg-page)]">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/80 backdrop-blur-lg">
+      <header className="sticky top-0 z-50 border-b border-[var(--ud-border-subtle)] bg-[var(--ud-bg-page)]/80 backdrop-blur-lg">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
           <Link href="/" className="flex items-center gap-2">
             <UdeetsBrandLockup textClassName="text-xl sm:text-2xl" priority />
           </Link>
           <nav className="flex items-center gap-2 sm:gap-3">
-            <Link href="/discover" className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-[#111111]" aria-label="Discover">
+            <ThemeToggle />
+            <Link href="/discover" className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]" aria-label="Discover">
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 21l-4.3-4.3" /><circle cx="11" cy="11" r="7" /></svg>
             </Link>
-            <Link href="/auth" className="inline-flex items-center rounded-full bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-5 py-2 text-sm font-medium text-white transition hover:opacity-90">
+            <Link href="/auth" className="inline-flex items-center rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-5 py-2 text-sm font-medium text-white transition hover:opacity-90">
               Sign in
             </Link>
           </nav>
@@ -174,9 +176,9 @@ export default function UseCasesPage() {
         {/* Hero */}
         <section className="bg-gradient-to-b from-[#EAF6F3]/40 to-white py-20 sm:py-28">
           <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
-            <h1 className="text-4xl font-semibold tracking-tight text-[#111111] sm:text-5xl">
+            <h1 className="text-4xl font-semibold tracking-tight text-[var(--ud-text-primary)] sm:text-5xl">
               Use cases &{" "}
-              <span className="text-[#0C5C57]">templates</span>
+              <span className="text-[var(--ud-brand-primary)]">templates</span>
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-slate-500">
               uDeets comes with pre-built templates for every type of community. Pick one to get started in seconds, then customize it to make it yours.
@@ -185,14 +187,14 @@ export default function UseCasesPage() {
         </section>
 
         {/* Quick nav */}
-        <section className="border-b border-slate-100 bg-white">
+        <section className="border-b border-[var(--ud-border-subtle)] bg-[var(--ud-bg-page)]">
           <div className="mx-auto max-w-7xl overflow-x-auto px-4 sm:px-6 lg:px-10" style={{ scrollbarWidth: "none" }}>
             <div className="flex gap-1 py-3">
               {USE_CASES.map((uc) => (
                 <a
                   key={uc.id}
                   href={`#${uc.id}`}
-                  className="flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-[#EAF6F3] hover:text-[#0C5C57]"
+                  className="flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-[var(--ud-brand-light)] hover:text-[var(--ud-brand-primary)]"
                 >
                   <uc.icon className="h-4 w-4" />
                   {uc.name.split("&")[0].trim()}
@@ -208,25 +210,25 @@ export default function UseCasesPage() {
             <section
               key={uc.id}
               id={uc.id}
-              className={i % 2 === 1 ? "bg-[#FAFBFC] py-16 sm:py-20" : "bg-white py-16 sm:py-20"}
+              className={i % 2 === 1 ? "bg-[var(--ud-bg-subtle)] py-16 sm:py-20" : "bg-[var(--ud-bg-page)] py-16 sm:py-20"}
             >
               <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
                 <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
                   {/* Info */}
                   <div className={i % 2 === 1 ? "lg:order-2" : ""}>
                     <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#EAF6F3] to-[#d4ece7]">
-                      <uc.icon className="h-6 w-6 text-[#0C5C57]" />
+                      <uc.icon className="h-6 w-6 text-[var(--ud-brand-primary)]" />
                     </div>
-                    <h2 className="text-2xl font-semibold tracking-tight text-[#111111] sm:text-3xl">
+                    <h2 className="text-2xl font-semibold tracking-tight text-[var(--ud-text-primary)] sm:text-3xl">
                       {uc.name}
                     </h2>
-                    <p className="mt-2 text-base font-medium text-[#0C5C57]">{uc.tagline}</p>
+                    <p className="mt-2 text-base font-medium text-[var(--ud-brand-primary)]">{uc.tagline}</p>
                     <p className="mt-4 text-base leading-relaxed text-slate-500">{uc.description}</p>
 
                     <div className="mt-8">
                       <Link
                         href="/create-hub"
-                        className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-6 py-2.5 text-sm font-medium text-white transition hover:opacity-90"
+                        className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-6 py-2.5 text-sm font-medium text-white transition hover:opacity-90"
                       >
                         Create a {uc.name.split("&")[0].trim()} Hub
                         <ArrowRight className="h-4 w-4" />
@@ -236,14 +238,14 @@ export default function UseCasesPage() {
 
                   {/* Features checklist */}
                   <div className={i % 2 === 1 ? "lg:order-1" : ""}>
-                    <div className="rounded-2xl border border-slate-100 bg-white p-6 sm:p-8">
+                    <div className="rounded-2xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-page)] p-6 sm:p-8">
                       <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
                         Template features
                       </h3>
                       <div className="mt-5 space-y-4">
                         {uc.features.map((f) => (
                           <div key={f} className="flex items-start gap-3">
-                            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#0C5C57]" />
+                            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[var(--ud-brand-primary)]" />
                             <span className="text-sm leading-relaxed text-slate-600">{f}</span>
                           </div>
                         ))}
@@ -259,7 +261,7 @@ export default function UseCasesPage() {
         {/* CTA */}
         <section className="pb-20 sm:pb-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0C5C57] to-[#1a8a82] px-8 py-16 text-center shadow-2xl shadow-teal-900/20 sm:px-16 sm:py-20">
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-8 py-16 text-center shadow-2xl shadow-teal-900/20 sm:px-16 sm:py-20">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(169,209,202,0.15),transparent_50%)]" />
               <div className="relative">
                 <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
@@ -269,7 +271,7 @@ export default function UseCasesPage() {
                   uDeets works for any group that needs to share information. Start with a general template and customize it to fit your needs.
                 </p>
                 <div className="mt-8">
-                  <Link href="/create-hub" className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3.5 text-sm font-semibold text-[#0C5C57] shadow-lg transition hover:bg-slate-50">
+                  <Link href="/create-hub" className="inline-flex items-center gap-2 rounded-full bg-[var(--ud-bg-page)] px-7 py-3.5 text-sm font-semibold text-[var(--ud-brand-primary)] shadow-lg transition hover:bg-slate-50">
                     Create Your Hub <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>
@@ -280,7 +282,7 @@ export default function UseCasesPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-100 bg-[#111111]">
+      <footer className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)]">
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-10">
           <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
             <div className="flex items-center gap-3">

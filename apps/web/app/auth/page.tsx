@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
+import { ThemeToggle } from "@/components/theme-provider";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import { signInWithApple } from "@/services/auth/signInWithApple";
 import { signInWithGoogle } from "@/services/auth/signInWithGoogle";
@@ -201,13 +202,13 @@ function AuthPageContent() {
     }
   }
 
-  const PAGE_BG = "bg-white";
-  const HEADER_BG = "bg-white border-b border-slate-200/60";
+  const PAGE_BG = "bg-[var(--ud-bg-page)]";
+  const HEADER_BG = "bg-[var(--ud-bg-card)] border-b border-[var(--ud-border-subtle)]";
   const FOOTER_BG = "bg-[#0C5C57]";
-  const NAV_TEXT = "text-[#111111]";
+  const NAV_TEXT = "text-[var(--ud-text-primary)]";
   const BRAND_TEXT_STYLE = "text-xl sm:text-2xl";
-  const BUTTON_PRIMARY = "rounded-full bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-6 py-3 text-sm font-medium text-white hover:opacity-90";
-  const SURFACE = "rounded-2xl border border-slate-100 bg-white shadow-sm";
+  const BUTTON_PRIMARY = "rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-6 py-3 text-sm font-medium text-white hover:opacity-90";
+  const SURFACE = "rounded-2xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-sm";
 
   return (
     <div className={cx("min-h-screen", PAGE_BG)}>
@@ -218,19 +219,20 @@ function AuthPageContent() {
             <UdeetsBrandLockup textClassName={BRAND_TEXT_STYLE} priority />
           </Link>
 
-          <nav className="flex items-center gap-2 sm:gap-3">
+          <nav className="flex items-center gap-1.5 sm:gap-2">
             <Link
               href="/discover"
-              className={`rounded-full px-4 py-2 text-sm font-medium ${NAV_TEXT} transition hover:bg-slate-100 sm:px-5 sm:py-2.5`}
+              className={`rounded-full px-4 py-2 text-sm font-medium ${NAV_TEXT} transition hover:bg-[var(--ud-bg-subtle)] sm:px-5 sm:py-2.5`}
             >
               Discover
             </Link>
             <Link
               href={isAuthenticated ? "/dashboard" : "/"}
-              className={`rounded-full px-4 py-2 text-sm font-medium ${NAV_TEXT} transition hover:bg-slate-100 sm:px-5 sm:py-2.5`}
+              className={`rounded-full px-4 py-2 text-sm font-medium ${NAV_TEXT} transition hover:bg-[var(--ud-bg-subtle)] sm:px-5 sm:py-2.5`}
             >
               Home
             </Link>
+            <ThemeToggle />
           </nav>
         </div>
       </header>
@@ -240,20 +242,20 @@ function AuthPageContent() {
         <div className={cx(SURFACE, "w-full max-w-md p-6 sm:p-8")}>
           <div className="mb-8 text-center">
             <UdeetsBrandLockup className="mb-2 justify-center" textClassName="text-3xl" showIcon={false} />
-            <p className="text-gray-600">Create. Subscribe. Stay Informed.</p>
+            <p className="text-[var(--ud-text-secondary)]">Create. Subscribe. Stay Informed.</p>
           </div>
 
           {/* Toggle */}
           <div className="mb-6">
-            <div className="flex bg-gray-100 rounded-xl p-1">
+            <div className="flex rounded-xl bg-[var(--ud-bg-subtle)] p-1">
               <button
                 type="button"
                 onClick={() => { setMode("signin"); setError(""); setSignupSuccess(false); }}
                 className={cx(
                   "flex-1 py-2 px-4 text-sm font-medium rounded-lg transition",
                   mode === "signin"
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "bg-[var(--ud-bg-card)] text-[var(--ud-text-primary)] shadow-sm"
+                    : "text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]"
                 )}
               >
                 Sign in
@@ -264,8 +266,8 @@ function AuthPageContent() {
                 className={cx(
                   "flex-1 py-2 px-4 text-sm font-medium rounded-lg transition",
                   mode === "signup"
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "bg-[var(--ud-bg-card)] text-[var(--ud-text-primary)] shadow-sm"
+                    : "text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]"
                 )}
               >
                 Sign up
@@ -279,7 +281,7 @@ function AuthPageContent() {
               type="button"
               onClick={handleGoogleSignIn}
               disabled={isGoogleLoading || isAppleLoading}
-              className="w-full flex items-center justify-center px-4 py-3 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 transition disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full flex items-center justify-center px-4 py-3 border border-[var(--ud-border)] rounded-xl bg-[var(--ud-bg-page)] text-[var(--ud-text-primary)] hover:bg-[var(--ud-bg-subtle)] transition disabled:cursor-not-allowed disabled:opacity-60"
             >
               <GoogleIcon className="w-5 h-5 mr-3" />
               {isGoogleLoading ? "Connecting to Google..." : "Continue with Google"}
@@ -288,7 +290,7 @@ function AuthPageContent() {
               type="button"
               onClick={handleAppleSignIn}
               disabled={isGoogleLoading || isAppleLoading}
-              className="w-full flex items-center justify-center px-4 py-3 border border-slate-200 rounded-xl bg-black text-white hover:bg-gray-900 transition disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full flex items-center justify-center px-4 py-3 border border-[var(--ud-border)] rounded-xl bg-black text-white hover:bg-gray-900 transition disabled:cursor-not-allowed disabled:opacity-60"
             >
               <AppleIcon className="w-5 h-5 mr-3" />
               {isAppleLoading ? "Connecting to Apple..." : "Continue with Apple"}
@@ -298,10 +300,10 @@ function AuthPageContent() {
           {/* Divider */}
           <div className="mb-6 relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200" />
+              <div className="w-full border-t border-[var(--ud-border)]" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">OR</span>
+              <span className="px-2 bg-[var(--ud-bg-card)] text-[var(--ud-text-muted)]">OR</span>
             </div>
           </div>
 
@@ -321,7 +323,7 @@ function AuthPageContent() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Full Name"
-                className="w-full rounded-xl border border-gray-300 px-3 py-3 focus:ring-2 focus:ring-[#A9D1CA]"
+                className="w-full rounded-xl border border-[var(--ud-border)] bg-[var(--ud-bg-input)] px-3 py-3 text-[var(--ud-text-primary)] placeholder:text-[var(--ud-text-muted)] focus:ring-2 focus:ring-[#A9D1CA] outline-none"
               />
             )}
 
@@ -330,7 +332,7 @@ function AuthPageContent() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email"
-              className="w-full rounded-xl border border-gray-300 px-3 py-3 focus:ring-2 focus:ring-[#A9D1CA]"
+              className="w-full rounded-xl border border-[var(--ud-border)] bg-[var(--ud-bg-input)] px-3 py-3 text-[var(--ud-text-primary)] placeholder:text-[var(--ud-text-muted)] focus:ring-2 focus:ring-[#A9D1CA] outline-none"
             />
 
             <input
@@ -338,7 +340,7 @@ function AuthPageContent() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
-              className="w-full rounded-xl border border-gray-300 px-3 py-3 focus:ring-2 focus:ring-[#A9D1CA]"
+              className="w-full rounded-xl border border-[var(--ud-border)] bg-[var(--ud-bg-input)] px-3 py-3 text-[var(--ud-text-primary)] placeholder:text-[var(--ud-text-muted)] focus:ring-2 focus:ring-[#A9D1CA] outline-none"
             />
 
             {mode === "signup" && (
@@ -347,7 +349,7 @@ function AuthPageContent() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm Password"
-                className="w-full rounded-xl border border-gray-300 px-3 py-3 focus:ring-2 focus:ring-[#A9D1CA]"
+                className="w-full rounded-xl border border-[var(--ud-border)] bg-[var(--ud-bg-input)] px-3 py-3 text-[var(--ud-text-primary)] placeholder:text-[var(--ud-text-muted)] focus:ring-2 focus:ring-[#A9D1CA] outline-none"
               />
             )}
 
@@ -360,11 +362,11 @@ function AuthPageContent() {
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-[#0C5C57]"
+                    className="h-4 w-4 rounded border-gray-300 text-[var(--ud-brand-primary)]"
                   />
-                  <span className="ml-2 text-sm text-gray-700">Remember me</span>
+                  <span className="ml-2 text-sm text-[var(--ud-text-secondary)]">Remember me</span>
                 </label>
-                <button type="button" className="text-sm text-[#0C5C57]">
+                <button type="button" className="text-sm text-[var(--ud-brand-primary)]">
                   Forgot password?
                 </button>
               </div>
@@ -382,13 +384,13 @@ function AuthPageContent() {
                   : "Create Account"}
             </button>
 
-            <p className="text-xs text-center text-gray-500 mt-4">
+            <p className="text-xs text-center text-[var(--ud-text-muted)] mt-4">
               By continuing, I agree to the{" "}
-              <a href="#" className="text-[#0C5C57]">
+              <a href="#" className="text-[var(--ud-brand-primary)]">
                 Terms & Conditions
               </a>{" "}
               and{" "}
-              <a href="#" className="text-[#0C5C57]">
+              <a href="#" className="text-[var(--ud-brand-primary)]">
                 Privacy Policy
               </a>
               .

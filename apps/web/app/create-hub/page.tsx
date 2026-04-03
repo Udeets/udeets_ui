@@ -24,7 +24,7 @@ function StepDots({ current }: { current: Step }) {
           key={s}
           className={cn(
             "h-2 w-2 rounded-full transition-colors",
-            s <= current ? "bg-[#0C5C57]" : "bg-gray-300"
+            s <= current ? "bg-[var(--ud-brand-primary)]" : "bg-gray-300"
           )}
         />
       ))}
@@ -125,7 +125,7 @@ function CreateHubPageContent() {
         {showSuccess ? (
           <div className="flex flex-col items-center py-6 text-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#EAF6F3]">
-              <CheckCircle className="h-8 w-8 text-[#0C5C57]" />
+              <CheckCircle className="h-8 w-8 text-[var(--ud-brand-primary)]" />
             </div>
             <h2 className="mt-4 text-xl font-bold text-gray-900">{trimmedName} is ready!</h2>
             <div className="mt-6 flex w-full flex-col gap-3">
@@ -133,7 +133,7 @@ function CreateHubPageContent() {
                 <button
                   type="button"
                   onClick={() => router.push(createdHubHref)}
-                  className="w-full rounded-xl bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                  className="w-full rounded-xl bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] py-3 text-sm font-semibold text-white transition hover:opacity-90"
                 >
                   Go to Hub
                 </button>
@@ -159,7 +159,7 @@ function CreateHubPageContent() {
                 onChange={(e) => setHubName(e.target.value.slice(0, 50))}
                 placeholder="e.g. HCV Temple, Richmond Foodies..."
                 autoFocus
-                className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-[#A9D1CA] focus:ring-2 focus:ring-[#A9D1CA]"
+                className="w-full rounded-xl border border-[var(--ud-border)] px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-[var(--ud-border-focus)] focus:ring-2 focus:ring-[var(--ud-border-focus)]"
               />
               <p className="mt-2 text-right text-xs text-gray-400">{hubName.length}/50</p>
             </div>
@@ -171,7 +171,7 @@ function CreateHubPageContent() {
               className={cn(
                 "mt-4 w-full rounded-xl py-3 text-sm font-semibold transition",
                 isNameValid
-                  ? "bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] text-white hover:opacity-90"
+                  ? "bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] text-white hover:opacity-90"
                   : "cursor-not-allowed bg-gray-100 text-gray-400"
               )}
             >
@@ -194,8 +194,8 @@ function CreateHubPageContent() {
                   className={cn(
                     "flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition",
                     selectedCategory === opt.value
-                      ? "border-[#0C5C57] bg-[#f0faf8]"
-                      : "border-gray-200 bg-white hover:border-gray-300"
+                      ? "border-[var(--ud-brand-primary)] bg-[#f0faf8]"
+                      : "border-[var(--ud-border)] bg-white hover:border-gray-300"
                   )}
                 >
                   <span className="text-xl">{opt.emoji}</span>
@@ -213,7 +213,7 @@ function CreateHubPageContent() {
               className={cn(
                 "mt-4 w-full rounded-xl py-3 text-sm font-semibold transition",
                 selectedCategory
-                  ? "bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] text-white hover:opacity-90"
+                  ? "bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] text-white hover:opacity-90"
                   : "cursor-not-allowed bg-gray-100 text-gray-400"
               )}
             >
@@ -231,7 +231,7 @@ function CreateHubPageContent() {
             <div className="mt-4 space-y-3">
               <div className="relative">
                 <label className="block text-xs font-semibold text-gray-600 mb-2">Custom URL</label>
-                <div className="flex items-center rounded-xl border border-gray-200 bg-white overflow-hidden">
+                <div className="flex items-center rounded-xl border border-[var(--ud-border)] bg-white overflow-hidden">
                   <span className="px-4 py-3 text-sm text-gray-500 bg-gray-50 whitespace-nowrap">https://</span>
                   <input
                     value={customSlug}
@@ -256,7 +256,7 @@ function CreateHubPageContent() {
             <button
               type="button"
               onClick={() => setStep(4)}
-              className="mt-5 w-full rounded-xl bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] py-3 text-sm font-semibold text-white transition hover:opacity-90"
+              className="mt-5 w-full rounded-xl bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] py-3 text-sm font-semibold text-white transition hover:opacity-90"
             >
               Next →
             </button>
@@ -280,8 +280,8 @@ function CreateHubPageContent() {
                   className={cn(
                     "flex flex-col items-center rounded-xl border px-4 py-5 text-center transition",
                     visibility === opt.value
-                      ? "border-[#0C5C57] bg-[#f0faf8]"
-                      : "border-gray-200 bg-white hover:border-gray-300"
+                      ? "border-[var(--ud-brand-primary)] bg-[#f0faf8]"
+                      : "border-[var(--ud-border)] bg-white hover:border-gray-300"
                   )}
                 >
                   <span className="text-2xl">{opt.icon}</span>
@@ -293,7 +293,7 @@ function CreateHubPageContent() {
             <button
               type="button"
               onClick={() => setStep(5)}
-              className="mt-5 w-full rounded-xl bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] py-3 text-sm font-semibold text-white transition hover:opacity-90"
+              className="mt-5 w-full rounded-xl bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] py-3 text-sm font-semibold text-white transition hover:opacity-90"
             >
               Next →
             </button>
@@ -318,8 +318,8 @@ function CreateHubPageContent() {
                   className={cn(
                     "flex w-full items-start gap-3 rounded-xl border px-4 py-4 text-left transition",
                     postingPerm === opt.value
-                      ? "border-[#0C5C57] bg-[#f0faf8]"
-                      : "border-gray-200 bg-white hover:border-gray-300"
+                      ? "border-[var(--ud-brand-primary)] bg-[#f0faf8]"
+                      : "border-[var(--ud-border)] bg-white hover:border-gray-300"
                   )}
                 >
                   <span className="mt-0.5 text-xl">{opt.icon}</span>
@@ -339,7 +339,7 @@ function CreateHubPageContent() {
                 "mt-5 w-full rounded-xl py-3 text-sm font-semibold transition",
                 isSubmitting
                   ? "cursor-not-allowed bg-gray-200 text-gray-400"
-                  : "bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] text-white hover:opacity-90"
+                  : "bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] text-white hover:opacity-90"
               )}
             >
               {isSubmitting ? "Creating..." : "Create Hub →"}

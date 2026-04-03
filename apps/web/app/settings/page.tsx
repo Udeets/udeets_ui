@@ -34,7 +34,7 @@ function Toggle({ enabled, onToggle, label }: { enabled: boolean; onToggle: () =
       onClick={onToggle}
       className={cn(
         "relative h-7 w-12 shrink-0 rounded-full transition-all duration-200",
-        enabled ? "bg-[#A9D1CA] ring-1 ring-[#0C5C57]/15" : "bg-slate-300"
+        enabled ? "bg-[var(--ud-brand-light)] ring-1 ring-[var(--ud-brand-primary)]/15" : "bg-slate-300"
       )}
     >
       <span
@@ -48,13 +48,13 @@ function Toggle({ enabled, onToggle, label }: { enabled: boolean; onToggle: () =
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="mb-4 border-b border-slate-100 pb-3 text-lg font-semibold text-[#111111]">{children}</h2>;
+  return <h2 className="mb-4 border-b border-[var(--ud-border-subtle)] pb-3 text-lg font-semibold text-[var(--ud-text-primary)]">{children}</h2>;
 }
 
 function SavedBadge({ show }: { show: boolean }) {
   if (!show) return null;
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium text-[#0C5C57] animate-pulse">
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-[var(--ud-brand-primary)] animate-pulse">
       <Check className="h-3 w-3" /> Saved
     </span>
   );
@@ -157,7 +157,7 @@ export default function SettingsPage() {
         {/* Sidebar */}
         <aside className={cardClass("h-fit p-5")}>
           <div className="mb-4">
-            <h1 className="text-xl font-semibold tracking-tight text-[#111111]">Settings</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--ud-text-primary)]">Settings</h1>
           </div>
           <nav className="space-y-1">
             {NAV_ITEMS.map((item) => {
@@ -170,7 +170,7 @@ export default function SettingsPage() {
                   className={cn(
                     "flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm font-medium transition",
                     active
-                      ? "bg-[#A9D1CA]/55 text-[#0C5C57]"
+                      ? "bg-[var(--ud-brand-light)]/55 text-[var(--ud-brand-primary)]"
                       : item === "Danger Zone"
                         ? "text-rose-500 hover:bg-rose-50"
                         : "text-slate-600 hover:bg-[#F7FBFA]"
@@ -199,10 +199,10 @@ export default function SettingsPage() {
                     { key: "weekly_digest" as const, label: "Weekly community digest", desc: "Receive a recap of trending updates every Friday morning." },
                     { key: "event_reminders" as const, label: "Event reminders", desc: "Get reminder nudges before saved events begin." },
                   ]).map(({ key, label, desc }) => (
-                    <div key={key} className="flex items-start justify-between gap-4 rounded-xl border border-slate-100 p-4">
+                    <div key={key} className="flex items-start justify-between gap-4 rounded-xl border border-[var(--ud-border-subtle)] p-4">
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-[#111111]">{label}</p>
+                          <p className="text-sm font-medium text-[var(--ud-text-primary)]">{label}</p>
                           <SavedBadge show={savedKey === key} />
                         </div>
                         <p className="mt-1 text-sm text-slate-500">{desc}</p>
@@ -227,10 +227,10 @@ export default function SettingsPage() {
                     { key: "show_profile" as const, label: "Show profile in joined hubs", desc: "Let other members see your display name in shared communities." },
                     { key: "allow_invites" as const, label: "Allow direct community invites", desc: "Receive invite requests from local organizers." },
                   ]).map(({ key, label, desc }) => (
-                    <div key={key} className="flex items-start justify-between gap-4 rounded-xl border border-slate-100 p-4">
+                    <div key={key} className="flex items-start justify-between gap-4 rounded-xl border border-[var(--ud-border-subtle)] p-4">
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-[#111111]">{label}</p>
+                          <p className="text-sm font-medium text-[var(--ud-text-primary)]">{label}</p>
                           <SavedBadge show={savedKey === key} />
                         </div>
                         <p className="mt-1 text-sm text-slate-500">{desc}</p>
@@ -250,14 +250,14 @@ export default function SettingsPage() {
               <div className="space-y-5">
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-[#111111]">Theme</p>
+                    <p className="text-sm font-medium text-[var(--ud-text-primary)]">Theme</p>
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">Coming soon</span>
                   </div>
                   <div className="mt-3 flex gap-3">
                     {(["Light", "Dark", "System"] as const).map((theme) => (
                       <label key={theme} className={cn(
                         "flex cursor-not-allowed items-center gap-2 rounded-xl border px-4 py-2.5 text-sm",
-                        theme === "Light" ? "border-[#0C5C57] bg-[#f0faf8] text-[#0C5C57]" : "border-slate-200 text-slate-500"
+                        theme === "Light" ? "border-[var(--ud-brand-primary)] bg-[var(--ud-brand-light)] text-[var(--ud-brand-primary)]" : "border-[var(--ud-border)] text-slate-500"
                       )}>
                         <input type="radio" name="theme" value={theme} checked={theme === "Light"} readOnly className="accent-[#0C5C57]" />
                         {theme}
@@ -268,10 +268,10 @@ export default function SettingsPage() {
 
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-[#111111]">Language</p>
+                    <p className="text-sm font-medium text-[var(--ud-text-primary)]">Language</p>
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">Coming soon</span>
                   </div>
-                  <select disabled className="mt-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 opacity-60">
+                  <select disabled className="mt-3 rounded-xl border border-[var(--ud-border)] bg-white px-4 py-2.5 text-sm text-slate-700 opacity-60">
                     <option>English</option>
                   </select>
                 </div>
@@ -292,14 +292,14 @@ export default function SettingsPage() {
                       <input
                         value={nameDraft}
                         onChange={(e) => setNameDraft(e.target.value)}
-                        className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm text-[#111111] outline-none ring-[#A9D1CA] focus:ring-2"
+                        className="flex-1 rounded-xl border border-[var(--ud-border)] px-3 py-2 text-sm text-[var(--ud-text-primary)] outline-none ring-[var(--ud-border-focus)] focus:ring-2"
                         autoFocus
                       />
                       <div className="flex gap-2">
-                        <button type="button" onClick={saveName} disabled={isSavingName} className="rounded-lg bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-4 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60">
+                        <button type="button" onClick={saveName} disabled={isSavingName} className="rounded-lg bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-4 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60">
                           {isSavingName ? "Saving..." : "Save"}
                         </button>
-                        <button type="button" onClick={() => setEditingName(false)} className="rounded-lg border border-slate-200 px-4 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                        <button type="button" onClick={() => setEditingName(false)} className="rounded-lg border border-[var(--ud-border)] px-4 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
                           Cancel
                         </button>
                       </div>
@@ -308,7 +308,7 @@ export default function SettingsPage() {
                     <>
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Full Name</p>
-                        <p className="mt-1 text-sm font-medium text-[#111111]">{displayName}</p>
+                        <p className="mt-1 text-sm font-medium text-[var(--ud-text-primary)]">{displayName}</p>
                       </div>
                       <button type="button" onClick={() => { setNameDraft(fullName); setEditingName(true); }} className="shrink-0 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
                         Change
@@ -321,7 +321,7 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between py-4">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Email</p>
-                    <p className="mt-1 text-sm font-medium text-[#111111]">{displayEmail || "Not set"}</p>
+                    <p className="mt-1 text-sm font-medium text-[var(--ud-text-primary)]">{displayEmail || "Not set"}</p>
                   </div>
                 </div>
 
@@ -331,7 +331,7 @@ export default function SettingsPage() {
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Password</p>
                     <p className="mt-1 text-sm text-slate-500">Managed by your sign-in provider</p>
                   </div>
-                  <button type="button" disabled className="shrink-0 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-400 opacity-60">
+                  <button type="button" disabled className="shrink-0 rounded-full border border-[var(--ud-border)] px-4 py-2 text-sm font-medium text-slate-400 opacity-60">
                     Change password
                   </button>
                 </div>
@@ -340,7 +340,7 @@ export default function SettingsPage() {
                 <div className="py-4 last:pb-0">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Connected Accounts</p>
                   <div className="mt-3 space-y-3">
-                    <div className="flex items-center justify-between rounded-xl border border-slate-100 px-4 py-3">
+                    <div className="flex items-center justify-between rounded-xl border border-[var(--ud-border-subtle)] px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
                           <svg className="h-4 w-4" viewBox="0 0 24 24">
@@ -350,18 +350,18 @@ export default function SettingsPage() {
                             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                           </svg>
                         </div>
-                        <span className="text-sm font-medium text-[#111111]">Google</span>
+                        <span className="text-sm font-medium text-[var(--ud-text-primary)]">Google</span>
                       </div>
-                      <span className="flex items-center gap-1 text-xs font-medium text-[#0C5C57]"><Check className="h-3 w-3" /> Connected</span>
+                      <span className="flex items-center gap-1 text-xs font-medium text-[var(--ud-brand-primary)]"><Check className="h-3 w-3" /> Connected</span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl border border-slate-100 px-4 py-3">
+                    <div className="flex items-center justify-between rounded-xl border border-[var(--ud-border-subtle)] px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
                           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
                           </svg>
                         </div>
-                        <span className="text-sm font-medium text-[#111111]">Apple</span>
+                        <span className="text-sm font-medium text-[var(--ud-text-primary)]">Apple</span>
                       </div>
                       <span className="text-xs text-slate-400">Not connected</span>
                     </div>
@@ -376,9 +376,9 @@ export default function SettingsPage() {
             <section className={cardClass("p-6")}>
               <SectionTitle>Danger Zone</SectionTitle>
               <div className="space-y-4">
-                <div className="flex items-center justify-between rounded-xl border border-slate-100 p-4">
+                <div className="flex items-center justify-between rounded-xl border border-[var(--ud-border-subtle)] p-4">
                   <div>
-                    <p className="text-sm font-medium text-[#111111]">Sign out</p>
+                    <p className="text-sm font-medium text-[var(--ud-text-primary)]">Sign out</p>
                     <p className="mt-1 text-sm text-slate-500">End your current session on this device.</p>
                   </div>
                   <button
