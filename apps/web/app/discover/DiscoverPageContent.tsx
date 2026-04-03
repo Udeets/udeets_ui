@@ -5,20 +5,15 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
+import { ThemeToggle } from "@/components/theme-provider";
 import { isUdeetsLogoSrc } from "@/lib/branding";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import type { Hub as SupabaseHub } from "@/types/hub";
 
-const HEADER_BG = "bg-white border-b border-slate-200/60";
-const FOOTER_BG = "bg-[#0C5C57]";
-const PAGE_BG = "bg-[#fafafa]";
-const NAV_TEXT = "text-[#111111]";
+const HEADER_BG = "bg-[var(--ud-bg-card)] border-b border-[var(--ud-border-subtle)]";
+const PAGE_BG = "bg-[var(--ud-bg-page)]";
 const BRAND_TEXT_STYLE = "text-xl sm:text-2xl";
-const DISPLAY_HEADING = "font-semibold tracking-tight text-[#111111]";
 const FILTER_TEXT = "font-medium";
-const ACTION_TEXT = "font-medium text-[#111111]";
-const BUTTON_PRIMARY = "rounded-full bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-6 py-2.5 text-sm font-medium text-white hover:opacity-90 transition-colors duration-150";
-const ACTIVE_CHIP = "bg-[#0C5C57] text-white border-transparent";
 
 const ROUTE_AUTH = "/auth";
 
@@ -159,7 +154,7 @@ function LightArrowButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "h-10 w-10 rounded-full border border-slate-200 bg-white",
+        "h-10 w-10 rounded-full border border-[var(--ud-border)] bg-white",
         "text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition shadow-sm",
         "disabled:opacity-40 disabled:cursor-not-allowed",
         className
@@ -182,7 +177,7 @@ function HubListItem({ hub }: { hub: Hub }) {
   return (
     <Link
       href={hub.href}
-      className="flex items-start gap-4 rounded-lg px-2 py-3 transition-colors duration-150 hover:bg-white sm:gap-5 sm:px-3 sm:py-4"
+      className="flex items-start gap-4 rounded-lg px-2 py-3 transition-colors duration-150 hover:bg-[var(--ud-bg-subtle)] sm:gap-5 sm:px-3 sm:py-4"
     >
       {/* Square thumbnail */}
       <div className="h-[72px] w-[72px] flex-shrink-0 overflow-hidden rounded-lg sm:h-[88px] sm:w-[88px]">
@@ -195,7 +190,7 @@ function HubListItem({ hub }: { hub: Hub }) {
             onError={() => setImageFailed(true)}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#0C5C57] to-[#1a8a82]">
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)]">
             <span className="text-2xl font-semibold text-white/70">{hub.name?.charAt(0)?.toUpperCase()}</span>
           </div>
         )}
@@ -203,7 +198,7 @@ function HubListItem({ hub }: { hub: Hub }) {
 
       {/* Hub info */}
       <div className="min-w-0 flex-1 pt-0.5">
-        <h3 className="truncate text-[15px] font-semibold tracking-tight text-[#111111]">
+        <h3 className="truncate text-[15px] font-semibold tracking-tight text-[var(--ud-text-primary)]">
           {hub.name}
         </h3>
         <p className="mt-1 line-clamp-2 text-[13px] leading-snug text-gray-500">
@@ -228,17 +223,17 @@ function HubListSection({ hubs }: { hubs: Hub[] }) {
   return (
     <section className="py-4">
       {hubs.length ? (
-        <div className="grid grid-cols-1 gap-0 divide-y divide-slate-100 md:grid-cols-2 md:gap-x-6 md:divide-y-0">
+        <div className="grid grid-cols-1 gap-0 divide-y divide-[var(--ud-border-subtle)] md:grid-cols-2 md:gap-x-6 md:divide-y-0">
           {hubs.map((h) => (
-            <div key={h.id} className="border-b border-slate-100 last:border-b-0 md:border-b-0">
+            <div key={h.id} className="border-b border-[var(--ud-border-subtle)] last:border-b-0 md:border-b-0">
               <HubListItem hub={h} />
             </div>
           ))}
         </div>
       ) : (
-        <div className="rounded-xl bg-white px-8 py-12 text-center">
-          <p className="text-base font-medium text-[#111111]">No hubs yet</p>
-          <p className="mt-2 text-sm text-gray-500">
+        <div className="rounded-xl bg-[var(--ud-bg-card)] px-8 py-12 text-center">
+          <p className="text-base font-medium text-[var(--ud-text-primary)]">No hubs yet</p>
+          <p className="mt-2 text-sm text-[var(--ud-text-secondary)]">
             Create the first hub to see it appear here.
           </p>
         </div>
@@ -363,7 +358,7 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
             <UdeetsBrandLockup textClassName={BRAND_TEXT_STYLE} priority />
           </Link>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <Link
               href={
                 searchParams.get("demo_preview") === "1"
@@ -373,28 +368,29 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
                     : ROUTE_AUTH
               }
               data-demo-target={searchParams.get("demo_preview") === "1" ? "discover-create-hub" : undefined}
-              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-4 py-2 text-sm font-medium text-white transition-opacity duration-150 hover:opacity-90"
+              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-4 py-2 text-sm font-medium text-white transition-opacity duration-150 hover:opacity-90"
             >
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>
               Create Hub
             </Link>
+            <ThemeToggle />
             <Link
               href={isAuthenticated ? "/dashboard" : "/"}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-gray-500 transition hover:bg-slate-100 hover:text-[#111111]"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
               aria-label="Home"
             >
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z" /><path d="M9 21V12h6v9" /></svg>
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
             </Link>
           </div>
         </div>
       </header>
 
       {/* ── Centered title + search ─────────────────────────────── */}
-      <section className="bg-white px-4 pb-4 pt-6 sm:px-6 lg:px-10">
+      <section className="bg-[var(--ud-bg-card)] px-4 pb-4 pt-6 sm:px-6 lg:px-10">
         <div className="mx-auto max-w-4xl">
-          <h1 className="text-center text-2xl font-semibold tracking-tight text-[#111111] sm:text-3xl">Discover</h1>
+          <h1 className="text-center text-2xl font-semibold tracking-tight text-[var(--ud-text-primary)] sm:text-3xl">Discover</h1>
 
-          <div className="mt-4 flex items-center rounded-lg border border-slate-200 bg-[#fafafa] px-3 py-2.5">
+          <div className="mt-4 flex items-center rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-input)] px-3 py-2.5">
             <svg viewBox="0 0 24 24" className="mr-2.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 21l-4.3-4.3" />
               <circle cx="11" cy="11" r="7" />
@@ -403,14 +399,14 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search hubs, communities, places..."
-              className="min-w-0 flex-1 bg-transparent text-sm text-[#111111] outline-none placeholder:text-gray-400"
+              className="min-w-0 flex-1 bg-transparent text-sm text-[var(--ud-text-primary)] outline-none placeholder:text-gray-400"
             />
           </div>
         </div>
       </section>
 
       {/* ── Tab-style category filters ──────────────────────────── */}
-      <section className="border-b border-slate-200 bg-white relative z-40">
+      <section className="border-b border-[var(--ud-border)] bg-[var(--ud-bg-card)] relative z-40">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-10">
           <div className="flex items-center">
             <div
@@ -424,8 +420,8 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
                   "px-4 py-3 text-sm whitespace-nowrap transition-colors duration-150 border-b-2",
                   FILTER_TEXT,
                   activeCategory === "All"
-                    ? "border-[#0C5C57] text-[#0C5C57]"
-                    : "border-transparent text-gray-500 hover:text-[#111111]"
+                    ? "border-[var(--ud-brand-primary)] text-[var(--ud-brand-primary)]"
+                    : "border-transparent text-gray-500 hover:text-[var(--ud-text-primary)]"
                 )}
               >
                 All
@@ -433,7 +429,7 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
 
               <Link
                 href="/discover/location"
-                className="flex items-center justify-center px-3 py-3 transition-colors duration-150 border-b-2 border-transparent text-gray-400 hover:text-[#111111]"
+                className="flex items-center justify-center px-3 py-3 transition-colors duration-150 border-b-2 border-transparent text-gray-400 hover:text-[var(--ud-text-primary)]"
                 aria-label="Near me"
                 title="Near me"
               >
@@ -451,8 +447,8 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
                     "px-4 py-3 text-sm whitespace-nowrap transition-colors duration-150 border-b-2",
                     FILTER_TEXT,
                     activeCategory === c
-                      ? "border-[#0C5C57] text-[#0C5C57]"
-                      : "border-transparent text-gray-500 hover:text-[#111111]"
+                      ? "border-[var(--ud-brand-primary)] text-[var(--ud-brand-primary)]"
+                      : "border-transparent text-gray-500 hover:text-[var(--ud-text-primary)]"
                   )}
                 >
                   {c}
@@ -479,8 +475,8 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
         <HubListSection hubs={allFilteredHubs} />
       </main>
 
-      <footer className="border-t border-slate-100 bg-white py-6">
-        <div className="mx-auto max-w-4xl px-4 text-xs text-gray-400 sm:px-6 lg:px-10">
+      <footer className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] py-6">
+        <div className="mx-auto max-w-4xl px-4 text-xs text-[var(--ud-text-muted)] sm:px-6 lg:px-10">
           uDeets © {new Date().getFullYear()}
         </div>
       </footer>

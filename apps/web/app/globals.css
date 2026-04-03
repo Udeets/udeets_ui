@@ -1,10 +1,79 @@
 @import "tailwindcss";
 
+/* ─── uDeets Design Tokens (Light) ─── */
 :root {
   --background: #ffffff;
   --foreground: #171717;
   --font-system-sans: var(--font-inter, "Inter"), -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   --font-system-mono: "SFMono-Regular", SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* Backgrounds */
+  --ud-bg-page: #ffffff;
+  --ud-bg-card: #ffffff;
+  --ud-bg-subtle: #fafafa;
+  --ud-bg-elevated: #ffffff;
+  --ud-bg-input: #fafafa;
+  --ud-bg-overlay: rgba(0, 0, 0, 0.3);
+
+  /* Brand */
+  --ud-brand-primary: #0C5C57;
+  --ud-brand-primary-hover: #0a4f4a;
+  --ud-brand-light: #E3F1EF;
+  --ud-gradient-from: #0C5C57;
+  --ud-gradient-to: #1a8a82;
+
+  /* Text */
+  --ud-text-primary: #111111;
+  --ud-text-secondary: #6b7280;
+  --ud-text-muted: #9ca3af;
+  --ud-text-inverse: #ffffff;
+
+  /* Borders */
+  --ud-border: #e5e7eb;
+  --ud-border-focus: #0C5C57;
+  --ud-border-subtle: rgba(0, 0, 0, 0.06);
+
+  /* Status */
+  --ud-danger: #ef4444;
+  --ud-warning: #f59e0b;
+  --ud-success: #22c55e;
+}
+
+/* ─── uDeets Design Tokens (Dark) ─── */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+
+  /* Backgrounds */
+  --ud-bg-page: #0a0a0a;
+  --ud-bg-card: #1a1a1a;
+  --ud-bg-subtle: #111111;
+  --ud-bg-elevated: #262626;
+  --ud-bg-input: #1a1a1a;
+  --ud-bg-overlay: rgba(0, 0, 0, 0.6);
+
+  /* Brand - stays vivid in dark */
+  --ud-brand-primary: #22a89e;
+  --ud-brand-primary-hover: #1a8a82;
+  --ud-brand-light: rgba(12, 92, 87, 0.2);
+  --ud-gradient-from: #0C5C57;
+  --ud-gradient-to: #22a89e;
+
+  /* Text */
+  --ud-text-primary: #ededed;
+  --ud-text-secondary: #a1a1aa;
+  --ud-text-muted: #71717a;
+  --ud-text-inverse: #0a0a0a;
+
+  /* Borders */
+  --ud-border: #333333;
+  --ud-border-focus: #22a89e;
+  --ud-border-subtle: rgba(255, 255, 255, 0.08);
+
+  /* Status */
+  --ud-danger: #f87171;
+  --ud-warning: #fbbf24;
+  --ud-success: #4ade80;
 }
 
 @theme inline {
@@ -12,14 +81,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-system-sans);
   --font-mono: var(--font-system-mono);
-}
-
-/* Force light mode — dark theme is Phase 2 */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #ffffff;
-    --foreground: #171717;
-  }
 }
 
 body {
@@ -48,90 +109,48 @@ body {
   flex: 1 0 auto;
 }
 
+/* ─── Animations ─── */
 @keyframes blinkWord {
-  0%, 49%, 100% {
-    opacity: 1;
-  }
-
-  50%, 99% {
-    opacity: 0;
-  }
+  0%, 49%, 100% { opacity: 1; }
+  50%, 99% { opacity: 0; }
 }
-
 .blink-word {
   animation: blinkWord 1.1s infinite;
 }
 
 @keyframes fadeInPanel {
-  0% {
-    opacity: 0;
-    transform: translateY(14px) scale(0.985);
-  }
-
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  0% { opacity: 0; transform: translateY(14px) scale(0.985); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
-
 .fade-in-panel {
   animation: fadeInPanel 420ms ease-out;
 }
 
 @keyframes howItWorksClick {
-  0% {
-    transform: scale(1);
-  }
-
-  35% {
-    transform: scale(0.988);
-  }
-
-  100% {
-    transform: scale(1.015);
-  }
+  0% { transform: scale(1); }
+  35% { transform: scale(0.988); }
+  100% { transform: scale(1.015); }
 }
-
 .how-it-works-click {
   animation: howItWorksClick 220ms ease-out;
 }
 
 @keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
 @keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 @keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
