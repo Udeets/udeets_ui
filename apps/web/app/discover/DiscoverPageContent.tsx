@@ -4,7 +4,6 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
 import { isUdeetsLogoSrc } from "@/lib/branding";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
@@ -42,22 +41,6 @@ const CATEGORIES: Category[] = [
   "HOA's",
 ];
 
-type NearMeScope = "nearby" | "state" | "country" | "global";
-
-const SCOPE_LABELS: Record<NearMeScope, string> = {
-  nearby: "Nearby",
-  state: "State",
-  country: "Country",
-  global: "Global",
-};
-
-type LocationState = {
-  active: boolean;
-  label: string; // e.g. "Mechanicsville, VA" or "23116"
-  lat: number | null;
-  lng: number | null;
-  scope: NearMeScope;
-};
 
 type Hub = {
   id: string;
@@ -128,13 +111,6 @@ function toDiscoverHub(hub: SupabaseHub): Hub {
   };
 }
 
-function matchesLocation(h: Hub, loc: LocationState) {
-  if (!loc.active) return true;
-  const q = loc.label.toLowerCase();
-  if (!q) return true;
-  // Simple text-based matching against hub location fields
-  return h.locationLabel.toLowerCase().includes(q);
-}
 
 function IconChevronLeft(props: { className?: string }) {
   return (
@@ -198,219 +174,7 @@ function LightArrowButton({
   );
 }
 
-/* ── Near Me Location Popup ────────────────────────────────────── */
-function NearMePopup({
-  location,
-  onLocationChange,
-  onClose,
-  isAuthenticated,
-}: {
-  location: LocationState;
-  onLocationChange: (loc: LocationState) => void;
-  onClose: () => void;
-  isAuthenticated: boolean;
-}) {
-  const [searchValue, setSearchValue] = useState(location.label);
-  const [geoLoading, setGeoLoading] = useState(false);
-  const [geoError, setGeoError] = useState<string | null>(null);
-  const popupRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const trigger = document.getElementById("nearMePinTrigger");
-      if (trigger?.contains(target)) return;
-      if (popupRef.current?.contains(target)) return;
-      onClose();
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [onClose]);
-
-  const handleSearch = () => {
-    const trimmed = searchValue.trim();
-    if (!trimmed) {
-      onLocationChange({ active: false, label: "", lat: null, lng: null, scope: "nearby" });
-    } else {
-      onLocationChange({ active: true, label: trimmed, lat: null, lng: null, scope: location.scope });
-    }
-  };
-
-  const handleGeolocate = () => {
-    if (!navigator.geolocation) {
-      setGeoError("Geolocation is not supported by your browser.");
-      return;
-    }
-    setGeoLoading(true);
-    setGeoError(null);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        // Reverse geocode using a free API
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10`
-          );
-          if (res.ok) {
-            const data = await res.json();
-            const city =
-              data.address?.city ||
-              data.address?.town ||
-              data.address?.village ||
-              data.address?.county ||
-              "";
-            const state = data.address?.state || "";
-            const label = [city, state].filter(Boolean).join(", ");
-            setSearchValue(label);
-            onLocationChange({
-              active: true,
-              label,
-              lat: latitude,
-              lng: longitude,
-              scope: location.scope,
-            });
-          }
-        } catch {
-          setSearchValue(`${latitude.toFixed(3)}, ${longitude.toFixed(3)}`);
-          onLocationChange({
-            active: true,
-            label: `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`,
-            lat: latitude,
-            lng: longitude,
-            scope: location.scope,
-          });
-        }
-        setGeoLoading(false);
-      },
-      (err) => {
-        setGeoError(
-          err.code === 1
-            ? "Location permission denied. Please allow location access in your browser settings."
-            : "Could not determine your location. Please try again."
-        );
-        setGeoLoading(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  };
-
-  const handleClear = () => {
-    setSearchValue("");
-    onLocationChange({ active: false, label: "", lat: null, lng: null, scope: "nearby" });
-  };
-
-  return (
-    <div
-      ref={popupRef}
-      className="fixed z-[999999] w-[340px] rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden"
-    >
-      {/* Search input */}
-      <div className="px-4 pt-4 pb-3">
-        <label className="mb-2 block text-xs font-medium text-gray-500 uppercase tracking-wide">
-          City or ZIP code
-        </label>
-        <div className="flex items-center gap-2">
-          <div className="flex flex-1 items-center rounded-lg border border-slate-200 bg-[#fafafa] px-3 py-2">
-            <svg viewBox="0 0 24 24" className="mr-2 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 21l-4.3-4.3" />
-              <circle cx="11" cy="11" r="7" />
-            </svg>
-            <input
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              placeholder="e.g. Mechanicsville or 23116"
-              className="min-w-0 flex-1 bg-transparent text-sm text-[#111111] outline-none placeholder:text-gray-400"
-            />
-            {searchValue && (
-              <button onClick={handleClear} className="ml-1 text-gray-400 hover:text-gray-600">
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
-          <button
-            onClick={handleSearch}
-            className="rounded-lg bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-3 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
-          >
-            Go
-          </button>
-        </div>
-      </div>
-
-      {/* Geolocation button */}
-      <div className="px-4 pb-3">
-        <button
-          onClick={handleGeolocate}
-          disabled={geoLoading}
-          className="flex w-full items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-[#111111] transition hover:bg-slate-50 disabled:opacity-50"
-        >
-          {geoLoading ? (
-            <svg className="h-4 w-4 animate-spin text-[#0C5C57]" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
-              <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 24 24" className="h-4 w-4 text-[#0C5C57]" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-            </svg>
-          )}
-          {geoLoading ? "Finding your location..." : "Use my current location"}
-        </button>
-        {geoError && (
-          <p className="mt-1.5 text-xs text-red-500">{geoError}</p>
-        )}
-      </div>
-
-      {/* Divider */}
-      <div className="border-t border-slate-100" />
-
-      {/* Didn't find your hub? */}
-      <div className="px-4 py-3">
-        <p className="text-xs text-gray-500">
-          Didn&apos;t find your right hub?
-        </p>
-        <Link
-          href={isAuthenticated ? "/create-hub" : "/auth"}
-          className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-[#0C5C57] transition hover:text-[#094a46]"
-        >
-          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>
-          Create Hub
-        </Link>
-      </div>
-
-      {/* Divider */}
-      <div className="border-t border-slate-100" />
-
-      {/* Hubs around you — scope selector */}
-      <div className="px-4 py-3">
-        <p className="mb-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
-          Hubs around you
-        </p>
-        <div className="flex gap-1.5">
-          {(["nearby", "state", "country", "global"] as NearMeScope[]).map((scope) => (
-            <button
-              key={scope}
-              onClick={() => onLocationChange({ ...location, scope })}
-              className={cn(
-                "rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-150",
-                location.scope === scope
-                  ? "bg-[#0C5C57] text-white"
-                  : "bg-slate-100 text-gray-500 hover:bg-slate-200 hover:text-[#111111]"
-              )}
-            >
-              {SCOPE_LABELS[scope]}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── Band-app style hub list item ───────────────────────────────── */
+/* ── Hub list item ───────────────────────────────────────────────── */
 function HubListItem({ hub }: { hub: Hub }) {
   const [imageFailed, setImageFailed] = useState(false);
   const isLogo = isUdeetsLogoSrc(hub.image);
@@ -488,14 +252,6 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<Category>("All");
-  const [locationPopupOpen, setLocationPopupOpen] = useState(false);
-  const [location, setLocation] = useState<LocationState>({
-    active: false,
-    label: "",
-    lat: null,
-    lng: null,
-    scope: "nearby",
-  });
   const [supabaseHubs, setSupabaseHubs] = useState<Hub[]>(() => (initialHubs ?? []).map(toDiscoverHub));
   const [supabaseLoadState, setSupabaseLoadState] = useState<SupabaseLoadState>(initialHubs && initialHubs.length > 0 ? "success" : "idle");
   const [supabaseLoadError, setSupabaseLoadError] = useState<string | null>(null);
@@ -503,18 +259,6 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
   const chipsRef = useRef<HTMLDivElement | null>(null);
   const [canChipLeft, setCanChipLeft] = useState(false);
   const [canChipRight, setCanChipRight] = useState(true);
-
-  const [nearMePopupPos, setNearMePopupPos] = useState<{ left: number; top: number }>({ left: 0, top: 0 });
-
-  const updateNearMePopupPos = () => {
-    if (typeof window === "undefined") return;
-    const trigger = document.getElementById("nearMePinTrigger");
-    if (!trigger) return;
-    const r = trigger.getBoundingClientRect();
-    const popupW = 340;
-    const left = Math.max(8, Math.min(Math.round(r.left), window.innerWidth - popupW - 8));
-    setNearMePopupPos({ left, top: Math.round(r.bottom + 8) });
-  };
 
   const updateChipArrows = () => {
     const el = chipsRef.current;
@@ -546,17 +290,6 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
     el.scrollBy({ left: delta, behavior: "smooth" });
   };
 
-  // keep popup positioned correctly while open
-  useEffect(() => {
-    if (!locationPopupOpen) return;
-    const raf = window.requestAnimationFrame(() => updateNearMePopupPos());
-    const onResize = () => updateNearMePopupPos();
-    window.addEventListener("resize", onResize);
-    return () => {
-      window.cancelAnimationFrame(raf);
-      window.removeEventListener("resize", onResize);
-    };
-  }, [locationPopupOpen]);
 
   // Check auth state and refetch hubs with user token so user's own hubs appear (#21)
   useEffect(() => {
@@ -600,17 +333,15 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
   const baseFiltered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return allHubs.filter((h) => {
-      const matchQuery =
+      return (
         !q ||
         h.name.toLowerCase().includes(q) ||
         h.description.toLowerCase().includes(q) ||
         h.locationLabel.toLowerCase().includes(q) ||
-        h.membersLabel.toLowerCase().includes(q);
-
-      const matchLoc = matchesLocation(h, location);
-      return matchQuery && matchLoc;
+        h.membersLabel.toLowerCase().includes(q)
+      );
     });
-  }, [allHubs, query, location]);
+  }, [allHubs, query]);
 
   const categoryHubs = useMemo(() => {
     if (activeCategory === "All") return [];
@@ -622,7 +353,7 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
     return categoryHubs;
   }, [activeCategory, baseFiltered, categoryHubs]);
 
-  const isResultsMode = query.trim().length > 0 || location.active;
+  const isResultsMode = query.trim().length > 0;
 
   return (
     <div className={cn("min-h-screen", PAGE_BG)}>
@@ -700,18 +431,9 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
                 All
               </button>
 
-              <button
-                id="nearMePinTrigger"
-                onClick={() => {
-                  updateNearMePopupPos();
-                  setLocationPopupOpen((v) => !v);
-                }}
-                className={cn(
-                  "flex items-center justify-center px-3 py-3 transition-colors duration-150 border-b-2",
-                  location.active
-                    ? "border-[#0C5C57] text-[#0C5C57]"
-                    : "border-transparent text-gray-400 hover:text-[#111111]"
-                )}
+              <Link
+                href="/discover/location"
+                className="flex items-center justify-center px-3 py-3 transition-colors duration-150 border-b-2 border-transparent text-gray-400 hover:text-[#111111]"
                 aria-label="Near me"
                 title="Near me"
               >
@@ -719,7 +441,7 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
                   <path d="M12 22s7-6.2 7-12A7 7 0 1 0 5 10c0 5.8 7 12 7 12Z" />
                   <circle cx="12" cy="10" r="3" />
                 </svg>
-              </button>
+              </Link>
 
               {CATEGORIES.filter((c) => c !== "All").map((c) => (
                 <button
@@ -741,20 +463,6 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
         </div>
       </section>
 
-      {locationPopupOpen &&
-        typeof document !== "undefined" &&
-        createPortal(
-          <div style={{ position: "fixed", left: nearMePopupPos.left, top: nearMePopupPos.top, zIndex: 999999 }}>
-            <NearMePopup
-              location={location}
-              onLocationChange={(loc) => setLocation(loc)}
-              onClose={() => setLocationPopupOpen(false)}
-              isAuthenticated={isAuthenticated}
-            />
-          </div>,
-          document.body
-        )}
-
       <main className="mx-auto max-w-4xl px-4 py-4 sm:px-6 lg:px-10">
         {supabaseLoadState === "loading" ? (
           <div className="mb-4 rounded-lg bg-white px-4 py-3 text-sm text-slate-500">
@@ -767,28 +475,6 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
             {supabaseLoadError ?? "Could not load hubs."}
           </div>
         ) : null}
-
-        {/* Active location filter indicator */}
-        {location.active && (
-          <div className="mb-3 flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm">
-            <svg viewBox="0 0 24 24" className="h-4 w-4 text-[#0C5C57]" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 22s7-6.2 7-12A7 7 0 1 0 5 10c0 5.8 7 12 7 12Z" />
-              <circle cx="12" cy="10" r="3" />
-            </svg>
-            <span className="font-medium text-[#111111]">{location.label}</span>
-            <span className="text-gray-400">·</span>
-            <span className="text-gray-400 capitalize">{SCOPE_LABELS[location.scope]}</span>
-            <button
-              onClick={() => setLocation({ active: false, label: "", lat: null, lng: null, scope: "nearby" })}
-              className="ml-auto text-gray-400 hover:text-gray-600 transition"
-              aria-label="Clear location filter"
-            >
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        )}
 
         <HubListSection hubs={allFilteredHubs} />
       </main>
