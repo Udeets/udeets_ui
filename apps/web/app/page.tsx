@@ -57,7 +57,7 @@ function StepCard({ number, title, description }: { number: number; title: strin
   return (
     <div className="relative flex gap-5">
       <div className="flex flex-col items-center">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0C5C57] text-sm font-bold text-white">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] text-sm font-bold text-white">
           {number}
         </div>
         {number < 3 && <div className="mt-2 h-full w-px bg-gradient-to-b from-[#A9D1CA] to-transparent" />}
@@ -180,15 +180,23 @@ export default function Page() {
             <UdeetsBrandLockup textClassName="text-xl sm:text-2xl" priority />
           </Link>
 
-          <nav className="flex items-center gap-1 sm:gap-2">
-            <Link href="/discover" className="rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-[#111111]">
-              Discover
+          <nav className="flex items-center gap-2 sm:gap-3">
+            <Link
+              href="/discover"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-[#111111]"
+              aria-label="Discover"
+              title="Discover"
+            >
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 21l-4.3-4.3" />
+                <circle cx="11" cy="11" r="7" />
+              </svg>
             </Link>
-            <Link href="/auth" className="rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-[#111111]">
+            <Link
+              href="/auth"
+              className="inline-flex items-center rounded-full bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-5 py-2 text-sm font-medium text-white transition hover:opacity-90"
+            >
               Sign in
-            </Link>
-            <Link href="/auth" className="rounded-full bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-5 py-2 text-sm font-medium text-white transition hover:opacity-90">
-              Get started
             </Link>
           </nav>
         </div>
@@ -240,7 +248,7 @@ export default function Page() {
 
             {/* Hero visual */}
             <div className="mt-16 flex justify-center sm:mt-20">
-              <div className="relative flex h-64 w-64 items-center justify-center rounded-[2.5rem] bg-gradient-to-br from-[#0C5C57] to-[#0a4e4a] shadow-2xl shadow-[#0C5C57]/25 sm:h-80 sm:w-80 lg:h-96 lg:w-96">
+              <div className="relative flex h-64 w-64 items-center justify-center rounded-[2.5rem] bg-gradient-to-br from-[#0C5C57] to-[#1a8a82] shadow-2xl shadow-teal-900/25 sm:h-80 sm:w-80 lg:h-96 lg:w-96">
                 <div className="pointer-events-none absolute inset-0 rounded-[2.5rem] bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.1),transparent_60%)]" />
                 <UdeetsLogoIcon
                   className="h-32 w-32 text-white/80 drop-shadow-[0_4px_24px_rgba(255,255,255,0.1)] sm:h-40 sm:w-40 lg:h-48 lg:w-48"
@@ -370,7 +378,7 @@ export default function Page() {
         {/* ─── CTA BANNER ─── */}
         <section className="py-20 sm:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0C5C57] to-[#094a46] px-8 py-16 text-center shadow-2xl shadow-[#0C5C57]/20 sm:px-16 sm:py-20">
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0C5C57] to-[#1a8a82] px-8 py-16 text-center shadow-2xl shadow-teal-900/20 sm:px-16 sm:py-20">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(169,209,202,0.15),transparent_50%)]" />
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_80%,rgba(255,255,255,0.05),transparent_50%)]" />
 
