@@ -174,7 +174,7 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-white">
       {/* ─── HEADER ─── */}
-      <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/80 backdrop-blur-lg">
+      <header className="sticky top-0 z-50 border-b border-[#d4ece7]/60 bg-[#EAF6F3]/90 backdrop-blur-lg">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
           <Link href="/" className="flex items-center gap-2">
             <UdeetsBrandLockup textClassName="text-xl sm:text-2xl" priority />
