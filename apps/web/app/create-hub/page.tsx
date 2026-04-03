@@ -11,15 +11,15 @@ import { cn, descriptionFor, slugify } from "./helpers";
 import type { Visibility } from "./types";
 import { HUB_CATEGORY_OPTIONS } from "./types";
 
-type Step = 1 | 2 | 3 | 4;
+type Step = 1 | 2 | 3 | 4 | 5;
 type PostingPerm = "broadcast" | "admin_members" | "open";
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
 
 function StepDots({ current }: { current: Step }) {
   return (
     <div className="flex items-center justify-center gap-2">
-      {([1, 2, 3, 4] as const).map((s) => (
+      {([1, 2, 3, 4, 5] as const).map((s) => (
         <div
           key={s}
           className={cn(
@@ -39,6 +39,7 @@ function CreateHubPageContent() {
 
   const [step, setStep] = useState<Step>(1);
   const [hubName, setHubName] = useState("");
+  const [customSlug, setCustomSlug] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [visibility, setVisibility] = useState<Visibility>("Public");
   const [postingPerm, setPostingPerm] = useState<PostingPerm>("admin_members");
@@ -49,6 +50,9 @@ function CreateHubPageContent() {
 
   const trimmedName = hubName.trim();
   const isNameValid = trimmedName.length > 0 && trimmedName.length <= 50;
+
+  // Validate custom slug: lowercase, alphanumeric + hyphens
+  const isSlugValid = !customSlug || /^[a-z0-9-]+$/.test(customSlug) && !customSlug.startsWith('-') && !customSlug.endsWith('-');
 
   const close = () => router.push("/dashboard");
 
@@ -73,7 +77,10 @@ function CreateHubPageContent() {
       }
 
       const timestamp = Date.now();
-      const slug = `${slugify(trimmedName)}-${timestamp}`;
+      // Use custom slug if provided and valid, otherwise generate from name
+      const slug = customSlug && isSlugValid
+        ? customSlug
+        : `${slugify(trimmedName)}-${timestamp}`;
       const category = selectedCategory || "communities";
       const createdHub = await createHub({
         name: trimmedName,
@@ -215,8 +222,49 @@ function CreateHubPageContent() {
           </div>
         ) : null}
 
-        {/* STEP 3 — Visibility */}
+        {/* STEP 3 — Custom URL/Slug */}
         {!showSuccess && step === 3 ? (
+          <div>
+            <p className="text-sm text-gray-400">{trimmedName}</p>
+            <h2 className="mt-1 text-xl font-bold text-gray-900">Customize your hub URL</h2>
+            <p className="mt-3 text-xs text-gray-500">Optional: Create a custom URL like yourname.udeets.com</p>
+            <div className="mt-4 space-y-3">
+              <div className="relative">
+                <label className="block text-xs font-semibold text-gray-600 mb-2">Custom URL</label>
+                <div className="flex items-center rounded-xl border border-gray-200 bg-white overflow-hidden">
+                  <span className="px-4 py-3 text-sm text-gray-500 bg-gray-50 whitespace-nowrap">https://</span>
+                  <input
+                    value={customSlug}
+                    onChange={(e) => setCustomSlug(e.target.value.toLowerCase())}
+                    placeholder="yourname"
+                    className="flex-1 px-4 py-3 text-sm text-gray-900 outline-none transition focus:ring-2 focus:ring-[#A9D1CA] focus:ring-inset"
+                  />
+                  <span className="px-4 py-3 text-sm text-gray-500 bg-gray-50 whitespace-nowrap">.udeets.com</span>
+                </div>
+                {customSlug && !isSlugValid ? (
+                  <p className="mt-2 text-xs text-red-600">Only lowercase letters, numbers, and hyphens allowed. No leading/trailing hyphens.</p>
+                ) : null}
+                {customSlug ? (
+                  <p className="mt-2 text-xs text-gray-500">Preview: https://{customSlug}.udeets.com</p>
+                ) : null}
+              </div>
+              <div className="rounded-lg bg-gray-50 px-3 py-2">
+                <p className="text-xs font-semibold text-gray-600">Default URL:</p>
+                <p className="text-xs text-gray-500 mt-1">https://{slugify(trimmedName)}-{Date.now()}.udeets.com</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStep(4)}
+              className="mt-5 w-full rounded-xl bg-[#0C5C57] py-3 text-sm font-semibold text-white transition hover:bg-[#094a46]"
+            >
+              Next →
+            </button>
+          </div>
+        ) : null}
+
+        {/* STEP 4 — Visibility */}
+        {!showSuccess && step === 4 ? (
           <div>
             <p className="text-sm text-gray-400">{trimmedName}</p>
             <h2 className="mt-1 text-xl font-bold text-gray-900">Who can find this hub?</h2>
@@ -244,7 +292,7 @@ function CreateHubPageContent() {
             </div>
             <button
               type="button"
-              onClick={() => setStep(4)}
+              onClick={() => setStep(5)}
               className="mt-5 w-full rounded-xl bg-[#0C5C57] py-3 text-sm font-semibold text-white transition hover:bg-[#094a46]"
             >
               Next →
@@ -252,8 +300,8 @@ function CreateHubPageContent() {
           </div>
         ) : null}
 
-        {/* STEP 4 — Posting Permissions */}
-        {!showSuccess && step === 4 ? (
+        {/* STEP 5 — Posting Permissions */}
+        {!showSuccess && step === 5 ? (
           <div>
             <p className="text-sm text-gray-400">{trimmedName}</p>
             <h2 className="mt-1 text-xl font-bold text-gray-900">Who can post in this hub?</h2>

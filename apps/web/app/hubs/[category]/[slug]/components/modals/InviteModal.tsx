@@ -18,7 +18,8 @@ export function InviteModal({
   const [copied, setCopied] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
-  const inviteLink = `${typeof window !== "undefined" ? window.location.origin : ""}/hubs/${hubCategory}/${hubSlug}?action=join`;
+  // Use custom subdomain URL if available (hubSlug is the custom subdomain)
+  const inviteLink = `https://${hubSlug}.udeets.com?action=join`;
 
   const handleCopyLink = async () => {
     try {

@@ -24,16 +24,24 @@ function formatDeetTime(createdAt?: string | null) {
   return new Date(createdAt).toLocaleDateString();
 }
 
-export function mapDeetToHubFeedItem(item: Partial<DeetRecord>): HubContent["feed"][number] {
+export function mapDeetToHubFeedItem(item: Partial<DeetRecord>, hubCreatorId?: string): HubContent["feed"][number] {
   const card = mapDeetToDashboardCard(item);
   const kind = resolveHubFeedItemKind(card);
   const images = card.previewImageUrls?.length ? card.previewImageUrls : undefined;
   const image = card.previewImageUrl ?? images?.[0] ?? undefined;
 
+  // Determine role based on author ID vs hub creator
+  let role: "creator" | "admin" | "member" | undefined = undefined;
+  if (item.created_by && hubCreatorId && item.created_by === hubCreatorId) {
+    role = "creator";
+  }
+
   return {
     id: item.id ?? "",
     kind,
     author: asNonEmptyString(item.author_name) ?? "Hub member",
+    authorId: item.created_by ?? "",
+    role,
     time: formatDeetTime(card.createdAt ?? item.created_at),
     title: asNonEmptyString(item.title) ?? defaultFeedLabel(kind),
     body: asNonEmptyString(item.body) ?? "",

@@ -1,11 +1,13 @@
 "use client";
 
 import type { HubContent } from "@/lib/hub-content";
-import { Eye, Heart, Loader2, Megaphone, MessageSquare, Search, Share2, SlidersHorizontal } from "lucide-react";
+import { Eye, Heart, Loader2, Megaphone, MessageSquare, Search, SlidersHorizontal, Send } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { DeetComposerCard } from "../deets/DeetComposerCard";
 import { ACTION_ICON, ICON, PREMIUM_ICON_WRAPPER, FeedItemIcon, ImageWithFallback, cn, initials } from "../hubUtils";
 import { SectionShell } from "../SectionShell";
 import type { ComposerChildFlow } from "../deets/deetTypes";
+import type { DeetComment } from "@/lib/services/deets/deet-interactions";
 
 function sanitizeHtmlContent(html: string): string {
   // Remove script tags and event handlers to prevent XSS
@@ -53,11 +55,19 @@ export function DeetsSection({
   coverImageSrc,
   recentPhotos,
   hubName,
+  hubCategory,
+  hubSlug,
   onOpenComposer,
   onOpenViewer,
   likedDeetIds,
   likingDeetIds,
   onToggleLike,
+  expandedCommentDeetId,
+  commentsByDeetId,
+  commentLoadingDeetIds,
+  commentSubmittingDeetId,
+  onToggleComments,
+  onSubmitComment,
 }: {
   normalizedPostSearch: string;
   postSearchQuery: string;
@@ -81,12 +91,51 @@ export function DeetsSection({
   coverImageSrc: string;
   recentPhotos: string[];
   hubName: string;
+  hubCategory: string;
+  hubSlug: string;
   onOpenComposer: (child?: ComposerChildFlow | null) => void;
   onOpenViewer: (images: string[], index: number, title: string, body: string, focusId?: string) => void;
   likedDeetIds?: Set<string>;
   likingDeetIds?: Set<string>;
   onToggleLike?: (deetId: string) => void;
+  expandedCommentDeetId?: string | null;
+  commentsByDeetId?: Record<string, DeetComment[]>;
+  commentLoadingDeetIds?: Set<string>;
+  commentSubmittingDeetId?: string | null;
+  onToggleComments?: (deetId: string) => void;
+  onSubmitComment?: (deetId: string, body: string) => void;
 }) {
+  const [copiedDeetId, setCopiedDeetId] = useState<string | null>(null);
+  const copiedTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleShareDeet = async (deetId: string) => {
+    const shareUrl = `${window.location.origin}/hubs/${hubCategory}/${hubSlug}?focus=${deetId}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopiedDeetId(deetId);
+
+      // Clear previous timeout
+      if (copiedTimeoutRef.current) {
+        clearTimeout(copiedTimeoutRef.current);
+      }
+
+      // Auto-hide toast after 2 seconds
+      copiedTimeoutRef.current = setTimeout(() => {
+        setCopiedDeetId(null);
+      }, 2000);
+    } catch (err) {
+      console.error("Failed to copy to clipboard:", err);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimeoutRef.current) {
+        clearTimeout(copiedTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <SectionShell
       title="Deets"
@@ -271,6 +320,11 @@ export function DeetsSection({
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-sm font-semibold text-[#111111]">{item.author}</h3>
+                      {item.role && (
+                        <span className="inline-flex items-center rounded-full bg-[#E3F1EF] px-2 py-0.5 text-[10px] font-semibold text-[#0C5C57]">
+                          {item.role === "creator" ? "Creator" : item.role === "admin" ? "Admin" : "Member"}
+                        </span>
+                      )}
                       <span className="text-xs text-slate-400">•</span>
                       <span className="text-xs text-slate-500">{item.time}</span>
                       <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[#0C5C57]">
@@ -335,20 +389,49 @@ export function DeetsSection({
                           )}
                           <span>{item.likes}</span>
                         </button>
-                        <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[#0C5C57]">
+                        <button
+                          type="button"
+                          onClick={() => onToggleComments?.(item.id)}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 transition hover:text-[#0C5C57]",
+                            expandedCommentDeetId === item.id && "text-[#0C5C57] font-medium"
+                          )}
+                        >
                           <MessageSquare className={ICON} />
                           <span>{item.comments}</span>
                         </button>
-                        <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[#0C5C57]">
-                          <Share2 className={ICON} />
-                          <span>Share</span>
-                        </button>
+                        <div className="relative inline-flex items-center">
+                          <button
+                            type="button"
+                            onClick={() => handleShareDeet(item.id)}
+                            className="inline-flex items-center gap-1.5 transition hover:text-[#0C5C57]"
+                          >
+                            <Send className={ICON} />
+                            <span>{copiedDeetId === item.id ? "Copied!" : "Share"}</span>
+                          </button>
+                          {copiedDeetId === item.id && (
+                            <span className="absolute -top-8 left-0 whitespace-nowrap text-xs font-medium text-[#0C5C57] bg-white border border-slate-200 rounded px-2 py-1 shadow-sm">
+                              Copied to clipboard
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="inline-flex items-center gap-1.5 text-slate-500">
                         <Eye className={ICON} />
                         <span>{item.views}</span>
                       </div>
                     </div>
+
+                    {expandedCommentDeetId === item.id && (
+                      <DeetCommentsSection
+                        deetId={item.id}
+                        comments={commentsByDeetId?.[item.id] ?? []}
+                        isLoading={commentLoadingDeetIds?.has(item.id) ?? false}
+                        isSubmitting={commentSubmittingDeetId === item.id}
+                        onSubmitComment={onSubmitComment}
+                        dpImageSrc={dpImageSrc}
+                      />
+                    )}
                   </div>
                 </div>
               </article>
@@ -358,4 +441,99 @@ export function DeetsSection({
       )}
     </SectionShell>
   );
+}
+
+function DeetCommentsSection({
+  deetId,
+  comments,
+  isLoading,
+  isSubmitting,
+  onSubmitComment,
+  dpImageSrc,
+}: {
+  deetId: string;
+  comments: DeetComment[];
+  isLoading: boolean;
+  isSubmitting: boolean;
+  onSubmitComment?: (deetId: string, body: string) => void;
+  dpImageSrc: string;
+}) {
+  const [commentText, setCommentText] = useState("");
+
+  const handleSubmit = () => {
+    if (commentText.trim() && !isSubmitting) {
+      onSubmitComment?.(deetId, commentText);
+      setCommentText("");
+    }
+  };
+
+  return (
+    <div className="mt-3 rounded-b-xl border-t border-slate-100 bg-slate-50 p-4">
+      {isLoading ? (
+        <div className="flex items-center justify-center py-6">
+          <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+        </div>
+      ) : comments.length === 0 ? (
+        <p className="text-xs text-slate-500 italic">No comments yet. Be the first!</p>
+      ) : (
+        <div className="max-h-[300px] overflow-y-auto space-y-3 mb-3">
+          {comments.map((comment) => (
+            <div key={comment.id} className="text-sm">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-slate-900">{comment.authorName || "Anonymous"}</span>
+                <span className="text-xs text-slate-400">{formatCommentTime(comment.createdAt)}</span>
+              </div>
+              <p className="text-slate-700 mt-1">{comment.body}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex gap-2 items-end">
+        <input
+          type="text"
+          placeholder="Write a comment..."
+          value={commentText}
+          onChange={(e) => setCommentText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSubmit();
+            }
+          }}
+          disabled={isSubmitting}
+          className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:border-[#0C5C57] focus:ring-2 focus:ring-[#A9D1CA] disabled:opacity-75"
+        />
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={!commentText.trim() || isSubmitting}
+          className="inline-flex items-center justify-center rounded-lg bg-[#0C5C57] text-white px-3 py-2 transition disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#0A4943]"
+          aria-label="Send comment"
+        >
+          {isSubmitting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function formatCommentTime(timestamp: string): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return date.toLocaleDateString();
 }

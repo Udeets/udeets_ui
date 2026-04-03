@@ -6,7 +6,7 @@ import { listDeets, subscribeToDeets } from "@/lib/services/deets/list-deets";
 import type { DeetRecord } from "@/lib/services/deets/deet-types";
 import { mapDeetToHubFeedItem } from "../components/deets/map-deet-to-hub-feed-item";
 
-export function useHubLiveFeed(hubId: string) {
+export function useHubLiveFeed(hubId: string, hubCreatorId?: string) {
   const [liveFeedItems, setLiveFeedItems] = useState<HubContent["feed"]>([]);
 
   useEffect(() => {
@@ -24,7 +24,7 @@ export function useHubLiveFeed(hubId: string) {
         const items = await listDeets({ hubIds: [hubId] });
         if (!cancelled) {
           startTransition(() => {
-            setLiveFeedItems(items.map(mapDeetToHubFeedItem));
+            setLiveFeedItems(items.map((item) => mapDeetToHubFeedItem(item, hubCreatorId)));
           });
         }
       } catch {
@@ -45,16 +45,16 @@ export function useHubLiveFeed(hubId: string) {
       cancelled = true;
       unsubscribe();
     };
-  }, [hubId]);
+  }, [hubId, hubCreatorId]);
 
   const prependCreatedDeet = useCallback((createdDeet: DeetRecord) => {
     startTransition(() => {
       setLiveFeedItems((current) => [
-        mapDeetToHubFeedItem(createdDeet),
+        mapDeetToHubFeedItem(createdDeet, hubCreatorId),
         ...current.filter((item) => item.id !== createdDeet.id),
       ]);
     });
-  }, []);
+  }, [hubCreatorId]);
 
   return {
     liveFeedItems,

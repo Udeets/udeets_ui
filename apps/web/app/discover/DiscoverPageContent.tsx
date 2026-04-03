@@ -458,27 +458,12 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
     return baseFiltered.filter((h) => h.category === activeCategory);
   }, [activeCategory, baseFiltered]);
 
-  const trending = useMemo(() => {
-    if (activeCategory !== "All") return [];
-    return baseFiltered.slice(0, 8);
-  }, [activeCategory, baseFiltered]);
-
-  const popular = useMemo(() => {
-    if (activeCategory !== "All") return [];
-    return baseFiltered.slice(8, 16).length ? baseFiltered.slice(8, 16) : baseFiltered.slice(0, 8);
-  }, [activeCategory, baseFiltered]);
-
-  const nearby = useMemo(() => {
-    if (activeCategory !== "All") return [];
-    return baseFiltered.filter((h) => h.locationLabel);
-  }, [activeCategory, baseFiltered]);
-
-  const isResultsMode = query.trim().length > 0 || nearMe !== "Any";
-
-  const resultsHubs = useMemo(() => {
+  const allFilteredHubs = useMemo(() => {
     if (activeCategory === "All") return baseFiltered;
     return categoryHubs;
   }, [activeCategory, baseFiltered, categoryHubs]);
+
+  const isResultsMode = query.trim().length > 0 || nearMe !== "Any";
 
   return (
     <div className={cn("min-h-screen", PAGE_BG)}>
@@ -638,19 +623,14 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
           </div>
         ) : null}
 
-        {isResultsMode ? (
-          <CarouselSection
-            title="Results"
-            hubs={resultsHubs}
-          />
+        {isResultsMode && activeCategory !== "All" ? (
+          <CarouselSection title={`${activeCategory} Results`} hubs={allFilteredHubs} />
+        ) : isResultsMode ? (
+          <CarouselSection title="Results" hubs={allFilteredHubs} />
         ) : activeCategory !== "All" ? (
-          <CarouselSection title={activeCategory} hubs={categoryHubs} />
+          <CarouselSection title={activeCategory} hubs={allFilteredHubs} />
         ) : (
-          <>
-            <CarouselSection title="Trending" hubs={trending} />
-            <CarouselSection title="Popular" hubs={popular} />
-            <CarouselSection title="Near You" hubs={nearby} />
-          </>
+          <CarouselSection title="All Hubs" hubs={allFilteredHubs} />
         )}
       </main>
 

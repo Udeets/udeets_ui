@@ -1,12 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { toggleDeetLike, getDeetLikeStatus } from "@/lib/services/deets/deet-interactions";
+import { toggleDeetLike, getDeetLikeStatus, addDeetComment, listDeetComments, type DeetComment } from "@/lib/services/deets/deet-interactions";
 import type { HubContent } from "@/lib/hub-content";
 
 export function useDeetInteractions(feedItems: HubContent["feed"]) {
   const [likedDeetIds, setLikedDeetIds] = useState<Set<string>>(new Set());
   const [likingDeetIds, setLikingDeetIds] = useState<Set<string>>(new Set());
+
+  // Comment state
+  const [expandedCommentDeetId, setExpandedCommentDeetId] = useState<string | null>(null);
+  const [commentsByDeetId, setCommentsByDeetId] = useState<Record<string, DeetComment[]>>({});
+  const [commentLoadingDeetIds, setCommentLoadingDeetIds] = useState<Set<string>>(new Set());
+  const [commentSubmittingDeetId, setCommentSubmittingDeetId] = useState<string | null>(null);
 
   // Fetch like status when feed items change
   useEffect(() => {
@@ -58,9 +64,63 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
     }
   }, [likingDeetIds]);
 
+  const handleToggleComments = useCallback(async (deetId: string) => {
+    if (expandedCommentDeetId === deetId) {
+      // Close comments
+      setExpandedCommentDeetId(null);
+    } else {
+      // Open comments — load them if not already cached
+      setExpandedCommentDeetId(deetId);
+      if (!commentsByDeetId[deetId] && !commentLoadingDeetIds.has(deetId)) {
+        setCommentLoadingDeetIds((prev) => new Set(prev).add(deetId));
+        try {
+          const comments = await listDeetComments(deetId);
+          setCommentsByDeetId((prev) => ({
+            ...prev,
+            [deetId]: comments,
+          }));
+        } catch (error) {
+          console.error("Failed to load comments:", error);
+        } finally {
+          setCommentLoadingDeetIds((prev) => {
+            const next = new Set(prev);
+            next.delete(deetId);
+            return next;
+          });
+        }
+      }
+    }
+  }, [expandedCommentDeetId, commentsByDeetId, commentLoadingDeetIds]);
+
+  const handleSubmitComment = useCallback(async (deetId: string, body: string) => {
+    if (commentSubmittingDeetId) return;
+
+    setCommentSubmittingDeetId(deetId);
+    try {
+      const newComment = await addDeetComment(deetId, body);
+      setCommentsByDeetId((prev) => {
+        const existing = prev[deetId] ?? [];
+        return {
+          ...prev,
+          [deetId]: [...existing, newComment],
+        };
+      });
+    } catch (error) {
+      console.error("Failed to submit comment:", error);
+    } finally {
+      setCommentSubmittingDeetId(null);
+    }
+  }, [commentSubmittingDeetId]);
+
   return {
     likedDeetIds,
     likingDeetIds,
     handleToggleLike,
+    expandedCommentDeetId,
+    commentsByDeetId,
+    commentLoadingDeetIds,
+    commentSubmittingDeetId,
+    handleToggleComments,
+    handleSubmitComment,
   };
 }

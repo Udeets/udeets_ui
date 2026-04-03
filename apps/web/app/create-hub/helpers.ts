@@ -6,7 +6,7 @@ export function cn(...classes: Array<string | false | null | undefined>) {
 
 export function getInitialStep(value: string | null): Step {
   const initialStep = Number(value) as Step;
-  return initialStep === 2 || initialStep === 3 || initialStep === 4 ? initialStep : 1;
+  return initialStep === 2 || initialStep === 3 || initialStep === 4 || initialStep === 5 ? initialStep : 1;
 }
 
 export function getInitialVisibility(value: string | null): Visibility {

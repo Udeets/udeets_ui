@@ -61,6 +61,21 @@ import {
   normalizePublicSrc,
 } from "./components/hubUtils";
 
+function formatViewerCommentTime(timestamp: string): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "now";
+  if (diffMins < 60) return `${diffMins}m`;
+  if (diffHours < 24) return `${diffHours}h`;
+  if (diffDays < 7) return `${diffDays}d`;
+
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
 
 export default function HubClient({
   hub,
@@ -212,7 +227,7 @@ export default function HubClient({
     loadAttachmentPhotos();
   }, [hub.id]);
 
-  const { liveFeedItems, prependCreatedDeet } = useHubLiveFeed(hub.id);
+  const { liveFeedItems, prependCreatedDeet } = useHubLiveFeed(hub.id, hub.createdBy);
   const {
     savedHubName,
     savedHubCategory,
@@ -319,7 +334,17 @@ export default function HubClient({
   const accentTheme = getHubColorTheme(settingsAccentColor || hub.accentColor);
 
   const allFeedItems = [...liveFeedItems, ...hubContent.feed];
-  const { likedDeetIds, likingDeetIds, handleToggleLike } = useDeetInteractions(allFeedItems);
+  const {
+    likedDeetIds,
+    likingDeetIds,
+    handleToggleLike,
+    expandedCommentDeetId,
+    commentsByDeetId,
+    commentLoadingDeetIds,
+    commentSubmittingDeetId,
+    handleToggleComments,
+    handleSubmitComment,
+  } = useDeetInteractions(allFeedItems);
   const feedItemCount = allFeedItems.length;
   const totalEngagement = allFeedItems.reduce((sum, item) => sum + item.likes + item.comments, 0);
   const totalViews = allFeedItems.reduce((sum, item) => sum + item.views, 0);
@@ -462,6 +487,39 @@ export default function HubClient({
     canAccessAdmins,
     isDirty,
   });
+
+  // Reload pending requests when Members tab is accessed
+  useEffect(() => {
+    if (!isCreatorAdmin || activeSection !== "Members") return;
+
+    let ignore = false;
+
+    async function reloadPendingRequests() {
+      const { listPendingRequests, fetchProfilesForUsers } = await import("@/lib/services/members/manage-members");
+      const pending = await listPendingRequests(hub.id);
+      if (!pending.length) {
+        if (!ignore) setPendingRequests([]);
+        return;
+      }
+      const profileMap = await fetchProfilesForUsers(pending.map((p) => p.userId));
+      if (!ignore) {
+        setPendingRequests(pending.map((p) => {
+          const profile = profileMap.get(p.userId);
+          return {
+            userId: p.userId,
+            fullName: profile?.fullName ?? p.userId.slice(0, 8),
+            avatarUrl: profile?.avatarUrl ?? null,
+            email: profile?.email ?? null,
+            requestedAt: p.joinedAt,
+          };
+        }));
+      }
+    }
+
+    void reloadPendingRequests();
+    return () => { ignore = true; };
+  }, [activeSection, hub.id, isCreatorAdmin]);
+
   const { viewer, openViewer, closeViewer, nextViewerImage, prevViewerImage } =
     useHubViewerState();
   const {
@@ -581,6 +639,7 @@ export default function HubClient({
           user_id: user.id,
           role: "member",
           status: "pending",
+          joined_at: new Date().toISOString(),
         }, { onConflict: "hub_id,user_id" });
         setIsPending(true);
         setShowJoinConfirm(true);
@@ -749,6 +808,7 @@ export default function HubClient({
           onOpenSectionEditor={() => setIsSectionEditorOpen(true)}
           settingsAccentColor={settingsAccentColor}
           onSettingsAccentColorChange={setSettingsAccentColor}
+          accentTheme={accentTheme}
         />
       );
     }
@@ -809,11 +869,19 @@ export default function HubClient({
         coverImageSrc={coverImageSrc}
         recentPhotos={recentPhotos}
         hubName={hubName}
+        hubCategory={hub.category}
+        hubSlug={hub.slug}
         onOpenComposer={openDeetComposer}
         onOpenViewer={openViewer}
         likedDeetIds={likedDeetIds}
         likingDeetIds={likingDeetIds}
         onToggleLike={handleToggleLike}
+        expandedCommentDeetId={expandedCommentDeetId}
+        commentsByDeetId={commentsByDeetId}
+        commentLoadingDeetIds={commentLoadingDeetIds}
+        commentSubmittingDeetId={commentSubmittingDeetId}
+        onToggleComments={handleToggleComments}
+        onSubmitComment={handleSubmitComment}
       />
     );
   };
@@ -1274,10 +1342,31 @@ export default function HubClient({
             </div>
 
             {/* Comments area — hidden on mobile for compact view */}
-            <div className="mt-3 hidden max-h-[200px] overflow-y-auto rounded-xl bg-slate-50 p-3 text-sm text-slate-500 lg:mt-4 lg:block">
-              <p className="font-medium text-slate-600">Comments</p>
-              <p className="mt-2 italic text-slate-400">No comments yet. Be the first to comment.</p>
-            </div>
+            {viewer.focusId && commentsByDeetId[viewer.focusId] ? (
+              <div className="mt-3 hidden max-h-[200px] overflow-y-auto rounded-xl bg-slate-50 p-3 text-sm text-slate-500 lg:mt-4 lg:block space-y-2">
+                <p className="font-medium text-slate-600">Comments</p>
+                {commentsByDeetId[viewer.focusId].length === 0 ? (
+                  <p className="mt-2 italic text-slate-400">No comments yet. Be the first to comment.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {commentsByDeetId[viewer.focusId].map((comment) => (
+                      <div key={comment.id} className="text-xs">
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium text-slate-900">{comment.authorName || "Anonymous"}</span>
+                          <span className="text-slate-400">{formatViewerCommentTime(comment.createdAt)}</span>
+                        </div>
+                        <p className="text-slate-700 mt-0.5">{comment.body}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="mt-3 hidden max-h-[200px] overflow-y-auto rounded-xl bg-slate-50 p-3 text-sm text-slate-500 lg:mt-4 lg:block">
+                <p className="font-medium text-slate-600">Comments</p>
+                <p className="mt-2 italic text-slate-400">No comments yet. Be the first to comment.</p>
+              </div>
+            )}
 
             {/* Show the post button */}
             {viewer.focusId ? (

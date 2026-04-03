@@ -19,6 +19,8 @@ export type HubFeedItem = {
   id: string;
   kind: HubFeedItemKind;
   author: string;
+  authorId: string;
+  role?: "creator" | "admin" | "member";
   time: string;
   title: string;
   body: string;

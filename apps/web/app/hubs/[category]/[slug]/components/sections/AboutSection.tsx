@@ -1,14 +1,117 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { Camera, Check, ChevronDown, Facebook, Globe, Instagram, Loader2, MapPin, Pencil, Phone, Settings, UsersRound, X, Youtube } from "lucide-react";
-import { useState } from "react";
+import { Camera, Check, CheckCircle2, ChevronDown, Facebook, Globe, Instagram, Loader2, MapPin, Pencil, Phone, Settings, UsersRound, X, Youtube } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { HubCTARecord } from "@/lib/services/ctas/cta-types";
 import type { HubSection } from "@/lib/services/sections/section-types";
-import { HUB_COLOR_THEMES, type HubColorThemeKey } from "@/lib/hub-color-themes";
+import { HUB_COLOR_THEMES, type HubColorThemeKey, type HubColorTheme } from "@/lib/hub-color-themes";
 import { CTADisplay } from "../ctas/CTADisplay";
 import { CustomSectionDisplay } from "./custom/CustomSectionDisplay";
 import { ACTION_ICON, ACTION_ICON_BUTTON, CARD, displayLinkValue, ImageWithFallback, initials, cn } from "../hubUtils";
+
+/* ── Color Palette Picker ────────────────────────────────────────── */
+
+function ColorPalettePickerButton({
+  selectedColor,
+  onColorChange,
+}: {
+  selectedColor?: HubColorThemeKey;
+  onColorChange: (color: HubColorThemeKey) => void;
+}) {
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+
+  const updateDropdownPos = () => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    setDropdownPos({
+      top: rect.bottom + 8,
+      left: Math.max(8, rect.left - 60),
+    });
+  };
+
+  const handleButtonClick = () => {
+    updateDropdownPos();
+    setIsOpen((v) => !v);
+  };
+
+  const handleColorSelect = (color: HubColorThemeKey) => {
+    onColorChange(color);
+    setIsOpen(false);
+  };
+
+  // Close dropdown on outside click
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (buttonRef.current && !buttonRef.current.contains(target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
+
+  // Create a gradient circle from all 6 colors
+  const gradientStops = HUB_COLOR_THEMES.map((theme, idx) => {
+    const angle = (idx / HUB_COLOR_THEMES.length) * 360;
+    return `${theme.swatch} ${angle}deg ${angle + 60}deg`;
+  }).join(", ");
+
+  return (
+    <div className="relative">
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={handleButtonClick}
+        className="h-8 w-8 rounded-full border-2 transition shadow-sm hover:shadow-md"
+        style={{
+          background: `conic-gradient(${HUB_COLOR_THEMES.map((t) => t.swatch).join(", ")})`,
+          borderColor: selectedColor ? HUB_COLOR_THEMES.find(t => t.key === selectedColor)?.swatch : "#cbd5e1",
+        }}
+        title="Select theme color"
+        aria-label="Open color theme picker"
+      />
+
+      {isOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fixed z-50 rounded-lg bg-white shadow-lg border border-slate-200 p-3"
+            style={{ top: dropdownPos.top, left: dropdownPos.left, minWidth: "220px" }}
+          >
+            <div className="space-y-1.5">
+              {HUB_COLOR_THEMES.map((theme) => (
+                <button
+                  key={theme.key}
+                  type="button"
+                  onClick={() => handleColorSelect(theme.key)}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-slate-50"
+                >
+                  <div
+                    className="h-5 w-5 rounded border border-slate-200"
+                    style={{ backgroundColor: theme.swatch }}
+                  />
+                  <span className="flex-1 text-left text-slate-700">{theme.label}</span>
+                  {selectedColor === theme.key ? (
+                    <CheckCircle2 className="h-4 w-4 text-slate-400 shrink-0" />
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          </div>,
+          document.body
+        )}
+    </div>
+  );
+}
 
 /* ── Collapsible Card ────────────────────────────────────────────── */
 
@@ -17,16 +120,21 @@ function CollapsibleCard({
   defaultOpen = true,
   headerAction,
   children,
+  accentTheme,
 }: {
   title: string;
   defaultOpen?: boolean;
   headerAction?: React.ReactNode;
   children: React.ReactNode;
+  accentTheme?: HubColorTheme;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="rounded-xl border border-slate-100 bg-white">
+    <div
+      className="rounded-xl border border-slate-100"
+      style={{ backgroundColor: accentTheme?.wash }}
+    >
       <button
         type="button"
         onClick={() => setIsOpen((v) => !v)}
@@ -90,6 +198,7 @@ export function AboutSection({
   onOpenSectionEditor,
   settingsAccentColor,
   onSettingsAccentColorChange,
+  accentTheme,
 }: {
   CategoryIcon: LucideIcon;
   categoryLabel: string;
@@ -130,6 +239,7 @@ export function AboutSection({
   onOpenSectionEditor?: () => void;
   settingsAccentColor?: HubColorThemeKey;
   onSettingsAccentColorChange?: (value: HubColorThemeKey) => void;
+  accentTheme?: HubColorTheme;
 }) {
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [draftDesc, setDraftDesc] = useState(hubDescription);
@@ -191,7 +301,16 @@ export function AboutSection({
                 <button
                   type="button"
                   onClick={onMembershipAction}
-                  className="rounded-lg bg-[#0C5C57] px-4 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[#0a4f4a]"
+                  className="rounded-lg px-4 py-1.5 text-sm font-semibold text-white transition-colors duration-150"
+                  style={{
+                    backgroundColor: accentTheme?.primary,
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = accentTheme?.primaryHover ?? accentTheme?.primary ?? "";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = accentTheme?.primary ?? "";
+                  }}
                 >
                   Join
                 </button>
@@ -200,32 +319,29 @@ export function AboutSection({
                 <button
                   type="button"
                   onClick={onInviteMembers}
-                  className="rounded-lg border border-[#0C5C57] px-4 py-1.5 text-sm font-medium text-[#0C5C57] transition-colors duration-150 hover:bg-[#E3F1EF]"
+                  className="rounded-lg px-4 py-1.5 text-sm font-medium transition-colors duration-150"
+                  style={{
+                    borderColor: accentTheme?.primary,
+                    color: accentTheme?.primary,
+                    border: `1px solid ${accentTheme?.primary}`,
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = accentTheme?.wash ?? "";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" as string;
+                  }}
                 >
                   Invite
                 </button>
               ) : null}
               {isCreatorAdmin && onSettingsAccentColorChange ? (
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   <span className="text-xs text-slate-400">Theme:</span>
-                  <div className="flex gap-1.5">
-                    {HUB_COLOR_THEMES.map((theme) => (
-                      <button
-                        key={theme.key}
-                        type="button"
-                        onClick={() => onSettingsAccentColorChange(theme.key)}
-                        className={cn(
-                          "h-5 w-5 rounded-full border-2 transition",
-                          settingsAccentColor === theme.key
-                            ? "border-slate-400 shadow-sm"
-                            : "border-transparent hover:border-slate-300"
-                        )}
-                        style={{ backgroundColor: theme.swatch }}
-                        title={theme.label}
-                        aria-label={`Select ${theme.label} theme`}
-                      />
-                    ))}
-                  </div>
+                  <ColorPalettePickerButton
+                    selectedColor={settingsAccentColor}
+                    onColorChange={onSettingsAccentColorChange}
+                  />
                 </div>
               ) : null}
             </div>
@@ -250,7 +366,21 @@ export function AboutSection({
                   <button type="button" onClick={handleCancelEditDesc} disabled={isSavingDesc} className="rounded-lg border border-slate-200 p-1.5 text-slate-500 transition-colors duration-150 hover:bg-slate-50">
                     <X className="h-3.5 w-3.5 stroke-2" />
                   </button>
-                  <button type="button" onClick={handleSaveDesc} disabled={isSavingDesc} className="rounded-lg bg-[#0C5C57] p-1.5 text-white transition-colors duration-150 hover:bg-[#0a4f4a]">
+                  <button
+                    type="button"
+                    onClick={handleSaveDesc}
+                    disabled={isSavingDesc}
+                    className="rounded-lg p-1.5 text-white transition-colors duration-150"
+                    style={{
+                      backgroundColor: accentTheme?.primary,
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.backgroundColor = accentTheme?.primaryHover ?? accentTheme?.primary ?? "";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.backgroundColor = accentTheme?.primary ?? "";
+                    }}
+                  >
                     {isSavingDesc ? <Loader2 className="h-3.5 w-3.5 animate-spin stroke-2" /> : <Check className="h-3.5 w-3.5 stroke-2" />}
                   </button>
                 </div>
@@ -260,7 +390,19 @@ export function AboutSection({
             <div className="group flex items-start gap-2">
               <p className="text-sm leading-relaxed text-slate-600">{hubDescription}</p>
               {isCreatorAdmin ? (
-                <button type="button" onClick={handleStartEditDesc} className="shrink-0 rounded p-1 text-slate-400 opacity-0 transition hover:text-[#0C5C57] group-hover:opacity-100" aria-label="Edit description">
+                <button
+                  type="button"
+                  onClick={handleStartEditDesc}
+                  className="shrink-0 rounded p-1 text-slate-400 opacity-0 transition group-hover:opacity-100"
+                  style={{ "--hover-color": accentTheme?.primary } as React.CSSProperties & { "--hover-color": string }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.color = accentTheme?.primary ?? "#0C5C57";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.color = "#9CA3AF";
+                  }}
+                  aria-label="Edit description"
+                >
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
               ) : null}
@@ -269,7 +411,17 @@ export function AboutSection({
             <button
               type="button"
               onClick={handleStartEditDesc}
-              className="w-full rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm text-slate-500 transition-colors duration-150 hover:border-[#A9D1CA]"
+              className="w-full rounded-lg border border-dashed px-4 py-3 text-left text-sm text-slate-500 transition-colors duration-150"
+              style={{
+                borderColor: "#E2E8F0",
+                backgroundColor: "#F9FAFB",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.borderColor = accentTheme?.surface ?? "#A9D1CA";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.borderColor = "#E2E8F0";
+              }}
             >
               <span className="font-medium text-[#111111]">Add a description</span>
               {" — "}Tell people what {hubName} is about, who it&apos;s for, and what they can expect.
@@ -284,6 +436,7 @@ export function AboutSection({
           {showConnectCard ? (
             <CollapsibleCard
               title="Connect"
+              accentTheme={accentTheme}
               headerAction={
                 isCreatorAdmin ? (
                   <button
@@ -320,18 +473,19 @@ export function AboutSection({
                 <button
                   type="button"
                   onClick={onOpenConnectEditor}
-                  className="text-sm text-[#0C5C57] transition hover:underline"
+                  className="text-sm transition hover:underline"
+                  style={{ color: accentTheme?.primary }}
                 >
                   Add contact info
                 </button>
               )}
-              {connectSuccess ? <p className="mt-2 text-xs font-medium text-[#0C5C57]">{connectSuccess}</p> : null}
+              {connectSuccess ? <p className="mt-2 text-xs font-medium" style={{ color: accentTheme?.primary }}>{connectSuccess}</p> : null}
               {connectError ? <p className="mt-2 text-xs font-medium text-[#B42318]">{connectError}</p> : null}
             </CollapsibleCard>
           ) : null}
 
           {/* About this hub card */}
-          <CollapsibleCard title="About this hub">
+          <CollapsibleCard title="About this hub" accentTheme={accentTheme}>
             <div className="space-y-1.5">
               {[
                 { icon: CategoryIcon, label: "Category",   value: categoryLabel },
@@ -351,6 +505,7 @@ export function AboutSection({
           {/* Members / Community leadership card */}
           <CollapsibleCard
             title="Members"
+            accentTheme={accentTheme}
             headerAction={
               isCreatorAdmin ? (
                 <button
@@ -398,9 +553,21 @@ export function AboutSection({
                   onClick={onOpenGalleryUpload}
                   disabled={isUploadingGallery}
                   className={cn(
-                    "rounded-xl border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:border-[#A9D1CA] hover:text-[#0C5C57]",
+                    "rounded-xl border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition",
                     isUploadingGallery && "cursor-not-allowed opacity-60"
                   )}
+                  style={{
+                    borderColor: "#E2E8F0",
+                    color: "#475569",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = accentTheme?.surface ?? "#A9D1CA";
+                    (e.currentTarget as HTMLButtonElement).style.color = accentTheme?.primary ?? "#0C5C57";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = "#E2E8F0";
+                    (e.currentTarget as HTMLButtonElement).style.color = "#475569";
+                  }}
                 >
                   {isUploadingGallery ? (
                     <span className="inline-flex items-center gap-1">
@@ -438,19 +605,33 @@ export function AboutSection({
                   <button
                     type="button"
                     onClick={() => onOpenViewer?.(recentPhotos, 0, `${hubName} Album`, "Recent photos from this hub.")}
-                    className="flex shrink-0 h-28 w-28 items-center justify-center rounded-xl border border-slate-100 bg-[#F7FBFA] text-sm font-semibold text-[#0C5C57] transition hover:bg-[#EAF6F3]"
+                    className="flex shrink-0 h-28 w-28 items-center justify-center rounded-xl border border-slate-100 text-sm font-semibold transition"
+                    style={{
+                      backgroundColor: accentTheme?.wash,
+                      color: accentTheme?.primary,
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.backgroundColor = accentTheme?.surface ?? "#EAF6F3";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.backgroundColor = accentTheme?.wash ?? "#F7FBFA";
+                    }}
                   >
                     +{recentPhotos.length - 6} more
                   </button>
                 ) : null}
               </div>
             ) : (
-              <div className="flex items-center gap-3 rounded-xl bg-[#F7FBFA] px-4 py-3">
+              <div
+                className="flex items-center gap-3 rounded-xl px-4 py-3"
+                style={{ backgroundColor: accentTheme?.wash }}
+              >
                 <Camera className="h-4 w-4 shrink-0 text-slate-400 stroke-2" />
                 <button
                   type="button"
                   onClick={onOpenGalleryUpload}
-                  className="text-sm text-[#0C5C57] transition-colors duration-150 hover:underline"
+                  className="text-sm transition-colors duration-150 hover:underline"
+                  style={{ color: accentTheme?.primary }}
                 >
                   Add photos to bring this hub to life
                 </button>
