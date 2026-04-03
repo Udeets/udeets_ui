@@ -7,7 +7,7 @@ export const sportsConfig: HubTemplateConfig = {
   terminology: {
     hub: "Team / Club",
     deets: "Updates",
-    members: "Players",
+    members: "Members",
     admin: "Coach / Admin",
     about: "About Us",
   },

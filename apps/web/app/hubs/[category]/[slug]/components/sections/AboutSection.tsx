@@ -5,6 +5,7 @@ import { Camera, Check, ChevronDown, Facebook, Globe, Instagram, Loader2, MapPin
 import { useState } from "react";
 import type { HubCTARecord } from "@/lib/services/ctas/cta-types";
 import type { HubSection } from "@/lib/services/sections/section-types";
+import { HUB_COLOR_THEMES, type HubColorThemeKey } from "@/lib/hub-color-themes";
 import { CTADisplay } from "../ctas/CTADisplay";
 import { CustomSectionDisplay } from "./custom/CustomSectionDisplay";
 import { ACTION_ICON, ACTION_ICON_BUTTON, CARD, displayLinkValue, ImageWithFallback, initials, cn } from "../hubUtils";
@@ -87,6 +88,8 @@ export function AboutSection({
   onOpenViewer,
   customSections,
   onOpenSectionEditor,
+  settingsAccentColor,
+  onSettingsAccentColorChange,
 }: {
   CategoryIcon: LucideIcon;
   categoryLabel: string;
@@ -125,6 +128,8 @@ export function AboutSection({
   onOpenViewer?: (images: string[], index: number, title: string, body: string) => void;
   customSections?: HubSection[];
   onOpenSectionEditor?: () => void;
+  settingsAccentColor?: HubColorThemeKey;
+  onSettingsAccentColorChange?: (value: HubColorThemeKey) => void;
 }) {
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [draftDesc, setDraftDesc] = useState(hubDescription);
@@ -169,11 +174,11 @@ export function AboutSection({
     <section className={cn(CARD, "w-full min-w-0 p-5 sm:p-6")}>
       <div className="space-y-6">
 
-        {/* ═══ BLOCK 1 — Welcome + Join/Requested ═══ */}
+        {/* ═══ BLOCK 1 — Welcome + Join/Requested + Color Picker ═══ */}
         <div className="border-b border-slate-100 pb-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <h2 className="text-xl font-bold tracking-tight text-[#111111]">Welcome to {hubName}!</h2>
-            <div className="flex shrink-0 items-center gap-2">
+            <h2 className="text-xl font-semibold tracking-tight text-[#111111]">Welcome to {hubName}!</h2>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
               {userRole === "pending" ? (
                 <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-4 py-1.5 text-sm font-semibold text-amber-700">
                   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
@@ -186,7 +191,7 @@ export function AboutSection({
                 <button
                   type="button"
                   onClick={onMembershipAction}
-                  className="rounded-lg bg-[#0C5C57] px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-[#094a46]"
+                  className="rounded-lg bg-[#0C5C57] px-4 py-1.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[#0a4f4a]"
                 >
                   Join
                 </button>
@@ -195,10 +200,33 @@ export function AboutSection({
                 <button
                   type="button"
                   onClick={onInviteMembers}
-                  className="rounded-lg border border-[#0C5C57] px-4 py-1.5 text-sm font-medium text-[#0C5C57] transition hover:bg-[#f0faf8]"
+                  className="rounded-lg border border-[#0C5C57] px-4 py-1.5 text-sm font-medium text-[#0C5C57] transition-colors duration-150 hover:bg-[#E3F1EF]"
                 >
                   Invite
                 </button>
+              ) : null}
+              {isCreatorAdmin && onSettingsAccentColorChange ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-slate-400">Theme:</span>
+                  <div className="flex gap-1.5">
+                    {HUB_COLOR_THEMES.map((theme) => (
+                      <button
+                        key={theme.key}
+                        type="button"
+                        onClick={() => onSettingsAccentColorChange(theme.key)}
+                        className={cn(
+                          "h-5 w-5 rounded-full border-2 transition",
+                          settingsAccentColor === theme.key
+                            ? "border-slate-400 shadow-sm"
+                            : "border-transparent hover:border-slate-300"
+                        )}
+                        style={{ backgroundColor: theme.swatch }}
+                        title={theme.label}
+                        aria-label={`Select ${theme.label} theme`}
+                      />
+                    ))}
+                  </div>
+                </div>
               ) : null}
             </div>
           </div>
@@ -214,16 +242,16 @@ export function AboutSection({
                 placeholder={`Tell people what ${hubName} is about, who it's for, and what they can expect...`}
                 rows={3}
                 autoFocus
-                className="w-full rounded-lg border border-[#A9D1CA] bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:ring-2 focus:ring-[#A9D1CA]"
+                className="w-full rounded-lg border border-[#A9D1CA] bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors duration-150 focus:ring-2 focus:ring-[#A9D1CA]"
               />
               <div className="flex items-center justify-between">
                 <span className="text-xs text-slate-400">{draftDesc.length}/300</span>
                 <div className="flex items-center gap-2">
-                  <button type="button" onClick={handleCancelEditDesc} disabled={isSavingDesc} className="rounded-lg border border-slate-200 p-1.5 text-slate-500 transition hover:bg-slate-50">
-                    <X className="h-3.5 w-3.5" />
+                  <button type="button" onClick={handleCancelEditDesc} disabled={isSavingDesc} className="rounded-lg border border-slate-200 p-1.5 text-slate-500 transition-colors duration-150 hover:bg-slate-50">
+                    <X className="h-3.5 w-3.5 stroke-2" />
                   </button>
-                  <button type="button" onClick={handleSaveDesc} disabled={isSavingDesc} className="rounded-lg bg-[#0C5C57] p-1.5 text-white transition hover:bg-[#094a46]">
-                    {isSavingDesc ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                  <button type="button" onClick={handleSaveDesc} disabled={isSavingDesc} className="rounded-lg bg-[#0C5C57] p-1.5 text-white transition-colors duration-150 hover:bg-[#0a4f4a]">
+                    {isSavingDesc ? <Loader2 className="h-3.5 w-3.5 animate-spin stroke-2" /> : <Check className="h-3.5 w-3.5 stroke-2" />}
                   </button>
                 </div>
               </div>
@@ -241,7 +269,7 @@ export function AboutSection({
             <button
               type="button"
               onClick={handleStartEditDesc}
-              className="w-full rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm text-slate-500 transition hover:border-[#A9D1CA]"
+              className="w-full rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm text-slate-500 transition-colors duration-150 hover:border-[#A9D1CA]"
             >
               <span className="font-medium text-[#111111]">Add a description</span>
               {" — "}Tell people what {hubName} is about, who it&apos;s for, and what they can expect.
@@ -278,9 +306,9 @@ export function AboutSection({
                       href={href}
                       target={label === "Phone" ? undefined : "_blank"}
                       rel={label === "Phone" ? undefined : "noreferrer"}
-                      className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm transition hover:bg-[#F7FBFA]"
+                      className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm transition-colors duration-150 hover:bg-[#F7FBFA]"
                     >
-                      <LinkIcon className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      <LinkIcon className="h-3.5 w-3.5 shrink-0 text-slate-400 stroke-2" />
                       <span className="shrink-0 text-xs text-slate-400">{label}</span>
                       <span className="min-w-0 truncate text-xs font-medium text-[#111111]">
                         {label === "Phone" ? value : displayLinkValue(value)}
@@ -312,7 +340,7 @@ export function AboutSection({
                 ...(locationValue ? [{ icon: MapPin, label: "Location", value: locationValue }] : []),
               ].map(({ icon: FactIcon, label, value }) => (
                 <div key={label} className="flex items-center gap-2 rounded-xl px-2 py-1.5">
-                  <FactIcon className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                  <FactIcon className="h-3.5 w-3.5 shrink-0 text-slate-400 stroke-2" />
                   <span className="shrink-0 text-xs text-slate-400">{label}</span>
                   <span className="min-w-0 truncate text-xs font-medium text-[#111111]">{value}</span>
                 </div>
@@ -376,7 +404,7 @@ export function AboutSection({
                 >
                   {isUploadingGallery ? (
                     <span className="inline-flex items-center gap-1">
-                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <Loader2 className="h-3 w-3 animate-spin stroke-2" />
                       Uploading
                     </span>
                   ) : (
@@ -418,11 +446,11 @@ export function AboutSection({
               </div>
             ) : (
               <div className="flex items-center gap-3 rounded-xl bg-[#F7FBFA] px-4 py-3">
-                <Camera className="h-4 w-4 shrink-0 text-slate-400" />
+                <Camera className="h-4 w-4 shrink-0 text-slate-400 stroke-2" />
                 <button
                   type="button"
                   onClick={onOpenGalleryUpload}
-                  className="text-sm text-[#0C5C57] transition hover:underline"
+                  className="text-sm text-[#0C5C57] transition-colors duration-150 hover:underline"
                 >
                   Add photos to bring this hub to life
                 </button>

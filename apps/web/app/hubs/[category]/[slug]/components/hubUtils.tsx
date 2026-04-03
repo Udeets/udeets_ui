@@ -20,15 +20,15 @@ import type { HubFeedItemKind } from "@/lib/hub-content";
 import type { HubRecord } from "@/lib/hubs";
 import type { HubTab } from "./hubTypes";
 
-export const CARD = "rounded-3xl border border-slate-100 bg-white shadow-sm";
+export const CARD = "rounded-xl border border-slate-100 bg-white shadow-sm";
 export const BUTTON_PRIMARY =
-  "rounded-full bg-[#0C5C57] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#094a46]";
+  "rounded-full bg-[#0C5C57] px-4 py-2 text-xs font-semibold text-white transition-colors duration-150 hover:bg-[#0a4f4a]";
 export const BUTTON_SECONDARY =
-  "rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50";
-export const ICON = "h-4.5 w-4.5 stroke-[1.8]";
+  "rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition-colors duration-150 hover:bg-slate-50";
+export const ICON = "h-4 w-4 stroke-2";
 export const EMPTY_MEDIA_BG = "#A9D1CA";
-export const ACTION_ICON = "h-4 w-4 stroke-[1.6]";
-export const ACTION_ICON_BUTTON = "inline-flex items-center text-[#111111]/78 transition hover:text-[#0C5C57]";
+export const ACTION_ICON = "h-4 w-4 stroke-2";
+export const ACTION_ICON_BUTTON = "inline-flex items-center text-[#111111]/78 transition-colors duration-150 hover:text-[#0C5C57]";
 export const PREMIUM_ICON_WRAPPER =
   "inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#F7FBFA] text-[#0C5C57]";
 export const HUB_TABS: HubTab[] = ["About", "Posts", "Attachments", "Members"];
@@ -92,6 +92,7 @@ export function ImageWithFallback({
   fallbackClassName,
   fallback,
   loading,
+  fallbackStyle,
 }: {
   src?: string;
   sources?: string[];
@@ -100,6 +101,7 @@ export function ImageWithFallback({
   fallbackClassName: string;
   fallback: React.ReactNode;
   loading?: "lazy" | "eager";
+  fallbackStyle?: React.CSSProperties;
 }) {
   const normalizedSources = useMemo(
     () => Array.from(new Set((sources?.length ? sources : [src]).filter(Boolean))) as string[],
@@ -109,7 +111,7 @@ export function ImageWithFallback({
   const activeSrc = normalizedSources[sourceIndex] ?? normalizedSources[0];
 
   if (!activeSrc) {
-    return <div className={fallbackClassName}>{fallback}</div>;
+    return <div className={fallbackClassName} style={fallbackStyle}>{fallback}</div>;
   }
 
   return (

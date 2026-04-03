@@ -43,6 +43,7 @@ type UseDeetComposerArgs = {
   demoComposerText: string;
   isCreatorAdmin: boolean;
   authorName: string;
+  authorAvatarSrc?: string;
   onDeetCreated: (deet: DeetRecord) => void;
 };
 
@@ -52,6 +53,7 @@ export function useDeetComposer({
   demoComposerText,
   isCreatorAdmin,
   authorName,
+  authorAvatarSrc,
   onDeetCreated,
 }: UseDeetComposerArgs) {
   const [composerOpen, setComposerOpen] = useState(false);
@@ -165,6 +167,29 @@ export function useDeetComposer({
     }
   };
 
+  const sanitizeHtml = (html: string): string => {
+    // Remove script tags and event handlers to prevent XSS
+    const div = document.createElement("div");
+    div.innerHTML = html;
+
+    // Remove all script tags
+    const scripts = div.querySelectorAll("script");
+    scripts.forEach((script) => script.remove());
+
+    // Remove event handler attributes
+    const allElements = div.querySelectorAll("*");
+    allElements.forEach((el) => {
+      // Remove all on* event handlers
+      Array.from(el.attributes).forEach((attr) => {
+        if (attr.name.startsWith("on")) {
+          el.removeAttribute(attr.name);
+        }
+      });
+    });
+
+    return div.innerHTML;
+  };
+
   const handleSubmitDeet = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isSubmittingDeet) return;
@@ -224,11 +249,14 @@ export function useDeetComposer({
       const resolvedKind = (deetSettings.noticeEnabled ? "Notices" : postTypeToKind[deetSettings.postType] || "Posts") as import("@/lib/services/deets/deet-types").DeetKind;
       const resolvedTitle = deetSettings.noticeEnabled ? "Notice" : postTypeToTitle[deetSettings.postType] || "Deet";
 
+      // Sanitize the HTML content before saving
+      const sanitizedBody = sanitizeHtml(trimmedText || newestSticker?.detail || "Shared a new update.");
+
       const createdDeet = await createDeet({
         hubId,
         authorName,
         title: resolvedTitle,
-        body: trimmedText || newestSticker?.detail || "Shared a new update.",
+        body: sanitizedBody,
         kind: resolvedKind,
         previewImageUrl: primaryImage,
         previewImageUrls: uploadedPhotoUrls,
@@ -262,6 +290,8 @@ export function useDeetComposer({
     isFontSizeMenuOpen,
     deetSettings,
     deetPhotoInputRef,
+    authorName,
+    authorAvatarSrc,
     setActiveComposerChild,
     setModalDraftText,
     setDeetFormatting,

@@ -7,6 +7,29 @@ import { ACTION_ICON, ICON, PREMIUM_ICON_WRAPPER, FeedItemIcon, ImageWithFallbac
 import { SectionShell } from "../SectionShell";
 import type { ComposerChildFlow } from "../deets/deetTypes";
 
+function sanitizeHtmlContent(html: string): string {
+  // Remove script tags and event handlers to prevent XSS
+  const div = document.createElement("div");
+  div.innerHTML = html;
+
+  // Remove all script tags
+  const scripts = div.querySelectorAll("script");
+  scripts.forEach((script) => script.remove());
+
+  // Remove event handler attributes
+  const allElements = div.querySelectorAll("*");
+  allElements.forEach((el) => {
+    // Remove all on* event handlers
+    Array.from(el.attributes).forEach((attr) => {
+      if (attr.name.startsWith("on")) {
+        el.removeAttribute(attr.name);
+      }
+    });
+  });
+
+  return div.innerHTML;
+}
+
 export function DeetsSection({
   normalizedPostSearch,
   postSearchQuery,
@@ -256,7 +279,12 @@ export function DeetsSection({
                       </span>
                     </div>
 
-                    <p className="mt-2 text-sm leading-relaxed text-slate-700">{item.body}</p>
+                    <div
+                      className="mt-2 text-sm leading-relaxed text-slate-700"
+                      dangerouslySetInnerHTML={{
+                        __html: sanitizeHtmlContent(item.body),
+                      }}
+                    />
 
                     {item.image ? (
                       <button

@@ -3,7 +3,7 @@
 
 import type { FormEvent } from "react";
 import { useEffect, useRef } from "react";
-import { Images, Settings, Smile, X } from "lucide-react";
+import { BarChart3, FileText, Images, Megaphone, Settings, Smile, X } from "lucide-react";
 import { ACTION_ICON, BUTTON_PRIMARY, ICON, cn } from "../hubUtils";
 import type { AttachedDeetItem, ComposerChildFlow, DeetFormattingState } from "./deetTypes";
 
@@ -22,6 +22,8 @@ export function CreateDeetModal({
   onSubmit,
   isSubmitting,
   onCloseFontSizeMenu,
+  authorName = "You",
+  authorAvatarSrc,
 }: {
   draftText: string;
   onDraftTextChange: (value: string) => void;
@@ -37,8 +39,12 @@ export function CreateDeetModal({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   isSubmitting: boolean;
   onCloseFontSizeMenu: () => void;
+  authorName?: string;
+  authorAvatarSrc?: string;
 }) {
   const fontMenuRef = useRef<HTMLDivElement | null>(null);
+  const editorRef = useRef<HTMLDivElement | null>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!isFontSizeMenuOpen) return;
@@ -53,12 +59,52 @@ export function CreateDeetModal({
     return () => window.removeEventListener("mousedown", handlePointerDown);
   }, [isFontSizeMenuOpen, onCloseFontSizeMenu]);
 
+  const applyBold = () => {
+    document.execCommand("bold");
+    editorRef.current?.focus();
+  };
+
+  const applyItalic = () => {
+    document.execCommand("italic");
+    editorRef.current?.focus();
+  };
+
+  const applyUnderline = () => {
+    document.execCommand("underline");
+    editorRef.current?.focus();
+  };
+
+  const applyFontSize = (size: "small" | "medium" | "large") => {
+    const sizeValue = size === "small" ? "1" : size === "medium" ? "3" : "5";
+    document.execCommand("fontSize", false, sizeValue);
+    onFormattingChange({ ...formatting, fontSize: size });
+    onCloseFontSizeMenu();
+    editorRef.current?.focus();
+  };
+
+  const applyTextColor = (color: string) => {
+    document.execCommand("foreColor", false, color);
+    onFormattingChange({ ...formatting, textColor: color });
+    editorRef.current?.focus();
+  };
+
+  const handleEditorInput = () => {
+    if (editorRef.current) {
+      onDraftTextChange(editorRef.current.innerHTML);
+    }
+  };
+
+  useEffect(() => {
+    if (editorRef.current && editorRef.current.innerHTML !== draftText) {
+      editorRef.current.innerHTML = draftText;
+    }
+  }, [draftText]);
+
   return (
     <div className="fixed inset-0 z-[210] flex items-center justify-center bg-[rgba(15,23,42,0.62)] p-4">
       <div className="w-full rounded-[28px] border border-white/70 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.28)]" style={{ maxWidth: "560px" }}>
-        <div className="flex items-center justify-between px-5 pb-2 pt-5">
-          <div className="w-10" />
-          <h3 className="text-[20px] font-semibold tracking-tight text-[#111111]">Create Deet</h3>
+        {/* Header: Close, Title, Post Button */}
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <button
             type="button"
             onClick={onClose}
@@ -66,17 +112,48 @@ export function CreateDeetModal({
           >
             <X className={ICON} />
           </button>
+          <h3 className="text-[20px] font-semibold tracking-tight text-[#111111]">Write Post</h3>
+          <button
+            type="submit"
+            form="deet-form"
+            disabled={isSubmitting}
+            className={cn(BUTTON_PRIMARY, isSubmitting && "cursor-not-allowed opacity-60")}
+          >
+            {isSubmitting ? "Posting" : "Post"}
+          </button>
         </div>
 
-        <form className="px-5 pb-5" onSubmit={onSubmit}>
-          <div className="relative z-10 mt-3 flex items-center justify-center gap-2">
+        <form id="deet-form" className="px-5 py-4" onSubmit={onSubmit}>
+          {/* Author info */}
+          <div className="mb-4 flex items-center gap-2">
+            {authorAvatarSrc ? (
+              <img
+                src={authorAvatarSrc}
+                alt={authorName}
+                className="h-10 w-10 rounded-full object-cover"
+              />
+            ) : (
+              <div className="h-10 w-10 rounded-full bg-[#A9D1CA] flex items-center justify-center text-sm font-semibold text-[#111111]">
+                {authorName
+                  .split(" ")
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((part) => part[0])
+                  .join("")}
+              </div>
+            )}
+            <span className="text-sm font-medium text-[#111111]">{authorName}</span>
+          </div>
+
+          {/* Formatting toolbar */}
+          <div className="relative z-10 mb-4 flex items-center gap-2">
             <div ref={fontMenuRef} className="relative">
               <button
                 type="button"
                 onClick={onToggleFontSizeMenu}
-                className="inline-flex h-9 min-w-[40px] items-center justify-center rounded-xl border border-slate-200 px-3 text-sm font-medium text-slate-600"
+                className="inline-flex h-9 min-w-[44px] items-center justify-center rounded-xl border border-slate-200 px-3 text-sm font-medium text-slate-600 transition hover:border-slate-300"
               >
-                aA
+                Aa
               </button>
 
               {isFontSizeMenuOpen ? (
@@ -85,7 +162,7 @@ export function CreateDeetModal({
                     <button
                       key={size}
                       type="button"
-                      onClick={() => onFormattingChange({ ...formatting, fontSize: size })}
+                      onClick={() => applyFontSize(size)}
                       className={cn(
                         "block w-full rounded-xl px-3 py-2 text-left text-sm transition",
                         formatting.fontSize === size ? "bg-[#EAF6F3] text-[#0C5C57]" : "text-slate-600 hover:bg-slate-50"
@@ -97,84 +174,74 @@ export function CreateDeetModal({
                 </div>
               ) : null}
             </div>
+
             <button
               type="button"
-              onClick={() => onFormattingChange({ ...formatting, bold: !formatting.bold })}
-              className={cn(
-                "inline-flex h-9 w-9 items-center justify-center rounded-xl border text-sm font-semibold",
-                formatting.bold ? "border-[#0C5C57] bg-[#EAF6F3] text-[#0C5C57]" : "border-slate-200 text-slate-600"
-              )}
+              onClick={applyBold}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 transition hover:border-slate-300"
             >
               B
             </button>
+
             <button
               type="button"
-              onClick={() => onFormattingChange({ ...formatting, italic: !formatting.italic })}
-              className={cn(
-                "inline-flex h-9 w-9 items-center justify-center rounded-xl border text-sm italic",
-                formatting.italic ? "border-[#0C5C57] bg-[#EAF6F3] text-[#0C5C57]" : "border-slate-200 text-slate-600"
-              )}
+              onClick={applyItalic}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-sm italic text-slate-600 transition hover:border-slate-300"
             >
               I
             </button>
+
             <button
               type="button"
-              onClick={() => onFormattingChange({ ...formatting, underline: !formatting.underline })}
-              className={cn(
-                "inline-flex h-9 w-9 items-center justify-center rounded-xl border text-sm underline",
-                formatting.underline ? "border-[#0C5C57] bg-[#EAF6F3] text-[#0C5C57]" : "border-slate-200 text-slate-600"
-              )}
+              onClick={applyUnderline}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-sm underline text-slate-600 transition hover:border-slate-300"
             >
               U
             </button>
-            <label className="relative inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-slate-200 text-sm font-semibold">
+
+            <label className="relative inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-slate-200 transition hover:border-slate-300">
               <span className="text-[#0C5C57]">A</span>
               <input
                 type="color"
                 value={formatting.textColor}
-                onChange={(event) => onFormattingChange({ ...formatting, textColor: event.target.value })}
+                onChange={(event) => applyTextColor(event.target.value)}
                 aria-label="Choose text color"
                 className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
               />
             </label>
           </div>
 
-          <div className="mt-4 rounded-[24px] border border-slate-300 p-4">
-            <textarea
-              value={draftText}
-              onChange={(event) => onDraftTextChange(event.target.value)}
-              placeholder="What&apos;s on your mind?"
-              className={cn(
-                "w-full resize-none bg-transparent outline-none placeholder:text-slate-400",
-                selectedPhotoPreviews.length > 0 ? "h-[120px]" : "h-[180px]",
-                formatting.fontSize === "small" && "text-sm",
-                formatting.fontSize === "medium" && "text-base",
-                formatting.fontSize === "large" && "text-lg",
-                formatting.bold && "font-semibold",
-                formatting.italic && "italic",
-                formatting.underline && "underline"
-              )}
-              style={{ color: formatting.textColor }}
+          {/* Rich text editor container */}
+          <div className="rounded-[24px] border border-slate-300 p-4 bg-white">
+            {/* ContentEditable div */}
+            <div
+              ref={editorRef}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={handleEditorInput}
+              data-placeholder="Write something..."
+              className="min-h-[180px] w-full outline-none text-base text-gray-800 whitespace-pre-wrap [&:empty:before]:content-[attr(data-placeholder)] [&:empty:before]:text-slate-400"
             />
 
-            {/* Photo thumbnail strip */}
+            {/* Photo thumbnails strip (inside editor container) */}
             {selectedPhotoPreviews.length > 0 ? (
-              <div className="mt-3 border-t border-slate-100 pt-3">
-                <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="mt-4 border-t border-slate-100 pt-4">
+                <div className="flex gap-3 overflow-x-auto pb-2">
                   {selectedPhotoPreviews.map((preview, index) => (
                     <div key={`preview-${index}`} className="relative shrink-0">
                       <img
                         src={preview}
                         alt={`Photo ${index + 1}`}
-                        className="h-20 w-20 rounded-xl object-cover"
+                        className="rounded-lg object-cover"
+                        style={{ width: "60px", height: "60px" }}
                       />
                       {onRemovePhoto ? (
                         <button
                           type="button"
                           onClick={() => onRemovePhoto(index)}
-                          className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#111111]/70 text-white transition hover:bg-[#111111]/90"
+                          className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-[#111111]/80 text-white transition hover:bg-[#111111]"
                         >
-                          <X className="h-3 w-3" />
+                          <X className="h-3.5 w-3.5" />
                         </button>
                       ) : null}
                     </div>
@@ -182,8 +249,59 @@ export function CreateDeetModal({
                 </div>
               </div>
             ) : null}
+
+            {/* Action icons row (inside editor container, at bottom) */}
+            <div className="mt-4 border-t border-slate-100 pt-4 flex items-center gap-3 text-slate-500">
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => onOpenChild("photo")}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[#F1F8F6] hover:text-[#0C5C57]"
+                title="Photo/Video"
+              >
+                <Images className={ICON} />
+              </button>
+
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => onOpenChild("emoji")}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[#F1F8F6] hover:text-[#0C5C57]"
+                title="Sticker/Emoji"
+              >
+                <Smile className={ICON} />
+              </button>
+
+              <button
+                type="button"
+                disabled={isSubmitting}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[#F1F8F6] hover:text-[#0C5C57]"
+                title="Announcement"
+              >
+                <Megaphone className={ICON} />
+              </button>
+
+              <button
+                type="button"
+                disabled={isSubmitting}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[#F1F8F6] hover:text-[#0C5C57]"
+                title="Notice"
+              >
+                <FileText className={ICON} />
+              </button>
+
+              <button
+                type="button"
+                disabled={isSubmitting}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[#F1F8F6] hover:text-[#0C5C57]"
+                title="Poll"
+              >
+                <BarChart3 className={ICON} />
+              </button>
+            </div>
           </div>
 
+          {/* Attached items display (outside editor) */}
           {attachedItems.length ? (
             <div className="mt-4 space-y-2">
               {attachedItems.map((item) => (
@@ -202,27 +320,8 @@ export function CreateDeetModal({
             </div>
           ) : null}
 
-          <div className="mt-4 flex items-center justify-between text-slate-500">
-            <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={() => onOpenChild("photo")}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[#F1F8F6] hover:text-[#0C5C57]"
-            >
-              <Images className={ICON} />
-            </button>
-
-            <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={() => onOpenChild("emoji")}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[#F1F8F6] hover:text-[#0C5C57]"
-            >
-              <Smile className={ICON} />
-            </button>
-          </div>
-
-          <div className="mt-5 flex items-center justify-between border-t border-[#E5EFEC] pt-5">
+          {/* Deet Settings button */}
+          <div className="mt-5 flex items-center border-t border-[#E5EFEC] pt-5">
             <button
               type="button"
               disabled={isSubmitting}
@@ -231,10 +330,6 @@ export function CreateDeetModal({
             >
               <Settings className={ACTION_ICON} />
               Deet Settings
-            </button>
-
-            <button type="submit" disabled={isSubmitting} className={cn(BUTTON_PRIMARY, isSubmitting && "cursor-not-allowed opacity-60")}>
-              {isSubmitting ? "Posting" : "Post"}
             </button>
           </div>
         </form>

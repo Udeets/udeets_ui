@@ -32,6 +32,7 @@ export type HubRecord = {
   about?: string[];
   offerings?: string[];
   highlights?: string[];
+  accentColor?: string | null;
   contact?: {
     visit: string;
     stayConnected: string;
@@ -102,6 +103,7 @@ export function toHubRecord(hub: DbHubRecord): HubRecord {
     feedImages: [],
     adminImages: [],
     tags: [],
+    accentColor: hub.accent_color,
     quickInfo: [
       { label: "Type", value: hub.category.replace(/-/g, " ") },
       { label: "Location", value: locationLabel },

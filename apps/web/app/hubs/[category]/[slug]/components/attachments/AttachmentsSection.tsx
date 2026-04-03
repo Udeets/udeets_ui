@@ -86,14 +86,14 @@ export function AttachmentsSection({
       </div>
 
       {/* Files */}
-      <div className="mt-6">
-        <div className="flex items-center gap-2 pb-3">
-          <Paperclip className="h-4 w-4 text-slate-400" />
-          <span className="text-sm font-medium text-[#111111]">Files</span>
-          <span className="text-xs text-slate-400">{fileItems.length}</span>
-        </div>
+      {fileItems.length > 0 && (
+        <div className="mt-6">
+          <div className="flex items-center gap-2 pb-3">
+            <Paperclip className="h-4 w-4 text-slate-400" />
+            <span className="text-sm font-medium text-[#111111]">Files</span>
+            <span className="text-xs text-slate-400">{fileItems.length}</span>
+          </div>
 
-        {fileItems.length > 0 ? (
           <div className="space-y-2">
             {fileItems.map((file) => (
               <div key={file} className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5">
@@ -104,12 +104,8 @@ export function AttachmentsSection({
               </div>
             ))}
           </div>
-        ) : (
-          <div className="rounded-xl bg-slate-50 px-4 py-8 text-center">
-            <p className="text-sm text-slate-500">No files yet</p>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </SectionShell>
   );
 }

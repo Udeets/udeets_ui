@@ -19,6 +19,7 @@ import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader } from "@/components/udeets
 import type { HubContent } from "@/lib/hub-content";
 import type { HubRecord } from "@/lib/hubs";
 import { getHubConfigByCategory } from "@/lib/hub-templates";
+import { getHubColorTheme } from "@/lib/hub-color-themes";
 import { useAuthSession } from "@/services/auth/useAuthSession";
 import { AttachmentsSection } from "./components/attachments/AttachmentsSection";
 import { HubHeroHeader } from "./components/HubHeroHeader";
@@ -28,6 +29,8 @@ import { AboutSection } from "./components/sections/AboutSection";
 import { CTADisplay } from "./components/ctas/CTADisplay";
 import { CTAEditorModal } from "./components/ctas/CTAEditorModal";
 import { CustomSectionEditorModal } from "./components/sections/custom/CustomSectionEditorModal";
+import { InviteModal } from "./components/modals/InviteModal";
+import { DeleteHubModal } from "./components/modals/DeleteHubModal";
 import { DeetsSection } from "./components/sections/DeetsSection";
 import { EventsSection } from "./components/sections/EventsSection";
 import { ReviewsSection } from "./components/sections/ReviewsSection";
@@ -92,6 +95,8 @@ export default function HubClient({
   const initialHubName = demoHubName || hub.name;
   const hubDescription = demoHubDescription || hub.description;
   const [isAdminsEditorOpen, setIsAdminsEditorOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [isDeleteHubModalOpen, setIsDeleteHubModalOpen] = useState(false);
 
   const dpInputRef = useRef<HTMLInputElement | null>(null);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
@@ -180,6 +185,33 @@ export default function HubClient({
     return () => { ignore = true; };
   }, [hub.id]);
 
+  // Load all photos from attachments table (includes DP, cover, and gallery)
+  const [allAttachmentPhotos, setAllAttachmentPhotos] = useState<string[]>([]);
+  const loadAttachmentPhotos = async () => {
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("attachments")
+        .select("file_url")
+        .eq("hub_id", hub.id)
+        .eq("file_type", "image")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (data) {
+        const photoUrls = data.map((row: { file_url: string }) => normalizePublicSrc(row.file_url)).filter(Boolean);
+        setAllAttachmentPhotos(photoUrls);
+      }
+    } catch (err) {
+      console.error("[load-attachment-photos]", err);
+    }
+  };
+
+  useEffect(() => {
+    loadAttachmentPhotos();
+  }, [hub.id]);
+
   const { liveFeedItems, prependCreatedDeet } = useHubLiveFeed(hub.id);
   const {
     savedHubName,
@@ -262,16 +294,29 @@ export default function HubClient({
     dpInputRef,
     coverInputRef,
   });
-  const recentPhotos = galleryImages.slice(0, 6);
+
+  // Reload attachment photos when media is uploaded
+  useEffect(() => {
+    if (mediaSuccess || (!isUploadingDp && !isUploadingCover && !isUploadingGallery)) {
+      // Small delay to ensure DB insert is complete
+      const timer = setTimeout(() => loadAttachmentPhotos(), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [mediaSuccess, isUploadingDp, isUploadingCover, isUploadingGallery]);
+
+  // Merge gallery images with attachment photos, preferring attachments (which include DP/cover uploads)
+  const allPhotos = allAttachmentPhotos.length > 0 ? allAttachmentPhotos : galleryImages;
+  const recentPhotos = allPhotos.slice(0, 6);
   const displayCoverImageSrc = coverImageSrc;
   const adminImages = (hub.adminImages ?? []).map(normalizePublicSrc).filter(Boolean);
-  const albumChoices = galleryImages.filter((image) => image !== dpImageSrc && image !== coverImageSrc);
+  const albumChoices = allPhotos.filter((image) => image !== dpImageSrc && image !== coverImageSrc);
   const categoryMeta = categoryMetaFor(savedHubCategory);
   const CategoryIcon = categoryMeta.icon;
   const hubTemplateConfig = useMemo(() => getHubConfigByCategory(savedHubCategory), [savedHubCategory]);
   const memberCount = Math.max(1, Number.parseInt(hub.membersLabel, 10) || 0);
   const headerHubName = hub.name?.trim() || hubName;
   const visibilityLabel: "Public" | "Private" = hub.visibility;
+  const accentTheme = getHubColorTheme(settingsAccentColor || hub.accentColor);
 
   const allFeedItems = [...liveFeedItems, ...hubContent.feed];
   const { likedDeetIds, likingDeetIds, handleToggleLike } = useDeetInteractions(allFeedItems);
@@ -357,13 +402,16 @@ export default function HubClient({
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.access_token && !ignore) {
         loadMembers();
-        loadPendingRequests();
+        // Only load pending requests if the current user is the hub creator
+        if (isCreatorAdmin) {
+          loadPendingRequests();
+        }
       }
     }
 
     init();
     return () => { ignore = true; };
-  }, [hub.id]);
+  }, [hub.id, isCreatorAdmin]);
 
   const handleApproveRequest = async (userId: string) => {
     setProcessingUserIds((prev) => new Set(prev).add(userId));
@@ -465,6 +513,7 @@ export default function HubClient({
     demoComposerText,
     isCreatorAdmin,
     authorName: deetAuthorName,
+    authorAvatarSrc: creatorAvatarSrc,
     onDeetCreated: prependCreatedDeet,
   });
 
@@ -620,6 +669,8 @@ export default function HubClient({
           onSettingsAccentColorChange={setSettingsAccentColor}
           settingsSaveSuccess={settingsSaveSuccess}
           settingsSaveError={settingsSaveError}
+          hubId={hub.id}
+          onShowDeleteModal={() => setIsDeleteHubModalOpen(true)}
         />
       );
     }
@@ -641,7 +692,7 @@ export default function HubClient({
           activeAdminCount={activeAdminCount}
           eventCount={hubContent.events.length}
           recentPhotoCount={recentPhotos.length}
-          onInviteMembers={() => openCenterMembers("invite")}
+          onInviteMembers={() => setIsInviteModalOpen(true)}
           onOpenSettings={openSettingsPanel}
           onOpenAdminsEditor={() => setIsAdminsEditorOpen(true)}
           onOpenPosts={() => setActiveSection("Posts")}
@@ -669,7 +720,7 @@ export default function HubClient({
           isCreatorAdmin={isCreatorAdmin}
           userRole={isCreatorAdmin ? "creator" : isJoined ? "member" : isPending ? "pending" : null}
           onMembershipAction={handleMembershipAction}
-          onInviteMembers={() => openCenterMembers("invite")}
+          onInviteMembers={() => setIsInviteModalOpen(true)}
           onOpenSettings={openSettingsPanel}
           onOpenConnectEditor={openConnectEditor}
           connectSuccess={connectSuccess}
@@ -696,6 +747,8 @@ export default function HubClient({
           onOpenViewer={openViewer}
           customSections={customSections}
           onOpenSectionEditor={() => setIsSectionEditorOpen(true)}
+          settingsAccentColor={settingsAccentColor}
+          onSettingsAccentColorChange={setSettingsAccentColor}
         />
       );
     }
@@ -718,9 +771,9 @@ export default function HubClient({
     if (activeSection === "Events") {
       return (
         <EventsSection
-          events={hubContent.events}
-          highlightedItemId={highlightedItemId}
-          onViewEventUpdate={(focusId) => navigateToFocus(focusId, "Posts")}
+          hubId={hub.id}
+          userId={user?.id ?? null}
+          isCreatorAdmin={isCreatorAdmin}
         />
       );
     }
@@ -789,6 +842,7 @@ export default function HubClient({
           memberCount={memberCount}
           categoryLabel={categoryMeta.label}
           visibilityLabel={visibilityLabel}
+          accentTheme={accentTheme}
         />
 
         {mediaSuccess ? <p className="px-4 pt-3 text-sm font-medium text-[#0C5C57]">{mediaSuccess}</p> : null}
@@ -1043,6 +1097,8 @@ export default function HubClient({
               onOpenChild={setActiveComposerChild}
               onSubmit={handleSubmitDeet}
               isSubmitting={isSubmittingDeet}
+              authorName={deetAuthorName}
+              authorAvatarSrc={creatorAvatarSrc}
             />,
             document.body
           )
@@ -1177,7 +1233,7 @@ export default function HubClient({
             ) : null}
 
             {/* Image */}
-            <img src={viewer.images[viewer.index]} alt="Hub photo" className="max-h-[60vh] max-w-full rounded-2xl object-contain lg:max-h-[85vh] lg:max-w-[65vw] lg:rounded-3xl" />
+            <img src={viewer.images[viewer.index]} alt="Hub photo" className="max-h-[85vh] max-w-[90vw] w-auto h-auto rounded-2xl object-contain lg:max-h-[85vh] lg:max-w-[90vw] lg:rounded-3xl" />
           </div>
 
           {/* Engagement panel — bottom sheet on mobile, sidebar on desktop */}
@@ -1340,6 +1396,29 @@ export default function HubClient({
           sections={customSections}
           onClose={() => setIsSectionEditorOpen(false)}
           onSaved={(saved) => setCustomSections(saved)}
+        />
+      ) : null}
+
+      {/* Invite Modal */}
+      {isInviteModalOpen ? (
+        <InviteModal
+          hubName={hubName}
+          hubSlug={hub.slug}
+          hubCategory={hub.category}
+          onClose={() => setIsInviteModalOpen(false)}
+        />
+      ) : null}
+
+      {/* Delete Hub Modal */}
+      {isDeleteHubModalOpen ? (
+        <DeleteHubModal
+          hubName={hubName}
+          hubId={hub.id}
+          onClose={() => setIsDeleteHubModalOpen(false)}
+          onDeleted={() => {
+            setIsDeleteHubModalOpen(false);
+            // The deleteHub function will redirect to /dashboard
+          }}
         />
       ) : null}
     </div>

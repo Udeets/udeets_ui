@@ -81,8 +81,8 @@ export function HubSidebarNav({
             }}
             className={
               isActive
-                ? "flex items-center gap-3 border-l-2 border-[#0C5C57] bg-[#f0faf8] px-4 py-2.5 text-[13px] font-medium text-[#0C5C57]"
-                : "flex items-center gap-3 border-l-2 border-transparent px-4 py-2.5 text-[13px] text-gray-500 transition hover:bg-gray-50 hover:text-gray-700"
+                ? "flex items-center gap-3 border-l-2 border-[#0C5C57] bg-[#E3F1EF] px-4 py-2.5 text-[13px] font-medium text-[#0C5C57]"
+                : "flex items-center gap-3 border-l-2 border-transparent px-4 py-2.5 text-[13px] text-[#6b7280] transition-colors duration-150 hover:bg-[#fafafa] hover:text-[#0C5C57]"
             }
           >
             <Icon className="h-4 w-4 shrink-0" />
@@ -99,8 +99,8 @@ export function HubSidebarNav({
             onClick={() => onNavigate({ tab: activeSection, panel: "settings" })}
             className={
               activePanel === "settings"
-                ? "flex items-center gap-3 border-l-2 border-[#0C5C57] bg-[#f0faf8] px-4 py-2.5 text-[13px] font-medium text-[#0C5C57]"
-                : "flex items-center gap-3 border-l-2 border-transparent px-4 py-2.5 text-[13px] text-gray-500 transition hover:bg-gray-50 hover:text-gray-700"
+                ? "flex items-center gap-3 border-l-2 border-[#0C5C57] bg-[#E3F1EF] px-4 py-2.5 text-[13px] font-medium text-[#0C5C57]"
+                : "flex items-center gap-3 border-l-2 border-transparent px-4 py-2.5 text-[13px] text-[#6b7280] transition-colors duration-150 hover:bg-[#fafafa] hover:text-[#0C5C57]"
             }
           >
             <Settings className="h-4 w-4 shrink-0" />

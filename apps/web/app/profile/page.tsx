@@ -223,7 +223,8 @@ export default function ProfilePage() {
       if (uploadError) { console.error("[profile] avatar upload error:", uploadError); return; }
       const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
       const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-      await supabase.from("profiles").update({ avatar_url: publicUrl, updated_at: new Date().toISOString() }).eq("id", user.id);
+      const { error: updateError } = await supabase.from("profiles").update({ avatar_url: publicUrl, updated_at: new Date().toISOString() }).eq("id", user.id);
+      if (updateError) { console.error("[profile] avatar update error:", updateError); return; }
       setProfile((prev) => prev ? { ...prev, avatar_url: publicUrl } : prev);
     } catch (err) {
       console.error("[profile] avatar upload failed:", err);
@@ -244,7 +245,7 @@ export default function ProfilePage() {
       const updatePayload: Record<string, string> = { updated_at: new Date().toISOString() };
       if (field === "full_name") updatePayload.full_name = editDraft;
       await supabase.from("profiles").update(updatePayload).eq("id", user.id);
-      setProfile((prev) => prev ? { ...prev, ...updatePayload } : prev);
+      setProfile((prev) => prev ? { ...prev, full_name: field === "full_name" ? editDraft : prev.full_name } : prev);
       setEditingField(null);
       setEditDraft("");
     } catch (err) {

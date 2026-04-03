@@ -102,6 +102,8 @@ export function SettingsSection({
   onSettingsAccentColorChange,
   settingsSaveSuccess,
   settingsSaveError,
+  hubId,
+  onShowDeleteModal,
 }: {
   isDirty: boolean;
   isSavingSettings: boolean;
@@ -135,6 +137,8 @@ export function SettingsSection({
   onSettingsAccentColorChange: (value: HubColorThemeKey) => void;
   settingsSaveSuccess: string | null;
   settingsSaveError: string | null;
+  hubId: string;
+  onShowDeleteModal: () => void;
 }) {
   return (
     <SectionShell
@@ -341,6 +345,28 @@ export function SettingsSection({
         {/* ── Status messages ────────────────────────────────── */}
         {settingsSaveSuccess && <p className="rounded-lg bg-[#EAF6F3] px-3 py-2 text-xs font-medium text-[#0C5C57]">{settingsSaveSuccess}</p>}
         {settingsSaveError && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-600">{settingsSaveError}</p>}
+
+        {/* ── Danger Zone ────────────────────────────────────── */}
+        {isCreatorAdmin && (
+          <div className="border-t border-slate-100 pt-6">
+            <GroupHeader title="Danger Zone" />
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-red-900">Delete this hub</p>
+                  <p className="text-xs text-red-700">This action cannot be undone.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={onShowDeleteModal}
+                  className="shrink-0 rounded-lg border border-red-600 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-100"
+                >
+                  Delete Hub
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </SectionShell>
   );

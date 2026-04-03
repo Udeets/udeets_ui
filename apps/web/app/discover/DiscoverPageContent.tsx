@@ -416,6 +416,7 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
             const { data, error } = await supabase
               .from("hubs")
               .select("*")
+              .neq("created_by", session.user.id)
               .order("created_at", { ascending: false });
             if (!cancelled && data && !error) {
               setSupabaseHubs(data.map(toDiscoverHub));

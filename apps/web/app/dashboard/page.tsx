@@ -35,11 +35,11 @@ type FeedItem = {
 };
 
 const PAGE_BG = "bg-white";
-const CARD = "rounded-[28px] border border-[#D6E8E4] bg-white shadow-[0_14px_34px_rgba(12,92,87,0.08)]";
-const TEXT_DARK = "text-[#12312D]";
-const TEXT_MUTED = "text-[#58706B]";
+const CARD = "rounded-xl border border-slate-100 bg-white shadow-sm";
+const TEXT_DARK = "text-[#111111]";
+const TEXT_MUTED = "text-[#6b7280]";
 const PRIMARY_BUTTON =
-  "inline-flex items-center justify-center rounded-full bg-[#0C5C57] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#094944]";
+  "inline-flex items-center justify-center rounded-full bg-[#0C5C57] px-5 py-3 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[#0a4f4a]";
 const FEED_FILTERS: FeedFilter[] = ["All", "Posts", "Notices", "Deals", "Announcements", "Polls", "Photos", "Videos"];
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -141,7 +141,7 @@ function CreateHubTile() {
             <svg viewBox="0 0 24 24" className="h-9 w-9 text-[#0C5C57]" fill="none" stroke="currentColor" strokeWidth="2.2">
               <path d="M12 5v14M5 12h14" strokeLinecap="round" />
             </svg>
-            <h3 className={cn("text-[15px] font-medium leading-5", TEXT_DARK)}>Create Hub</h3>
+            <h3 className={cn("text-[15px] font-semibold tracking-tight leading-5", TEXT_DARK)}>Create Hub</h3>
         </div>
       </div>
 
@@ -209,10 +209,10 @@ function HubLauncher({
               type="button"
               onClick={() => onSelectView(tab.key)}
               className={cn(
-                "relative rounded-full px-4 py-2 text-sm font-semibold transition",
+                "relative rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-150",
                 selectedView === tab.key
-                  ? "bg-white text-[#12312D] shadow-sm"
-                  : "text-[#58706B] hover:text-[#12312D]",
+                  ? "bg-white text-[#111111] shadow-sm"
+                  : "text-[#6b7280] hover:text-[#111111]",
               )}
             >
               {tab.label}
@@ -476,9 +476,9 @@ function DashboardPageContent() {
         <UdeetsHeader />
         <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 md:pb-6 lg:px-10">
           <section className={cn(CARD, "p-6 text-center")}>
-            <h1 className={cn("text-2xl font-semibold tracking-tight", TEXT_DARK)}>Loading dashboard...</h1>
+            <h1 className={cn("text-2xl font-semibold tracking-tight", TEXT_DARK)}>Loading dashboard…</h1>
             <p className={cn("mt-3 text-sm leading-relaxed", TEXT_MUTED)}>
-              We&apos;re checking your session and loading your hubs.
+              We're checking your session and loading your hubs.
             </p>
           </section>
         </main>
@@ -495,10 +495,10 @@ function DashboardPageContent() {
         <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 md:pb-6 lg:px-10">
           <section className={cn(CARD, "p-6 text-center")}>
             <h1 className={cn("text-2xl font-semibold tracking-tight", TEXT_DARK)}>
-              Redirecting to sign in...
+              Redirecting to sign in…
             </h1>
             <p className={cn("mt-3 text-sm leading-relaxed", TEXT_MUTED)}>
-              Your session could not be found, so we&apos;re sending you to the auth page.
+              Your session could not be found, so we're sending you to the auth page.
             </p>
           </section>
         </main>
@@ -515,9 +515,9 @@ function DashboardPageContent() {
       <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 md:pb-6 lg:px-10">
         {isLoadingHubs ? (
           <section className={cn(CARD, "mt-6 p-6 text-center sm:p-8")}>
-            <h2 className={cn("text-2xl font-semibold tracking-tight", TEXT_DARK)}>Loading your hubs...</h2>
+            <h2 className={cn("text-2xl font-semibold tracking-tight", TEXT_DARK)}>Loading your hubs…</h2>
             <p className={cn("mt-3 text-sm leading-6 sm:text-base", TEXT_MUTED)}>
-              We&apos;re organizing your dashboard now.
+              We're organizing your dashboard now.
             </p>
           </section>
         ) : null}
@@ -525,9 +525,9 @@ function DashboardPageContent() {
         {hubsLoadError ? (
           <section className={cn(CARD, "mt-6 p-6 text-center sm:p-8")}>
             <h2 className={cn("text-2xl font-semibold tracking-tight", TEXT_DARK)}>
-              We couldn&apos;t load your dashboard
+              We couldn't load your dashboard
             </h2>
-            <p className="mt-3 text-sm leading-6 text-rose-700 sm:text-base">{hubsLoadError}</p>
+            <p className="mt-3 text-sm leading-6 text-red-600 sm:text-base">{hubsLoadError}</p>
           </section>
         ) : null}
 
@@ -549,7 +549,7 @@ function DashboardPageContent() {
                 <div className="relative flex items-center gap-2">
                   <div
                     className={cn(
-                      "overflow-hidden rounded-full bg-[#F3FAF8] transition-all duration-300",
+                      "overflow-hidden rounded-full bg-[#fafafa] transition-all duration-300",
                       isSearchOpen ? "w-56 px-3 py-2 opacity-100 sm:w-72" : "w-0 px-0 py-0 opacity-0",
                     )}
                   >
@@ -557,15 +557,15 @@ function DashboardPageContent() {
                       value={searchQuery}
                       onChange={(event) => setSearchQuery(event.target.value)}
                       placeholder="Search posts"
-                      className="w-full bg-transparent text-sm text-[#12312D] outline-none placeholder:text-[#78908B]"
+                      className="w-full bg-transparent text-sm text-[#111111] outline-none placeholder:text-[#9ca3af]"
                       aria-label="Search posts"
                     />
                   </div>
                   <button
                     type="button"
                     className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-full bg-[#F3FAF8] text-[#12312D] transition hover:bg-[#E8F4F1]",
-                      isSearchOpen && "bg-[#E8F4F1]",
+                      "flex h-10 w-10 items-center justify-center rounded-full bg-[#fafafa] text-[#111111] transition-colors duration-150 hover:bg-[#f0faf8]",
+                      isSearchOpen && "bg-[#f0faf8]",
                     )}
                     onClick={() => setIsSearchOpen((current) => !current)}
                     aria-label="Toggle search"
@@ -579,8 +579,8 @@ function DashboardPageContent() {
                   <button
                     type="button"
                     className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-full bg-[#F3FAF8] text-[#12312D] transition hover:bg-[#E8F4F1]",
-                      isFilterMenuOpen && "bg-[#E8F4F1]",
+                      "flex h-10 w-10 items-center justify-center rounded-full bg-[#fafafa] text-[#111111] transition-colors duration-150 hover:bg-[#f0faf8]",
+                      isFilterMenuOpen && "bg-[#f0faf8]",
                     )}
                     onClick={() => setIsFilterMenuOpen((current) => !current)}
                     aria-label="Open filters"
@@ -593,7 +593,7 @@ function DashboardPageContent() {
                   </button>
 
                   {isFilterMenuOpen ? (
-                    <div className="absolute right-0 top-12 z-10 w-48 rounded-[22px] bg-white p-2 shadow-[0_14px_34px_rgba(12,92,87,0.12)]">
+                    <div className="absolute right-0 top-12 z-10 w-48 rounded-xl bg-white p-2 shadow-sm border border-slate-100">
                       {FEED_FILTERS.map((filter) => (
                         <button
                           key={filter}
@@ -603,10 +603,10 @@ function DashboardPageContent() {
                             setIsFilterMenuOpen(false);
                           }}
                           className={cn(
-                            "flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left text-sm transition",
+                            "flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm transition-colors duration-150",
                             selectedFeedFilter === filter
-                              ? "bg-[#EFF7F5] font-semibold text-[#12312D]"
-                              : "text-[#58706B] hover:bg-[#F6FBFA] hover:text-[#12312D]",
+                              ? "bg-[#E3F1EF] font-semibold text-[#111111]"
+                              : "text-[#6b7280] hover:bg-[#fafafa] hover:text-[#111111]",
                           )}
                         >
                           <span>{filter}</span>
@@ -625,41 +625,41 @@ function DashboardPageContent() {
                       const cardContent = (
                         <>
                           <div className="flex items-start gap-3">
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#0C5C57] to-[#1a8a82]">
-                              <span className="text-xs font-semibold text-white/80">{item.hubName?.charAt(0)?.toUpperCase() ?? "H"}</span>
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#A9D1CA]">
+                              <span className="text-xs font-semibold text-[#0C5C57]">{item.hubName?.charAt(0)?.toUpperCase() ?? "H"}</span>
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center justify-between gap-2">
-                                <p className="truncate text-sm font-semibold text-[#12312D]">{item.hubName || "Hub"}</p>
-                                <span className="shrink-0 text-xs text-gray-400">{item.timeLabel}</span>
+                                <p className="truncate text-sm font-semibold text-[#111111]">{item.hubName || "Hub"}</p>
+                                <span className="shrink-0 text-xs text-[#9ca3af]">{item.timeLabel}</span>
                               </div>
-                              <p className="text-xs text-gray-400">Posted by: Hub Member</p>
+                              <p className="text-xs text-[#9ca3af]">Posted by: Hub Member</p>
                             </div>
                           </div>
-                          {item.title ? <h3 className={cn("mt-3 text-base font-semibold", TEXT_DARK)}>{item.title}</h3> : null}
+                          {item.title ? <h3 className={cn("mt-3 text-base font-semibold tracking-tight", TEXT_DARK)}>{item.title}</h3> : null}
                           {item.body ? <p className={cn("mt-1 text-sm leading-6", TEXT_MUTED)}>{item.body}</p> : null}
                           <DashboardDeetImage src={item.previewImage || item.previewImages[0]} alt={item.title} />
-                          <div className="mt-3 flex items-center gap-6 border-t border-gray-100 pt-3">
+                          <div className="mt-3 flex items-center gap-6 border-t border-slate-100 pt-3">
                             <button
                               type="button"
                               onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleLike(item.id); }}
-                              className="flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-[#0C5C57]"
+                              className="flex items-center gap-1.5 text-sm text-[#9ca3af] transition-colors duration-150 hover:text-[#0C5C57]"
                             >
                               <Heart
-                                className="h-4 w-4"
+                                className="h-4 w-4 stroke-2"
                                 fill={likedDeets.has(item.id) ? "#0C5C57" : "none"}
                                 stroke={likedDeets.has(item.id) ? "#0C5C57" : "currentColor"}
                               />
                               <span>{likedDeets.has(item.id) ? 1 : 0}</span>
                               <span>Like</span>
                             </button>
-                            <button type="button" className="flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-[#0C5C57]">
-                              <MessageCircle className="h-4 w-4" />
+                            <button type="button" className="flex items-center gap-1.5 text-sm text-[#9ca3af] transition-colors duration-150 hover:text-[#0C5C57]">
+                              <MessageCircle className="h-4 w-4 stroke-2" />
                               <span>0</span>
                               <span>Comment</span>
                             </button>
-                            <button type="button" className="flex items-center gap-1.5 text-sm text-gray-500 transition-colors hover:text-[#0C5C57]">
-                              <Share2 className="h-4 w-4" />
+                            <button type="button" className="flex items-center gap-1.5 text-sm text-[#9ca3af] transition-colors duration-150 hover:text-[#0C5C57]">
+                              <Share2 className="h-4 w-4 stroke-2" />
                               <span>Share</span>
                             </button>
                           </div>
@@ -670,19 +670,19 @@ function DashboardPageContent() {
                         <Link
                           key={item.id}
                           href={item.href}
-                          className="block rounded-2xl border border-slate-100 bg-white p-4 transition hover:border-slate-200"
+                          className="block rounded-lg border border-slate-100 bg-white p-4 transition-colors duration-150 hover:border-slate-200"
                         >
                           {cardContent}
                         </Link>
                       ) : (
-                        <article key={item.id} className="rounded-2xl border border-slate-100 bg-white p-4">
+                        <article key={item.id} className="rounded-lg border border-slate-100 bg-white p-4">
                           {cardContent}
                         </article>
                       );
                     })}
                   </div>
                 ) : (
-                  <div className="rounded-[24px] bg-[#F6FBFA] px-6 py-10 text-center">
+                  <div className="rounded-xl bg-[#fafafa] px-6 py-10 text-center border border-slate-100">
                     <h3 className={cn("text-xl font-semibold tracking-tight", TEXT_DARK)}>
                       No {selectedFeedFilter === "All" ? "deets" : selectedFeedFilter.toLowerCase()} yet
                     </h3>
@@ -691,18 +691,18 @@ function DashboardPageContent() {
                       your hubs, they will appear here in one combined feed.
                     </p>
                     <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-[22px] bg-white px-5 py-4 text-left shadow-[0_8px_20px_rgba(12,92,87,0.05)]">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5F807A]">Current view</p>
-                        <p className={cn("mt-2 text-base font-semibold", TEXT_DARK)}>
+                      <div className="rounded-lg bg-white px-5 py-4 text-left shadow-sm border border-slate-100">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6b7280]">Current view</p>
+                        <p className={cn("mt-2 text-base font-semibold tracking-tight", TEXT_DARK)}>
                           {selectedHubView === "my-hubs" ? "My Hubs" : selectedHubView === "joined" ? "Joined Hubs" : "Requested Hubs"}
                         </p>
                         <p className={cn("mt-1 text-sm", TEXT_MUTED)}>
                           {searchQuery ? `Searching for "${searchQuery}".` : "Search and filter controls are ready here."}
                         </p>
                       </div>
-                      <div className="rounded-[22px] bg-white px-5 py-4 text-left shadow-[0_8px_20px_rgba(12,92,87,0.05)]">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5F807A]">Next step</p>
-                        <p className={cn("mt-2 text-base font-semibold", TEXT_DARK)}>
+                      <div className="rounded-lg bg-white px-5 py-4 text-left shadow-sm border border-slate-100">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6b7280]">Next step</p>
+                        <p className={cn("mt-2 text-base font-semibold tracking-tight", TEXT_DARK)}>
                           {selectedFeedFilter === "All" ? "Browse all activity" : `Filtered by ${selectedFeedFilter}`}
                         </p>
                         <p className={cn("mt-1 text-sm", TEXT_MUTED)}>
