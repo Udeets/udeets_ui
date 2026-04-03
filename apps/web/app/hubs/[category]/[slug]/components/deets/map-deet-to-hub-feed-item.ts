@@ -39,9 +39,9 @@ export function mapDeetToHubFeedItem(item: Partial<DeetRecord>): HubContent["fee
     body: asNonEmptyString(item.body) ?? "",
     image,
     images,
-    likes: 0,
-    comments: 0,
-    views: 1,
+    likes: item.like_count ?? 0,
+    comments: item.comment_count ?? 0,
+    views: item.view_count ?? 0,
   };
 }
 

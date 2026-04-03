@@ -11,7 +11,7 @@ export const sportsConfig: HubTemplateConfig = {
     admin: "Coach / Admin",
     about: "About Us",
   },
-  tabs: ["About", "Posts", "Events", "Attachments", "Members"],
+  tabs: ["About", "Posts", "Attachments", "Events", "Members"],
   postTypes: [
     { type: "update", icon: "📢", description: "Team announcement" },
     { type: "game", icon: "🏆", description: "Game or match update" },

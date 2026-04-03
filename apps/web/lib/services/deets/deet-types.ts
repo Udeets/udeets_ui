@@ -108,6 +108,9 @@ export interface DeetRecord {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  like_count?: number;
+  comment_count?: number;
+  view_count?: number;
 }
 
 export interface CreateDeetInput {

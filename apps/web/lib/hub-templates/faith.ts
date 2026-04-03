@@ -11,7 +11,7 @@ export const faithConfig: HubTemplateConfig = {
     admin: "Leader",
     about: "About Us",
   },
-  tabs: ["About", "Posts", "Events", "Attachments", "Members"],
+  tabs: ["About", "Posts", "Attachments", "Events", "Members"],
   postTypes: [
     { type: "announcement", icon: "📢", description: "Official announcement" },
     { type: "event", icon: "📅", description: "Service, ceremony, or gathering" },

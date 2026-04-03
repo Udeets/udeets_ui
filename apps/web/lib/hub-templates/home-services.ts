@@ -11,7 +11,7 @@ export const homeServicesConfig: HubTemplateConfig = {
     admin: "Owner",
     about: "About Us",
   },
-  tabs: ["About", "Posts", "Attachments", "Members", "Reviews"],
+  tabs: ["About", "Posts", "Attachments", "Events", "Members"],
   postTypes: [
     { type: "update", icon: "📢", description: "General announcement" },
     { type: "availability", icon: "🗓️", description: "Availability update" },

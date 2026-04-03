@@ -1,7 +1,7 @@
 "use client";
 
 import type { HubContent } from "@/lib/hub-content";
-import { Eye, Heart, Megaphone, MessageSquare, Search, Share2, SlidersHorizontal } from "lucide-react";
+import { Eye, Heart, Loader2, Megaphone, MessageSquare, Search, Share2, SlidersHorizontal } from "lucide-react";
 import { DeetComposerCard } from "../deets/DeetComposerCard";
 import { ACTION_ICON, ICON, PREMIUM_ICON_WRAPPER, FeedItemIcon, ImageWithFallback, cn, initials } from "../hubUtils";
 import { SectionShell } from "../SectionShell";
@@ -32,6 +32,9 @@ export function DeetsSection({
   hubName,
   onOpenComposer,
   onOpenViewer,
+  likedDeetIds,
+  likingDeetIds,
+  onToggleLike,
 }: {
   normalizedPostSearch: string;
   postSearchQuery: string;
@@ -57,6 +60,9 @@ export function DeetsSection({
   hubName: string;
   onOpenComposer: (child?: ComposerChildFlow | null) => void;
   onOpenViewer: (images: string[], index: number, title: string, body: string, focusId?: string) => void;
+  likedDeetIds?: Set<string>;
+  likingDeetIds?: Set<string>;
+  onToggleLike?: (deetId: string) => void;
 }) {
   return (
     <SectionShell
@@ -282,8 +288,23 @@ export function DeetsSection({
 
                     <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-3 text-sm text-slate-600">
                       <div className="flex flex-wrap items-center gap-5">
-                        <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[#0C5C57]">
-                          <Heart className={ICON} />
+                        <button
+                          type="button"
+                          onClick={() => onToggleLike?.(item.id)}
+                          disabled={likingDeetIds?.has(item.id)}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 transition hover:text-[#0C5C57]",
+                            likedDeetIds?.has(item.id) && "text-[#0C5C57] font-medium"
+                          )}
+                        >
+                          {likingDeetIds?.has(item.id) ? (
+                            <Loader2 className={cn(ICON, "animate-spin")} />
+                          ) : (
+                            <Heart
+                              className={ICON}
+                              fill={likedDeetIds?.has(item.id) ? "currentColor" : "none"}
+                            />
+                          )}
                           <span>{item.likes}</span>
                         </button>
                         <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[#0C5C57]">

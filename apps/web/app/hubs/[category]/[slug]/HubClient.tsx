@@ -42,6 +42,7 @@ import { useHubFilters } from "./hooks/useHubFilters";
 import { useHubLiveFeed } from "./hooks/useHubLiveFeed";
 import { useHubMediaFlow } from "./hooks/useHubMediaFlow";
 import { useHubSettingsFlow } from "./hooks/useHubSettingsFlow";
+import { useDeetInteractions } from "./hooks/useDeetInteractions";
 import { useHubSectionState } from "./hooks/useHubSectionState";
 import { useHubViewerState } from "./hooks/useHubViewerState";
 import {
@@ -193,6 +194,7 @@ export default function HubClient({
     approvalSetting,
     whoCanPost,
     whoCanUpload,
+    settingsAccentColor,
     isSavingSettings,
     settingsSaveError,
     settingsSaveSuccess,
@@ -205,6 +207,7 @@ export default function HubClient({
     setApprovalSetting,
     setWhoCanPost,
     setWhoCanUpload,
+    setSettingsAccentColor,
     updateSettingsHubName,
     updateSettingsCategory,
     saveSettings,
@@ -271,6 +274,7 @@ export default function HubClient({
   const visibilityLabel: "Public" | "Private" = hub.visibility;
 
   const allFeedItems = [...liveFeedItems, ...hubContent.feed];
+  const { likedDeetIds, likingDeetIds, handleToggleLike } = useDeetInteractions(allFeedItems);
   const feedItemCount = allFeedItems.length;
   const totalEngagement = allFeedItems.reduce((sum, item) => sum + item.likes + item.comments, 0);
   const totalViews = allFeedItems.reduce((sum, item) => sum + item.views, 0);
@@ -555,6 +559,8 @@ export default function HubClient({
           onWhoCanPostChange={setWhoCanPost}
           whoCanUpload={whoCanUpload}
           onWhoCanUploadChange={setWhoCanUpload}
+          settingsAccentColor={settingsAccentColor}
+          onSettingsAccentColorChange={setSettingsAccentColor}
           settingsSaveSuccess={settingsSaveSuccess}
           settingsSaveError={settingsSaveError}
         />
@@ -690,6 +696,9 @@ export default function HubClient({
         hubName={hubName}
         onOpenComposer={openDeetComposer}
         onOpenViewer={openViewer}
+        likedDeetIds={likedDeetIds}
+        likingDeetIds={likingDeetIds}
+        onToggleLike={handleToggleLike}
       />
     );
   };

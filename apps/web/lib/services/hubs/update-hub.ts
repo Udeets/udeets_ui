@@ -91,6 +91,10 @@ export async function updateHub(hubId: string, input: UpdateHubInput): Promise<H
     payload.gallery_image_urls = input.galleryImageUrls;
   }
 
+  if (input.accentColor !== undefined) {
+    payload.accent_color = normalizeText(input.accentColor);
+  }
+
   const initialResult = await supabase
     .from("hubs")
     .update(payload)

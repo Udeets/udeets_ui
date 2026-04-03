@@ -23,7 +23,7 @@ const generalConfig: HubTemplateConfig = {
     admin: "Admin",
     about: "About",
   },
-  tabs: ["About", "Posts", "Attachments", "Members"],
+  tabs: ["About", "Posts", "Attachments", "Events", "Members"],
   postTypes: [
     { type: "update", icon: "📢", description: "General announcement" },
     { type: "event", icon: "📅", description: "Event" },

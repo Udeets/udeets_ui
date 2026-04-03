@@ -11,7 +11,7 @@ export const eventsConfig: HubTemplateConfig = {
     admin: "Organizer",
     about: "Event Details",
   },
-  tabs: ["About", "Posts", "Events", "Attachments", "Members"],
+  tabs: ["About", "Posts", "Attachments", "Events", "Members"],
   postTypes: [
     { type: "update", icon: "📢", description: "Event announcement" },
     { type: "lineup", icon: "🎤", description: "Speaker or performer announcement" },

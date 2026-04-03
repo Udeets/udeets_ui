@@ -11,7 +11,7 @@ export const healthWellnessConfig: HubTemplateConfig = {
     admin: "Owner / Instructor",
     about: "About Us",
   },
-  tabs: ["About", "Posts", "Events", "Attachments", "Members", "Reviews"],
+  tabs: ["About", "Posts", "Attachments", "Events", "Members"],
   postTypes: [
     { type: "update", icon: "📢", description: "General announcement" },
     { type: "class", icon: "🧘", description: "Class or session" },

@@ -11,7 +11,7 @@ export const foodDiningConfig: HubTemplateConfig = {
     admin: "Owner / Manager",
     about: "Our Story",
   },
-  tabs: ["About", "Posts", "Attachments", "Members", "Events", "Reviews"],
+  tabs: ["About", "Posts", "Attachments", "Events", "Members"],
   postTypes: [
     { type: "update", icon: "📢", description: "General announcement" },
     { type: "special", icon: "🍽️", description: "Today's special dish" },

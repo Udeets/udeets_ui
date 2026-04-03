@@ -11,7 +11,7 @@ export const hoaConfig: HubTemplateConfig = {
     admin: "Board Member",
     about: "Community Info",
   },
-  tabs: ["About", "Posts", "Events", "Members", "Polls", "Settings"],
+  tabs: ["About", "Posts", "Attachments", "Events", "Members"],
   postTypes: [
     { type: "notice", icon: "📢", description: "Official board announcement" },
     { type: "maintenance", icon: "🔧", description: "Scheduled work, outages" },

@@ -74,7 +74,8 @@ export function useHubMediaFlow({
         }
       }
 
-      setMediaSuccess(kind === "gallery" ? "Recent photos updated." : kind === "dp" ? "Display picture updated." : "Cover image updated.");
+      // Only show success for gallery uploads; DP and cover updates are self-evident
+      if (kind === "gallery") setMediaSuccess("Recent photos updated.");
     } catch (error) {
       setMediaError(error instanceof Error ? error.message : "Hub media could not be updated.");
     } finally {
@@ -134,7 +135,7 @@ export function useHubMediaFlow({
       });
       setDpImageSrc(normalizePublicSrc(updatedHub.dp_image_url || undefined));
       setCoverImageSrc(normalizePublicSrc(updatedHub.cover_image_url || undefined));
-      setMediaSuccess(mediaChooserTarget === "dp" ? "Display picture updated." : "Cover image updated.");
+      // No toast for DP/cover updates — visual change is self-evident
       closeMediaChooser();
     } catch (error) {
       setMediaError(error instanceof Error ? error.message : "Hub media could not be updated.");

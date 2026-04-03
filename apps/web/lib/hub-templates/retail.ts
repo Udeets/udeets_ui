@@ -11,7 +11,7 @@ export const retailConfig: HubTemplateConfig = {
     admin: "Owner / Manager",
     about: "About Us",
   },
-  tabs: ["About", "Posts", "Attachments", "Members", "Reviews"],
+  tabs: ["About", "Posts", "Attachments", "Events", "Members"],
   postTypes: [
     { type: "update", icon: "📢", description: "Store announcement" },
     { type: "new_arrival", icon: "🆕", description: "New product or arrival" },

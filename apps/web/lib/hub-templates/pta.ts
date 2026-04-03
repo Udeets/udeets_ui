@@ -11,7 +11,7 @@ export const ptaConfig: HubTemplateConfig = {
     admin: "Board Member",
     about: "About Us",
   },
-  tabs: ["About", "Posts", "Events", "Attachments", "Members", "Polls"],
+  tabs: ["About", "Posts", "Attachments", "Events", "Members"],
   postTypes: [
     { type: "notice", icon: "📢", description: "Official PTA announcement" },
     { type: "event", icon: "📅", description: "School event or meeting" },

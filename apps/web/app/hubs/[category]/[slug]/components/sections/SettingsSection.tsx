@@ -1,7 +1,8 @@
 "use client";
 
-import { ChevronRight, Loader2, Save } from "lucide-react";
+import { ChevronRight, Loader2, Palette, Save } from "lucide-react";
 import type { HubRecord } from "@/lib/hubs";
+import { HUB_COLOR_THEMES, type HubColorThemeKey } from "@/lib/hub-color-themes";
 import type { HubMemberRoleItem } from "../hubTypes";
 import { ImageWithFallback, cn, initials } from "../hubUtils";
 import { SectionShell } from "../SectionShell";
@@ -97,6 +98,8 @@ export function SettingsSection({
   onWhoCanPostChange,
   whoCanUpload,
   onWhoCanUploadChange,
+  settingsAccentColor,
+  onSettingsAccentColorChange,
   settingsSaveSuccess,
   settingsSaveError,
 }: {
@@ -128,6 +131,8 @@ export function SettingsSection({
   onWhoCanPostChange: (value: string) => void;
   whoCanUpload: string;
   onWhoCanUploadChange: (value: string) => void;
+  settingsAccentColor: HubColorThemeKey;
+  onSettingsAccentColorChange: (value: HubColorThemeKey) => void;
   settingsSaveSuccess: string | null;
   settingsSaveError: string | null;
 }) {
@@ -216,6 +221,33 @@ export function SettingsSection({
             <div className="py-3">
               <span className="mb-1.5 block text-xs text-slate-400">Location</span>
               <TextInput value={settingsLocation} onChange={onSettingsLocationChange} placeholder="City or address" />
+            </div>
+            {/* Accent color theme */}
+            <div className="py-3">
+              <span className="mb-1.5 flex items-center gap-1.5 text-xs text-slate-400">
+                <Palette className="h-3 w-3" /> Hub Color Theme
+              </span>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {HUB_COLOR_THEMES.map((theme) => (
+                  <button
+                    key={theme.key}
+                    type="button"
+                    onClick={() => onSettingsAccentColorChange(theme.key)}
+                    className={cn(
+                      "flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition",
+                      settingsAccentColor === theme.key
+                        ? "border-slate-400 bg-slate-50 text-[#111111] shadow-sm"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                    )}
+                  >
+                    <span
+                      className="inline-block h-4 w-4 rounded-full border border-white shadow-sm"
+                      style={{ backgroundColor: theme.swatch }}
+                    />
+                    {theme.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
