@@ -5,13 +5,11 @@ import Image from "next/image";
 import {
   ArrowRight,
   Bell,
-  BookOpen,
   Calendar,
   ChevronDown,
   Church,
   Dumbbell,
   Globe,
-  HelpCircle,
   Home,
   MapPin,
   Megaphone,
@@ -187,12 +185,153 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
   );
 }
 
-/* ─── Stat card ─── */
-function StatCard({ value, label }: { value: string; label: string }) {
+/* ─── Animated phone mockup for hero ─── */
+function HeroPhoneMockup() {
+  const [activeScreen, setActiveScreen] = useState(0);
+  const screens = [
+    { icon: Megaphone, label: "Announcements", color: "from-[#0C5C57] to-[#1a8a82]" },
+    { icon: Calendar, label: "Events", color: "from-blue-500 to-blue-600" },
+    { icon: Users, label: "Members", color: "from-purple-500 to-purple-600" },
+    { icon: MapPin, label: "Discover", color: "from-amber-500 to-amber-600" },
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => setActiveScreen((s) => (s + 1) % screens.length), 2500);
+    return () => clearInterval(timer);
+  }, [screens.length]);
+
   return (
-    <div className="text-center">
-      <div className="text-4xl font-bold tracking-tight text-[#0C5C57] sm:text-5xl">{value}</div>
-      <div className="mt-2 text-sm font-medium text-slate-500">{label}</div>
+    <div className="relative mx-auto w-[280px] sm:w-[320px]">
+      {/* Phone frame */}
+      <div className="relative overflow-hidden rounded-[2.5rem] border-[8px] border-[#111111] bg-white shadow-2xl shadow-slate-900/20">
+        {/* Status bar */}
+        <div className="flex items-center justify-between bg-[#111111] px-6 py-2">
+          <span className="text-[10px] font-medium text-white/60">9:41</span>
+          <div className="flex gap-1">
+            <div className="h-1.5 w-3 rounded-sm bg-white/60" />
+            <div className="h-1.5 w-1.5 rounded-full bg-white/60" />
+          </div>
+        </div>
+
+        {/* App header */}
+        <div className="bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
+              <UdeetsLogoIcon className="h-6 w-6 text-white" alt="" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-white">My Community Hub</div>
+              <div className="text-[10px] text-white/60">128 members</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Animated screens */}
+        <div className="relative h-[320px] sm:h-[360px] overflow-hidden">
+          {screens.map((screen, i) => (
+            <div
+              key={screen.label}
+              className="absolute inset-0 flex flex-col items-center justify-center px-6 transition-all duration-500"
+              style={{
+                opacity: activeScreen === i ? 1 : 0,
+                transform: activeScreen === i ? "translateY(0)" : "translateY(20px)",
+              }}
+            >
+              <div className={cn("mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br", screen.color)}>
+                <screen.icon className="h-8 w-8 text-white" />
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-semibold text-[#111111]">{screen.label}</div>
+                <div className="mt-2 space-y-2">
+                  <div className="mx-auto h-2.5 w-48 rounded-full bg-slate-100" />
+                  <div className="mx-auto h-2.5 w-36 rounded-full bg-slate-100" />
+                  <div className="mx-auto h-2.5 w-40 rounded-full bg-slate-100" />
+                </div>
+              </div>
+              {/* Fake cards */}
+              <div className="mt-6 w-full space-y-3">
+                <div className="flex items-center gap-3 rounded-xl bg-[#FAFBFC] p-3">
+                  <div className="h-10 w-10 rounded-lg bg-slate-200" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-2 w-24 rounded-full bg-slate-200" />
+                    <div className="h-2 w-16 rounded-full bg-slate-100" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-xl bg-[#FAFBFC] p-3">
+                  <div className="h-10 w-10 rounded-lg bg-slate-200" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-2 w-20 rounded-full bg-slate-200" />
+                    <div className="h-2 w-14 rounded-full bg-slate-100" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom nav */}
+        <div className="flex items-center justify-around border-t border-slate-100 bg-white px-4 py-3">
+          {screens.map((s, i) => (
+            <button
+              key={s.label}
+              onClick={() => setActiveScreen(i)}
+              className="flex flex-col items-center gap-1"
+            >
+              <s.icon className={cn("h-4 w-4 transition", activeScreen === i ? "text-[#0C5C57]" : "text-slate-300")} />
+              <div className={cn("h-1 w-1 rounded-full transition", activeScreen === i ? "bg-[#0C5C57]" : "bg-transparent")} />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Floating badges */}
+      <div className="absolute -left-8 top-1/4 animate-[float_3s_ease-in-out_infinite] rounded-xl border border-slate-100 bg-white px-3 py-2 shadow-lg sm:-left-16">
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#EAF6F3]">
+            <Bell className="h-3.5 w-3.5 text-[#0C5C57]" />
+          </div>
+          <div className="text-xs font-medium text-[#111111]">New deet!</div>
+        </div>
+      </div>
+      <div className="absolute -right-6 top-2/3 animate-[float_3s_ease-in-out_infinite_1.5s] rounded-xl border border-slate-100 bg-white px-3 py-2 shadow-lg sm:-right-14">
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#EAF6F3]">
+            <Users className="h-3.5 w-3.5 text-[#0C5C57]" />
+          </div>
+          <div className="text-xs font-medium text-[#111111]">+3 joined</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Scroll-animated section wrapper ─── */
+function AnimateOnScroll({ children, className, delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setVisible(true); },
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(30px)",
+        transition: `opacity 0.6s ease ${delay}ms, transform 0.6s ease ${delay}ms`,
+      }}
+    >
+      {children}
     </div>
   );
 }
@@ -469,70 +608,36 @@ export default function Page() {
             </div>
 
             <div className="mt-16 flex justify-center sm:mt-20">
-              <div className="relative flex h-64 w-64 items-center justify-center rounded-[2.5rem] bg-gradient-to-br from-[#0C5C57] to-[#1a8a82] shadow-2xl shadow-teal-900/25 sm:h-80 sm:w-80 lg:h-96 lg:w-96">
-                <div className="pointer-events-none absolute inset-0 rounded-[2.5rem] bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.1),transparent_60%)]" />
-                <UdeetsLogoIcon
-                  className="h-32 w-32 text-white/80 drop-shadow-[0_4px_24px_rgba(255,255,255,0.1)] sm:h-40 sm:w-40 lg:h-48 lg:w-48"
-                  alt="uDeets logo"
-                />
-              </div>
+              <HeroPhoneMockup />
             </div>
           </div>
         </section>
 
-        {/* ─── STATS ─── */}
-        <section className="border-y border-slate-100 bg-white py-14 sm:py-16">
-          <div className="mx-auto grid max-w-4xl grid-cols-2 gap-8 px-4 sm:grid-cols-4 sm:px-6">
-            <StatCard value="500+" label="Active Hubs" />
-            <StatCard value="10K+" label="Community Members" />
-            <StatCard value="8" label="Hub Templates" />
-            <StatCard value="99.9%" label="Uptime" />
-          </div>
-        </section>
-
         {/* ─── FEATURES ─── */}
-        <section className="bg-[#FAFBFC] py-20 sm:py-28">
+        <section className="border-t border-slate-100 bg-[#FAFBFC] py-20 sm:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
-            <div className="mx-auto max-w-2xl text-center">
+            <AnimateOnScroll className="mx-auto max-w-2xl text-center">
               <h2 className="text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
                 Everything your community needs
               </h2>
               <p className="mt-4 text-base leading-relaxed text-slate-500">
                 From local businesses to neighborhoods, uDeets gives you the tools to stay connected and informed.
               </p>
-            </div>
+            </AnimateOnScroll>
 
             <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              <FeatureCard
-                icon={Megaphone}
-                title="Real-time Updates"
-                description="Post announcements, events, deals, and alerts. Your community sees them instantly."
-              />
-              <FeatureCard
-                icon={Users}
-                title="Membership & Roles"
-                description="Manage members with roles like admin, moderator, and member. Control who can post and view."
-              />
-              <FeatureCard
-                icon={Globe}
-                title="Public or Private"
-                description="Choose who can find and join your hub. Public hubs are discoverable; private hubs are invite-only."
-              />
-              <FeatureCard
-                icon={Bell}
-                title="Smart Notifications"
-                description="Members get notified about the deets that matter to them — no noise, just signal."
-              />
-              <FeatureCard
-                icon={MapPin}
-                title="Local Discovery"
-                description="Discover hubs near you. Find restaurants, communities, and organizations in your neighborhood."
-              />
-              <FeatureCard
-                icon={Shield}
-                title="Template System"
-                description="Pre-configured templates for restaurants, HOAs, schools, fitness clubs, and more. Get started in seconds."
-              />
+              {[
+                { icon: Megaphone, title: "Real-time Updates", description: "Post announcements, events, deals, and alerts. Your community sees them instantly." },
+                { icon: Users, title: "Membership & Roles", description: "Manage members with roles like admin, moderator, and member. Control who can post and view." },
+                { icon: Globe, title: "Public or Private", description: "Choose who can find and join your hub. Public hubs are discoverable; private hubs are invite-only." },
+                { icon: Bell, title: "Smart Notifications", description: "Members get notified about the deets that matter to them — no noise, just signal." },
+                { icon: MapPin, title: "Local Discovery", description: "Discover hubs near you. Find restaurants, communities, and organizations in your neighborhood." },
+                { icon: Shield, title: "Template System", description: "Pre-configured templates for restaurants, HOAs, schools, fitness clubs, and more. Get started in seconds." },
+              ].map((f, i) => (
+                <AnimateOnScroll key={f.title} delay={i * 100}>
+                  <FeatureCard icon={f.icon} title={f.title} description={f.description} />
+                </AnimateOnScroll>
+              ))}
             </div>
           </div>
         </section>
@@ -540,24 +645,25 @@ export default function Page() {
         {/* ─── USE CASES / TEMPLATES ─── */}
         <section className="py-20 sm:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
-            <div className="mx-auto max-w-2xl text-center">
+            <AnimateOnScroll className="mx-auto max-w-2xl text-center">
               <h2 className="text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
                 Built for every type of community
               </h2>
               <p className="mt-4 text-base leading-relaxed text-slate-500">
                 Choose a template to get started in seconds, or build your hub from scratch. Each template comes with sections, labels, and layouts designed for your specific use case.
               </p>
-            </div>
+            </AnimateOnScroll>
 
             <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {TEMPLATES.map((t) => (
-                <UseCaseCard
-                  key={t.slug}
-                  icon={t.icon}
-                  title={t.name}
-                  description={t.description}
-                  href={`/use-cases#${t.slug}`}
-                />
+              {TEMPLATES.map((t, i) => (
+                <AnimateOnScroll key={t.slug} delay={i * 80}>
+                  <UseCaseCard
+                    icon={t.icon}
+                    title={t.name}
+                    description={t.description}
+                    href={`/use-cases#${t.slug}`}
+                  />
+                </AnimateOnScroll>
               ))}
             </div>
 
@@ -577,16 +683,16 @@ export default function Page() {
         <section className="border-t border-slate-100 bg-[#FAFBFC] py-20 sm:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
             <div className="grid gap-16 lg:grid-cols-2 lg:gap-20">
-              <div>
+              <AnimateOnScroll>
                 <h2 className="text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
                   Up and running in minutes
                 </h2>
                 <p className="mt-4 text-base leading-relaxed text-slate-500">
                   No technical setup needed. Create your hub, customize it, and start sharing with your community.
                 </p>
-              </div>
+              </AnimateOnScroll>
 
-              <div className="space-y-0">
+              <AnimateOnScroll delay={200} className="space-y-0">
                 <StepCard
                   number={1}
                   title="Create your hub"
@@ -602,7 +708,7 @@ export default function Page() {
                   title="Grow your community"
                   description="Members join, subscribe, and stay informed. Everything they need — in one clean, organized hub."
                 />
-              </div>
+              </AnimateOnScroll>
             </div>
           </div>
         </section>
@@ -611,7 +717,7 @@ export default function Page() {
         {topHubs.length > 0 && (
           <section className="py-20 sm:py-28">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
-              <div className="mb-10 flex items-end justify-between gap-4">
+              <AnimateOnScroll className="mb-10 flex items-end justify-between gap-4">
                 <div>
                   <h2 className="text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
                     Explore hubs
@@ -625,7 +731,7 @@ export default function Page() {
                   View all
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
-              </div>
+              </AnimateOnScroll>
 
               <div
                 ref={hubsRowRef}
@@ -651,14 +757,14 @@ export default function Page() {
         {/* ─── TESTIMONIALS ─── */}
         <section className="border-t border-slate-100 bg-[#FAFBFC] py-20 sm:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
-            <div className="mx-auto max-w-2xl text-center">
+            <AnimateOnScroll className="mx-auto max-w-2xl text-center">
               <h2 className="text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
                 Loved by communities everywhere
               </h2>
               <p className="mt-4 text-base leading-relaxed text-slate-500">
                 See how organizations are using uDeets to stay connected.
               </p>
-            </div>
+            </AnimateOnScroll>
 
             <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {[
@@ -677,9 +783,10 @@ export default function Page() {
                   name: "Pastor James W.",
                   role: "Grace Community Church",
                 },
-              ].map((t) => (
-                <div
+              ].map((t, i) => (
+                <AnimateOnScroll
                   key={t.name}
+                  delay={i * 150}
                   className="rounded-2xl border border-slate-100 bg-white p-6"
                 >
                   <MessageSquare className="mb-4 h-5 w-5 text-[#A9D1CA]" />
@@ -688,7 +795,7 @@ export default function Page() {
                     <p className="text-sm font-semibold text-[#111111]">{t.name}</p>
                     <p className="text-xs text-slate-500">{t.role}</p>
                   </div>
-                </div>
+                </AnimateOnScroll>
               ))}
             </div>
           </div>
@@ -697,20 +804,20 @@ export default function Page() {
         {/* ─── FAQ ─── */}
         <section className="py-20 sm:py-28" id="faq">
           <div className="mx-auto max-w-3xl px-4 sm:px-6">
-            <div className="text-center">
+            <AnimateOnScroll className="text-center">
               <h2 className="text-3xl font-semibold tracking-tight text-[#111111] sm:text-4xl">
                 Frequently asked questions
               </h2>
               <p className="mt-4 text-base leading-relaxed text-slate-500">
                 Everything you need to know about uDeets and hubs.
               </p>
-            </div>
+            </AnimateOnScroll>
 
-            <div className="mt-12 rounded-2xl border border-slate-100 bg-white px-6 sm:px-8">
+            <AnimateOnScroll delay={200} className="mt-12 rounded-2xl border border-slate-100 bg-white px-6 sm:px-8">
               {FAQ_ITEMS.map((item) => (
                 <FAQItem key={item.question} question={item.question} answer={item.answer} />
               ))}
-            </div>
+            </AnimateOnScroll>
 
             <div className="mt-8 text-center">
               <p className="text-sm text-slate-500">
