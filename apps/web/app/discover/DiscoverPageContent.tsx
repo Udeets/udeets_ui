@@ -12,15 +12,13 @@ import type { Hub as SupabaseHub } from "@/types/hub";
 
 const HEADER_BG = "bg-white border-b border-slate-200/60";
 const FOOTER_BG = "bg-[#0C5C57]";
-const PAGE_BG = "bg-white";
-const SECTION_MINT_BG = "bg-white";
-const HERO_ACCENT_BG = SECTION_MINT_BG;
+const PAGE_BG = "bg-[#fafafa]";
 const NAV_TEXT = "text-[#111111]";
 const BRAND_TEXT_STYLE = "text-xl sm:text-2xl";
 const DISPLAY_HEADING = "font-semibold tracking-tight text-[#111111]";
-const FILTER_TEXT = "font-semibold tracking-tight";
-const ACTION_TEXT = "font-semibold tracking-tight text-[#111111]";
-const BUTTON_PRIMARY = "rounded-full bg-[#0C5C57] px-6 py-3 text-sm font-semibold tracking-tight text-white hover:bg-[#094a46]";
+const FILTER_TEXT = "font-medium";
+const ACTION_TEXT = "font-medium text-[#111111]";
+const BUTTON_PRIMARY = "rounded-full bg-[#0C5C57] px-6 py-2.5 text-sm font-medium text-white hover:bg-[#094a46] transition-colors duration-150";
 const ACTIVE_CHIP = "bg-[#0C5C57] text-white border-transparent";
 
 const ROUTE_AUTH = "/auth";
@@ -208,80 +206,75 @@ function LightArrowButton({
   );
 }
 
-function HubCard({ hub }: { hub: Hub }) {
+/* ── Band-app style hub list item ───────────────────────────────── */
+function HubListItem({ hub }: { hub: Hub }) {
   const [imageFailed, setImageFailed] = useState(false);
   const isLogo = isUdeetsLogoSrc(hub.image);
 
   return (
     <Link
       href={hub.href}
-      className="w-[min(320px,calc(100vw-2rem))] flex-shrink-0 overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition hover:border-slate-300 sm:w-[320px]"
+      className="flex items-start gap-4 rounded-lg px-2 py-3 transition-colors duration-150 hover:bg-white sm:gap-5 sm:px-3 sm:py-4"
     >
-      {hub.image && !imageFailed ? (
-        <img
-          src={hub.image}
-          alt={hub.name}
-          className={cn("h-44 w-full", isLogo ? "object-contain" : "object-cover")}
-          loading="lazy"
-          onError={() => setImageFailed(true)}
-        />
-      ) : (
-        <div className="h-44 w-full bg-gradient-to-br from-[#0C5C57] to-[#1a8a82] flex items-center justify-center">
-          <span className="text-white/40 text-sm font-medium">{hub.name?.charAt(0)?.toUpperCase()}</span>
-        </div>
-      )}
-      <div className="min-w-0 p-6">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-xs bg-[#E3F1EF] text-slate-700 px-3 py-1 rounded-full font-semibold">
-            {hub.visibility}
-          </span>
-          <span className="text-xs text-gray-500">{hub.membersLabel}</span>
-        </div>
+      {/* Square thumbnail */}
+      <div className="h-[72px] w-[72px] flex-shrink-0 overflow-hidden rounded-lg sm:h-[88px] sm:w-[88px]">
+        {hub.image && !imageFailed ? (
+          <img
+            src={hub.image}
+            alt={hub.name}
+            className={cn("h-full w-full", isLogo ? "object-contain bg-white" : "object-cover")}
+            loading="lazy"
+            onError={() => setImageFailed(true)}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#0C5C57] to-[#1a8a82]">
+            <span className="text-2xl font-semibold text-white/70">{hub.name?.charAt(0)?.toUpperCase()}</span>
+          </div>
+        )}
+      </div>
 
-        <h3 className={cn("mt-3 break-words text-lg", DISPLAY_HEADING)}>{hub.name}</h3>
-        <p className="mt-2 break-words text-sm text-gray-600">{hub.description}</p>
-
-        <div className="text-xs text-gray-500 mt-4 flex justify-between">
-          <span className="min-w-0 break-words">{hub.locationLabel}</span>
-          <span>{hub.distanceMi.toFixed(1)} mi</span>
+      {/* Hub info */}
+      <div className="min-w-0 flex-1 pt-0.5">
+        <h3 className="truncate text-[15px] font-semibold tracking-tight text-[#111111]">
+          {hub.name}
+        </h3>
+        <p className="mt-1 line-clamp-2 text-[13px] leading-snug text-gray-500">
+          {hub.description}
+        </p>
+        <div className="mt-2 flex items-center gap-1.5 text-[12px] text-gray-400">
+          <span>{hub.membersLabel}</span>
+          {hub.locationLabel ? (
+            <>
+              <span>·</span>
+              <span className="truncate">{hub.locationLabel}</span>
+            </>
+          ) : null}
         </div>
       </div>
     </Link>
   );
 }
 
-function CarouselSection({ title, hubs }: { title: string; hubs: Hub[] }) {
-  const rowRef = useRef<HTMLDivElement | null>(null);
-
-  const scrollBy = (delta: number) => {
-    const el = rowRef.current;
-    if (!el) return;
-    el.scrollBy({ left: delta, behavior: "smooth" });
-  };
-
+/* ── Hub list grid (2 cols on desktop, 1 col on mobile) ─────────── */
+function HubListSection({ hubs }: { hubs: Hub[] }) {
   return (
-    <section className="py-10">
-      <div className="mb-6 flex items-end justify-between gap-3">
-        <h2 className={cn("text-2xl sm:text-3xl", DISPLAY_HEADING)}>{title}</h2>
-
-        <div className="hidden items-center gap-2 sm:flex">
-          <LightArrowButton dir="left" ariaLabel={`${title} scroll left`} onClick={() => scrollBy(-420)} />
-          <LightArrowButton dir="right" ariaLabel={`${title} scroll right`} onClick={() => scrollBy(420)} />
+    <section className="py-4">
+      {hubs.length ? (
+        <div className="grid grid-cols-1 gap-0 divide-y divide-slate-100 md:grid-cols-2 md:gap-x-6 md:divide-y-0">
+          {hubs.map((h) => (
+            <div key={h.id} className="border-b border-slate-100 last:border-b-0 md:border-b-0">
+              <HubListItem hub={h} />
+            </div>
+          ))}
         </div>
-      </div>
-
-      <div ref={rowRef} className="flex gap-6 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>
-        {hubs.length ? (
-          hubs.map((h) => <HubCard key={h.id} hub={h} />)
-        ) : (
-          <div className="w-full rounded-xl border border-slate-100 bg-white p-8 text-center shadow-sm">
-            <h3 className="text-xl font-semibold tracking-tight text-[#111111]">No hubs yet</h3>
-            <p className="mt-3 text-sm leading-relaxed text-slate-600">
-              Create the first hub to see it appear here.
-            </p>
-          </div>
-        )}
-      </div>
+      ) : (
+        <div className="rounded-xl bg-white px-8 py-12 text-center">
+          <p className="text-base font-medium text-[#111111]">No hubs yet</p>
+          <p className="mt-2 text-sm text-gray-500">
+            Create the first hub to see it appear here.
+          </p>
+        </div>
+      )}
     </section>
   );
 }
@@ -479,27 +472,11 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
         </div>
       </header>
 
-      <section className={cn("px-4 py-14 text-center sm:px-6 sm:py-20 lg:px-10", HERO_ACCENT_BG)}>
-        <div className="mx-auto max-w-7xl">
-          <h1 className={cn("text-3xl sm:text-5xl lg:text-6xl", DISPLAY_HEADING)}>Discover Hubs</h1>
-          <p className="mt-4 text-base text-slate-600 sm:text-lg lg:text-xl">Explore communities, business and places near you</p>
-
-          <div className="mx-auto mt-10 flex w-full max-w-3xl items-center rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm sm:px-4">
-            <div className="mr-2 text-gray-400">
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 21l-4.3-4.3" />
-                <circle cx="11" cy="11" r="7" />
-              </svg>
-            </div>
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search hubs, places, communities..."
-              className="min-w-0 flex-1 text-base text-gray-700 outline-none sm:text-lg"
-            />
-          </div>
-
-          <div className="mt-8">
+      {/* ── Compact header with search ────────────────────────────── */}
+      <section className="bg-white px-4 pb-4 pt-8 sm:px-6 lg:px-10">
+        <div className="mx-auto max-w-4xl">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-semibold tracking-tight text-[#111111] sm:text-3xl">Discover</h1>
             <Link
               href={
                 searchParams.get("demo_preview") === "1"
@@ -509,29 +486,44 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
                     : ROUTE_AUTH
               }
               data-demo-target={searchParams.get("demo_preview") === "1" ? "discover-create-hub" : undefined}
-              className={cn("inline-block transition", BUTTON_PRIMARY)}
+              className={cn("transition", BUTTON_PRIMARY)}
             >
               Create Hub
             </Link>
           </div>
+
+          <div className="mt-5 flex items-center rounded-lg border border-slate-200 bg-[#fafafa] px-3 py-2.5">
+            <svg viewBox="0 0 24 24" className="mr-2.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 21l-4.3-4.3" />
+              <circle cx="11" cy="11" r="7" />
+            </svg>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search Bands, Pages, and Posts"
+              className="min-w-0 flex-1 bg-transparent text-sm text-[#111111] outline-none placeholder:text-gray-400"
+            />
+          </div>
         </div>
       </section>
 
-      <section className="py-6 relative z-40">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
-          <div className="flex items-center gap-3">
+      {/* ── Tab-style category filters ──────────────────────────── */}
+      <section className="border-b border-slate-200 bg-white relative z-40">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-10">
+          <div className="flex items-center">
             <div
               ref={chipsRef}
-              className="flex items-center gap-3 overflow-x-auto pb-2 flex-1"
+              className="flex items-center gap-0 overflow-x-auto flex-1"
               style={{ scrollbarWidth: "none" }}
             >
               <button
                 onClick={() => setActiveCategory("All")}
                 className={cn(
-                  `px-6 py-3 rounded-full border transition whitespace-nowrap ${FILTER_TEXT}`,
+                  "px-4 py-3 text-sm whitespace-nowrap transition-colors duration-150 border-b-2",
+                  FILTER_TEXT,
                   activeCategory === "All"
-                    ? ACTIVE_CHIP
-                    : "bg-slate-50 text-gray-700 border-gray-200 hover:border-slate-300"
+                    ? "border-[#0C5C57] text-[#0C5C57]"
+                    : "border-transparent text-gray-500 hover:text-[#111111]"
                 )}
               >
                 All
@@ -545,18 +537,19 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
                     setNearMeOpen((v) => !v);
                   }}
                   className={cn(
-                    `flex items-center gap-2 px-6 py-3 rounded-full border transition whitespace-nowrap ${FILTER_TEXT}`,
+                    "flex items-center gap-1.5 px-4 py-3 text-sm whitespace-nowrap transition-colors duration-150 border-b-2",
+                    FILTER_TEXT,
                     nearMe !== "Any"
-                      ? ACTIVE_CHIP
-                      : "bg-slate-50 text-gray-700 border-gray-200 hover:border-slate-300"
+                      ? "border-[#0C5C57] text-[#0C5C57]"
+                      : "border-transparent text-gray-500 hover:text-[#111111]"
                   )}
                 >
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M12 22s7-6.2 7-12A7 7 0 1 0 5 10c0 5.8 7 12 7 12Z" />
                     <circle cx="12" cy="10" r="3" />
                   </svg>
                   <span>Near me</span>
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M6 9l6 6 6-6" />
                   </svg>
                 </button>
@@ -567,20 +560,16 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
                   key={c}
                   onClick={() => setActiveCategory(c)}
                   className={cn(
-                    `px-6 py-3 rounded-full border transition whitespace-nowrap ${FILTER_TEXT}`,
+                    "px-4 py-3 text-sm whitespace-nowrap transition-colors duration-150 border-b-2",
+                    FILTER_TEXT,
                     activeCategory === c
-                      ? ACTIVE_CHIP
-                      : "bg-slate-50 text-gray-700 border-gray-200 hover:border-slate-300"
+                      ? "border-[#0C5C57] text-[#0C5C57]"
+                      : "border-transparent text-gray-500 hover:text-[#111111]"
                   )}
                 >
                   {c}
                 </button>
               ))}
-            </div>
-
-            <div className="hidden md:flex items-center gap-2">
-              <LightArrowButton dir="left" ariaLabel="Scroll categories left" onClick={() => scrollChipsBy(-420)} disabled={!canChipLeft} />
-              <LightArrowButton dir="right" ariaLabel="Scroll categories right" onClick={() => scrollChipsBy(420)} disabled={!canChipRight} />
             </div>
           </div>
         </div>
@@ -610,33 +599,44 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
           document.body
         )}
 
-      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-10">
+      <main className="mx-auto max-w-4xl px-4 py-4 sm:px-6 lg:px-10">
         {supabaseLoadState === "loading" ? (
-          <div className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
-            Loading your Supabase-backed hubs...
+          <div className="mb-4 rounded-lg bg-white px-4 py-3 text-sm text-slate-500">
+            Loading hubs...
           </div>
         ) : null}
 
         {supabaseLoadState === "error" ? (
-          <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">
-            {supabaseLoadError ?? "Supabase-backed hubs could not be loaded."}
+          <div className="mb-4 rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-600">
+            {supabaseLoadError ?? "Could not load hubs."}
           </div>
         ) : null}
 
-        {isResultsMode && activeCategory !== "All" ? (
-          <CarouselSection title={`${activeCategory} Results`} hubs={allFilteredHubs} />
-        ) : isResultsMode ? (
-          <CarouselSection title="Results" hubs={allFilteredHubs} />
-        ) : activeCategory !== "All" ? (
-          <CarouselSection title={activeCategory} hubs={allFilteredHubs} />
-        ) : (
-          <CarouselSection title="All Hubs" hubs={allFilteredHubs} />
-        )}
+        {/* Browse by Location link (like Band app) */}
+        {nearMe === "Any" && activeCategory === "All" && !query.trim() ? (
+          <button
+            type="button"
+            onClick={() => {
+              updateNearMePos();
+              setNearMeOpen((v) => !v);
+            }}
+            className="mb-2 flex w-full items-center gap-2 rounded-lg bg-white px-4 py-3 text-sm font-medium text-[#111111] transition hover:bg-slate-50"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4 text-[#0C5C57]" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 22s7-6.2 7-12A7 7 0 1 0 5 10c0 5.8 7 12 7 12Z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            Browse by Location
+            <IconChevronRight className="ml-auto h-4 w-4 text-gray-400" />
+          </button>
+        ) : null}
+
+        <HubListSection hubs={allFilteredHubs} />
       </main>
 
-      <footer className={cn(FOOTER_BG, "py-6 text-white")}>
-        <div className="flex w-full items-center justify-between px-4 text-sm sm:px-6 sm:text-base lg:px-10">
-          <p>© uDeets. All rights reserved.</p>
+      <footer className="border-t border-slate-100 bg-white py-6">
+        <div className="mx-auto max-w-4xl px-4 text-xs text-gray-400 sm:px-6 lg:px-10">
+          uDeets © {new Date().getFullYear()}
         </div>
       </footer>
     </div>

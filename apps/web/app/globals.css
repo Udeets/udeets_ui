@@ -14,10 +14,11 @@
   --font-mono: var(--font-system-mono);
 }
 
+/* Force light mode — dark theme is Phase 2 */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #ffffff;
+    --foreground: #171717;
   }
 }
 
