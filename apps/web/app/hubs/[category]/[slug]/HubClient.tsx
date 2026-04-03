@@ -284,6 +284,9 @@ export default function HubClient({
   const knownActivityCount = feedItemCount + hubContent.events.length + recentPhotos.length;
   const fileItems: string[] = [];
   const [memberItems, setMemberItems] = useState<Array<{ userId: string; role: string; fullName: string; avatarUrl: string | null; email: string | null }>>([]);
+  const [pendingRequests, setPendingRequests] = useState<Array<{ userId: string; fullName: string; avatarUrl: string | null; email: string | null; requestedAt?: string | null }>>([]);
+  const [processingUserIds, setProcessingUserIds] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     let ignore = false;
 
@@ -291,7 +294,7 @@ export default function HubClient({
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
 
-      // Step 1: get members
+      // Step 1: get active members
       const { data: members, error: membersError } = await supabase
         .from("hub_members")
         .select("user_id, role")
@@ -326,18 +329,72 @@ export default function HubClient({
       }
     }
 
+    async function loadPendingRequests() {
+      const { listPendingRequests, fetchProfilesForUsers } = await import("@/lib/services/members/manage-members");
+      const pending = await listPendingRequests(hub.id);
+      if (!pending.length) {
+        if (!ignore) setPendingRequests([]);
+        return;
+      }
+      const profileMap = await fetchProfilesForUsers(pending.map((p) => p.userId));
+      if (!ignore) {
+        setPendingRequests(pending.map((p) => {
+          const profile = profileMap.get(p.userId);
+          return {
+            userId: p.userId,
+            fullName: profile?.fullName ?? p.userId.slice(0, 8),
+            avatarUrl: profile?.avatarUrl ?? null,
+            email: profile?.email ?? null,
+            requestedAt: p.joinedAt,
+          };
+        }));
+      }
+    }
+
     async function init() {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.access_token && !ignore) {
         loadMembers();
+        loadPendingRequests();
       }
     }
 
     init();
     return () => { ignore = true; };
   }, [hub.id]);
+
+  const handleApproveRequest = async (userId: string) => {
+    setProcessingUserIds((prev) => new Set(prev).add(userId));
+    try {
+      const { approveMemberRequest } = await import("@/lib/services/members/manage-members");
+      await approveMemberRequest(hub.id, userId);
+      // Move from pending to active members list
+      const approved = pendingRequests.find((r) => r.userId === userId);
+      setPendingRequests((prev) => prev.filter((r) => r.userId !== userId));
+      if (approved) {
+        setMemberItems((prev) => [...prev, { userId: approved.userId, role: "member", fullName: approved.fullName, avatarUrl: approved.avatarUrl, email: approved.email }]);
+      }
+    } catch (error) {
+      console.error("[approve]", error);
+    } finally {
+      setProcessingUserIds((prev) => { const next = new Set(prev); next.delete(userId); return next; });
+    }
+  };
+
+  const handleRejectRequest = async (userId: string) => {
+    setProcessingUserIds((prev) => new Set(prev).add(userId));
+    try {
+      const { rejectMemberRequest } = await import("@/lib/services/members/manage-members");
+      await rejectMemberRequest(hub.id, userId);
+      setPendingRequests((prev) => prev.filter((r) => r.userId !== userId));
+    } catch (error) {
+      console.error("[reject]", error);
+    } finally {
+      setProcessingUserIds((prev) => { const next = new Set(prev); next.delete(userId); return next; });
+    }
+  };
   const memberRoleItems: Array<{ name: string; role: string }> = [];
   const {
     activeSection,
@@ -588,6 +645,11 @@ export default function HubClient({
           onOpenSettings={openSettingsPanel}
           onOpenAdminsEditor={() => setIsAdminsEditorOpen(true)}
           onOpenPosts={() => setActiveSection("Posts")}
+          isCreatorAdmin={isCreatorAdmin}
+          pendingRequests={pendingRequests}
+          processingUserIds={processingUserIds}
+          onApproveRequest={handleApproveRequest}
+          onRejectRequest={handleRejectRequest}
         />
       );
     }

@@ -1,7 +1,7 @@
 "use client";
 
 import { AdminsSection } from "../sections/AdminsSection";
-import { MembersSection as HubMembersSection, type MemberItem } from "../sections/MembersSection";
+import { MembersSection as HubMembersSection, type MemberItem, type PendingRequestItem } from "../sections/MembersSection";
 
 type MembersPeopleSectionProps = {
   activePeopleView: "members" | "admins";
@@ -23,6 +23,11 @@ type MembersPeopleSectionProps = {
   onOpenSettings: () => void;
   onOpenAdminsEditor: () => void;
   onOpenPosts: () => void;
+  isCreatorAdmin?: boolean;
+  pendingRequests?: PendingRequestItem[];
+  processingUserIds?: Set<string>;
+  onApproveRequest?: (userId: string) => void;
+  onRejectRequest?: (userId: string) => void;
 };
 
 export function MembersSection({
@@ -45,6 +50,11 @@ export function MembersSection({
   onOpenSettings,
   onOpenAdminsEditor,
   onOpenPosts,
+  isCreatorAdmin,
+  pendingRequests,
+  processingUserIds,
+  onApproveRequest,
+  onRejectRequest,
 }: MembersPeopleSectionProps) {
   if (activePeopleView === "admins") {
     return canAccessAdmins ? (
@@ -68,5 +78,16 @@ export function MembersSection({
     ) : null;
   }
 
-  return <HubMembersSection membersPanelMode={membersPanelMode} memberItems={memberItems} onInviteMembers={onInviteMembers} />;
+  return (
+    <HubMembersSection
+      membersPanelMode={membersPanelMode}
+      memberItems={memberItems}
+      onInviteMembers={onInviteMembers}
+      isCreatorAdmin={isCreatorAdmin}
+      pendingRequests={pendingRequests}
+      processingUserIds={processingUserIds}
+      onApproveRequest={onApproveRequest}
+      onRejectRequest={onRejectRequest}
+    />
+  );
 }
