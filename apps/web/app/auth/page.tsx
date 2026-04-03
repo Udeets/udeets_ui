@@ -219,18 +219,26 @@ function AuthPageContent() {
             <UdeetsBrandLockup textClassName={BRAND_TEXT_STYLE} priority />
           </Link>
 
-          <nav className="flex items-center gap-1.5 sm:gap-2">
+          <nav className="flex items-center gap-1 sm:gap-1.5">
             <Link
               href="/discover"
-              className={`rounded-full px-4 py-2 text-sm font-medium ${NAV_TEXT} transition hover:bg-[var(--ud-bg-subtle)] sm:px-5 sm:py-2.5`}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
+              aria-label="Discover"
             >
-              Discover
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>
             </Link>
             <Link
               href={isAuthenticated ? "/dashboard" : "/"}
-              className={`rounded-full px-4 py-2 text-sm font-medium ${NAV_TEXT} transition hover:bg-[var(--ud-bg-subtle)] sm:px-5 sm:py-2.5`}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
+              aria-label="Home"
             >
-              Home
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
             </Link>
             <ThemeToggle />
           </nav>

@@ -213,7 +213,7 @@ function HubLauncher({
               className={cn(
                 "relative rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-150",
                 selectedView === tab.key
-                  ? "bg-white text-[var(--ud-text-primary)] shadow-sm"
+                  ? "bg-[var(--ud-bg-card)] text-[var(--ud-text-primary)] shadow-sm"
                   : "text-[var(--ud-text-secondary)] hover:text-[var(--ud-text-primary)]",
               )}
             >
@@ -672,7 +672,7 @@ function DashboardPageContent() {
                     </button>
 
                     {isEventsDropdownOpen ? (
-                      <div className="absolute right-0 top-12 z-10 w-64 rounded-xl bg-white shadow-lg border border-[var(--ud-border-subtle)]">
+                      <div className="absolute right-0 top-12 z-10 w-64 rounded-xl bg-[var(--ud-bg-card)] shadow-lg border border-[var(--ud-border-subtle)]">
                         <div className="p-3">
                           {isLoadingEvents ? (
                             <p className="text-center text-sm text-slate-500 py-4">Loading events…</p>
@@ -702,7 +702,7 @@ function DashboardPageContent() {
                   </div>
 
                   {isFilterMenuOpen ? (
-                    <div className="absolute right-0 top-12 z-10 w-48 rounded-xl bg-white p-2 shadow-sm border border-[var(--ud-border-subtle)]">
+                    <div className="absolute right-0 top-12 z-10 w-48 rounded-xl bg-[var(--ud-bg-card)] p-2 shadow-sm border border-[var(--ud-border-subtle)]">
                       {FEED_FILTERS.map((filter) => (
                         <button
                           key={filter}
@@ -779,12 +779,12 @@ function DashboardPageContent() {
                         <Link
                           key={item.id}
                           href={item.href}
-                          className="block rounded-lg border border-[var(--ud-border-subtle)] bg-white p-4 transition-colors duration-150 hover:border-[var(--ud-border)]"
+                          className="block rounded-lg border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] p-4 transition-colors duration-150 hover:border-[var(--ud-border)]"
                         >
                           {cardContent}
                         </Link>
                       ) : (
-                        <article key={item.id} className="rounded-lg border border-[var(--ud-border-subtle)] bg-white p-4">
+                        <article key={item.id} className="rounded-lg border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] p-4">
                           {cardContent}
                         </article>
                       );
@@ -800,7 +800,7 @@ function DashboardPageContent() {
                       your hubs, they will appear here in one combined feed.
                     </p>
                     <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-lg bg-white px-5 py-4 text-left shadow-sm border border-[var(--ud-border-subtle)]">
+                      <div className="rounded-lg bg-[var(--ud-bg-card)] px-5 py-4 text-left shadow-sm border border-[var(--ud-border-subtle)]">
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--ud-text-secondary)]">Current view</p>
                         <p className={cn("mt-2 text-base font-semibold tracking-tight", TEXT_DARK)}>
                           {selectedHubView === "my-hubs" ? "My Hubs" : selectedHubView === "joined" ? "Joined Hubs" : "Requested Hubs"}
@@ -809,7 +809,7 @@ function DashboardPageContent() {
                           {searchQuery ? `Searching for "${searchQuery}".` : "Search and filter controls are ready here."}
                         </p>
                       </div>
-                      <div className="rounded-lg bg-white px-5 py-4 text-left shadow-sm border border-[var(--ud-border-subtle)]">
+                      <div className="rounded-lg bg-[var(--ud-bg-card)] px-5 py-4 text-left shadow-sm border border-[var(--ud-border-subtle)]">
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--ud-text-secondary)]">Next step</p>
                         <p className={cn("mt-2 text-base font-semibold tracking-tight", TEXT_DARK)}>
                           {selectedFeedFilter === "All" ? "Browse all activity" : `Filtered by ${selectedFeedFilter}`}

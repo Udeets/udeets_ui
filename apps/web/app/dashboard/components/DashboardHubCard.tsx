@@ -75,7 +75,7 @@ export function DashboardHubCard({
         <div className="aspect-[3/2] w-full">
           <DashboardImage src={hub.coverImage} alt={`${hub.name} hub image`} hubName={hub.name} className="h-full w-full" />
         </div>
-        <div className="absolute bottom-0 left-3 z-10 h-10 w-10 translate-y-[30%] overflow-hidden rounded-full border-2 border-white bg-[var(--ud-bg-card)] p-0.5 shadow-sm">
+        <div className="absolute bottom-0 left-3 z-10 h-10 w-10 translate-y-[30%] overflow-hidden rounded-full border-2 border-[var(--ud-bg-card)] bg-[var(--ud-bg-card)] p-0.5 shadow-sm">
           <div className="h-full w-full overflow-hidden rounded-full">
             <DashboardImage src={hub.dpImage} alt={`${hub.name} avatar`} hubName={hub.name} className="h-full w-full" />
           </div>
