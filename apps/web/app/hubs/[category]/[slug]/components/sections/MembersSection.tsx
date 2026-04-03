@@ -54,13 +54,15 @@ export function MembersSection({
         <div className="divide-y divide-slate-100">
           {memberItems.map((member) => (
             <div key={member.userId} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-              {member.avatarUrl ? (
-                <img src={member.avatarUrl} alt={member.fullName} className="h-9 w-9 rounded-full object-cover" />
-              ) : (
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-[#EAF6F3] text-xs font-semibold text-[#0C5C57]">
-                  {initials(member.fullName)}
-                </span>
-              )}
+              <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-[#EAF6F3]">
+                {member.avatarUrl ? (
+                  <img src={member.avatarUrl} alt={member.fullName} className="h-full w-full object-cover" />
+                ) : (
+                  <span className="grid h-full w-full place-items-center text-xs font-semibold text-[#0C5C57]">
+                    {initials(member.fullName)}
+                  </span>
+                )}
+              </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-[#111111]">{member.fullName}</p>
                 {member.email ? <p className="truncate text-xs text-slate-400">{member.email}</p> : null}

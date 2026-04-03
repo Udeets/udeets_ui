@@ -60,8 +60,12 @@ function AuthPageContent() {
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState("");
   const [dismissedQueryError, setDismissedQueryError] = useState<string | null>(null);
+  const [fullName, setFullName] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isAppleLoading, setIsAppleLoading] = useState(false);
+  const [isEmailLoading, setIsEmailLoading] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
   const visibleError = error || (queryError && dismissedQueryError !== queryError ? queryError : "");
 
   useEffect(() => {
@@ -86,10 +90,89 @@ function AuthPageContent() {
     };
   }, [router]);
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setDismissedQueryError(queryError);
-    setError("Email/password sign-in is not enabled yet. Continue with Google.");
+    setError("");
+
+    // --- Validation (#18) ---
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError("Please enter your email address.");
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+    if (!password) {
+      setError("Please enter a password.");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+    if (mode === "signup") {
+      if (!fullName.trim()) {
+        setError("Please enter your full name.");
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError("Passwords do not match.");
+        return;
+      }
+    }
+
+    setIsEmailLoading(true);
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+
+      if (mode === "signup") {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: trimmedEmail,
+          password,
+          options: {
+            data: { full_name: fullName.trim() },
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          },
+        });
+        if (signUpError) {
+          setError(signUpError.message);
+          return;
+        }
+        // If email confirmation is required, Supabase returns a user but no session
+        if (data.user && !data.session) {
+          setError("");
+          setSignupSuccess(true);
+          return;
+        }
+        // If auto-confirmed, upsert profile and redirect
+        if (data.session) {
+          router.replace("/dashboard");
+        }
+      } else {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: trimmedEmail,
+          password,
+        });
+        if (signInError) {
+          if (signInError.message.includes("Invalid login credentials")) {
+            setError("Invalid email or password. Please try again.");
+          } else {
+            setError(signInError.message);
+          }
+          return;
+        }
+        router.replace("/dashboard");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    } finally {
+      setIsEmailLoading(false);
+    }
   }
 
   async function handleAppleSignIn() {
@@ -165,7 +248,7 @@ function AuthPageContent() {
             <div className="flex bg-gray-100 rounded-xl p-1">
               <button
                 type="button"
-                onClick={() => setMode("signin")}
+                onClick={() => { setMode("signin"); setError(""); setSignupSuccess(false); }}
                 className={cx(
                   "flex-1 py-2 px-4 text-sm font-medium rounded-lg transition",
                   mode === "signin"
@@ -177,7 +260,7 @@ function AuthPageContent() {
               </button>
               <button
                 type="button"
-                onClick={() => setMode("signup")}
+                onClick={() => { setMode("signup"); setError(""); setSignupSuccess(false); }}
                 className={cx(
                   "flex-1 py-2 px-4 text-sm font-medium rounded-lg transition",
                   mode === "signup"
@@ -223,10 +306,27 @@ function AuthPageContent() {
           </div>
 
           {/* Form */}
+          {signupSuccess ? (
+            <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-center">
+              <p className="text-sm font-medium text-green-800">Check your email!</p>
+              <p className="mt-1 text-sm text-green-700">
+                We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account.
+              </p>
+            </div>
+          ) : (
           <form onSubmit={onSubmit} className="space-y-4">
+            {mode === "signup" && (
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Full Name"
+                className="w-full rounded-xl border border-gray-300 px-3 py-3 focus:ring-2 focus:ring-[#A9D1CA]"
+              />
+            )}
+
             <input
               type="email"
-              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email"
@@ -235,12 +335,21 @@ function AuthPageContent() {
 
             <input
               type="password"
-              required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
               className="w-full rounded-xl border border-gray-300 px-3 py-3 focus:ring-2 focus:ring-[#A9D1CA]"
             />
+
+            {mode === "signup" && (
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm Password"
+                className="w-full rounded-xl border border-gray-300 px-3 py-3 focus:ring-2 focus:ring-[#A9D1CA]"
+              />
+            )}
 
             {visibleError && <p className="text-sm text-red-600">{visibleError}</p>}
 
@@ -263,9 +372,14 @@ function AuthPageContent() {
 
             <button
               type="submit"
-              className={cx(BUTTON_PRIMARY, "w-full")}
+              disabled={isEmailLoading}
+              className={cx(BUTTON_PRIMARY, "w-full disabled:cursor-not-allowed disabled:opacity-60")}
             >
-              {mode === "signin" ? "Sign In" : "Create Account"}
+              {isEmailLoading
+                ? "Please wait..."
+                : mode === "signin"
+                  ? "Sign In"
+                  : "Create Account"}
             </button>
 
             <p className="text-xs text-center text-gray-500 mt-4">
@@ -280,6 +394,7 @@ function AuthPageContent() {
               .
             </p>
           </form>
+          )}
         </div>
       </main>
 

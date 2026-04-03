@@ -599,7 +599,7 @@ export default function HubClient({
           hubLocationLabel={hub.locationLabel}
           connectLinks={connectLinks}
           isCreatorAdmin={isCreatorAdmin}
-          userRole={isCreatorAdmin ? "creator" : isJoined ? "member" : null}
+          userRole={isCreatorAdmin ? "creator" : isJoined ? "member" : isPending ? "pending" : null}
           onMembershipAction={handleMembershipAction}
           onInviteMembers={() => openCenterMembers("invite")}
           onOpenSettings={openSettingsPanel}

@@ -113,6 +113,7 @@ function locationLabelFor(hub: SupabaseHub) {
 
 function toDiscoverHub(hub: SupabaseHub): Hub {
   const imageSrc = hub.dp_image_url || hub.cover_image_url || undefined;
+  const vis = (hub.visibility ?? "public").toString().toLowerCase();
 
   return {
     id: hub.id,
@@ -121,7 +122,7 @@ function toDiscoverHub(hub: SupabaseHub): Hub {
     locationLabel: locationLabelFor(hub),
     distanceMi: 0,
     membersLabel: "New hub",
-    visibility: "Public",
+    visibility: vis === "private" ? "Private" : "Public",
     description: hub.description || "A new uDeets hub is getting set up.",
     href: `/hubs/${hub.category}/${hub.slug}`,
     image: normalizePublicSrc(imageSrc),
@@ -292,9 +293,9 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
   const [activeCategory, setActiveCategory] = useState<Category>("All");
   const [nearMe, setNearMe] = useState<NearMeOption>("Any");
   const [nearMeOpen, setNearMeOpen] = useState(false);
-  const [supabaseHubs] = useState<Hub[]>(() => (initialHubs ?? []).map(toDiscoverHub));
-  const [supabaseLoadState] = useState<SupabaseLoadState>(initialHubs && initialHubs.length > 0 ? "success" : "idle");
-  const [supabaseLoadError] = useState<string | null>(null);
+  const [supabaseHubs, setSupabaseHubs] = useState<Hub[]>(() => (initialHubs ?? []).map(toDiscoverHub));
+  const [supabaseLoadState, setSupabaseLoadState] = useState<SupabaseLoadState>(initialHubs && initialHubs.length > 0 ? "success" : "idle");
+  const [supabaseLoadError, setSupabaseLoadError] = useState<string | null>(null);
 
   const chipsRef = useRef<HTMLDivElement | null>(null);
   const [canChipLeft, setCanChipLeft] = useState(false);
@@ -398,13 +399,32 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
     };
   }, [nearMeOpen]);
 
-  // Check auth state — used for UI only (header link, Create Hub routing)
+  // Check auth state and refetch hubs with user token so user's own hubs appear (#21)
   useEffect(() => {
     let cancelled = false;
 
     getCurrentSession()
-      .then((session) => {
-        if (!cancelled) setIsAuthenticated(Boolean(session));
+      .then(async (session) => {
+        if (cancelled) return;
+        setIsAuthenticated(Boolean(session));
+
+        // If authenticated, refetch hubs with the user's token to include user's own hubs
+        if (session) {
+          try {
+            const { createClient } = await import("@/lib/supabase/client");
+            const supabase = createClient();
+            const { data, error } = await supabase
+              .from("hubs")
+              .select("*")
+              .order("created_at", { ascending: false });
+            if (!cancelled && data && !error) {
+              setSupabaseHubs(data.map(toDiscoverHub));
+              setSupabaseLoadState("success");
+            }
+          } catch {
+            // Silently fall back to server-fetched hubs
+          }
+        }
       })
       .catch(() => {
         if (!cancelled) setIsAuthenticated(false);

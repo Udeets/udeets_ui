@@ -135,7 +135,15 @@ export function AboutSection({
           <div className="flex flex-wrap items-start justify-between gap-3">
             <h2 className="text-xl font-bold tracking-tight text-[#111111]">Welcome to {hubName}!</h2>
             <div className="flex shrink-0 items-center gap-2">
-              {!userRole ? (
+              {userRole === "pending" ? (
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-4 py-1.5 text-sm font-semibold text-amber-700">
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12,6 12,12 16,14" />
+                  </svg>
+                  Requested
+                </span>
+              ) : !userRole ? (
                 <button
                   type="button"
                   onClick={onMembershipAction}

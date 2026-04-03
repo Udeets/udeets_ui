@@ -292,14 +292,16 @@ function ProfilePanel({ user, onLogout }: { user: { email?: string; user_metadat
     <div className="absolute right-0 top-full z-[120] mt-3 min-w-[220px] overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg">
       {/* User identity card */}
       <div className="flex items-center gap-3 rounded-t-xl bg-gray-50 px-4 py-3">
-        {avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover" />
-        ) : (
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#0C5C57] to-[#1a8a82]">
-            <span className="text-sm font-semibold text-white/80">{displayName.charAt(0).toUpperCase()}</span>
-          </div>
-        )}
+        <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-[#0C5C57] to-[#1a8a82]">
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <span className="text-sm font-semibold text-white/80">{displayName.charAt(0).toUpperCase()}</span>
+            </div>
+          )}
+        </div>
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-gray-900">{displayName}</p>
           <p className="truncate text-xs text-gray-500">{displayEmail}</p>
