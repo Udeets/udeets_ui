@@ -133,7 +133,7 @@ function CreateHubPageContent() {
                 <button
                   type="button"
                   onClick={() => router.push(createdHubHref)}
-                  className="w-full rounded-xl bg-[#0C5C57] py-3 text-sm font-semibold text-white transition hover:bg-[#094a46]"
+                  className="w-full rounded-xl bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] py-3 text-sm font-semibold text-white transition hover:opacity-90"
                 >
                   Go to Hub
                 </button>
@@ -171,7 +171,7 @@ function CreateHubPageContent() {
               className={cn(
                 "mt-4 w-full rounded-xl py-3 text-sm font-semibold transition",
                 isNameValid
-                  ? "bg-[#0C5C57] text-white hover:bg-[#094a46]"
+                  ? "bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] text-white hover:opacity-90"
                   : "cursor-not-allowed bg-gray-100 text-gray-400"
               )}
             >
@@ -213,7 +213,7 @@ function CreateHubPageContent() {
               className={cn(
                 "mt-4 w-full rounded-xl py-3 text-sm font-semibold transition",
                 selectedCategory
-                  ? "bg-[#0C5C57] text-white hover:bg-[#094a46]"
+                  ? "bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] text-white hover:opacity-90"
                   : "cursor-not-allowed bg-gray-100 text-gray-400"
               )}
             >
@@ -256,7 +256,7 @@ function CreateHubPageContent() {
             <button
               type="button"
               onClick={() => setStep(4)}
-              className="mt-5 w-full rounded-xl bg-[#0C5C57] py-3 text-sm font-semibold text-white transition hover:bg-[#094a46]"
+              className="mt-5 w-full rounded-xl bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] py-3 text-sm font-semibold text-white transition hover:opacity-90"
             >
               Next →
             </button>
@@ -293,7 +293,7 @@ function CreateHubPageContent() {
             <button
               type="button"
               onClick={() => setStep(5)}
-              className="mt-5 w-full rounded-xl bg-[#0C5C57] py-3 text-sm font-semibold text-white transition hover:bg-[#094a46]"
+              className="mt-5 w-full rounded-xl bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] py-3 text-sm font-semibold text-white transition hover:opacity-90"
             >
               Next →
             </button>
@@ -339,7 +339,7 @@ function CreateHubPageContent() {
                 "mt-5 w-full rounded-xl py-3 text-sm font-semibold transition",
                 isSubmitting
                   ? "cursor-not-allowed bg-gray-200 text-gray-400"
-                  : "bg-[#0C5C57] text-white hover:bg-[#094a46]"
+                  : "bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] text-white hover:opacity-90"
               )}
             >
               {isSubmitting ? "Creating..." : "Create Hub →"}

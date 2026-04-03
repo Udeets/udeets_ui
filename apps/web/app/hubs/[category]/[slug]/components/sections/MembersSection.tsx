@@ -107,7 +107,7 @@ export function MembersSection({
           <button
             type="button"
             onClick={onInviteMembers}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#0C5C57] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#094a46]"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
           >
             <UserPlus className="h-3.5 w-3.5" />
             Invite

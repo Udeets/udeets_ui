@@ -296,7 +296,7 @@ export default function SettingsPage() {
                         autoFocus
                       />
                       <div className="flex gap-2">
-                        <button type="button" onClick={saveName} disabled={isSavingName} className="rounded-lg bg-[#0C5C57] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#094a46] disabled:opacity-60">
+                        <button type="button" onClick={saveName} disabled={isSavingName} className="rounded-lg bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-4 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60">
                           {isSavingName ? "Saving..." : "Save"}
                         </button>
                         <button type="button" onClick={() => setEditingName(false)} className="rounded-lg border border-slate-200 px-4 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">

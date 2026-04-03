@@ -33,7 +33,7 @@ export function ReviewsSection({
             </p>
             <button
               type="button"
-              className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-[#0C5C57] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#094a46]"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
             >
               <MessageSquare className="h-4 w-4" />
               Write a Review

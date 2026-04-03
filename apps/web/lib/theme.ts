@@ -26,7 +26,7 @@ export const colors = {
 } as const;
 
 export const buttons = {
-  primary: 'bg-[#0C5C57] text-white hover:bg-[#0a4f4a] transition-colors duration-150',
+  primary: 'bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] text-white hover:opacity-90 transition-colors duration-150',
   outline: 'border border-[#0C5C57] text-[#0C5C57] hover:bg-[#E3F1EF] transition-colors duration-150',
   ghost: 'text-[#0C5C57] hover:bg-[#E3F1EF] transition-colors duration-150',
   danger: 'bg-red-500 text-white hover:bg-red-600 transition-colors duration-150',

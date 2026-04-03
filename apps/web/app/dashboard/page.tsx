@@ -41,7 +41,7 @@ const CARD = "rounded-xl border border-slate-100 bg-white shadow-sm";
 const TEXT_DARK = "text-[#111111]";
 const TEXT_MUTED = "text-[#6b7280]";
 const PRIMARY_BUTTON =
-  "inline-flex items-center justify-center rounded-full bg-[#0C5C57] px-5 py-3 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[#0a4f4a]";
+  "inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-5 py-3 text-sm font-semibold text-white transition-colors duration-150 hover:opacity-90";
 const FEED_FILTERS: FeedFilter[] = ["All", "Posts", "Notices", "Deals", "Announcements", "Polls", "Photos", "Videos"];
 
 function cn(...classes: Array<string | false | null | undefined>) {

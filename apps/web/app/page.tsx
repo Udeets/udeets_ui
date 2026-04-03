@@ -187,7 +187,7 @@ export default function Page() {
             <Link href="/auth" className="rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-[#111111]">
               Sign in
             </Link>
-            <Link href="/auth" className="rounded-full bg-[#0C5C57] px-5 py-2 text-sm font-medium text-white transition hover:bg-[#094a46]">
+            <Link href="/auth" className="rounded-full bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-5 py-2 text-sm font-medium text-white transition hover:opacity-90">
               Get started
             </Link>
           </nav>
@@ -224,7 +224,7 @@ export default function Page() {
               <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Link
                   href="/auth"
-                  className="inline-flex items-center gap-2 rounded-full bg-[#0C5C57] px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-[#0C5C57]/20 transition hover:bg-[#094a46] hover:shadow-xl hover:shadow-[#0C5C57]/25"
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-teal-900/20 transition hover:opacity-90 hover:shadow-xl hover:shadow-teal-900/25"
                 >
                   Get Started Free
                   <ArrowRight className="h-4 w-4" />

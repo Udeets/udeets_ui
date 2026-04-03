@@ -81,8 +81,8 @@ export function InviteModal({
               className={cn(
                 "flex items-center justify-center gap-2 rounded-lg px-4 py-3 font-medium transition",
                 copied
-                  ? "bg-[#0C5C57] text-white"
-                  : "bg-[#0C5C57] text-white hover:bg-[#094a46]"
+                  ? "bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] text-white"
+                  : "bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] text-white hover:opacity-90"
               )}
             >
               <Copy className="h-4 w-4" />

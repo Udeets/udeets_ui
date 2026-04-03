@@ -22,7 +22,7 @@ import type { HubTab } from "./hubTypes";
 
 export const CARD = "rounded-xl border border-slate-100 bg-white shadow-sm";
 export const BUTTON_PRIMARY =
-  "rounded-full bg-[#0C5C57] px-4 py-2 text-xs font-semibold text-white transition-colors duration-150 hover:bg-[#0a4f4a]";
+  "rounded-full bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-4 py-2 text-xs font-semibold text-white transition-colors duration-150 hover:opacity-90";
 export const BUTTON_SECONDARY =
   "rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition-colors duration-150 hover:bg-slate-50";
 export const ICON = "h-4 w-4 stroke-2";

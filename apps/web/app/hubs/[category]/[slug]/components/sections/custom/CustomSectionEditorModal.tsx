@@ -228,7 +228,7 @@ export function CustomSectionEditorModal({
             disabled={isSaving}
             className={cn(
               "rounded-xl px-5 py-2 text-sm font-semibold transition",
-              isSaving ? "cursor-not-allowed bg-slate-200 text-slate-400" : "bg-[#0C5C57] text-white hover:bg-[#094a46]"
+              isSaving ? "cursor-not-allowed bg-slate-200 text-slate-400" : "bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] text-white hover:opacity-90"
             )}
           >
             {isSaving ? <Loader2 className="inline h-4 w-4 animate-spin" /> : "Save Sections"}

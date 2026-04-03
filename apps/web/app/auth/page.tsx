@@ -206,7 +206,7 @@ function AuthPageContent() {
   const FOOTER_BG = "bg-[#0C5C57]";
   const NAV_TEXT = "text-[#111111]";
   const BRAND_TEXT_STYLE = "text-xl sm:text-2xl";
-  const BUTTON_PRIMARY = "rounded-full bg-[#0C5C57] px-6 py-3 text-sm font-medium text-white hover:bg-[#094a46]";
+  const BUTTON_PRIMARY = "rounded-full bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-6 py-3 text-sm font-medium text-white hover:opacity-90";
   const SURFACE = "rounded-2xl border border-slate-100 bg-white shadow-sm";
 
   return (
