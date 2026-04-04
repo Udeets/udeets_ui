@@ -104,17 +104,17 @@ export function CreateDeetModal({
 
   return (
     <div className="fixed inset-0 z-[210] flex items-center justify-center bg-[var(--ud-bg-overlay)] p-4">
-      <div className="w-full rounded-[28px] border border-white/70 bg-[var(--ud-bg-card)] shadow-[0_24px_70px_rgba(15,23,42,0.28)]" style={{ maxWidth: "560px" }}>
+      <div className="w-full overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-lg" style={{ maxWidth: "560px" }}>
         {/* Header: Close, Title, Post Button */}
-        <div className="flex items-center justify-between border-b border-[var(--ud-border)] px-5 py-4">
+        <div className="flex items-center justify-between border-b border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] px-5 py-3.5">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full border border-[var(--ud-border)] p-2 text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)]"
+            className="rounded-full p-1.5 text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-card)] hover:text-[var(--ud-text-primary)]"
           >
-            <X className={ICON} />
+            <X className="h-5 w-5 stroke-[1.8]" />
           </button>
-          <h3 className="text-[20px] font-semibold tracking-tight text-[var(--ud-text-primary)]">Write Post</h3>
+          <h3 className="text-base font-semibold text-[var(--ud-text-primary)]">Write Post</h3>
           <button
             type="submit"
             form="deet-form"
@@ -126,27 +126,6 @@ export function CreateDeetModal({
         </div>
 
         <form id="deet-form" className="px-5 py-4" onSubmit={onSubmit}>
-          {/* Author info */}
-          <div className="mb-4 flex items-center gap-2">
-            {authorAvatarSrc ? (
-              <img
-                src={authorAvatarSrc}
-                alt={authorName}
-                className="h-10 w-10 rounded-full object-cover"
-              />
-            ) : (
-              <div className="h-10 w-10 rounded-full bg-[var(--ud-brand-primary)] flex items-center justify-center text-sm font-semibold text-[var(--ud-text-primary)]">
-                {authorName
-                  .split(" ")
-                  .filter(Boolean)
-                  .slice(0, 2)
-                  .map((part) => part[0])
-                  .join("")}
-              </div>
-            )}
-            <span className="text-sm font-medium text-[var(--ud-text-primary)]">{authorName}</span>
-          </div>
-
           {/* Formatting toolbar */}
           <div className="relative z-10 mb-4 flex items-center gap-2">
             <div ref={fontMenuRef} className="relative">
@@ -214,7 +193,7 @@ export function CreateDeetModal({
           </div>
 
           {/* Rich text editor container */}
-          <div className="rounded-[24px] border border-[var(--ud-border)] p-4 bg-[var(--ud-bg-card)]">
+          <div className="rounded-xl border border-[var(--ud-border-subtle)] p-4 bg-[var(--ud-bg-card)]">
             {/* ContentEditable div */}
             <div
               ref={editorRef}
@@ -253,84 +232,85 @@ export function CreateDeetModal({
             ) : null}
 
             {/* Action icons row (inside editor container, at bottom) */}
-            <div className="mt-4 border-t border-[var(--ud-border)] pt-4 flex items-center gap-3 text-[var(--ud-text-muted)]">
+            <div className="mt-4 border-t border-[var(--ud-border-subtle)] pt-3 flex items-center gap-1 text-[var(--ud-text-muted)]">
               <button
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => onOpenChild("photo")}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
                 title="Photo/Video"
               >
-                <Images className={ICON} />
+                <Images className="h-5 w-5 stroke-[1.5]" />
               </button>
 
               <button
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => onOpenChild("emoji")}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
                 title="Sticker/Emoji"
               >
-                <Smile className={ICON} />
+                <Smile className="h-5 w-5 stroke-[1.5]" />
               </button>
 
               <button
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => onSetPostType?.("notice")}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
                 title="Announcement"
               >
-                <Megaphone className={ICON} />
+                <Megaphone className="h-5 w-5 stroke-[1.5]" />
               </button>
 
               <button
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => onSetPostType?.("notice")}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
                 title="Notice"
               >
-                <FileText className={ICON} />
+                <FileText className="h-5 w-5 stroke-[1.5]" />
               </button>
 
               <button
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => onSetPostType?.("post")}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
                 title="Poll"
               >
-                <BarChart3 className={ICON} />
+                <BarChart3 className="h-5 w-5 stroke-[1.5]" />
               </button>
 
               <button
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => onOpenChild("photo")}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
                 title="Attach File"
               >
-                <Paperclip className={ICON} />
+                <Paperclip className="h-5 w-5 stroke-[1.5]" />
               </button>
 
               <button
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => onSetPostType?.("news")}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
                 title="Event"
               >
-                <Calendar className={ICON} />
+                <Calendar className="h-5 w-5 stroke-[1.5]" />
               </button>
 
               <button
                 type="button"
                 disabled={isSubmitting}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
+                onClick={() => onSetPostType?.("post")}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
                 title="Check-in"
               >
-                <MapPin className={ICON} />
+                <MapPin className="h-5 w-5 stroke-[1.5]" />
               </button>
             </div>
           </div>
@@ -355,7 +335,7 @@ export function CreateDeetModal({
           ) : null}
 
           {/* Deet Settings button */}
-          <div className="mt-5 flex items-center border-t border-[var(--ud-border)] pt-5">
+          <div className="mt-5 flex items-center border-t border-[var(--ud-border-subtle)] pt-4">
             <button
               type="button"
               disabled={isSubmitting}

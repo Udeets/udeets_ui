@@ -33,6 +33,7 @@ export function ReviewsSection({
             </p>
             <button
               type="button"
+              onClick={() => alert("Reviews feature is coming soon!")}
               className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[var(--ud-brand-primary)] to-[var(--ud-brand-primary)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
             >
               <MessageSquare className="h-4 w-4" />

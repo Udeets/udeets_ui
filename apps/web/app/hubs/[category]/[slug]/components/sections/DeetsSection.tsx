@@ -300,7 +300,7 @@ export function DeetsSection({
                 id={item.id}
                 key={item.id}
                 className={cn(
-                  "w-full rounded-[28px] border border-[#DCECE7] bg-[linear-gradient(180deg,#FFFFFF_0%,#F8FCFB_100%)] p-5 shadow-sm transition",
+                  "w-full overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] p-5 shadow-sm transition",
                   highlightedItemId === item.id && "ring-2 ring-[var(--ud-brand-primary)] ring-offset-2 ring-offset-white",
                   (item.kind === "hazard" || item.kind === "alert") && "border-l-4 border-l-red-500"
                 )}
@@ -468,7 +468,7 @@ function DeetCommentsSection({
   };
 
   return (
-    <div className="mt-3 rounded-b-xl border-t border-[var(--ud-border)] bg-[var(--ud-bg-subtle)] p-4">
+    <div className="mt-3 rounded-b-lg border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] p-4">
       {isLoading ? (
         <div className="flex items-center justify-center py-6">
           <Loader2 className="h-5 w-5 animate-spin text-[var(--ud-text-muted)]" />

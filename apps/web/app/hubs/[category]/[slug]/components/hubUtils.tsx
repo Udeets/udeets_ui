@@ -25,9 +25,9 @@ export const BUTTON_PRIMARY =
   "rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-4 py-2 text-xs font-semibold text-white transition-colors duration-150 hover:opacity-90";
 export const BUTTON_SECONDARY =
   "rounded-full border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-4 py-2 text-xs font-semibold text-[var(--ud-text-primary)] transition-colors duration-150 hover:bg-[var(--ud-bg-subtle)]";
-export const ICON = "h-4 w-4 stroke-2";
+export const ICON = "h-[18px] w-[18px] stroke-[1.5]";
 export const EMPTY_MEDIA_BG = "#A9D1CA";
-export const ACTION_ICON = "h-4 w-4 stroke-2";
+export const ACTION_ICON = "h-5 w-5 stroke-[1.5]";
 export const ACTION_ICON_BUTTON = "inline-flex items-center text-[var(--ud-text-primary)]/78 transition-colors duration-150 hover:text-[var(--ud-brand-primary)]";
 export const PREMIUM_ICON_WRAPPER =
   "inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--ud-brand-light)] text-[var(--ud-brand-primary)]";

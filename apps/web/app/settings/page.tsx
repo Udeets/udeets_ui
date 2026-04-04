@@ -135,7 +135,10 @@ export default function SettingsPage() {
     setIsSavingName(true);
     const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
-    await supabase.from("profiles").update({ full_name: nameDraft, updated_at: new Date().toISOString() }).eq("id", user.id);
+    const { error } = await supabase.from("profiles").update({ full_name: nameDraft, updated_at: new Date().toISOString() }).eq("id", user.id);
+    if (error) { console.error("[settings] name save error:", error); setIsSavingName(false); return; }
+    // Sync to auth user metadata so header updates
+    await supabase.auth.updateUser({ data: { full_name: nameDraft } });
     setFullName(nameDraft);
     setEditingName(false);
     setIsSavingName(false);

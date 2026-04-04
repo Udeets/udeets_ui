@@ -226,6 +226,8 @@ export default function ProfilePage() {
       const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
       const { error: updateError } = await supabase.from("profiles").update({ avatar_url: publicUrl, updated_at: new Date().toISOString() }).eq("id", user.id);
       if (updateError) { console.error("[profile] avatar update error:", updateError); return; }
+      // Also sync avatar to auth user metadata so navigation header updates
+      await supabase.auth.updateUser({ data: { avatar_url: publicUrl } });
       setProfile((prev) => prev ? { ...prev, avatar_url: publicUrl } : prev);
     } catch (err) {
       console.error("[profile] avatar upload failed:", err);
@@ -245,7 +247,14 @@ export default function ProfilePage() {
       const supabase = createClient();
       const updatePayload: Record<string, string> = { updated_at: new Date().toISOString() };
       if (field === "full_name") updatePayload.full_name = editDraft;
-      await supabase.from("profiles").update(updatePayload).eq("id", user.id);
+      const { error } = await supabase.from("profiles").update(updatePayload).eq("id", user.id);
+      if (error) { console.error("[profile] save error:", error); return; }
+
+      // Also update Supabase auth user metadata so navigation header reflects changes
+      if (field === "full_name") {
+        await supabase.auth.updateUser({ data: { full_name: editDraft } });
+      }
+
       setProfile((prev) => prev ? { ...prev, full_name: field === "full_name" ? editDraft : prev.full_name } : prev);
       setEditingField(null);
       setEditDraft("");
@@ -426,7 +435,7 @@ export default function ProfilePage() {
                         <p className="text-xs text-slate-500">Not connected</p>
                       </div>
                     </div>
-                    <button type="button" className="rounded-full border border-slate-300 px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100">
+                    <button type="button" onClick={() => alert("Apple Sign-In is coming soon!")} className="rounded-full border border-slate-300 px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100">
                       Connect
                     </button>
                   </div>

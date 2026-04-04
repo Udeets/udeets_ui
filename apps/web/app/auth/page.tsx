@@ -393,11 +393,11 @@ function AuthPageContent() {
 
             <p className="text-xs text-center text-[var(--ud-text-muted)] mt-4">
               By continuing, I agree to the{" "}
-              <a href="#" className="text-[var(--ud-brand-primary)]">
+              <a href="/terms" className="text-[var(--ud-brand-primary)] hover:underline">
                 Terms & Conditions
               </a>{" "}
               and{" "}
-              <a href="#" className="text-[var(--ud-brand-primary)]">
+              <a href="/privacy" className="text-[var(--ud-brand-primary)] hover:underline">
                 Privacy Policy
               </a>
               .

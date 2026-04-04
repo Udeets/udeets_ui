@@ -27,7 +27,7 @@ export function FilesSection({ fileItems }: { fileItems: string[] }) {
                   <p className="text-xs text-[var(--ud-text-muted)]">Mock shared file</p>
                 </div>
               </div>
-              <button type="button" className={BUTTON_SECONDARY}>
+              <button type="button" onClick={() => alert("File preview is coming soon.")} className={BUTTON_SECONDARY}>
                 Open
               </button>
             </div>
