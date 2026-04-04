@@ -93,7 +93,7 @@ export async function addDeetComment(deetId: string, body: string): Promise<Deet
   const { data, error } = await supabase
     .from("deet_comments")
     .insert({ deet_id: deetId, user_id: user.id, body: trimmed })
-    .select("id, deet_id, user_id, body, created_at")
+    .select("id, deet_id, user_id, body, created_at, profiles:user_id(full_name, avatar_url)")
     .single();
 
   if (error) throw new Error(`Failed to add comment: ${error.message}`);
@@ -106,12 +106,16 @@ export async function addDeetComment(deetId: string, body: string): Promise<Deet
 
   await supabase.from("deets").update({ comment_count: count ?? 0 }).eq("id", deetId);
 
+  const profile = data.profiles as unknown as { full_name: string | null; avatar_url: string | null } | null;
+
   return {
     id: data.id,
     deetId: data.deet_id,
     userId: data.user_id,
     body: data.body,
     createdAt: data.created_at,
+    authorName: profile?.full_name ?? undefined,
+    authorAvatar: profile?.avatar_url ?? undefined,
   };
 }
 
@@ -120,20 +124,25 @@ export async function listDeetComments(deetId: string): Promise<DeetComment[]> {
 
   const { data, error } = await supabase
     .from("deet_comments")
-    .select("id, deet_id, user_id, body, created_at")
+    .select("id, deet_id, user_id, body, created_at, profiles:user_id(full_name, avatar_url)")
     .eq("deet_id", deetId)
     .order("created_at", { ascending: true })
     .limit(50);
 
   if (error) throw new Error(`Failed to load comments: ${error.message}`);
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    deetId: row.deet_id,
-    userId: row.user_id,
-    body: row.body,
-    createdAt: row.created_at,
-  }));
+  return (data ?? []).map((row) => {
+    const profile = row.profiles as unknown as { full_name: string | null; avatar_url: string | null } | null;
+    return {
+      id: row.id,
+      deetId: row.deet_id,
+      userId: row.user_id,
+      body: row.body,
+      createdAt: row.created_at,
+      authorName: profile?.full_name ?? undefined,
+      authorAvatar: profile?.avatar_url ?? undefined,
+    };
+  });
 }
 
 // ── Views ──────────────────────────────────────────────────────────
