@@ -13,34 +13,39 @@ import type { Hub as SupabaseHub } from "@/types/hub";
 const HEADER_BG = "bg-[var(--ud-bg-card)] border-b border-[var(--ud-border-subtle)]";
 const PAGE_BG = "bg-[var(--ud-bg-page)]";
 const BRAND_TEXT_STYLE = "text-xl sm:text-2xl";
-const FILTER_TEXT = "font-medium";
 
 const ROUTE_AUTH = "/auth";
 
-type Category =
-  | "All"
-  | "Religious Places"
-  | "Communities"
-  | "Restaurants"
-  | "Fitness"
-  | "Pet Clubs"
-  | "HOA's";
+/* ── Category definitions with icons & colors ───────────────────── */
 
-const CATEGORIES: Category[] = [
-  "All",
-  "Religious Places",
-  "Communities",
-  "Restaurants",
-  "Fitness",
-  "Pet Clubs",
-  "HOA's",
+type CategoryDef = {
+  slug: string;        // used for filtering — matches hub.category
+  label: string;       // display name
+  emoji: string;       // shown inside the round icon
+  color: string;       // bg color of the round icon
+};
+
+const CATEGORY_DEFS: CategoryDef[] = [
+  { slug: "communities",      label: "Community",        emoji: "🏘️", color: "#E0F2FE" },
+  { slug: "restaurants",      label: "Restaurant",       emoji: "🍽️", color: "#FEF3C7" },
+  { slug: "hoa",              label: "HOA",              emoji: "🏡", color: "#D1FAE5" },
+  { slug: "religious-places", label: "Religious",        emoji: "🛕", color: "#FCE7F3" },
+  { slug: "fitness",          label: "Fitness",          emoji: "💪", color: "#FEE2E2" },
+  { slug: "pet-clubs",        label: "Pet Club",         emoji: "🐾", color: "#EDE9FE" },
+  { slug: "pta",              label: "School / PTA",     emoji: "🎒", color: "#DBEAFE" },
+  { slug: "health-wellness",  label: "Health",           emoji: "🧘", color: "#CCFBF1" },
+  { slug: "home-services",    label: "Home Services",    emoji: "🔧", color: "#FEF9C3" },
+  { slug: "retail",           label: "Retail",           emoji: "🛍️", color: "#FFE4E6" },
+  { slug: "events",           label: "Events",           emoji: "🎉", color: "#E0E7FF" },
 ];
 
+type DisplayCategory = "All" | string;
 
 type Hub = {
   id: string;
   name: string;
-  category: Exclude<Category, "All">;
+  categorySlug: string;
+  categoryLabel: string;
   locationLabel: string;
   distanceMi: number;
   membersLabel: string;
@@ -57,23 +62,12 @@ function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-function toDiscoverCategory(category: string): Exclude<Category, "All"> {
-  switch (category) {
-    case "religious-places":
-      return "Religious Places";
-    case "communities":
-      return "Communities";
-    case "restaurants":
-      return "Restaurants";
-    case "fitness":
-      return "Fitness";
-    case "pet-clubs":
-      return "Pet Clubs";
-    case "hoa":
-      return "HOA's";
-    default:
-      return "Communities";
-  }
+function categoryDefFor(slug: string): CategoryDef | undefined {
+  return CATEGORY_DEFS.find((c) => c.slug === slug);
+}
+
+function categoryLabelFor(slug: string): string {
+  return categoryDefFor(slug)?.label ?? "Community";
 }
 
 function normalizePublicSrc(src?: string) {
@@ -94,7 +88,8 @@ function toDiscoverHub(hub: SupabaseHub): Hub {
   return {
     id: hub.id,
     name: hub.name,
-    category: toDiscoverCategory(hub.category),
+    categorySlug: hub.category,
+    categoryLabel: categoryLabelFor(hub.category),
     locationLabel: locationLabelFor(hub),
     distanceMi: 0,
     membersLabel: "New hub",
@@ -106,70 +101,26 @@ function toDiscoverHub(hub: SupabaseHub): Hub {
   };
 }
 
+/* ── Chevron icons ───────────────────────────────────────────────── */
 
 function IconChevronLeft(props: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 20 20"
-      className={props.className}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
+    <svg viewBox="0 0 20 20" className={props.className} fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M12.5 15l-5-5 5-5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
+
 function IconChevronRight(props: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 20 20"
-      className={props.className}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
+    <svg viewBox="0 0 20 20" className={props.className} fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M7.5 15l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-function LightArrowButton({
-  dir,
-  onClick,
-  disabled,
-  className,
-  ariaLabel,
-}: {
-  dir: "left" | "right";
-  onClick: () => void;
-  disabled?: boolean;
-  className?: string;
-  ariaLabel: string;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={ariaLabel}
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(
-        "h-10 w-10 rounded-full border border-[var(--ud-border)] bg-white",
-        "text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition shadow-sm",
-        "disabled:opacity-40 disabled:cursor-not-allowed",
-        className
-      )}
-    >
-      {dir === "left" ? (
-        <IconChevronLeft className="h-5 w-5 mx-auto" />
-      ) : (
-        <IconChevronRight className="h-5 w-5 mx-auto" />
-      )}
-    </button>
-  );
-}
-
 /* ── Hub list item ───────────────────────────────────────────────── */
+
 function HubListItem({ hub }: { hub: Hub }) {
   const [imageFailed, setImageFailed] = useState(false);
   const isLogo = isUdeetsLogoSrc(hub.image);
@@ -179,7 +130,6 @@ function HubListItem({ hub }: { hub: Hub }) {
       href={hub.href}
       className="flex items-start gap-4 rounded-lg px-2 py-3 transition-colors duration-150 hover:bg-[var(--ud-bg-subtle)] sm:gap-5 sm:px-3 sm:py-4"
     >
-      {/* Square thumbnail */}
       <div className="h-[72px] w-[72px] flex-shrink-0 overflow-hidden rounded-lg sm:h-[88px] sm:w-[88px]">
         {hub.image && !imageFailed ? (
           <img
@@ -196,7 +146,6 @@ function HubListItem({ hub }: { hub: Hub }) {
         )}
       </div>
 
-      {/* Hub info */}
       <div className="min-w-0 flex-1 pt-0.5">
         <h3 className="truncate text-[15px] font-semibold tracking-tight text-[var(--ud-text-primary)]">
           {hub.name}
@@ -218,7 +167,8 @@ function HubListItem({ hub }: { hub: Hub }) {
   );
 }
 
-/* ── Hub list grid (2 cols on desktop, 1 col on mobile) ─────────── */
+/* ── Hub list grid ───────────────────────────────────────────────── */
+
 function HubListSection({ hubs }: { hubs: Hub[] }) {
   return (
     <section className="py-4">
@@ -242,35 +192,79 @@ function HubListSection({ hubs }: { hubs: Hub[] }) {
   );
 }
 
+/* ── Category icon pill ──────────────────────────────────────────── */
+
+function CategoryIcon({
+  def,
+  isActive,
+  onClick,
+}: {
+  def: CategoryDef;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-[72px] shrink-0 flex-col items-center gap-1.5 py-2 transition-transform duration-150 hover:scale-105"
+    >
+      <div
+        className={cn(
+          "flex h-14 w-14 items-center justify-center rounded-full text-2xl transition-all duration-150",
+          isActive
+            ? "ring-2 ring-[var(--ud-brand-primary)] ring-offset-2 shadow-md"
+            : "shadow-sm"
+        )}
+        style={{ backgroundColor: def.color }}
+      >
+        {def.emoji}
+      </div>
+      <span
+        className={cn(
+          "text-[11px] font-medium leading-tight text-center line-clamp-1",
+          isActive ? "text-[var(--ud-brand-primary)] font-semibold" : "text-[var(--ud-text-secondary)]"
+        )}
+      >
+        {def.label}
+      </span>
+    </button>
+  );
+}
+
+/* ── Main page component ─────────────────────────────────────────── */
+
 export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any[] }) {
   const searchParams = useSearchParams();
+  const isDemoPreview = searchParams.get("demo_preview") === "1";
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [query, setQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<Category>("All");
+  const [activeCategory, setActiveCategory] = useState<DisplayCategory>("All");
   const [supabaseHubs, setSupabaseHubs] = useState<Hub[]>(() => (initialHubs ?? []).map(toDiscoverHub));
   const [supabaseLoadState, setSupabaseLoadState] = useState<SupabaseLoadState>(initialHubs && initialHubs.length > 0 ? "success" : "idle");
   const [supabaseLoadError, setSupabaseLoadError] = useState<string | null>(null);
 
-  const chipsRef = useRef<HTMLDivElement | null>(null);
-  const [canChipLeft, setCanChipLeft] = useState(false);
-  const [canChipRight, setCanChipRight] = useState(true);
+  // Category strip scrolling
+  const stripRef = useRef<HTMLDivElement | null>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
 
-  const updateChipArrows = () => {
-    const el = chipsRef.current;
+  const updateScrollArrows = () => {
+    const el = stripRef.current;
     if (!el) return;
-    setCanChipLeft(el.scrollLeft > 2);
-    setCanChipRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+    setCanScrollLeft(el.scrollLeft > 2);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
   };
 
   useEffect(() => {
-    const el = chipsRef.current;
+    const el = stripRef.current;
     if (!el) return;
-    updateChipArrows();
+    updateScrollArrows();
 
-    const onScroll = () => updateChipArrows();
+    const onScroll = () => updateScrollArrows();
     el.addEventListener("scroll", onScroll, { passive: true });
 
-    const onResize = () => updateChipArrows();
+    const onResize = () => updateScrollArrows();
     window.addEventListener("resize", onResize);
 
     return () => {
@@ -279,14 +273,11 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
     };
   }, []);
 
-  const scrollChipsBy = (delta: number) => {
-    const el = chipsRef.current;
-    if (!el) return;
-    el.scrollBy({ left: delta, behavior: "smooth" });
+  const scrollStripBy = (delta: number) => {
+    stripRef.current?.scrollBy({ left: delta, behavior: "smooth" });
   };
 
-
-  // Check auth state and refetch hubs with user token so user's own hubs appear (#21)
+  // Auth & hub loading
   useEffect(() => {
     let cancelled = false;
 
@@ -295,7 +286,6 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
         if (cancelled) return;
         setIsAuthenticated(Boolean(session));
 
-        // If authenticated, refetch hubs with the user's token to include user's own hubs
         if (session) {
           try {
             const { createClient } = await import("@/lib/supabase/client");
@@ -318,11 +308,10 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
         if (!cancelled) setIsAuthenticated(false);
       });
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
+  // Filtering
   const allHubs = useMemo(() => supabaseHubs, [supabaseHubs]);
 
   const baseFiltered = useMemo(() => {
@@ -338,20 +327,20 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
     });
   }, [allHubs, query]);
 
-  const categoryHubs = useMemo(() => {
-    if (activeCategory === "All") return [];
-    return baseFiltered.filter((h) => h.category === activeCategory);
-  }, [activeCategory, baseFiltered]);
-
   const allFilteredHubs = useMemo(() => {
     if (activeCategory === "All") return baseFiltered;
-    return categoryHubs;
-  }, [activeCategory, baseFiltered, categoryHubs]);
+    return baseFiltered.filter((h) => h.categorySlug === activeCategory);
+  }, [activeCategory, baseFiltered]);
 
-  const isResultsMode = query.trim().length > 0;
+  const createHubHref = isDemoPreview
+    ? "/create-hub?demo_preview=1"
+    : isAuthenticated
+      ? "/create-hub"
+      : ROUTE_AUTH;
 
   return (
     <div className={cn("min-h-screen", PAGE_BG)}>
+      {/* ── Header ───────────────────────────────────────────────── */}
       <header className={cn("sticky top-0 z-50", HEADER_BG)}>
         <div className="flex min-h-14 w-full items-center justify-between px-4 py-2 sm:px-6 lg:px-10">
           <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
@@ -359,20 +348,17 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
           </Link>
 
           <div className="flex items-center gap-1.5">
-            <Link
-              href={
-                searchParams.get("demo_preview") === "1"
-                  ? "/create-hub?demo_preview=1"
-                  : isAuthenticated
-                    ? "/create-hub"
-                    : ROUTE_AUTH
-              }
-              data-demo-target={searchParams.get("demo_preview") === "1" ? "discover-create-hub" : undefined}
-              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-4 py-2 text-sm font-medium text-white transition-opacity duration-150 hover:opacity-90"
-            >
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>
-              Create Hub
-            </Link>
+            {/* Create Hub button only for authenticated users */}
+            {isAuthenticated ? (
+              <Link
+                href={createHubHref}
+                data-demo-target={isDemoPreview ? "discover-create-hub" : undefined}
+                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-4 py-2 text-sm font-medium text-white transition-opacity duration-150 hover:opacity-90"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>
+                Create Hub
+              </Link>
+            ) : null}
             <Link
               href={isAuthenticated ? "/dashboard" : "/"}
               className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
@@ -404,60 +390,113 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
         </div>
       </section>
 
-      {/* ── Tab-style category filters ──────────────────────────── */}
-      <section className="border-b border-[var(--ud-border)] bg-[var(--ud-bg-card)] relative z-40">
+      {/* ── Category strip with round icons ─────────────────────── */}
+      <section className="border-b border-[var(--ud-border)] bg-[var(--ud-bg-card)]">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-10">
-          <div className="flex items-center">
+          <div className="relative flex items-center">
+            {/* Left scroll arrow */}
+            {canScrollLeft ? (
+              <button
+                type="button"
+                aria-label="Scroll categories left"
+                onClick={() => scrollStripBy(-200)}
+                className="absolute left-0 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-[var(--ud-border)] bg-[var(--ud-bg-card)] text-[var(--ud-text-muted)] shadow-sm transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
+              >
+                <IconChevronLeft className="h-4 w-4" />
+              </button>
+            ) : null}
+
+            {/* Scrollable category strip */}
             <div
-              ref={chipsRef}
-              className="flex items-center gap-0 overflow-x-auto flex-1"
+              ref={stripRef}
+              className="flex items-end gap-1 overflow-x-auto px-1 py-1"
               style={{ scrollbarWidth: "none" }}
             >
+              {/* "All" pill */}
               <button
+                type="button"
                 onClick={() => setActiveCategory("All")}
-                className={cn(
-                  "px-4 py-3 text-sm whitespace-nowrap transition-colors duration-150 border-b-2",
-                  FILTER_TEXT,
-                  activeCategory === "All"
-                    ? "border-[var(--ud-brand-primary)] text-[var(--ud-brand-primary)]"
-                    : "border-transparent text-gray-500 hover:text-[var(--ud-text-primary)]"
-                )}
+                className="flex w-[72px] shrink-0 flex-col items-center gap-1.5 py-2 transition-transform duration-150 hover:scale-105"
               >
-                All
-              </button>
-
-              <Link
-                href="/discover/location"
-                className="flex items-center justify-center px-3 py-3 transition-colors duration-150 border-b-2 border-transparent text-gray-400 hover:text-[var(--ud-text-primary)]"
-                aria-label="Near me"
-                title="Near me"
-              >
-                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 22s7-6.2 7-12A7 7 0 1 0 5 10c0 5.8 7 12 7 12Z" />
-                  <circle cx="12" cy="10" r="3" />
-                </svg>
-              </Link>
-
-              {CATEGORIES.filter((c) => c !== "All").map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setActiveCategory(c)}
+                <div
                   className={cn(
-                    "px-4 py-3 text-sm whitespace-nowrap transition-colors duration-150 border-b-2",
-                    FILTER_TEXT,
-                    activeCategory === c
-                      ? "border-[var(--ud-brand-primary)] text-[var(--ud-brand-primary)]"
-                      : "border-transparent text-gray-500 hover:text-[var(--ud-text-primary)]"
+                    "flex h-14 w-14 items-center justify-center rounded-full text-2xl transition-all duration-150",
+                    activeCategory === "All"
+                      ? "ring-2 ring-[var(--ud-brand-primary)] ring-offset-2 shadow-md"
+                      : "shadow-sm"
+                  )}
+                  style={{ backgroundColor: "#E3F1EF" }}
+                >
+                  🌐
+                </div>
+                <span
+                  className={cn(
+                    "text-[11px] font-medium leading-tight",
+                    activeCategory === "All" ? "text-[var(--ud-brand-primary)] font-semibold" : "text-[var(--ud-text-secondary)]"
                   )}
                 >
-                  {c}
-                </button>
+                  All
+                </span>
+              </button>
+
+              {/* Location pill */}
+              <Link
+                href="/discover/location"
+                className="flex w-[72px] shrink-0 flex-col items-center gap-1.5 py-2 transition-transform duration-150 hover:scale-105"
+              >
+                <div
+                  className="flex h-14 w-14 items-center justify-center rounded-full shadow-sm"
+                  style={{ backgroundColor: "#F0FDF4" }}
+                >
+                  📍
+                </div>
+                <span className="text-[11px] font-medium leading-tight text-[var(--ud-text-secondary)]">
+                  Near Me
+                </span>
+              </Link>
+
+              {/* Category icons */}
+              {CATEGORY_DEFS.map((def) => (
+                <CategoryIcon
+                  key={def.slug}
+                  def={def}
+                  isActive={activeCategory === def.slug}
+                  onClick={() => setActiveCategory(def.slug)}
+                />
               ))}
+
+              {/* Create Hub — always at the end */}
+              <Link
+                href={createHubHref}
+                className="flex w-[72px] shrink-0 flex-col items-center gap-1.5 py-2 transition-transform duration-150 hover:scale-105"
+              >
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] shadow-sm">
+                  <svg viewBox="0 0 24 24" className="h-6 w-6 text-white" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <span className="text-[11px] font-semibold leading-tight text-[var(--ud-brand-primary)]">
+                  Create Hub
+                </span>
+              </Link>
             </div>
+
+            {/* Right scroll arrow */}
+            {canScrollRight ? (
+              <button
+                type="button"
+                aria-label="Scroll categories right"
+                onClick={() => scrollStripBy(200)}
+                className="absolute right-0 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-[var(--ud-border)] bg-[var(--ud-bg-card)] text-[var(--ud-text-muted)] shadow-sm transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
+              >
+                <IconChevronRight className="h-4 w-4" />
+              </button>
+            ) : null}
           </div>
         </div>
       </section>
 
+      {/* ── Hub list ─────────────────────────────────────────────── */}
       <main className="mx-auto max-w-4xl px-4 py-4 sm:px-6 lg:px-10">
         {supabaseLoadState === "loading" ? (
           <div className="mb-4 rounded-lg bg-white px-4 py-3 text-sm text-slate-500">
