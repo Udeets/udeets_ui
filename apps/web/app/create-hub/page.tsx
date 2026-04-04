@@ -41,6 +41,7 @@ function CreateHubPageContent() {
   const [step, setStep] = useState<Step>(1);
   const [hubName, setHubName] = useState("");
   const [customSlug, setCustomSlug] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [visibility, setVisibility] = useState<Visibility>("Public");
   const [postingPerm, setPostingPerm] = useState<PostingPerm>("admin_members");
@@ -90,6 +91,7 @@ function CreateHubPageContent() {
         visibility: visibility === "Private" ? "private" : "public",
         tagline: `${trimmedName} on uDeets`,
         description: descriptionFor([]),
+        websiteUrl: websiteUrl ? `https://${websiteUrl}` : undefined,
       });
 
       setCreatedHubHref(`/hubs/${createdHub.category}/${createdHub.slug}`);
@@ -252,6 +254,19 @@ function CreateHubPageContent() {
               <div className="rounded-lg bg-gray-50 px-3 py-2">
                 <p className="text-xs font-semibold text-gray-600">Default URL:</p>
                 <p className="text-xs text-gray-500 mt-1">https://{slugify(trimmedName)}-{Date.now()}.udeets.com</p>
+              </div>
+              <div className="mt-4">
+                <label className="block text-xs font-semibold text-gray-600 mb-2">Website URL (optional)</label>
+                <div className="flex items-center rounded-xl border border-[var(--ud-border)] bg-white overflow-hidden">
+                  <span className="px-4 py-3 text-sm text-gray-500 bg-gray-50 whitespace-nowrap">https://</span>
+                  <input
+                    value={websiteUrl}
+                    onChange={(e) => setWebsiteUrl(e.target.value.replace(/^https?:\/\//, ''))}
+                    placeholder="www.yourhub.com"
+                    className="flex-1 px-4 py-3 text-sm text-gray-900 outline-none transition focus:ring-2 focus:ring-[#A9D1CA] focus:ring-inset"
+                  />
+                </div>
+                <p className="mt-1.5 text-xs text-gray-400">This will appear in your hub&apos;s Connect section, editable only by admins.</p>
               </div>
             </div>
             <button

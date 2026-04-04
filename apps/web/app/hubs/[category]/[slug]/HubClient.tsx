@@ -1183,6 +1183,7 @@ export default function HubClient({
               isSubmitting={isSubmittingDeet}
               authorName={deetAuthorName}
               authorAvatarSrc={creatorAvatarSrc}
+              onSetPostType={(postType) => setDeetSettings((prev) => ({ ...prev, postType: postType as import("./components/deets/deetTypes").DeetPostType }))}
             />,
             document.body
           )
@@ -1239,21 +1240,72 @@ export default function HubClient({
               ) : null}
 
               {activeComposerChild === "emoji" ? (
-                <DeetChildModal title="Choose Sticker" onClose={() => setActiveComposerChild(null)}>
-                  <div className="grid grid-cols-4 gap-3">
-                    {["😀", "🎉", "🙏", "📣", "❤️", "🌟", "📸", "🎊", "🪔", "😊", "🙌", "🎈", "🐘", "🕉️", "🌸", "✨", "🪷", "📿", "🥥", "🍛", "🎵", "🎁", "🎆", "💛"].map((emoji) => (
-                      <button
-                        key={emoji}
-                        type="button"
-                        onClick={() => {
-                          setModalDraftText((current) => `${current}${current ? " " : ""}${emoji}`);
-                          attachDeetItem({ type: "sticker", title: "Sticker added", detail: emoji });
-                        }}
-                        className="flex h-16 items-center justify-center rounded-2xl border border-[var(--ud-border)] text-2xl transition hover:border-[var(--ud-brand-primary)] hover:bg-[var(--ud-bg-subtle)]"
-                      >
-                        {emoji}
-                      </button>
-                    ))}
+                <DeetChildModal title="Emoji & Stickers" onClose={() => setActiveComposerChild(null)}>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Smileys & People</p>
+                      <div className="grid grid-cols-6 gap-2">
+                        {["😀","😃","😄","😁","😆","😅","🤣","😂","🙂","🙃","😉","😊","😇","🥰","😍","🤩","😘","😗","😚","😙","🥲","😋","😛","😜","🤪","😝","🤗","🤭","🫣","🤫","🤔","🫡","🤐","🤨","😐","😑","😶","🫥","😏","😒","🙄","😬","🤥","😌","😔","😪","🤤","😴","😷","🤒","🤕","🤢","🤮","🥵","🥶","🥴","😵","🤯","🤠","🥳","🥸","😎","🤓","🧐","😕","🫤","😟","🙁","😮","😯","😲","😳","🥺","🥹","😦","😧","😨","😰","😥","😢","😭","😱","😖","😣","😞","😓","😩","😫","🥱","😤","😡","😠","🤬","😈","👿","💀","☠️","💩","🤡","👹","👺","👻","👽","👾","🤖"].map((e) => (
+                          <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Gestures & Body</p>
+                      <div className="grid grid-cols-6 gap-2">
+                        {["👋","🤚","🖐️","✋","🖖","🫱","🫲","🫳","🫴","👌","🤌","🤏","✌️","🤞","🫰","🤟","🤘","🤙","👈","👉","👆","🖕","👇","☝️","🫵","👍","👎","✊","👊","🤛","🤜","👏","🙌","🫶","👐","🤲","🤝","🙏","✍️","💅","🤳","💪","🦾","🦿","🦵","🦶","👂","🦻","👃","🧠","🫀","🫁","🦷","🦴","👀","👁️","👅","👄"].map((e) => (
+                          <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Hearts & Symbols</p>
+                      <div className="grid grid-cols-6 gap-2">
+                        {["❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💔","❣️","💕","💞","💓","💗","💖","💘","💝","💟","❤️‍🔥","❤️‍🩹","♥️","🔥","⭐","🌟","✨","💫","🎯","💯","💢","💥","💦","💨","🕊️","🎶","🎵","🔔","📢","📣","💬","💭","🗯️","♠️","♣️","♥️","♦️","🏆","🥇","🥈","🥉","🎖️","🏅","🎗️","🎪"].map((e) => (
+                          <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Food & Nature</p>
+                      <div className="grid grid-cols-6 gap-2">
+                        {["🍎","🍊","🍋","🍌","🍉","🍇","🍓","🫐","🍈","🍒","🍑","🥭","🍍","🥥","🥝","🍅","🥑","🥦","🥬","🥒","🌶️","🫑","🌽","🥕","🫒","🧄","🧅","🥔","🍞","🥐","🥖","🫓","🥨","🥯","🧀","🍳","🥞","🧇","🥓","🍔","🍟","🍕","🌭","🌮","🌯","🫔","🥙","🧆","🥗","🍝","🍜","🍲","🍛","🍣","🍱","🥟","🍤","🍚","🍘","🍥","🥮","🍡","🧁","🍰","🎂","🍮","🍭","🍬","🍫","🍩","🍪","☕","🍵","🥤","🧋","🍺","🍻","🥂","🍷"].map((e) => (
+                          <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Activities & Celebrations</p>
+                      <div className="grid grid-cols-6 gap-2">
+                        {["🎉","🎊","🎈","🎁","🎀","🎄","🎃","🎆","🎇","🧨","🪔","🪅","🎋","🎍","🎎","🎏","🎐","🧧","🎑","🎠","🎡","🎢","🎪","🎭","🎨","🎬","🎤","🎧","🎼","🎹","🥁","🎷","🎺","🎸","🪕","🎻","🪘","🎲","♟️","🎯","🎳","🎮","🕹️","⚽","🏀","🏈","⚾","🥎","🎾","🏐","🏉","🥏","🎱","🪀","🏓","🏸","🏒","🥍","🏏","🪃","🥅","⛳","🏹","🎣","🤿","🥊","🥋","🛹","🛼","⛸️","🎿","🛷","🏂","🧗","🏋️","🤸","🤺","⛷️","🏄","🚴"].map((e) => (
+                          <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Animals</p>
+                      <div className="grid grid-cols-6 gap-2">
+                        {["🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐻‍❄️","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🙈","🙉","🙊","🐒","🐔","🐧","🐦","🐤","🐣","🐥","🦆","🦅","🦉","🦇","🐺","🐗","🐴","🦄","🐝","🪱","🐛","🦋","🐌","🐞","🐜","🪰","🪲","🪳","🐢","🐍","🦎","🦖","🦕","🐙","🦑","🦐","🦞","🦀","🐡","🐠","🐟","🐬","🐳","🐋","🦈","🐊","🐅","🐆","🦓","🦍","🦧","🐘","🦛","🦏","🐪","🐫","🦒","🦘","🦬","🐃","🐂","🐄","🐎","🐖","🐏","🐑","🦙","🐐","🦌","🐕","🐩","🦮","🐕‍🦺","🐈","🐈‍⬛","🐓","🦃","🦤","🦚","🦜","🦢","🦩","🕊️","🐇","🦝","🦨","🦡","🦫","🦦","🦥","🐁","🐀","🐿️","🦔"].map((e) => (
+                          <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Travel & Places</p>
+                      <div className="grid grid-cols-6 gap-2">
+                        {["🏠","🏡","🏘️","🏚️","🏗️","🏢","🏣","🏤","🏥","🏦","🏨","🏩","🏪","🏫","🏬","🏭","🏯","🏰","💒","🗼","🗽","⛪","🕌","🛕","🕍","⛩️","🕋","⛲","⛺","🌁","🌃","🏙️","🌄","🌅","🌆","🌇","🌉","🌌","🎠","🛝","🎡","🎢","🚂","🚃","🚄","🚅","🚆","🚇","🚈","🚉","🚊","🚝","🚞","🚋","🚌","🚍","🚎","🚐","🚑","🚒","🚓","🚔","🚕","🚖","🚗","🚘","🚙","🛻","🚚","🚛","🚜","✈️","🛩️","🚀","🛸","🚁","🛶","⛵","🚤","🛥️","🛳️","⛴️","🚢"].map((e) => (
+                          <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Indian & Cultural</p>
+                      <div className="grid grid-cols-6 gap-2">
+                        {["🪔","🕉️","🪷","📿","🛕","🐘","🦚","🙏","🧘","🧿","🪬","🫶","🍛","🥥","🍚","🌶️","🫖","🍵","🎭","🪘","🎶","🎵","💃","🕺","👳","👳‍♀️","🧕","🪭","🏵️","🌺","🌸","🌼","💐","🌻","🌹","🪻"].map((e) => (
+                          <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </DeetChildModal>
               ) : null}

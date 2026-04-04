@@ -55,6 +55,7 @@ export async function createHub(input: CreateHubInput): Promise<HubRecord> {
     cover_image_url: normalizeText(input.coverImageUrl),
     dp_image_url: normalizeText(input.dpImageUrl),
     gallery_image_urls: [],
+    website_url: normalizeText(input.websiteUrl ?? undefined),
     created_by: user.id,
   };
 

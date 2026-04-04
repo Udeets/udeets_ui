@@ -3,7 +3,7 @@
 
 import type { FormEvent } from "react";
 import { useEffect, useRef } from "react";
-import { BarChart3, FileText, Images, Megaphone, Settings, Smile, X } from "lucide-react";
+import { BarChart3, Calendar, FileText, Images, MapPin, Megaphone, Paperclip, Settings, Smile, X } from "lucide-react";
 import { ACTION_ICON, BUTTON_PRIMARY, ICON, cn } from "../hubUtils";
 import type { AttachedDeetItem, ComposerChildFlow, DeetFormattingState } from "./deetTypes";
 
@@ -24,6 +24,7 @@ export function CreateDeetModal({
   onCloseFontSizeMenu,
   authorName = "You",
   authorAvatarSrc,
+  onSetPostType,
 }: {
   draftText: string;
   onDraftTextChange: (value: string) => void;
@@ -41,6 +42,7 @@ export function CreateDeetModal({
   onCloseFontSizeMenu: () => void;
   authorName?: string;
   authorAvatarSrc?: string;
+  onSetPostType?: (postType: string) => void;
 }) {
   const fontMenuRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
@@ -275,6 +277,7 @@ export function CreateDeetModal({
               <button
                 type="button"
                 disabled={isSubmitting}
+                onClick={() => onSetPostType?.("notice")}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
                 title="Announcement"
               >
@@ -284,6 +287,7 @@ export function CreateDeetModal({
               <button
                 type="button"
                 disabled={isSubmitting}
+                onClick={() => onSetPostType?.("notice")}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
                 title="Notice"
               >
@@ -293,10 +297,40 @@ export function CreateDeetModal({
               <button
                 type="button"
                 disabled={isSubmitting}
+                onClick={() => onSetPostType?.("post")}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
                 title="Poll"
               >
                 <BarChart3 className={ICON} />
+              </button>
+
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => onOpenChild("photo")}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
+                title="Attach File"
+              >
+                <Paperclip className={ICON} />
+              </button>
+
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => onSetPostType?.("news")}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
+                title="Event"
+              >
+                <Calendar className={ICON} />
+              </button>
+
+              <button
+                type="button"
+                disabled={isSubmitting}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
+                title="Check-in"
+              >
+                <MapPin className={ICON} />
               </button>
             </div>
           </div>

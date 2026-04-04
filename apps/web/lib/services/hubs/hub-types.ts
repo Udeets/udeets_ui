@@ -67,6 +67,7 @@ export interface CreateHubInput {
   country?: string;
   coverImageUrl?: string;
   dpImageUrl?: string;
+  websiteUrl?: string | null;
 }
 
 export interface UpdateHubInput {
