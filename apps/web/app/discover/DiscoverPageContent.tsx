@@ -348,17 +348,6 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
           </Link>
 
           <div className="flex items-center gap-1.5">
-            {/* Create Hub button only for authenticated users */}
-            {isAuthenticated ? (
-              <Link
-                href={createHubHref}
-                data-demo-target={isDemoPreview ? "discover-create-hub" : undefined}
-                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-4 py-2 text-sm font-medium text-white transition-opacity duration-150 hover:opacity-90"
-              >
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>
-                Create Hub
-              </Link>
-            ) : null}
             <Link
               href={isAuthenticated ? "/dashboard" : "/"}
               className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"

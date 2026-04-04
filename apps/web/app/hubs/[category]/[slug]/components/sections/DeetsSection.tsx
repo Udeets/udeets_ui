@@ -61,6 +61,7 @@ export function DeetsSection({
   onOpenViewer,
   likedDeetIds,
   likingDeetIds,
+  likeCountOverrides,
   onToggleLike,
   expandedCommentDeetId,
   commentsByDeetId,
@@ -97,6 +98,7 @@ export function DeetsSection({
   onOpenViewer: (images: string[], index: number, title: string, body: string, focusId?: string) => void;
   likedDeetIds?: Set<string>;
   likingDeetIds?: Set<string>;
+  likeCountOverrides?: Record<string, number>;
   onToggleLike?: (deetId: string) => void;
   expandedCommentDeetId?: string | null;
   commentsByDeetId?: Record<string, DeetComment[]>;
@@ -387,7 +389,7 @@ export function DeetsSection({
                               fill={likedDeetIds?.has(item.id) ? "currentColor" : "none"}
                             />
                           )}
-                          <span>{item.likes}</span>
+                          <span>{likeCountOverrides?.[item.id] ?? item.likes}</span>
                         </button>
                         <button
                           type="button"
@@ -480,7 +482,7 @@ function DeetCommentsSection({
           {comments.map((comment) => (
             <div key={comment.id} className="text-sm">
               <div className="flex items-center gap-2">
-                <span className="font-medium text-[var(--ud-text-primary)]">{comment.authorName || "Anonymous"}</span>
+                <span className="font-medium text-[var(--ud-text-primary)]">{comment.authorName || "User"}</span>
                 <span className="text-xs text-[var(--ud-text-muted)]">{formatCommentTime(comment.createdAt)}</span>
               </div>
               <p className="text-[var(--ud-text-secondary)] mt-1">{comment.body}</p>

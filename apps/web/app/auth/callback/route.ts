@@ -24,10 +24,13 @@ export async function GET(request: Request) {
 
   const user = data.session?.user;
   if (user) {
+    const meta = user.user_metadata ?? {};
+    // Google OAuth may store name under "full_name", "name", or both
+    const fullName = (meta.full_name as string) || (meta.name as string) || null;
     await upsertProfile(
       user.id,
-      user.user_metadata?.full_name ?? null,
-      user.user_metadata?.avatar_url ?? null,
+      fullName,
+      (meta.avatar_url as string) ?? null,
       user.email ?? null,
     );
   }

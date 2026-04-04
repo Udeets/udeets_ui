@@ -109,7 +109,7 @@ export async function addDeetComment(deetId: string, body: string): Promise<Deet
   // Fetch the commenter's profile
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, avatar_url")
+    .select("full_name, avatar_url, email")
     .eq("id", user.id)
     .single();
 
@@ -119,7 +119,7 @@ export async function addDeetComment(deetId: string, body: string): Promise<Deet
     userId: data.user_id,
     body: data.body,
     createdAt: data.created_at,
-    authorName: profile?.full_name ?? undefined,
+    authorName: profile?.full_name || profile?.email?.split("@")[0] || user.email?.split("@")[0] || undefined,
     authorAvatar: profile?.avatar_url ?? undefined,
   };
 }
@@ -142,12 +142,12 @@ export async function listDeetComments(deetId: string): Promise<DeetComment[]> {
   const userIds = [...new Set(data.map((row) => row.user_id))];
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, full_name, avatar_url")
+    .select("id, full_name, avatar_url, email")
     .in("id", userIds);
 
-  const profileMap = new Map<string, { full_name: string | null; avatar_url: string | null }>();
+  const profileMap = new Map<string, { full_name: string | null; avatar_url: string | null; email: string | null }>();
   for (const p of profiles ?? []) {
-    profileMap.set(p.id, { full_name: p.full_name, avatar_url: p.avatar_url });
+    profileMap.set(p.id, { full_name: p.full_name, avatar_url: p.avatar_url, email: p.email });
   }
 
   return data.map((row) => {
@@ -158,7 +158,7 @@ export async function listDeetComments(deetId: string): Promise<DeetComment[]> {
       userId: row.user_id,
       body: row.body,
       createdAt: row.created_at,
-      authorName: profile?.full_name ?? undefined,
+      authorName: profile?.full_name || profile?.email?.split("@")[0] || undefined,
       authorAvatar: profile?.avatar_url ?? undefined,
     };
   });

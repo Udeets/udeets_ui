@@ -324,7 +324,7 @@ function DashboardCommentSection({
           {comments.map((comment) => (
             <div key={comment.id} className="text-sm">
               <div className="flex items-center gap-2">
-                <span className="font-medium text-[var(--ud-text-primary)]">{comment.authorName || "Anonymous"}</span>
+                <span className="font-medium text-[var(--ud-text-primary)]">{comment.authorName || "User"}</span>
                 <span className="text-xs text-[var(--ud-text-muted)]">{formatCommentTime(comment.createdAt)}</span>
               </div>
               <p className="mt-0.5 text-[var(--ud-text-secondary)]">{comment.body}</p>

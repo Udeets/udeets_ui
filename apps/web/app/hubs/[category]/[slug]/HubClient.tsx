@@ -346,6 +346,7 @@ export default function HubClient({
   const {
     likedDeetIds,
     likingDeetIds,
+    likeCountOverrides,
     handleToggleLike,
     expandedCommentDeetId,
     commentsByDeetId,
@@ -891,6 +892,7 @@ export default function HubClient({
         onOpenViewer={openViewer}
         likedDeetIds={likedDeetIds}
         likingDeetIds={likingDeetIds}
+        likeCountOverrides={likeCountOverrides}
         onToggleLike={handleToggleLike}
         expandedCommentDeetId={expandedCommentDeetId}
         commentsByDeetId={commentsByDeetId}

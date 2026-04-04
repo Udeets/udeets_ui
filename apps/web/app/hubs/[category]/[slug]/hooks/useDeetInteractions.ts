@@ -7,6 +7,7 @@ import type { HubContent } from "@/lib/hub-content";
 export function useDeetInteractions(feedItems: HubContent["feed"]) {
   const [likedDeetIds, setLikedDeetIds] = useState<Set<string>>(new Set());
   const [likingDeetIds, setLikingDeetIds] = useState<Set<string>>(new Set());
+  const [likeCountOverrides, setLikeCountOverrides] = useState<Record<string, number>>({});
 
   // Comment state
   const [expandedCommentDeetId, setExpandedCommentDeetId] = useState<string | null>(null);
@@ -26,10 +27,13 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
         const statusMap = await getDeetLikeStatus(deetIds);
         if (!cancelled) {
           const liked = new Set<string>();
+          const counts: Record<string, number> = {};
           for (const [id, status] of statusMap) {
             if (status.liked) liked.add(id);
+            counts[id] = status.count;
           }
           setLikedDeetIds(liked);
+          setLikeCountOverrides(counts);
         }
       } catch {
         // Silently fail — buttons will just start at 0
@@ -53,6 +57,7 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
         else next.delete(deetId);
         return next;
       });
+      setLikeCountOverrides((prev) => ({ ...prev, [deetId]: result.likeCount }));
     } catch {
       // Silently fail
     } finally {
@@ -115,6 +120,7 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
   return {
     likedDeetIds,
     likingDeetIds,
+    likeCountOverrides,
     handleToggleLike,
     expandedCommentDeetId,
     commentsByDeetId,
