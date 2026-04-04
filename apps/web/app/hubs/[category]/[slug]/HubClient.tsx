@@ -584,6 +584,8 @@ export default function HubClient({
     onDeetCreated: prependCreatedDeet,
   });
 
+  const shouldOpenComments = searchParams.get("comments") === "1";
+
   useEffect(() => {
     if (!focusTarget) return;
     const timer = window.setTimeout(() => {
@@ -592,9 +594,14 @@ export default function HubClient({
       target.scrollIntoView({ behavior: "smooth", block: "center" });
       setHighlightedItemId(focusTarget);
       window.setTimeout(() => setHighlightedItemId((current) => (current === focusTarget ? null : current)), 2200);
+
+      // Auto-expand comments if ?comments=1 is present
+      if (shouldOpenComments) {
+        handleToggleComments(focusTarget);
+      }
     }, 180);
     return () => window.clearTimeout(timer);
-  }, [activeSection, focusTarget]);
+  }, [activeSection, focusTarget, shouldOpenComments, handleToggleComments]);
 
   const navigateToFocus = (focusId: string, tab?: HubTab) => {
     const params = new URLSearchParams();

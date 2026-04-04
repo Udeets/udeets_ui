@@ -2,14 +2,21 @@
 
 export const dynamic = "force-dynamic";
 
-import { Calendar, Heart, MessageCircle, Share2 } from "lucide-react";
+import { Calendar, Heart, Loader2, MessageCircle, Send, Share2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
 import { mapDeetToDashboardCard } from "@/lib/mappers/deets/map-deet-to-dashboard-card";
 import { listDeets, subscribeToDeets } from "@/lib/services/deets/list-deets";
 import type { DeetRecord } from "@/lib/services/deets/deet-types";
+import {
+  toggleDeetLike,
+  getDeetLikeStatus,
+  addDeetComment,
+  listDeetComments,
+  type DeetComment,
+} from "@/lib/services/deets/deet-interactions";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import { listHubs } from "@/lib/services/hubs/list-hubs";
 import { listMyMemberships, type MyMembership } from "@/lib/services/members/list-my-memberships";
@@ -266,6 +273,99 @@ function HubLauncher({
   );
 }
 
+function formatCommentTime(timestamp: string): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return date.toLocaleDateString();
+}
+
+function DashboardCommentSection({
+  deetId,
+  comments,
+  isLoading,
+  isSubmitting,
+  onSubmitComment,
+}: {
+  deetId: string;
+  comments: DeetComment[];
+  isLoading: boolean;
+  isSubmitting: boolean;
+  onSubmitComment: (deetId: string, body: string) => void;
+}) {
+  const [commentText, setCommentText] = useState("");
+
+  const handleSubmit = () => {
+    if (commentText.trim() && !isSubmitting) {
+      onSubmitComment(deetId, commentText);
+      setCommentText("");
+    }
+  };
+
+  return (
+    <div className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] px-4 py-3">
+      {isLoading ? (
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="h-5 w-5 animate-spin text-[var(--ud-text-muted)]" />
+        </div>
+      ) : comments.length === 0 ? (
+        <p className="mb-3 text-xs italic text-[var(--ud-text-muted)]">No comments yet. Be the first!</p>
+      ) : (
+        <div className="mb-3 max-h-[240px] space-y-2.5 overflow-y-auto">
+          {comments.map((comment) => (
+            <div key={comment.id} className="text-sm">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-[var(--ud-text-primary)]">{comment.authorName || "Anonymous"}</span>
+                <span className="text-xs text-[var(--ud-text-muted)]">{formatCommentTime(comment.createdAt)}</span>
+              </div>
+              <p className="mt-0.5 text-[var(--ud-text-secondary)]">{comment.body}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-end gap-2">
+        <input
+          type="text"
+          placeholder="Write a comment..."
+          value={commentText}
+          onChange={(e) => setCommentText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSubmit();
+            }
+          }}
+          disabled={isSubmitting}
+          className="min-w-0 flex-1 rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-3 py-2 text-sm text-[var(--ud-text-secondary)] outline-none placeholder:text-[var(--ud-text-muted)] focus:border-[var(--ud-brand-primary)] focus:ring-2 focus:ring-[var(--ud-brand-light)] disabled:opacity-75"
+        />
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={!commentText.trim() || isSubmitting}
+          className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-[var(--ud-brand-primary)] to-[#1a8a82] px-3 py-2 text-white transition disabled:cursor-not-allowed disabled:opacity-50 hover:opacity-90"
+          aria-label="Send comment"
+        >
+          {isSubmitting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function DashboardPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -283,19 +383,103 @@ function DashboardPageContent() {
   const [isLoadingHubs, setIsLoadingHubs] = useState(true);
   const [hubsLoadError, setHubsLoadError] = useState<string | null>(null);
   const [myDeetsItems, setMyDeetsItems] = useState<FeedItem[]>([]);
-  const [likedDeets, setLikedDeets] = useState<Set<string>>(new Set());
   const [upcomingEvents, setUpcomingEvents] = useState<Array<{ id: string; title: string; eventDate: string; hubId: string; hubName: string; href: string }>>([]);
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
   const eventsButtonRef = useRef<HTMLButtonElement | null>(null);
 
-  const toggleLike = (deetId: string) => {
-    setLikedDeets(prev => {
-      const next = new Set(prev);
-      if (next.has(deetId)) next.delete(deetId);
-      else next.add(deetId);
-      return next;
-    });
-  };
+  // ── Interaction state (likes, comments, share) ──
+  const [likedDeets, setLikedDeets] = useState<Set<string>>(new Set());
+  const [likingDeets, setLikingDeets] = useState<Set<string>>(new Set());
+  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
+  const [expandedCommentDeetId, setExpandedCommentDeetId] = useState<string | null>(null);
+  const [commentsByDeetId, setCommentsByDeetId] = useState<Record<string, DeetComment[]>>({});
+  const [commentLoadingDeetIds, setCommentLoadingDeetIds] = useState<Set<string>>(new Set());
+  const [commentSubmittingDeetId, setCommentSubmittingDeetId] = useState<string | null>(null);
+  const [copiedDeetId, setCopiedDeetId] = useState<string | null>(null);
+  const copiedTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const toggleLike = useCallback(async (deetId: string) => {
+    if (likingDeets.has(deetId)) return;
+    setLikingDeets((prev) => new Set(prev).add(deetId));
+    try {
+      const result = await toggleDeetLike(deetId);
+      setLikedDeets((prev) => {
+        const next = new Set(prev);
+        if (result.liked) next.add(deetId);
+        else next.delete(deetId);
+        return next;
+      });
+      setLikeCounts((prev) => ({ ...prev, [deetId]: result.likeCount }));
+    } catch {
+      // Silently fail
+    } finally {
+      setLikingDeets((prev) => {
+        const next = new Set(prev);
+        next.delete(deetId);
+        return next;
+      });
+    }
+  }, [likingDeets]);
+
+  const handleToggleComments = useCallback(async (deetId: string) => {
+    if (expandedCommentDeetId === deetId) {
+      setExpandedCommentDeetId(null);
+    } else {
+      setExpandedCommentDeetId(deetId);
+      if (!commentsByDeetId[deetId] && !commentLoadingDeetIds.has(deetId)) {
+        setCommentLoadingDeetIds((prev) => new Set(prev).add(deetId));
+        try {
+          const comments = await listDeetComments(deetId);
+          setCommentsByDeetId((prev) => ({ ...prev, [deetId]: comments }));
+        } catch (error) {
+          console.error("Failed to load comments:", error);
+        } finally {
+          setCommentLoadingDeetIds((prev) => {
+            const next = new Set(prev);
+            next.delete(deetId);
+            return next;
+          });
+        }
+      }
+    }
+  }, [expandedCommentDeetId, commentsByDeetId, commentLoadingDeetIds]);
+
+  const handleSubmitComment = useCallback(async (deetId: string, body: string) => {
+    if (commentSubmittingDeetId) return;
+    setCommentSubmittingDeetId(deetId);
+    try {
+      const newComment = await addDeetComment(deetId, body);
+      setCommentsByDeetId((prev) => ({
+        ...prev,
+        [deetId]: [...(prev[deetId] ?? []), newComment],
+      }));
+    } catch (error) {
+      console.error("Failed to submit comment:", error);
+    } finally {
+      setCommentSubmittingDeetId(null);
+    }
+  }, [commentSubmittingDeetId]);
+
+  const handleShareDeet = useCallback(async (deetId: string, hubHref?: string) => {
+    const shareUrl = hubHref
+      ? `${window.location.origin}${hubHref}?focus=${deetId}`
+      : `${window.location.origin}/dashboard`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopiedDeetId(deetId);
+      if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+      copiedTimeoutRef.current = setTimeout(() => setCopiedDeetId(null), 2000);
+    } catch {
+      // Silently fail
+    }
+  }, []);
+
+  // Cleanup copied timeout
+  useEffect(() => {
+    return () => {
+      if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -518,6 +702,35 @@ function DashboardPageContent() {
     };
   }, [authStatus, visibleHubs]);
 
+  // Fetch like statuses when deets items change
+  useEffect(() => {
+    const deetIds = myDeetsItems.map((item) => item.id).filter(Boolean);
+    if (!deetIds.length) return;
+
+    let cancelled = false;
+
+    async function fetchLikeStatus() {
+      try {
+        const statusMap = await getDeetLikeStatus(deetIds);
+        if (!cancelled) {
+          const liked = new Set<string>();
+          const counts: Record<string, number> = {};
+          for (const [id, status] of statusMap) {
+            if (status.liked) liked.add(id);
+            counts[id] = status.count;
+          }
+          setLikedDeets(liked);
+          setLikeCounts(counts);
+        }
+      } catch {
+        // Silently fail
+      }
+    }
+
+    void fetchLikeStatus();
+    return () => { cancelled = true; };
+  }, [myDeetsItems]);
+
   const filteredDeetsItems = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
     const dedupedItems = myDeetsItems.filter((item, index, array) => array.findIndex((candidate) => candidate.id === item.id) === index);
@@ -731,61 +944,109 @@ function DashboardPageContent() {
                 {filteredDeetsItems.length ? (
                   <div className="space-y-3">
                     {filteredDeetsItems.map((item) => {
-                      const cardContent = (
-                        <>
-                          <div className="flex items-start gap-3">
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--ud-brand-light)]">
-                              <span className="text-xs font-semibold text-[var(--ud-brand-primary)]">{item.hubName?.charAt(0)?.toUpperCase() ?? "H"}</span>
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="truncate text-sm font-semibold text-[var(--ud-text-primary)]">{item.hubName || "Hub"}</p>
-                                <span className="shrink-0 text-xs text-[var(--ud-text-muted)]">{item.timeLabel}</span>
+                      const isLiked = likedDeets.has(item.id);
+                      const isLiking = likingDeets.has(item.id);
+                      const likeCount = likeCounts[item.id] ?? 0;
+                      const commentCount = (commentsByDeetId[item.id] ?? []).length;
+                      const isCommentsOpen = expandedCommentDeetId === item.id;
+
+                      return (
+                        <article key={item.id} className="overflow-hidden rounded-lg border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] transition-colors duration-150 hover:border-[var(--ud-border)]">
+                          {/* Card body — clickable to navigate to hub */}
+                          {item.href ? (
+                            <Link href={item.href} className="block p-4">
+                              <div className="flex items-start gap-3">
+                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--ud-brand-light)]">
+                                  <span className="text-xs font-semibold text-[var(--ud-brand-primary)]">{item.hubName?.charAt(0)?.toUpperCase() ?? "H"}</span>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <p className="truncate text-sm font-semibold text-[var(--ud-text-primary)]">{item.hubName || "Hub"}</p>
+                                    <span className="shrink-0 text-xs text-[var(--ud-text-muted)]">{item.timeLabel}</span>
+                                  </div>
+                                  <p className="text-xs text-[var(--ud-text-muted)]">Posted by: Hub Member</p>
+                                </div>
                               </div>
-                              <p className="text-xs text-[var(--ud-text-muted)]">Posted by: Hub Member</p>
+                              {item.title ? <h3 className={cn("mt-3 text-base font-semibold tracking-tight", TEXT_DARK)}>{item.title}</h3> : null}
+                              {item.body ? <p className={cn("mt-1 text-sm leading-6", TEXT_MUTED)}>{item.body}</p> : null}
+                              <DashboardDeetImage src={item.previewImage || item.previewImages[0]} alt={item.title} />
+                            </Link>
+                          ) : (
+                            <div className="p-4">
+                              <div className="flex items-start gap-3">
+                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--ud-brand-light)]">
+                                  <span className="text-xs font-semibold text-[var(--ud-brand-primary)]">{item.hubName?.charAt(0)?.toUpperCase() ?? "H"}</span>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <p className="truncate text-sm font-semibold text-[var(--ud-text-primary)]">{item.hubName || "Hub"}</p>
+                                    <span className="shrink-0 text-xs text-[var(--ud-text-muted)]">{item.timeLabel}</span>
+                                  </div>
+                                  <p className="text-xs text-[var(--ud-text-muted)]">Posted by: Hub Member</p>
+                                </div>
+                              </div>
+                              {item.title ? <h3 className={cn("mt-3 text-base font-semibold tracking-tight", TEXT_DARK)}>{item.title}</h3> : null}
+                              {item.body ? <p className={cn("mt-1 text-sm leading-6", TEXT_MUTED)}>{item.body}</p> : null}
+                              <DashboardDeetImage src={item.previewImage || item.previewImages[0]} alt={item.title} />
                             </div>
-                          </div>
-                          {item.title ? <h3 className={cn("mt-3 text-base font-semibold tracking-tight", TEXT_DARK)}>{item.title}</h3> : null}
-                          {item.body ? <p className={cn("mt-1 text-sm leading-6", TEXT_MUTED)}>{item.body}</p> : null}
-                          <DashboardDeetImage src={item.previewImage || item.previewImages[0]} alt={item.title} />
-                          <div className="mt-3 flex items-center gap-6 border-t border-[var(--ud-border-subtle)] pt-3">
+                          )}
+
+                          {/* Action bar — always outside the link */}
+                          <div className="flex items-center gap-6 border-t border-[var(--ud-border-subtle)] px-4 py-3">
                             <button
                               type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleLike(item.id); }}
-                              className="flex items-center gap-1.5 text-sm text-[var(--ud-text-muted)] transition-colors duration-150 hover:text-[var(--ud-brand-primary)]"
+                              disabled={isLiking}
+                              onClick={() => toggleLike(item.id)}
+                              className={cn(
+                                "flex items-center gap-1.5 text-sm transition-colors duration-150 hover:text-[var(--ud-brand-primary)]",
+                                isLiked ? "text-[var(--ud-brand-primary)] font-medium" : "text-[var(--ud-text-muted)]"
+                              )}
                             >
-                              <Heart
-                                className="h-4 w-4 stroke-2"
-                                fill={likedDeets.has(item.id) ? "var(--ud-brand-primary)" : "none"}
-                                stroke={likedDeets.has(item.id) ? "var(--ud-brand-primary)" : "currentColor"}
-                              />
-                              <span>{likedDeets.has(item.id) ? 1 : 0}</span>
+                              {isLiking ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Heart
+                                  className="h-4 w-4 stroke-2"
+                                  fill={isLiked ? "currentColor" : "none"}
+                                />
+                              )}
+                              <span>{likeCount}</span>
                               <span>Like</span>
                             </button>
-                            <button type="button" className="flex items-center gap-1.5 text-sm text-[var(--ud-text-muted)] transition-colors duration-150 hover:text-[var(--ud-brand-primary)]">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleComments(item.id)}
+                              className={cn(
+                                "flex items-center gap-1.5 text-sm transition-colors duration-150 hover:text-[var(--ud-brand-primary)]",
+                                isCommentsOpen ? "text-[var(--ud-brand-primary)] font-medium" : "text-[var(--ud-text-muted)]"
+                              )}
+                            >
                               <MessageCircle className="h-4 w-4 stroke-2" />
-                              <span>0</span>
+                              <span>{commentCount}</span>
                               <span>Comment</span>
                             </button>
-                            <button type="button" className="flex items-center gap-1.5 text-sm text-[var(--ud-text-muted)] transition-colors duration-150 hover:text-[var(--ud-brand-primary)]">
-                              <Share2 className="h-4 w-4 stroke-2" />
-                              <span>Share</span>
-                            </button>
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onClick={() => handleShareDeet(item.id, item.href)}
+                                className="flex items-center gap-1.5 text-sm text-[var(--ud-text-muted)] transition-colors duration-150 hover:text-[var(--ud-brand-primary)]"
+                              >
+                                <Share2 className="h-4 w-4 stroke-2" />
+                                <span>{copiedDeetId === item.id ? "Copied!" : "Share"}</span>
+                              </button>
+                            </div>
                           </div>
-                        </>
-                      );
 
-                      return item.href ? (
-                        <Link
-                          key={item.id}
-                          href={item.href}
-                          className="block rounded-lg border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] p-4 transition-colors duration-150 hover:border-[var(--ud-border)]"
-                        >
-                          {cardContent}
-                        </Link>
-                      ) : (
-                        <article key={item.id} className="rounded-lg border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] p-4">
-                          {cardContent}
+                          {/* Inline comments section */}
+                          {isCommentsOpen ? (
+                            <DashboardCommentSection
+                              deetId={item.id}
+                              comments={commentsByDeetId[item.id] ?? []}
+                              isLoading={commentLoadingDeetIds.has(item.id)}
+                              isSubmitting={commentSubmittingDeetId === item.id}
+                              onSubmitComment={handleSubmitComment}
+                            />
+                          ) : null}
                         </article>
                       );
                     })}
