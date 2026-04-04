@@ -47,18 +47,18 @@ export function InviteModal({
     <>
       {/* Modal overlay */}
       <div
-        className="fixed inset-0 z-40 bg-black/40 transition"
+        className="fixed inset-0 z-40 bg-[var(--ud-bg-overlay)] transition"
         onClick={onClose}
       />
 
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+        <div className="relative w-full max-w-sm rounded-2xl bg-[var(--ud-bg-card)] p-6 shadow-xl">
           {/* Close button */}
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-4 top-4 rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+            className="absolute right-4 top-4 rounded-lg p-1 text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-secondary)]"
             aria-label="Close modal"
           >
             <X className="h-5 w-5" />
@@ -66,7 +66,7 @@ export function InviteModal({
 
           {/* Header */}
           <div className="mb-6 pr-8">
-            <h2 className="text-lg font-semibold text-[#111111]">
+            <h2 className="text-lg font-semibold text-[var(--ud-text-primary)]">
               Invite people to {hubName}
             </h2>
           </div>
@@ -81,8 +81,8 @@ export function InviteModal({
               className={cn(
                 "flex items-center justify-center gap-2 rounded-lg px-4 py-3 font-medium transition",
                 copied
-                  ? "bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] text-white"
-                  : "bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] text-white hover:opacity-90"
+                  ? "bg-gradient-to-r from-[var(--ud-brand-primary)] to-[var(--ud-brand-primary)] text-white"
+                  : "bg-gradient-to-r from-[var(--ud-brand-primary)] to-[var(--ud-brand-primary)] text-white hover:opacity-90"
               )}
             >
               <Copy className="h-4 w-4" />
@@ -93,7 +93,7 @@ export function InviteModal({
             <button
               type="button"
               onClick={handleComingSoon}
-              className="rounded-lg border border-[#0C5C57] px-4 py-3 font-medium text-[#0C5C57] transition hover:bg-[#f0faf8]"
+              className="rounded-lg border border-[var(--ud-brand-primary)] px-4 py-3 font-medium text-[var(--ud-brand-primary)] transition hover:bg-[var(--ud-brand-light)]"
             >
               Invite uDeets Member
             </button>

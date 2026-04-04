@@ -60,8 +60,8 @@ export function CTADisplay({ ctas }: { ctas: HubCTARecord[] }) {
             target={["phone", "email"].includes(cta.action_type) ? undefined : "_blank"}
             rel={["phone", "email"].includes(cta.action_type) ? undefined : "noreferrer"}
             className={cn(
-              "inline-flex items-center gap-2 rounded-xl border border-[#0C5C57] px-4 py-2 text-sm font-semibold text-[#0C5C57]",
-              "transition hover:bg-[#EAF6F3] active:scale-[0.97]"
+              "inline-flex items-center gap-2 rounded-xl border border-[var(--ud-brand-primary)] px-4 py-2 text-sm font-semibold text-[var(--ud-brand-primary)]",
+              "transition hover:bg-[var(--ud-brand-light)] active:scale-[0.97]"
             )}
           >
             <Icon className="h-4 w-4 shrink-0" />

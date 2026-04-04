@@ -81,8 +81,8 @@ export function HubSidebarNav({
             }}
             className={
               isActive
-                ? "flex items-center gap-3 border-l-2 border-[#0C5C57] bg-[#E3F1EF] px-4 py-2.5 text-[13px] font-medium text-[#0C5C57]"
-                : "flex items-center gap-3 border-l-2 border-transparent px-4 py-2.5 text-[13px] text-[#6b7280] transition-colors duration-150 hover:bg-[#fafafa] hover:text-[#0C5C57]"
+                ? "flex items-center gap-3 border-l-2 border-[var(--ud-brand-primary)] bg-[var(--ud-brand-light)] px-4 py-2.5 text-[13px] font-medium text-[var(--ud-brand-primary)]"
+                : "flex items-center gap-3 border-l-2 border-transparent px-4 py-2.5 text-[13px] text-[var(--ud-text-secondary)] transition-colors duration-150 hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
             }
           >
             <Icon className="h-4 w-4 shrink-0" />
@@ -93,14 +93,14 @@ export function HubSidebarNav({
 
       {isCreatorAdmin ? (
         <>
-          <div className="mx-4 my-2 border-t border-slate-100" />
+          <div className="mx-4 my-2 border-t border-[var(--ud-border-subtle)]" />
           <button
             type="button"
             onClick={() => onNavigate({ tab: activeSection, panel: "settings" })}
             className={
               activePanel === "settings"
-                ? "flex items-center gap-3 border-l-2 border-[#0C5C57] bg-[#E3F1EF] px-4 py-2.5 text-[13px] font-medium text-[#0C5C57]"
-                : "flex items-center gap-3 border-l-2 border-transparent px-4 py-2.5 text-[13px] text-[#6b7280] transition-colors duration-150 hover:bg-[#fafafa] hover:text-[#0C5C57]"
+                ? "flex items-center gap-3 border-l-2 border-[var(--ud-brand-primary)] bg-[var(--ud-brand-light)] px-4 py-2.5 text-[13px] font-medium text-[var(--ud-brand-primary)]"
+                : "flex items-center gap-3 border-l-2 border-transparent px-4 py-2.5 text-[13px] text-[var(--ud-text-secondary)] transition-colors duration-150 hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
             }
           >
             <Settings className="h-4 w-4 shrink-0" />

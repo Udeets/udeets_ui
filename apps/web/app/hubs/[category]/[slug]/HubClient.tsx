@@ -60,6 +60,8 @@ import {
   compactId,
   normalizePublicSrc,
 } from "./components/hubUtils";
+import { useHubRole } from "@/hooks/useUserRole";
+import { can } from "@/lib/roles";
 
 function formatViewerCommentTime(timestamp: string): string {
   const date = new Date(timestamp);
@@ -117,7 +119,14 @@ export default function HubClient({
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const isCreatorAdmin = Boolean(user?.id && hub.createdBy && user.id === hub.createdBy);
-  const canAccessAdmins = isCreatorAdmin;
+
+  // ─── Role-based access ───
+  const { role: hubRole, isMember: roleMember, isPending: rolePending } = useHubRole(hub.id, hub.createdBy ?? null);
+  const canEditHub = can(hubRole, "hub:edit_settings");
+  const canManageMembers = can(hubRole, "hub:manage_members");
+  const canViewFullContent = can(hubRole, "hub:view_full_content");
+
+  const canAccessAdmins = canEditHub;
   const creatorMetadata = user?.user_metadata;
   const creatorDisplayName = isCreatorAdmin ? creatorMetadata?.full_name || creatorMetadata?.name || user?.email || "You" : "Hub Creator";
   const creatorDetail = isCreatorAdmin ? user?.email || "Admin" : hub.createdBy ? `Admin • ${compactId(hub.createdBy)}` : "Admin";
@@ -168,7 +177,7 @@ export default function HubClient({
 
   const isPublicHub = hub.visibility === "Public";
   // Content gating: non-members see Header + About only
-  const canAccessFullContent = isMember || isCreatorAdmin;
+  const canAccessFullContent = canViewFullContent || isMember || isCreatorAdmin;
 
   // CTA state
   const [hubCTAs, setHubCTAs] = useState<import("@/lib/services/ctas/cta-types").HubCTARecord[]>([]);
@@ -656,16 +665,16 @@ export default function HubClient({
     if (!canAccessFullContent && activeSection !== "About") {
       return (
         <div className={cn(CARD, "p-8 text-center")}>
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#E3F1EF]">
-            <svg viewBox="0 0 24 24" className="h-6 w-6 text-[#0C5C57]" fill="none" stroke="currentColor" strokeWidth="2">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--ud-brand-light)]">
+            <svg viewBox="0 0 24 24" className="h-6 w-6 text-[var(--ud-brand-primary)]" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-[#12312D]">
+          <h3 className="text-lg font-semibold text-[var(--ud-text-primary)]">
             {isPending ? "Request Pending" : "Members Only"}
           </h3>
-          <p className="mx-auto mt-2 max-w-sm text-sm text-[#58706B]">
+          <p className="mx-auto mt-2 max-w-sm text-sm text-[var(--ud-text-secondary)]">
             {isPending
               ? "Your request to join this hub is awaiting approval from the admin."
               : isPublicHub
@@ -887,7 +896,7 @@ export default function HubClient({
   };
 
   return (
-    <div className="min-h-screen bg-white pb-16 md:pb-0">
+    <div className="min-h-screen bg-[var(--ud-bg-page)] pb-16 md:pb-0">
       <UdeetsHeader />
 
       <div className="mx-auto w-full max-w-7xl">
@@ -913,11 +922,11 @@ export default function HubClient({
           accentTheme={accentTheme}
         />
 
-        {mediaSuccess ? <p className="px-4 pt-3 text-sm font-medium text-[#0C5C57]">{mediaSuccess}</p> : null}
-        {mediaError ? <p className="px-4 pt-3 text-sm font-medium text-[#B42318]">{mediaError}</p> : null}
+        {mediaSuccess ? <p className="px-4 pt-3 text-sm font-medium text-[var(--ud-brand-primary)]">{mediaSuccess}</p> : null}
+        {mediaError ? <p className="px-4 pt-3 text-sm font-medium text-[var(--ud-danger)]">{mediaError}</p> : null}
 
         {/* Mobile horizontal tab bar — visible below lg */}
-        <div className="flex overflow-x-auto border-b border-slate-100 bg-white lg:hidden" style={{ scrollbarWidth: "none" as never }}>
+        <div className="flex overflow-x-auto border-b border-[var(--ud-border)] bg-[var(--ud-bg-card)] lg:hidden" style={{ scrollbarWidth: "none" as never }}>
           {(hubTemplateConfig.tabs.filter((t) => t !== "Settings") as string[])
             .filter((tab) => canAccessFullContent || tab === "About")
             .map((tab) => (
@@ -936,8 +945,8 @@ export default function HubClient({
                 className={cn(
                   "shrink-0 border-b-2 px-4 py-3 text-sm font-medium transition",
                   activeSection === tab && activePanel !== "settings"
-                    ? "border-[#0C5C57] text-[#0C5C57]"
-                    : "border-transparent text-slate-500 hover:text-slate-700"
+                    ? "border-[var(--ud-brand-primary)] text-[var(--ud-brand-primary)]"
+                    : "border-transparent text-[var(--ud-text-muted)] hover:text-[var(--ud-text-secondary)]"
                 )}
               >
                 {tab === "About"
@@ -956,8 +965,8 @@ export default function HubClient({
               className={cn(
                 "shrink-0 border-b-2 px-4 py-3 text-sm font-medium transition",
                 activePanel === "settings"
-                  ? "border-[#0C5C57] text-[#0C5C57]"
-                  : "border-transparent text-slate-500 hover:text-slate-700"
+                  ? "border-[var(--ud-brand-primary)] text-[var(--ud-brand-primary)]"
+                  : "border-transparent text-[var(--ud-text-muted)] hover:text-[var(--ud-text-secondary)]"
               )}
             >
               Settings
@@ -968,7 +977,7 @@ export default function HubClient({
         {/* Below header — 2-column on desktop, single column on mobile */}
         <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr]">
           {/* Left sidebar — hidden on mobile */}
-          <aside className="hidden border-r border-slate-100 bg-white lg:block">
+          <aside className="hidden border-r border-[var(--ud-border)] bg-[var(--ud-bg-card)] lg:block">
             <HubSidebarNav
               activeSection={activeSection}
               activePanel={activePanel}
@@ -980,7 +989,7 @@ export default function HubClient({
           </aside>
 
           {/* Content area */}
-          <main className="min-h-[calc(100vh-200px)] bg-[#fafafa] p-4 sm:p-6">
+          <main className="min-h-[calc(100vh-200px)] bg-[var(--ud-bg-subtle)] p-4 sm:p-6">
             {renderMainContent()}
           </main>
         </div>
@@ -993,23 +1002,23 @@ export default function HubClient({
       {showJoinConfirm ? (
         <div className="fixed inset-0 z-[200] flex items-end justify-center bg-[#111111]/45 sm:items-center">
           <div className={cn(CARD, "w-full max-w-md animate-[slideUp_200ms_ease-out] rounded-t-[28px] p-6 sm:rounded-[28px]")}>
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#E3F1EF]">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--ud-brand-light)]">
               {isPending ? (
                 <svg viewBox="0 0 24 24" className="h-6 w-6 text-amber-600" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="12" r="10" />
                   <polyline points="12 6 12 12 16 14" />
                 </svg>
               ) : (
-                <svg viewBox="0 0 24 24" className="h-6 w-6 text-[#0C5C57]" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg viewBox="0 0 24 24" className="h-6 w-6 text-[var(--ud-brand-primary)]" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                   <polyline points="22 4 12 14.01 9 11.01" />
                 </svg>
               )}
             </div>
-            <h3 className="text-center text-lg font-semibold text-[#12312D]">
+            <h3 className="text-center text-lg font-semibold text-[var(--ud-text-primary)]">
               {isPending ? "Request Sent!" : "Welcome to " + hubName + "!"}
             </h3>
-            <p className="mx-auto mt-2 max-w-xs text-center text-sm text-[#58706B]">
+            <p className="mx-auto mt-2 max-w-xs text-center text-sm text-[var(--ud-text-secondary)]">
               {isPending
                 ? "Your request has been sent to the hub admin. You'll get access once they approve it."
                 : "You're now a member. Check out the latest deets from this hub."}
@@ -1029,7 +1038,7 @@ export default function HubClient({
               ) : null}
               <button
                 type="button"
-                className="w-full rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-[#12312D] transition hover:bg-slate-50"
+                className="w-full rounded-full border border-[var(--ud-border)] px-5 py-3 text-sm font-semibold text-[var(--ud-text-primary)] transition hover:bg-[var(--ud-bg-subtle)]"
                 onClick={() => setShowJoinConfirm(false)}
               >
                 {isPending ? "Got it" : "Stay on About"}
@@ -1043,11 +1052,11 @@ export default function HubClient({
         <div className="fixed inset-0 z-[118] flex items-center justify-center bg-[#111111]/45 p-4">
           <div className={cn(CARD, "w-full max-w-md p-5")}>
             <div>
-              <h3 className="text-lg font-semibold tracking-tight text-[#111111]">You have unsaved changes</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600">Save your hub settings before switching tabs, or discard your edits.</p>
+              <h3 className="text-lg font-semibold tracking-tight text-[var(--ud-text-primary)]">You have unsaved changes</h3>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--ud-text-secondary)]">Save your hub settings before switching tabs, or discard your edits.</p>
             </div>
 
-            {settingsSaveError ? <p className="mt-4 text-sm font-medium text-[#B42318]">{settingsSaveError}</p> : null}
+            {settingsSaveError ? <p className="mt-4 text-sm font-medium text-[var(--ud-danger)]">{settingsSaveError}</p> : null}
 
             <div className="mt-5 flex justify-end gap-3">
               <button
@@ -1082,12 +1091,12 @@ export default function HubClient({
           <div className={cn(CARD, "w-full max-w-md p-5")}>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-lg font-semibold tracking-tight text-[#111111]">
+                <h3 className="text-lg font-semibold tracking-tight text-[var(--ud-text-primary)]">
                   {mediaChooserTarget === "dp" ? "Change Display Picture" : "Change Cover Image"}
                 </h3>
-                <p className="mt-1 text-sm text-slate-600">Choose an existing album photo or upload a new one.</p>
+                <p className="mt-1 text-sm text-[var(--ud-text-secondary)]">Choose an existing album photo or upload a new one.</p>
               </div>
-              <button type="button" onClick={closeMediaChooser} className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50" aria-label="Close media chooser">
+              <button type="button" onClick={closeMediaChooser} className="rounded-full border border-[var(--ud-border)] p-2 text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)]" aria-label="Close media chooser">
                 <X className={ICON} />
               </button>
             </div>
@@ -1100,7 +1109,7 @@ export default function HubClient({
                   disabled={!albumChoices.length}
                   className={cn(
                     "flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm font-medium transition",
-                    albumChoices.length ? "border-slate-200 text-[#111111] hover:border-[#A9D1CA] hover:bg-[#F7FBFA]" : "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400"
+                    albumChoices.length ? "border-[var(--ud-border)] text-[var(--ud-text-primary)] hover:border-[var(--ud-brand-primary)] hover:bg-[var(--ud-bg-subtle)]" : "cursor-not-allowed border-[var(--ud-border)] bg-[var(--ud-bg-subtle)] text-[var(--ud-text-muted)]"
                   )}
                 >
                   <span>Choose from Albums</span>
@@ -1109,17 +1118,17 @@ export default function HubClient({
                 <button
                   type="button"
                   onClick={handleChooseFromDevice}
-                  className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left text-sm font-medium text-[#111111] transition hover:border-[#A9D1CA] hover:bg-[#F7FBFA]"
+                  className="flex w-full items-center justify-between rounded-2xl border border-[var(--ud-border)] px-4 py-3 text-left text-sm font-medium text-[var(--ud-text-primary)] transition hover:border-[var(--ud-brand-primary)] hover:bg-[var(--ud-bg-subtle)]"
                 >
                   <span>Upload from Device</span>
-                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Device</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--ud-text-muted)]">Device</span>
                 </button>
               </div>
             ) : (
               <div className="mt-5">
                 <div className="grid grid-cols-3 gap-3">
                   {albumChoices.map((imageUrl, index) => (
-                    <button key={`${imageUrl}-${index}`} type="button" onClick={() => void handleAlbumImageSelect(imageUrl)} className="aspect-square overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 transition hover:border-[#A9D1CA]">
+                    <button key={`${imageUrl}-${index}`} type="button" onClick={() => void handleAlbumImageSelect(imageUrl)} className="aspect-square overflow-hidden rounded-2xl border border-[var(--ud-border)] bg-[var(--ud-bg-subtle)] transition hover:border-[var(--ud-brand-primary)]">
                       <ImageWithFallback
                         src={imageUrl}
                         sources={[imageUrl]}
@@ -1182,7 +1191,7 @@ export default function HubClient({
                     <button
                       type="button"
                       onClick={() => deetPhotoInputRef.current?.click()}
-                      className="w-full rounded-2xl border border-dashed border-[#A9D1CA] bg-[#F7FBFA] px-4 py-8 text-center text-sm font-medium text-[#0C5C57] transition hover:bg-[#EEF7F4]"
+                      className="w-full rounded-2xl border border-dashed border-[var(--ud-brand-primary)] bg-[var(--ud-bg-subtle)] px-4 py-8 text-center text-sm font-medium text-[var(--ud-brand-primary)] transition hover:bg-[var(--ud-bg-subtle)]"
                     >
                       Choose images from device
                     </button>
@@ -1190,7 +1199,7 @@ export default function HubClient({
                     {selectedPhotoPreviews.length ? (
                       <div className="mt-4 grid grid-cols-3 gap-3">
                         {selectedPhotoPreviews.map((preview, index) => (
-                          <div key={`${preview}-${index}`} className="aspect-square overflow-hidden rounded-2xl bg-slate-100">
+                          <div key={`${preview}-${index}`} className="aspect-square overflow-hidden rounded-2xl bg-[var(--ud-bg-subtle)]">
                             <img src={preview} alt={`Selected ${index + 1}`} className="h-full w-full object-cover" />
                           </div>
                         ))}
@@ -1233,7 +1242,7 @@ export default function HubClient({
                           setModalDraftText((current) => `${current}${current ? " " : ""}${emoji}`);
                           attachDeetItem({ type: "sticker", title: "Sticker added", detail: emoji });
                         }}
-                        className="flex h-16 items-center justify-center rounded-2xl border border-slate-200 text-2xl transition hover:border-[#A9D1CA] hover:bg-[#F7FBFA]"
+                        className="flex h-16 items-center justify-center rounded-2xl border border-[var(--ud-border)] text-2xl transition hover:border-[var(--ud-brand-primary)] hover:bg-[var(--ud-bg-subtle)]"
                       >
                         {emoji}
                       </button>
@@ -1256,8 +1265,8 @@ export default function HubClient({
         ? createPortal(
             <div className="fixed inset-0 z-[230] flex items-center justify-center bg-[rgba(15,23,42,0.72)] p-4">
               <div className={cn(CARD, "w-full max-w-sm p-5")}>
-                <h4 className="text-xl font-semibold tracking-tight text-[#111111]">Discard this deet?</h4>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">You have unsaved text or attached content. If you leave now, those changes will be lost.</p>
+                <h4 className="text-xl font-semibold tracking-tight text-[var(--ud-text-primary)]">Discard this deet?</h4>
+                <p className="mt-2 text-sm leading-relaxed text-[var(--ud-text-secondary)]">You have unsaved text or attached content. If you leave now, those changes will be lost.</p>
                 <div className="mt-5 flex justify-end gap-3">
                   <button type="button" onClick={() => setActiveComposerChild(null)} className={BUTTON_SECONDARY}>
                     Cancel
@@ -1305,12 +1314,12 @@ export default function HubClient({
           </div>
 
           {/* Engagement panel — bottom sheet on mobile, sidebar on desktop */}
-          <div className="shrink-0 rounded-t-2xl bg-white p-4 lg:flex lg:w-[360px] lg:flex-col lg:rounded-none lg:border-l lg:border-white/20 lg:p-5">
-            <h3 className="text-base font-semibold tracking-tight text-[#111111]">{viewer.title || "Photo"}</h3>
-            <p className="mt-1 text-sm text-slate-600 lg:mt-2">{viewer.body || "Shared from this hub."}</p>
+          <div className="shrink-0 rounded-t-2xl bg-[var(--ud-bg-card)] p-4 lg:flex lg:w-[360px] lg:flex-col lg:rounded-none lg:border-l lg:border-white/20 lg:p-5">
+            <h3 className="text-base font-semibold tracking-tight text-[var(--ud-text-primary)]">{viewer.title || "Photo"}</h3>
+            <p className="mt-1 text-sm text-[var(--ud-text-secondary)] lg:mt-2">{viewer.body || "Shared from this hub."}</p>
 
             {/* Engagement metrics */}
-            <div className="mt-3 flex items-center gap-4 text-sm text-slate-500 lg:mt-4">
+            <div className="mt-3 flex items-center gap-4 text-sm text-[var(--ud-text-muted)] lg:mt-4">
               <span className="inline-flex items-center gap-1">
                 <Eye className="h-3.5 w-3.5" />
                 0 views
@@ -1326,16 +1335,16 @@ export default function HubClient({
             </div>
 
             {/* Action buttons */}
-            <div className="mt-3 flex items-center gap-3 border-t border-slate-100 pt-3 text-sm text-slate-600 lg:mt-4 lg:pt-4">
-              <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[#0C5C57]">
+            <div className="mt-3 flex items-center gap-3 border-t border-[var(--ud-border)] pt-3 text-sm text-[var(--ud-text-secondary)] lg:mt-4 lg:pt-4">
+              <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[var(--ud-brand-primary)]">
                 <Heart className={ICON} />
                 Like
               </button>
-              <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[#0C5C57]">
+              <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[var(--ud-brand-primary)]">
                 <MessageSquare className={ICON} />
                 Comment
               </button>
-              <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[#0C5C57]">
+              <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[var(--ud-brand-primary)]">
                 <Share2 className={ICON} />
                 Share
               </button>
@@ -1343,28 +1352,28 @@ export default function HubClient({
 
             {/* Comments area — hidden on mobile for compact view */}
             {viewer.focusId && commentsByDeetId[viewer.focusId] ? (
-              <div className="mt-3 hidden max-h-[200px] overflow-y-auto rounded-xl bg-slate-50 p-3 text-sm text-slate-500 lg:mt-4 lg:block space-y-2">
-                <p className="font-medium text-slate-600">Comments</p>
+              <div className="mt-3 hidden max-h-[200px] overflow-y-auto rounded-xl bg-[var(--ud-bg-subtle)] p-3 text-sm text-[var(--ud-text-muted)] lg:mt-4 lg:block space-y-2">
+                <p className="font-medium text-[var(--ud-text-secondary)]">Comments</p>
                 {commentsByDeetId[viewer.focusId].length === 0 ? (
-                  <p className="mt-2 italic text-slate-400">No comments yet. Be the first to comment.</p>
+                  <p className="mt-2 italic text-[var(--ud-text-muted)]">No comments yet. Be the first to comment.</p>
                 ) : (
                   <div className="space-y-2">
                     {commentsByDeetId[viewer.focusId].map((comment) => (
                       <div key={comment.id} className="text-xs">
                         <div className="flex items-center gap-1">
-                          <span className="font-medium text-slate-900">{comment.authorName || "Anonymous"}</span>
-                          <span className="text-slate-400">{formatViewerCommentTime(comment.createdAt)}</span>
+                          <span className="font-medium text-[var(--ud-text-primary)]">{comment.authorName || "Anonymous"}</span>
+                          <span className="text-[var(--ud-text-muted)]">{formatViewerCommentTime(comment.createdAt)}</span>
                         </div>
-                        <p className="text-slate-700 mt-0.5">{comment.body}</p>
+                        <p className="text-[var(--ud-text-secondary)] mt-0.5">{comment.body}</p>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
             ) : (
-              <div className="mt-3 hidden max-h-[200px] overflow-y-auto rounded-xl bg-slate-50 p-3 text-sm text-slate-500 lg:mt-4 lg:block">
-                <p className="font-medium text-slate-600">Comments</p>
-                <p className="mt-2 italic text-slate-400">No comments yet. Be the first to comment.</p>
+              <div className="mt-3 hidden max-h-[200px] overflow-y-auto rounded-xl bg-[var(--ud-bg-subtle)] p-3 text-sm text-[var(--ud-text-muted)] lg:mt-4 lg:block">
+                <p className="font-medium text-[var(--ud-text-secondary)]">Comments</p>
+                <p className="mt-2 italic text-[var(--ud-text-muted)]">No comments yet. Be the first to comment.</p>
               </div>
             )}
 
@@ -1390,33 +1399,33 @@ export default function HubClient({
           <div className={cn(CARD, "w-full max-w-md p-5")}>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-lg font-semibold tracking-tight text-[#111111]">Edit Connect</h3>
-                <p className="mt-1 text-sm text-slate-600">Add or update the links shown in this section.</p>
+                <h3 className="text-lg font-semibold tracking-tight text-[var(--ud-text-primary)]">Edit Connect</h3>
+                <p className="mt-1 text-sm text-[var(--ud-text-secondary)]">Add or update the links shown in this section.</p>
               </div>
-              <button type="button" onClick={closeConnectEditor} className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50" aria-label="Close connect editor">
+              <button type="button" onClick={closeConnectEditor} className="rounded-full border border-[var(--ud-border)] p-2 text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)]" aria-label="Close connect editor">
                 <X className={ICON} />
               </button>
             </div>
 
             <div className="mt-5 space-y-4">
               <SettingField label="Website">
-                <input value={connectDraft.website} onChange={handleConnectChange("website")} placeholder="https://yourhub.com" className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 outline-none ring-[#A9D1CA] transition focus:ring-2" />
+                <input value={connectDraft.website} onChange={handleConnectChange("website")} placeholder="https://yourhub.com" className="w-full rounded-2xl border border-[var(--ud-border)] px-4 py-3 text-sm text-[var(--ud-text-secondary)] outline-none ring-[var(--ud-brand-primary)] transition focus:ring-2" />
               </SettingField>
               <SettingField label="Facebook">
-                <input value={connectDraft.facebook} onChange={handleConnectChange("facebook")} placeholder="facebook.com/yourhub" className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 outline-none ring-[#A9D1CA] transition focus:ring-2" />
+                <input value={connectDraft.facebook} onChange={handleConnectChange("facebook")} placeholder="facebook.com/yourhub" className="w-full rounded-2xl border border-[var(--ud-border)] px-4 py-3 text-sm text-[var(--ud-text-secondary)] outline-none ring-[var(--ud-brand-primary)] transition focus:ring-2" />
               </SettingField>
               <SettingField label="Instagram">
-                <input value={connectDraft.instagram} onChange={handleConnectChange("instagram")} placeholder="instagram.com/yourhub" className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 outline-none ring-[#A9D1CA] transition focus:ring-2" />
+                <input value={connectDraft.instagram} onChange={handleConnectChange("instagram")} placeholder="instagram.com/yourhub" className="w-full rounded-2xl border border-[var(--ud-border)] px-4 py-3 text-sm text-[var(--ud-text-secondary)] outline-none ring-[var(--ud-brand-primary)] transition focus:ring-2" />
               </SettingField>
               <SettingField label="YouTube">
-                <input value={connectDraft.youtube} onChange={handleConnectChange("youtube")} placeholder="youtube.com/@yourhub" className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 outline-none ring-[#A9D1CA] transition focus:ring-2" />
+                <input value={connectDraft.youtube} onChange={handleConnectChange("youtube")} placeholder="youtube.com/@yourhub" className="w-full rounded-2xl border border-[var(--ud-border)] px-4 py-3 text-sm text-[var(--ud-text-secondary)] outline-none ring-[var(--ud-brand-primary)] transition focus:ring-2" />
               </SettingField>
               <SettingField label="Phone / Contact">
-                <input value={connectDraft.phone} onChange={handleConnectChange("phone")} placeholder="(555) 555-5555" className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 outline-none ring-[#A9D1CA] transition focus:ring-2" />
+                <input value={connectDraft.phone} onChange={handleConnectChange("phone")} placeholder="(555) 555-5555" className="w-full rounded-2xl border border-[var(--ud-border)] px-4 py-3 text-sm text-[var(--ud-text-secondary)] outline-none ring-[var(--ud-brand-primary)] transition focus:ring-2" />
               </SettingField>
             </div>
 
-            {connectError ? <p className="mt-4 text-sm text-[#B42318]">{connectError}</p> : null}
+            {connectError ? <p className="mt-4 text-sm text-[var(--ud-danger)]">{connectError}</p> : null}
 
             <div className="mt-5 flex justify-end gap-3">
               <button type="button" onClick={closeConnectEditor} className={BUTTON_SECONDARY}>
@@ -1442,19 +1451,19 @@ export default function HubClient({
           <div className={cn(CARD, "w-full max-w-md p-5")}>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-lg font-semibold tracking-tight text-[#111111]">Hub Admin Tools</h3>
-                <p className="mt-1 text-sm text-slate-600">This is a simple first pass for future admin management.</p>
+                <h3 className="text-lg font-semibold tracking-tight text-[var(--ud-text-primary)]">Hub Admin Tools</h3>
+                <p className="mt-1 text-sm text-[var(--ud-text-secondary)]">This is a simple first pass for future admin management.</p>
               </div>
-              <button type="button" onClick={() => setIsAdminsEditorOpen(false)} className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50" aria-label="Close admin tools">
+              <button type="button" onClick={() => setIsAdminsEditorOpen(false)} className="rounded-full border border-[var(--ud-border)] p-2 text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)]" aria-label="Close admin tools">
                 <X className={ICON} />
               </button>
             </div>
 
             <div className="mt-5 space-y-3">
               {["Add moderators", "Add users", "Create groups"].map((label) => (
-                <button key={label} type="button" className="flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-left text-sm font-medium text-[#111111] transition hover:border-[#A9D1CA] hover:bg-[#F7FBFA]">
+                <button key={label} type="button" className="flex w-full items-center justify-between rounded-2xl border border-[var(--ud-border)] px-4 py-3 text-left text-sm font-medium text-[var(--ud-text-primary)] transition hover:border-[var(--ud-brand-primary)] hover:bg-[var(--ud-bg-subtle)]">
                   <span>{label}</span>
-                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Soon</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--ud-text-muted)]">Soon</span>
                 </button>
               ))}
             </div>

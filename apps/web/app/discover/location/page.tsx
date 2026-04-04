@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
-import { ThemeToggle } from "@/components/theme-provider";
+
 import { isUdeetsLogoSrc } from "@/lib/branding";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import type { Hub as SupabaseHub } from "@/types/hub";
@@ -383,7 +383,6 @@ export default function LocationDiscoverPage() {
             <UdeetsBrandLockup textClassName="text-xl sm:text-2xl" priority />
           </Link>
           <div className="flex items-center gap-1.5">
-            <ThemeToggle />
             <Link
               href={isAuthenticated ? "/dashboard" : "/"}
               className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"

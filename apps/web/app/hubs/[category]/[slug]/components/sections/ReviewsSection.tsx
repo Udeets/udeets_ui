@@ -24,16 +24,16 @@ export function ReviewsSection({
       {reviews.length === 0 ? (
         <div className="grid min-h-[280px] w-full place-items-center text-center">
           <div className="w-full max-w-xs">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#EAF6F3]">
-              <Star className="h-7 w-7 text-[#0C5C57]" />
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--ud-brand-light)]">
+              <Star className="h-7 w-7 text-[var(--ud-brand-primary)]" />
             </div>
-            <h3 className="mt-4 text-lg font-semibold text-[#111111]">No reviews yet</h3>
-            <p className="mt-2 text-sm text-slate-500">
+            <h3 className="mt-4 text-lg font-semibold text-[var(--ud-text-primary)]">No reviews yet</h3>
+            <p className="mt-2 text-sm text-[var(--ud-text-muted)]">
               Reviews from members and visitors will appear here.
             </p>
             <button
               type="button"
-              className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[var(--ud-brand-primary)] to-[var(--ud-brand-primary)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
             >
               <MessageSquare className="h-4 w-4" />
               Write a Review
@@ -43,20 +43,20 @@ export function ReviewsSection({
       ) : (
         <div className="space-y-3">
           {reviews.map((review) => (
-            <div key={review.id} className="rounded-2xl border border-slate-100 bg-white p-4">
+            <div key={review.id} className="rounded-2xl border border-[var(--ud-border)] bg-[var(--ud-bg-card)] p-4">
               <div className="flex items-center justify-between">
-                <p className="font-semibold text-[#111111]">{review.author}</p>
+                <p className="font-semibold text-[var(--ud-text-primary)]">{review.author}</p>
                 <div className="flex items-center gap-0.5">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Star
                       key={i}
-                      className={`h-3.5 w-3.5 ${i < review.rating ? "fill-amber-400 text-amber-400" : "text-slate-200"}`}
+                      className={`h-3.5 w-3.5 ${i < review.rating ? "fill-amber-400 text-amber-400" : "text-[var(--ud-border)]"}`}
                     />
                   ))}
                 </div>
               </div>
-              <p className="mt-2 text-sm text-slate-600">{review.text}</p>
-              <p className="mt-2 text-xs text-slate-400">{review.date}</p>
+              <p className="mt-2 text-sm text-[var(--ud-text-secondary)]">{review.text}</p>
+              <p className="mt-2 text-xs text-[var(--ud-text-muted)]">{review.date}</p>
             </div>
           ))}
         </div>

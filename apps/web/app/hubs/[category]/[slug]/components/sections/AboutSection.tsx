@@ -84,7 +84,7 @@ function ColorPalettePickerButton({
         typeof document !== "undefined" &&
         createPortal(
           <div
-            className="fixed z-50 rounded-lg bg-white shadow-lg border border-slate-200 p-3"
+            className="fixed z-50 rounded-lg bg-[var(--ud-bg-elevated)] shadow-lg border border-[var(--ud-border)] p-3"
             style={{ top: dropdownPos.top, left: dropdownPos.left, minWidth: "220px" }}
           >
             <div className="space-y-1.5">
@@ -93,15 +93,15 @@ function ColorPalettePickerButton({
                   key={theme.key}
                   type="button"
                   onClick={() => handleColorSelect(theme.key)}
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-slate-50"
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]"
                 >
                   <div
-                    className="h-5 w-5 rounded border border-slate-200"
+                    className="h-5 w-5 rounded border border-[var(--ud-border)]"
                     style={{ backgroundColor: theme.swatch }}
                   />
-                  <span className="flex-1 text-left text-slate-700">{theme.label}</span>
+                  <span className="flex-1 text-left text-[var(--ud-text-secondary)]">{theme.label}</span>
                   {selectedColor === theme.key ? (
-                    <CheckCircle2 className="h-4 w-4 text-slate-400 shrink-0" />
+                    <CheckCircle2 className="h-4 w-4 text-[var(--ud-text-muted)] shrink-0" />
                   ) : null}
                 </button>
               ))}
@@ -132,7 +132,7 @@ function CollapsibleCard({
 
   return (
     <div
-      className="rounded-xl border border-slate-100"
+      className="rounded-xl border border-[var(--ud-border)]"
       style={{ backgroundColor: accentTheme?.wash }}
     >
       <button
@@ -140,12 +140,12 @@ function CollapsibleCard({
         onClick={() => setIsOpen((v) => !v)}
         className="flex w-full items-center justify-between gap-2 px-4 py-3"
       >
-        <p className="text-sm font-medium text-slate-500">{title}</p>
+        <p className="text-sm font-medium text-[var(--ud-text-muted)]">{title}</p>
         <div className="flex items-center gap-1.5">
           {headerAction}
           <ChevronDown
             className={cn(
-              "h-4 w-4 text-slate-400 transition-transform duration-200",
+              "h-4 w-4 text-[var(--ud-text-muted)] transition-transform duration-200",
               isOpen && "rotate-180"
             )}
           />
@@ -285,9 +285,9 @@ export function AboutSection({
       <div className="space-y-6">
 
         {/* ═══ BLOCK 1 — Welcome + Join/Requested + Color Picker ═══ */}
-        <div className="border-b border-slate-100 pb-5">
+        <div className="border-b border-[var(--ud-border)] pb-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <h2 className="text-xl font-semibold tracking-tight text-[#111111]">Welcome to {hubName}!</h2>
+            <h2 className="text-xl font-semibold tracking-tight text-[var(--ud-text-primary)]">Welcome to {hubName}!</h2>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
               {userRole === "pending" ? (
                 <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-4 py-1.5 text-sm font-semibold text-amber-700">
@@ -349,7 +349,7 @@ export function AboutSection({
         </div>
 
         {/* ═══ BLOCK 2 — Editable Description ═══ */}
-        <div className="border-b border-slate-100 pb-5">
+        <div className="border-b border-[var(--ud-border)] pb-5">
           {isEditingDesc ? (
             <div className="space-y-2">
               <textarea
@@ -358,12 +358,12 @@ export function AboutSection({
                 placeholder={`Tell people what ${hubName} is about, who it's for, and what they can expect...`}
                 rows={3}
                 autoFocus
-                className="w-full rounded-lg border border-[#A9D1CA] bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors duration-150 focus:ring-2 focus:ring-[#A9D1CA]"
+                className="w-full rounded-lg border border-[var(--ud-brand-primary)] bg-[var(--ud-bg-card)] px-3 py-2 text-sm text-[var(--ud-text-primary)] outline-none transition-colors duration-150 focus:ring-2 focus:ring-[var(--ud-brand-primary)]"
               />
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-400">{draftDesc.length}/300</span>
+                <span className="text-xs text-[var(--ud-text-muted)]">{draftDesc.length}/300</span>
                 <div className="flex items-center gap-2">
-                  <button type="button" onClick={handleCancelEditDesc} disabled={isSavingDesc} className="rounded-lg border border-slate-200 p-1.5 text-slate-500 transition-colors duration-150 hover:bg-slate-50">
+                  <button type="button" onClick={handleCancelEditDesc} disabled={isSavingDesc} className="rounded-lg border border-[var(--ud-border)] p-1.5 text-[var(--ud-text-secondary)] transition-colors duration-150 hover:bg-[var(--ud-bg-subtle)]">
                     <X className="h-3.5 w-3.5 stroke-2" />
                   </button>
                   <button
@@ -388,18 +388,18 @@ export function AboutSection({
             </div>
           ) : hubDescription ? (
             <div className="group flex items-start gap-2">
-              <p className="text-sm leading-relaxed text-slate-600">{hubDescription}</p>
+              <p className="text-sm leading-relaxed text-[var(--ud-text-secondary)]">{hubDescription}</p>
               {isCreatorAdmin ? (
                 <button
                   type="button"
                   onClick={handleStartEditDesc}
-                  className="shrink-0 rounded p-1 text-slate-400 opacity-0 transition group-hover:opacity-100"
+                  className="shrink-0 rounded p-1 text-[var(--ud-text-muted)] opacity-0 transition group-hover:opacity-100"
                   style={{ "--hover-color": accentTheme?.primary } as React.CSSProperties & { "--hover-color": string }}
                   onMouseEnter={(e) => {
                     (e.currentTarget as HTMLButtonElement).style.color = accentTheme?.primary ?? "#0C5C57";
                   }}
                   onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.color = "#9CA3AF";
+                    (e.currentTarget as HTMLButtonElement).style.color = "var(--ud-text-muted)";
                   }}
                   aria-label="Edit description"
                 >
@@ -411,19 +411,19 @@ export function AboutSection({
             <button
               type="button"
               onClick={handleStartEditDesc}
-              className="w-full rounded-lg border border-dashed px-4 py-3 text-left text-sm text-slate-500 transition-colors duration-150"
+              className="w-full rounded-lg border border-dashed px-4 py-3 text-left text-sm text-[var(--ud-text-secondary)] transition-colors duration-150"
               style={{
-                borderColor: "#E2E8F0",
-                backgroundColor: "#F9FAFB",
+                borderColor: "var(--ud-border)",
+                backgroundColor: "var(--ud-bg-subtle)",
               }}
               onMouseEnter={(e) => {
                 (e.currentTarget as HTMLButtonElement).style.borderColor = accentTheme?.surface ?? "#A9D1CA";
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor = "#E2E8F0";
+                (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--ud-border)";
               }}
             >
-              <span className="font-medium text-[#111111]">Add a description</span>
+              <span className="font-medium text-[var(--ud-text-primary)]">Add a description</span>
               {" — "}Tell people what {hubName} is about, who it&apos;s for, and what they can expect.
             </button>
           ) : null}
@@ -459,11 +459,11 @@ export function AboutSection({
                       href={href}
                       target={label === "Phone" ? undefined : "_blank"}
                       rel={label === "Phone" ? undefined : "noreferrer"}
-                      className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm transition-colors duration-150 hover:bg-[#F7FBFA]"
+                      className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm transition-colors duration-150 hover:bg-[var(--ud-bg-subtle)]"
                     >
-                      <LinkIcon className="h-3.5 w-3.5 shrink-0 text-slate-400 stroke-2" />
-                      <span className="shrink-0 text-xs text-slate-400">{label}</span>
-                      <span className="min-w-0 truncate text-xs font-medium text-[#111111]">
+                      <LinkIcon className="h-3.5 w-3.5 shrink-0 text-[var(--ud-text-muted)] stroke-2" />
+                      <span className="shrink-0 text-xs text-[var(--ud-text-muted)]">{label}</span>
+                      <span className="min-w-0 truncate text-xs font-medium text-[var(--ud-text-primary)]">
                         {label === "Phone" ? value : displayLinkValue(value)}
                       </span>
                     </a>
@@ -480,7 +480,7 @@ export function AboutSection({
                 </button>
               )}
               {connectSuccess ? <p className="mt-2 text-xs font-medium" style={{ color: accentTheme?.primary }}>{connectSuccess}</p> : null}
-              {connectError ? <p className="mt-2 text-xs font-medium text-[#B42318]">{connectError}</p> : null}
+              {connectError ? <p className="mt-2 text-xs font-medium text-red-600">{connectError}</p> : null}
             </CollapsibleCard>
           ) : null}
 
@@ -494,9 +494,9 @@ export function AboutSection({
                 ...(locationValue ? [{ icon: MapPin, label: "Location", value: locationValue }] : []),
               ].map(({ icon: FactIcon, label, value }) => (
                 <div key={label} className="flex items-center gap-2 rounded-xl px-2 py-1.5">
-                  <FactIcon className="h-3.5 w-3.5 shrink-0 text-slate-400 stroke-2" />
-                  <span className="shrink-0 text-xs text-slate-400">{label}</span>
-                  <span className="min-w-0 truncate text-xs font-medium text-[#111111]">{value}</span>
+                  <FactIcon className="h-3.5 w-3.5 shrink-0 text-[var(--ud-text-muted)] stroke-2" />
+                  <span className="shrink-0 text-xs text-[var(--ud-text-muted)]">{label}</span>
+                  <span className="min-w-0 truncate text-xs font-medium text-[var(--ud-text-primary)]">{value}</span>
                 </div>
               ))}
             </div>
@@ -520,53 +520,53 @@ export function AboutSection({
               ) : undefined
             }
           >
-            <div className="flex items-center gap-3 rounded-xl bg-[#F7FBFA] px-3 py-3">
-              <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-[#A9D1CA]">
+            <div className="flex items-center gap-3 rounded-xl bg-[var(--ud-bg-subtle)] px-3 py-3">
+              <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-[var(--ud-border)] bg-[var(--ud-brand-primary)]">
                 <ImageWithFallback
                   src={creatorAvatarSrc}
                   sources={[creatorAvatarSrc, ...adminImages, dpImageSrc, coverImageSrc, ...recentPhotos]}
                   alt={creatorDisplayName}
                   className="h-full w-full object-cover"
-                  fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA] text-xs font-semibold text-[#111111]"
+                  fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-primary)] text-xs font-semibold text-[var(--ud-text-primary)]"
                   fallback={initials(creatorDisplayName)}
                 />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-[#111111]">{creatorDisplayName}</p>
-                <p className="text-xs text-slate-400">{creatorDetail}</p>
+                <p className="truncate text-sm font-semibold text-[var(--ud-text-primary)]">{creatorDisplayName}</p>
+                <p className="text-xs text-[var(--ud-text-muted)]">{creatorDetail}</p>
               </div>
             </div>
             {status === "loading" ? (
-              <p className="mt-2 text-xs text-slate-400">Loading details...</p>
+              <p className="mt-2 text-xs text-[var(--ud-text-muted)]">Loading details...</p>
             ) : null}
           </CollapsibleCard>
         </div>
 
         {/* ═══ BLOCK 4 — Photos row ═══ */}
         {showPhotosCard ? (
-          <div className="border-t border-slate-100 pt-5">
+          <div className="border-t border-[var(--ud-border)] pt-5">
             <div className="flex items-center justify-between gap-2 mb-3">
-              <p className="text-sm font-medium text-slate-500">Photos</p>
+              <p className="text-sm font-medium text-[var(--ud-text-muted)]">Photos</p>
               {isCreatorAdmin ? (
                 <button
                   type="button"
                   onClick={onOpenGalleryUpload}
                   disabled={isUploadingGallery}
                   className={cn(
-                    "rounded-xl border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition",
+                    "rounded-xl border border-[var(--ud-border)] px-2.5 py-1 text-xs font-medium text-[var(--ud-text-secondary)] transition",
                     isUploadingGallery && "cursor-not-allowed opacity-60"
                   )}
                   style={{
-                    borderColor: "#E2E8F0",
-                    color: "#475569",
+                    borderColor: "var(--ud-border)",
+                    color: "var(--ud-text-secondary)",
                   }}
                   onMouseEnter={(e) => {
                     (e.currentTarget as HTMLButtonElement).style.borderColor = accentTheme?.surface ?? "#A9D1CA";
                     (e.currentTarget as HTMLButtonElement).style.color = accentTheme?.primary ?? "#0C5C57";
                   }}
                   onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = "#E2E8F0";
-                    (e.currentTarget as HTMLButtonElement).style.color = "#475569";
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--ud-border)";
+                    (e.currentTarget as HTMLButtonElement).style.color = "var(--ud-text-secondary)";
                   }}
                 >
                   {isUploadingGallery ? (
@@ -589,14 +589,14 @@ export function AboutSection({
                     key={`${photo}-${i}`}
                     type="button"
                     onClick={() => onOpenViewer?.(recentPhotos, i, `${hubName} Album`, "Recent photos from this hub.")}
-                    className="shrink-0 h-28 w-28 overflow-hidden rounded-xl border border-slate-100 bg-slate-100 shadow-sm transition hover:shadow-md"
+                    className="shrink-0 h-28 w-28 overflow-hidden rounded-xl border border-[var(--ud-border)] bg-[var(--ud-bg-subtle)] shadow-sm transition hover:shadow-md"
                   >
                     <ImageWithFallback
                       src={photo}
                       sources={[photo, coverImageSrc, dpImageSrc].filter(Boolean)}
                       alt={`${hubName} photo ${i + 1}`}
                       className="h-full w-full object-cover"
-                      fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA]/35 text-xs text-[#0C5C57]"
+                      fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-primary)]/35 text-xs text-[var(--ud-brand-primary)]"
                       fallback="Photo"
                     />
                   </button>
@@ -605,7 +605,7 @@ export function AboutSection({
                   <button
                     type="button"
                     onClick={() => onOpenViewer?.(recentPhotos, 0, `${hubName} Album`, "Recent photos from this hub.")}
-                    className="flex shrink-0 h-28 w-28 items-center justify-center rounded-xl border border-slate-100 text-sm font-semibold transition"
+                    className="flex shrink-0 h-28 w-28 items-center justify-center rounded-xl border border-[var(--ud-border)] text-sm font-semibold transition"
                     style={{
                       backgroundColor: accentTheme?.wash,
                       color: accentTheme?.primary,
@@ -626,7 +626,7 @@ export function AboutSection({
                 className="flex items-center gap-3 rounded-xl px-4 py-3"
                 style={{ backgroundColor: accentTheme?.wash }}
               >
-                <Camera className="h-4 w-4 shrink-0 text-slate-400 stroke-2" />
+                <Camera className="h-4 w-4 shrink-0 text-[var(--ud-text-muted)] stroke-2" />
                 <button
                   type="button"
                   onClick={onOpenGalleryUpload}
@@ -642,7 +642,7 @@ export function AboutSection({
 
         {/* ═══ BLOCK 5 — Custom sections ═══ */}
         {((customSections && customSections.length > 0) || isCreatorAdmin) ? (
-          <div className="border-t border-slate-100 pt-5">
+          <div className="border-t border-[var(--ud-border)] pt-5">
             <CustomSectionDisplay
               sections={customSections ?? []}
               isCreatorAdmin={isCreatorAdmin}

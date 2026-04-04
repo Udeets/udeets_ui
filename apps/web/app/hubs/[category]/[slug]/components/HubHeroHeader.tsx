@@ -79,7 +79,7 @@ export function HubHeroHeader({
             onClick={onOpenDpChooser}
             disabled={!isCreatorAdmin || isUploadingDp}
             className={cn(
-              "h-20 w-20 overflow-hidden rounded-full border-4 border-white shadow-md",
+              "h-20 w-20 overflow-hidden rounded-full border-4 border-[var(--ud-bg-card)] shadow-md",
               isCreatorAdmin && "cursor-pointer"
             )}
             style={{ backgroundColor: accentTheme?.wash }}
@@ -90,7 +90,7 @@ export function HubHeroHeader({
                 sources={[dpImageSrc]}
                 alt={`${headerHubName} display`}
                 className="h-full w-full object-cover"
-                fallbackClassName="grid h-full w-full place-items-center bg-[#E3F1EF] text-2xl font-semibold text-[#0C5C57]"
+                fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-2xl font-semibold text-[var(--ud-brand-primary)]"
                 fallback={headerHubName.charAt(0).toUpperCase()}
               />
             ) : (
@@ -103,10 +103,10 @@ export function HubHeroHeader({
       </div>
 
       {/* Mobile: Hub info row below cover */}
-      <div className="flex items-end justify-between border-b border-slate-100 bg-white px-4 pb-3 pt-12 lg:hidden">
+      <div className="flex items-end justify-between border-b border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] px-4 pb-3 pt-12 lg:hidden">
         <div>
-          <h1 className="text-lg font-semibold tracking-tight text-[#111111]">{headerHubName}</h1>
-          <p className="text-xs text-gray-500">
+          <h1 className="text-lg font-semibold tracking-tight text-[var(--ud-text-primary)]">{headerHubName}</h1>
+          <p className="text-xs text-[var(--ud-text-secondary)]">
             {categoryLabel} · {memberCount} {memberCount === 1 ? "Member" : "Members"}
           </p>
         </div>
@@ -114,7 +114,7 @@ export function HubHeroHeader({
       </div>
 
       {/* Desktop: Left panel — DP, name, meta */}
-      <div className="relative hidden min-h-[260px] flex-col items-center justify-between border-r border-slate-100 px-4 py-4 lg:flex" style={{ backgroundColor: accentTheme?.wash }}>
+      <div className="relative hidden min-h-[260px] flex-col items-center justify-between border-r border-[var(--ud-border-subtle)] px-4 py-4 lg:flex" style={{ backgroundColor: accentTheme?.wash }}>
         <input ref={dpInputRef} type="file" accept="image/*" onChange={onDpChange} className="hidden" />
 
         <VisibilityIcon className="absolute right-3 top-3 text-[#1a3a35]" style={{ width: 15, height: 15 }} />
@@ -140,15 +140,15 @@ export function HubHeroHeader({
               fallback={headerHubName.charAt(0).toUpperCase()}
             />
           ) : (
-            <div className="grid h-full w-full place-items-center bg-[#E3F1EF]">
-              <span className="text-6xl font-semibold text-[#0C5C57]">{headerHubName.charAt(0).toUpperCase()}</span>
+            <div className="grid h-full w-full place-items-center bg-[var(--ud-brand-light)]">
+              <span className="text-6xl font-semibold text-[var(--ud-brand-primary)]">{headerHubName.charAt(0).toUpperCase()}</span>
             </div>
           )}
         </button>
 
         <div className="w-full text-center">
-          <h1 className="break-words text-center text-[15px] font-semibold tracking-tight text-[#111111]">{headerHubName}</h1>
-          <p className="mt-1 text-center text-[12px] text-gray-500">{categoryLabel} · {memberCount} {memberCount === 1 ? "Member" : "Members"}</p>
+          <h1 className="break-words text-center text-[15px] font-semibold tracking-tight text-[var(--ud-text-primary)]">{headerHubName}</h1>
+          <p className="mt-1 text-center text-[12px] text-[var(--ud-text-secondary)]">{categoryLabel} · {memberCount} {memberCount === 1 ? "Member" : "Members"}</p>
         </div>
       </div>
 
@@ -172,7 +172,7 @@ export function HubHeroHeader({
               fallback=""
             />
           ) : (
-            <div className="h-full w-full bg-[#A9D1CA]" />
+            <div className="h-full w-full" style={{ backgroundColor: accentTheme?.surface ?? "#A9D1CA" }} />
           )}
         </button>
       </div>

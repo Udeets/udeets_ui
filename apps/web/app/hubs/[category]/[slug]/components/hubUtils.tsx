@@ -20,17 +20,20 @@ import type { HubFeedItemKind } from "@/lib/hub-content";
 import type { HubRecord } from "@/lib/hubs";
 import type { HubTab } from "./hubTypes";
 
-export const CARD = "rounded-xl border border-slate-100 bg-white shadow-sm";
+export const CARD = "rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-sm";
 export const BUTTON_PRIMARY =
-  "rounded-full bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-4 py-2 text-xs font-semibold text-white transition-colors duration-150 hover:opacity-90";
+  "rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-4 py-2 text-xs font-semibold text-white transition-colors duration-150 hover:opacity-90";
 export const BUTTON_SECONDARY =
-  "rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition-colors duration-150 hover:bg-slate-50";
+  "rounded-full border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-4 py-2 text-xs font-semibold text-[var(--ud-text-primary)] transition-colors duration-150 hover:bg-[var(--ud-bg-subtle)]";
 export const ICON = "h-4 w-4 stroke-2";
 export const EMPTY_MEDIA_BG = "#A9D1CA";
 export const ACTION_ICON = "h-4 w-4 stroke-2";
-export const ACTION_ICON_BUTTON = "inline-flex items-center text-[#111111]/78 transition-colors duration-150 hover:text-[#0C5C57]";
+export const ACTION_ICON_BUTTON = "inline-flex items-center text-[var(--ud-text-primary)]/78 transition-colors duration-150 hover:text-[var(--ud-brand-primary)]";
 export const PREMIUM_ICON_WRAPPER =
-  "inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#F7FBFA] text-[#0C5C57]";
+  "inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--ud-brand-light)] text-[var(--ud-brand-primary)]";
+export const INPUT_CLASS = "w-full rounded-xl border border-[var(--ud-border)] bg-[var(--ud-bg-input)] px-4 py-2.5 text-sm text-[var(--ud-text-primary)] outline-none transition-colors focus:border-[var(--ud-border-focus)]";
+export const LABEL_CLASS = "text-xs font-semibold uppercase tracking-[0.18em] text-[var(--ud-text-muted)]";
+export const SECTION_TITLE = "text-lg font-semibold text-[var(--ud-text-primary)]";
 export const HUB_TABS: HubTab[] = ["About", "Posts", "Attachments", "Members"];
 
 export function cn(...classes: Array<string | false | null | undefined>) {
@@ -67,7 +70,7 @@ export function displayLinkValue(value?: string) {
 export function MediaEmptyState({ square = false }: { square?: boolean }) {
   return (
     <div
-      className={cn("grid h-full w-full place-items-center text-[#0C5C57]", square ? "aspect-square rounded-2xl" : "")}
+      className={cn("grid h-full w-full place-items-center text-[var(--ud-brand-primary)]", square ? "aspect-square rounded-2xl" : "")}
       style={{ backgroundColor: EMPTY_MEDIA_BG }}
     >
       <Plus className="h-9 w-9 stroke-[1.9] text-white/75" />
@@ -142,7 +145,7 @@ export function SettingField({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</span>
+      <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[var(--ud-text-muted)]">{label}</span>
       {children}
     </label>
   );

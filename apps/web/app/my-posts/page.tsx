@@ -3,12 +3,14 @@
 export const dynamic = "force-dynamic";
 
 import MockAppShell, { cardClass, sectionTitleClass } from "@/components/mock-app-shell";
+import { AuthGuard } from "@/components/AuthGuard";
 import { MyPostCard } from "./components/MyPostCard";
 import { WorkflowStatCard } from "./components/WorkflowStatCard";
 import { MY_POSTS, WORKFLOW_STATS } from "./data";
 
 export default function MyPostsPage() {
   return (
+    <AuthGuard>
     <MockAppShell activeNav="home">
       <section className="mb-4">
         <h1 className="text-3xl font-semibold tracking-tight text-[#111111]">My Posts</h1>
@@ -28,5 +30,6 @@ export default function MyPostsPage() {
         </div>
       </section>
     </MockAppShell>
+    </AuthGuard>
   );
 }

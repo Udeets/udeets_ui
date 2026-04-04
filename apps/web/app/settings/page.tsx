@@ -7,6 +7,7 @@ import { Check, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import MockAppShell, { cardClass } from "@/components/mock-app-shell";
+import { AuthGuard } from "@/components/AuthGuard";
 import { signOut } from "@/services/auth/signOut";
 import { useAuthSession } from "@/services/auth/useAuthSession";
 
@@ -151,6 +152,7 @@ export default function SettingsPage() {
   const displayName = fullName || (user?.user_metadata?.full_name as string) || displayEmail || "uDeets User";
 
   return (
+    <AuthGuard>
     <MockAppShell activeNav="home">
       <div className="grid gap-6 xl:grid-cols-[240px_minmax(0,1fr)]">
 
@@ -410,5 +412,6 @@ export default function SettingsPage() {
         </div>
       </div>
     </MockAppShell>
+    </AuthGuard>
   );
 }

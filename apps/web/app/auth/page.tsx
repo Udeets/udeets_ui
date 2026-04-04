@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
-import { ThemeToggle } from "@/components/theme-provider";
+
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import { signInWithApple } from "@/services/auth/signInWithApple";
 import { signInWithGoogle } from "@/services/auth/signInWithGoogle";
@@ -240,7 +240,6 @@ function AuthPageContent() {
                 <polyline points="9 22 9 12 15 12 15 22" />
               </svg>
             </Link>
-            <ThemeToggle />
           </nav>
         </div>
       </header>

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
-import { ThemeToggle } from "@/components/theme-provider";
+
 import { isUdeetsLogoSrc } from "@/lib/branding";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import type { Hub as SupabaseHub } from "@/types/hub";
@@ -373,7 +373,6 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>
               Create Hub
             </Link>
-            <ThemeToggle />
             <Link
               href={isAuthenticated ? "/dashboard" : "/"}
               className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"

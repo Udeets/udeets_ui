@@ -148,16 +148,16 @@ export function CTAEditorModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-      <div className="fixed inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-lg rounded-t-2xl bg-white p-6 shadow-xl sm:rounded-2xl">
+      <div className="fixed inset-0 bg-[var(--ud-bg-overlay)]" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-lg rounded-t-2xl bg-[var(--ud-bg-card)] p-6 shadow-xl sm:rounded-2xl">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-[#111111]">Edit CTA Buttons</h2>
-          <button type="button" onClick={onClose} className="rounded-lg p-1 hover:bg-slate-100">
-            <X className="h-5 w-5 text-slate-500" />
+          <h2 className="text-lg font-bold text-[var(--ud-text-primary)]">Edit CTA Buttons</h2>
+          <button type="button" onClick={onClose} className="rounded-lg p-1 hover:bg-[var(--ud-bg-subtle)]">
+            <X className="h-5 w-5 text-[var(--ud-text-muted)]" />
           </button>
         </div>
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-[var(--ud-text-muted)]">
           Add up to {MAX_CTAS_PER_HUB} call-to-action buttons. Drag to reorder.
         </p>
 
@@ -169,7 +169,7 @@ export function CTAEditorModal({
             return (
               <div
                 key={index}
-                className="rounded-xl border border-slate-200 bg-[#F7FBFA] p-3"
+                className="rounded-xl border border-[var(--ud-border)] bg-[var(--ud-bg-subtle)] p-3"
               >
                 <div className="flex items-start gap-2">
                   {/* Reorder handle */}
@@ -186,15 +186,15 @@ export function CTAEditorModal({
                   <div className="min-w-0 flex-1 space-y-2">
                     {/* Action type selector with icon preview */}
                     <div className="flex items-center gap-2">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#EAF6F3]">
-                        <TypeIcon className="h-4 w-4 text-[#0C5C57]" />
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--ud-brand-light)]">
+                        <TypeIcon className="h-4 w-4 text-[var(--ud-brand-primary)]" />
                       </div>
                       <select
                         value={draft.action_type}
                         onChange={(e) =>
                           updateDraft(index, { action_type: e.target.value as CTAActionType })
                         }
-                        className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-[#A9D1CA] focus:ring-2"
+                        className="flex-1 rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-3 py-2 text-sm outline-none ring-[var(--ud-brand-primary)] focus:ring-2"
                       >
                         {CTA_ACTION_TYPES.map((t) => (
                           <option key={t} value={t}>
@@ -209,7 +209,7 @@ export function CTAEditorModal({
                       value={draft.label}
                       onChange={(e) => updateDraft(index, { label: e.target.value })}
                       placeholder="Button label"
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-[#A9D1CA] focus:ring-2"
+                      className="w-full rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-3 py-2 text-sm outline-none ring-[var(--ud-brand-primary)] focus:ring-2"
                     />
 
                     {/* Value — the only field user must fill */}
@@ -217,16 +217,16 @@ export function CTAEditorModal({
                       value={draft.action_value}
                       onChange={(e) => updateDraft(index, { action_value: e.target.value })}
                       placeholder={config.placeholder}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none ring-[#A9D1CA] focus:ring-2"
+                      className="w-full rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-3 py-2 text-sm outline-none ring-[var(--ud-brand-primary)] focus:ring-2"
                     />
 
                     {/* Visibility toggle */}
-                    <label className="flex items-center gap-2 text-xs text-slate-500">
+                    <label className="flex items-center gap-2 text-xs text-[var(--ud-text-muted)]">
                       <input
                         type="checkbox"
                         checked={draft.is_visible}
                         onChange={(e) => updateDraft(index, { is_visible: e.target.checked })}
-                        className="h-3.5 w-3.5 rounded border-slate-300 text-[#0C5C57] focus:ring-[#A9D1CA]"
+                        className="h-3.5 w-3.5 rounded border-[var(--ud-border)] text-[var(--ud-brand-primary)] focus:ring-[var(--ud-brand-primary)]"
                       />
                       Visible
                     </label>
@@ -258,17 +258,17 @@ export function CTAEditorModal({
           <button
             type="button"
             onClick={addDraft}
-            className="mt-3 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-[#0C5C57] transition hover:bg-[#EAF6F3]"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-[var(--ud-brand-primary)] transition hover:bg-[var(--ud-brand-light)]"
           >
             <Plus className="h-4 w-4" />
             Add CTA
           </button>
         )}
 
-        {error && <p className="mt-2 text-xs font-medium text-[#B42318]">{error}</p>}
+        {error && <p className="mt-2 text-xs font-medium text-[var(--ud-danger)]">{error}</p>}
 
         {/* Footer */}
-        <div className="mt-5 flex justify-end gap-3 border-t border-slate-100 pt-4">
+        <div className="mt-5 flex justify-end gap-3 border-t border-[var(--ud-border)] pt-4">
           <button type="button" onClick={onClose} className={BUTTON_SECONDARY}>
             Cancel
           </button>

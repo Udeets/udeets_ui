@@ -135,15 +135,15 @@ export function CustomSectionEditorModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[115] flex items-center justify-center bg-black/40 p-4">
-      <div className="relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl">
+    <div className="fixed inset-0 z-[115] flex items-center justify-center bg-[var(--ud-bg-overlay)] p-4">
+      <div className="relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-[var(--ud-bg-card)] p-5 shadow-2xl">
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-semibold text-[#111111]">Custom Sections</h3>
-            <p className="mt-1 text-sm text-slate-500">Add sections with titles and bullet points.</p>
+            <h3 className="text-lg font-semibold text-[var(--ud-text-primary)]">Custom Sections</h3>
+            <p className="mt-1 text-sm text-[var(--ud-text-muted)]">Add sections with titles and bullet points.</p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50">
+          <button type="button" onClick={onClose} className="rounded-full border border-[var(--ud-border)] p-2 text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)]">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -151,14 +151,14 @@ export function CustomSectionEditorModal({
         {/* Sections */}
         <div className="mt-5 space-y-5">
           {drafts.map((section, sIdx) => (
-            <div key={section.tempId} className="rounded-xl border border-slate-200 p-4">
+            <div key={section.tempId} className="rounded-xl border border-[var(--ud-border)] p-4">
               <div className="flex items-center gap-2">
-                <GripVertical className="h-4 w-4 shrink-0 text-slate-300" />
+                <GripVertical className="h-4 w-4 shrink-0 text-[var(--ud-border)]" />
                 <input
                   value={section.title}
                   onChange={(e) => updateSectionTitle(sIdx, e.target.value)}
                   placeholder="Section title (e.g. Hours, Menu, Rules)"
-                  className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-[#A9D1CA] focus:ring-1 focus:ring-[#A9D1CA]"
+                  className="flex-1 rounded-lg border border-[var(--ud-border)] px-3 py-2 text-sm outline-none transition focus:border-[var(--ud-brand-primary)] focus:ring-1 focus:ring-[var(--ud-brand-primary)]"
                 />
                 <button type="button" onClick={() => removeSection(sIdx)} className="rounded p-1 text-slate-400 transition hover:text-red-500">
                   <Trash2 className="h-4 w-4" />
@@ -172,7 +172,7 @@ export function CustomSectionEditorModal({
                     <select
                       value={item.tag}
                       onChange={(e) => updateItem(sIdx, iIdx, "tag", e.target.value)}
-                      className="mt-0.5 w-24 shrink-0 rounded border border-slate-200 px-2 py-1.5 text-xs outline-none transition focus:border-[#A9D1CA]"
+                      className="mt-0.5 w-24 shrink-0 rounded border border-[var(--ud-border)] px-2 py-1.5 text-xs outline-none transition focus:border-[var(--ud-brand-primary)]"
                     >
                       <option value="">No tag</option>
                       {SECTION_TAGS.map((tag) => (
@@ -183,7 +183,7 @@ export function CustomSectionEditorModal({
                       value={item.label}
                       onChange={(e) => updateItem(sIdx, iIdx, "label", e.target.value)}
                       placeholder="Bullet point text"
-                      className="min-w-0 flex-1 rounded border border-slate-200 px-2 py-1.5 text-sm outline-none transition focus:border-[#A9D1CA]"
+                      className="min-w-0 flex-1 rounded border border-[var(--ud-border)] px-2 py-1.5 text-sm outline-none transition focus:border-[var(--ud-brand-primary)]"
                     />
                     <button type="button" onClick={() => removeItem(sIdx, iIdx)} className="mt-1 rounded p-0.5 text-slate-400 transition hover:text-red-500">
                       <X className="h-3.5 w-3.5" />
@@ -209,7 +209,7 @@ export function CustomSectionEditorModal({
           <button
             type="button"
             onClick={addSection}
-            className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 py-3 text-sm font-medium text-slate-500 transition hover:border-[#A9D1CA] hover:text-[#0C5C57]"
+            className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-[var(--ud-border)] py-3 text-sm font-medium text-[var(--ud-text-muted)] transition hover:border-[var(--ud-brand-primary)] hover:text-[var(--ud-brand-primary)]"
           >
             <Plus className="h-4 w-4" /> Add Section
           </button>
@@ -218,8 +218,8 @@ export function CustomSectionEditorModal({
         {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
 
         {/* Footer */}
-        <div className="mt-5 flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
-          <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50">
+        <div className="mt-5 flex items-center justify-end gap-3 border-t border-[var(--ud-border)] pt-4">
+          <button type="button" onClick={onClose} className="rounded-xl border border-[var(--ud-border)] px-4 py-2 text-sm font-medium text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)]">
             Cancel
           </button>
           <button
@@ -228,7 +228,7 @@ export function CustomSectionEditorModal({
             disabled={isSaving}
             className={cn(
               "rounded-xl px-5 py-2 text-sm font-semibold transition",
-              isSaving ? "cursor-not-allowed bg-slate-200 text-slate-400" : "bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] text-white hover:opacity-90"
+              isSaving ? "cursor-not-allowed bg-slate-200 text-slate-400" : "bg-gradient-to-r from-[var(--ud-brand-primary)] to-[var(--ud-brand-primary)] text-white hover:opacity-90"
             )}
           >
             {isSaving ? <Loader2 className="inline h-4 w-4 animate-spin" /> : "Save Sections"}

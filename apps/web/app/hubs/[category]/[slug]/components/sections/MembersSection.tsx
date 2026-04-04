@@ -33,29 +33,29 @@ function PendingRequestCard({
 }) {
   return (
     <div className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-      <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-[#EAF6F3]">
+      <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
         {request.avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={request.avatarUrl} alt={request.fullName} className="h-full w-full object-cover" />
         ) : (
-          <span className="grid h-full w-full place-items-center text-xs font-semibold text-[#0C5C57]">
+          <span className="grid h-full w-full place-items-center text-xs font-semibold text-[var(--ud-brand-primary)]">
             {initials(request.fullName)}
           </span>
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-[#111111]">{request.fullName}</p>
-        {request.email ? <p className="truncate text-xs text-slate-400">{request.email}</p> : null}
+        <p className="truncate text-sm font-medium text-[var(--ud-text-primary)]">{request.fullName}</p>
+        {request.email ? <p className="truncate text-xs text-[var(--ud-text-muted)]">{request.email}</p> : null}
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
         {isProcessing ? (
-          <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+          <Loader2 className="h-4 w-4 animate-spin text-[var(--ud-text-muted)]" />
         ) : (
           <>
             <button
               type="button"
               onClick={onApprove}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#EAF6F3] text-[#0C5C57] transition hover:bg-[#d4eee8]"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--ud-brand-light)] text-[var(--ud-brand-primary)] transition hover:bg-[var(--ud-brand-light)]/60"
               title="Approve"
               aria-label={`Approve ${request.fullName}`}
             >
@@ -146,35 +146,35 @@ export function MembersSection({
       {/* Active Members List */}
       {memberItems.length === 0 ? (
         <div className="flex flex-col items-center py-12 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
-            <UsersRound className="h-5 w-5 text-slate-400" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--ud-bg-subtle)]">
+            <UsersRound className="h-5 w-5 text-[var(--ud-text-muted)]" />
           </div>
-          <p className="mt-3 text-sm font-medium text-[#111111]">
+          <p className="mt-3 text-sm font-medium text-[var(--ud-text-primary)]">
             {membersPanelMode === "invite" ? "Invite your first members" : "No members yet"}
           </p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-[var(--ud-text-muted)]">
             {membersPanelMode === "invite" ? "Start building your community." : "Members will appear here as they join."}
           </p>
         </div>
       ) : (
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-[var(--ud-border)]">
           {memberItems.map((member) => (
             <div key={member.userId} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-              <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-[#EAF6F3]">
+              <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
                 {member.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={member.avatarUrl} alt={member.fullName} className="h-full w-full object-cover" />
                 ) : (
-                  <span className="grid h-full w-full place-items-center text-xs font-semibold text-[#0C5C57]">
+                  <span className="grid h-full w-full place-items-center text-xs font-semibold text-[var(--ud-brand-primary)]">
                     {initials(member.fullName)}
                   </span>
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-[#111111]">{member.fullName}</p>
-                {member.email ? <p className="truncate text-xs text-slate-400">{member.email}</p> : null}
+                <p className="truncate text-sm font-medium text-[var(--ud-text-primary)]">{member.fullName}</p>
+                {member.email ? <p className="truncate text-xs text-[var(--ud-text-muted)]">{member.email}</p> : null}
               </div>
-              <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium capitalize text-slate-500">{member.role}</span>
+              <span className="shrink-0 rounded-full bg-[var(--ud-bg-subtle)] px-2 py-0.5 text-[10px] font-medium capitalize text-[var(--ud-text-muted)]">{member.role}</span>
             </div>
           ))}
         </div>

@@ -21,9 +21,9 @@ export function CustomSectionDisplay({
   return (
     <div className="space-y-4">
       {visibleSections.map((section) => (
-        <div key={section.id} className="rounded-xl border border-slate-100 p-4">
+        <div key={section.id} className="rounded-xl border border-[var(--ud-border)] p-4">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-medium text-slate-500">{section.title}</p>
+            <p className="text-sm font-medium text-[var(--ud-text-muted)]">{section.title}</p>
             {isCreatorAdmin && onEdit ? (
               <button type="button" onClick={onEdit} className={ACTION_ICON_BUTTON} aria-label="Edit sections">
                 <Pencil className={ACTION_ICON} />
@@ -39,19 +39,19 @@ export function CustomSectionDisplay({
                       {TAG_LABELS[item.tag as keyof typeof TAG_LABELS] || item.tag}
                     </span>
                   ) : (
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#0C5C57]" />
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--ud-brand-primary)]" />
                   )}
                   <div className="min-w-0">
-                    <span className="text-sm text-[#111111]">{item.label}</span>
+                    <span className="text-sm text-[var(--ud-text-primary)]">{item.label}</span>
                     {item.value ? (
-                      <span className="ml-1 text-xs text-slate-400">{item.value}</span>
+                      <span className="ml-1 text-xs text-[var(--ud-text-muted)]">{item.value}</span>
                     ) : null}
                   </div>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="mt-2 text-sm italic text-slate-400">No items added yet.</p>
+            <p className="mt-2 text-sm italic text-[var(--ud-text-muted)]">No items added yet.</p>
           )}
         </div>
       ))}
@@ -60,9 +60,9 @@ export function CustomSectionDisplay({
         <button
           type="button"
           onClick={onEdit}
-          className="w-full rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-left text-sm text-slate-500 transition hover:border-[#A9D1CA]"
+          className="w-full rounded-xl border border-dashed border-[var(--ud-border)] bg-[var(--ud-bg-subtle)] px-4 py-4 text-left text-sm text-[var(--ud-text-muted)] transition hover:border-[var(--ud-brand-primary)]"
         >
-          <span className="font-medium text-[#111111]">Add a custom section</span>
+          <span className="font-medium text-[var(--ud-text-primary)]">Add a custom section</span>
           {" — "}Create sections like Menu, Hours, Rules, Services, and more.
         </button>
       ) : null}

@@ -10,21 +10,21 @@ export function FilesSection({ fileItems }: { fileItems: string[] }) {
       {fileItems.length === 0 ? (
         <div className="grid min-h-[240px] w-full place-items-center text-center">
           <div className="w-full">
-            <h3 className="text-xl font-semibold tracking-tight text-[#111111]">No files yet</h3>
-            <p className="mt-3 text-sm leading-relaxed text-slate-600">Shared guides, forms, and resources will appear here.</p>
+            <h3 className="text-xl font-semibold tracking-tight text-[var(--ud-text-primary)]">No files yet</h3>
+            <p className="mt-3 text-sm leading-relaxed text-[var(--ud-text-secondary)]">Shared guides, forms, and resources will appear here.</p>
           </div>
         </div>
       ) : (
         <section className="w-full space-y-3">
           {fileItems.map((file) => (
-            <div key={file} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+            <div key={file} className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--ud-border)] bg-[var(--ud-bg-subtle)] p-4">
               <div className="flex items-center gap-3">
                 <span className={PREMIUM_ICON_WRAPPER}>
                   <Paperclip className={ICON} />
                 </span>
                 <div>
-                  <p className="text-sm font-semibold text-[#111111]">{file}</p>
-                  <p className="text-xs text-slate-500">Mock shared file</p>
+                  <p className="text-sm font-semibold text-[var(--ud-text-primary)]">{file}</p>
+                  <p className="text-xs text-[var(--ud-text-muted)]">Mock shared file</p>
                 </div>
               </div>
               <button type="button" className={BUTTON_SECONDARY}>

@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import MockAppShell, { cardClass, sectionTitleClass } from "@/components/mock-app-shell";
+import { AuthGuard } from "@/components/AuthGuard";
 import { useAuthSession } from "@/services/auth/useAuthSession";
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -269,6 +270,7 @@ export default function ProfilePage() {
   ];
 
   return (
+    <AuthGuard>
     <MockAppShell activeNav="home">
       <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
         {/* Sidebar */}
@@ -534,5 +536,6 @@ export default function ProfilePage() {
         </div>
       </div>
     </MockAppShell>
+    </AuthGuard>
   );
 }

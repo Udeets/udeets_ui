@@ -101,18 +101,18 @@ export function CreateDeetModal({
   }, [draftText]);
 
   return (
-    <div className="fixed inset-0 z-[210] flex items-center justify-center bg-[rgba(15,23,42,0.62)] p-4">
-      <div className="w-full rounded-[28px] border border-white/70 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.28)]" style={{ maxWidth: "560px" }}>
+    <div className="fixed inset-0 z-[210] flex items-center justify-center bg-[var(--ud-bg-overlay)] p-4">
+      <div className="w-full rounded-[28px] border border-white/70 bg-[var(--ud-bg-card)] shadow-[0_24px_70px_rgba(15,23,42,0.28)]" style={{ maxWidth: "560px" }}>
         {/* Header: Close, Title, Post Button */}
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-[var(--ud-border)] px-5 py-4">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50"
+            className="rounded-full border border-[var(--ud-border)] p-2 text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)]"
           >
             <X className={ICON} />
           </button>
-          <h3 className="text-[20px] font-semibold tracking-tight text-[#111111]">Write Post</h3>
+          <h3 className="text-[20px] font-semibold tracking-tight text-[var(--ud-text-primary)]">Write Post</h3>
           <button
             type="submit"
             form="deet-form"
@@ -133,7 +133,7 @@ export function CreateDeetModal({
                 className="h-10 w-10 rounded-full object-cover"
               />
             ) : (
-              <div className="h-10 w-10 rounded-full bg-[#A9D1CA] flex items-center justify-center text-sm font-semibold text-[#111111]">
+              <div className="h-10 w-10 rounded-full bg-[var(--ud-brand-primary)] flex items-center justify-center text-sm font-semibold text-[var(--ud-text-primary)]">
                 {authorName
                   .split(" ")
                   .filter(Boolean)
@@ -142,7 +142,7 @@ export function CreateDeetModal({
                   .join("")}
               </div>
             )}
-            <span className="text-sm font-medium text-[#111111]">{authorName}</span>
+            <span className="text-sm font-medium text-[var(--ud-text-primary)]">{authorName}</span>
           </div>
 
           {/* Formatting toolbar */}
@@ -151,13 +151,13 @@ export function CreateDeetModal({
               <button
                 type="button"
                 onClick={onToggleFontSizeMenu}
-                className="inline-flex h-9 min-w-[44px] items-center justify-center rounded-xl border border-slate-200 px-3 text-sm font-medium text-slate-600 transition hover:border-slate-300"
+                className="inline-flex h-9 min-w-[44px] items-center justify-center rounded-xl border border-[var(--ud-border)] px-3 text-sm font-medium text-[var(--ud-text-secondary)] transition hover:border-[var(--ud-border)]"
               >
                 Aa
               </button>
 
               {isFontSizeMenuOpen ? (
-                <div className="absolute left-0 top-[calc(100%+8px)] z-20 min-w-[124px] rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+                <div className="absolute left-0 top-[calc(100%+8px)] z-20 min-w-[124px] rounded-2xl border border-[var(--ud-border)] bg-[var(--ud-bg-card)] p-2 shadow-lg">
                   {(["small", "medium", "large"] as const).map((size) => (
                     <button
                       key={size}
@@ -165,7 +165,7 @@ export function CreateDeetModal({
                       onClick={() => applyFontSize(size)}
                       className={cn(
                         "block w-full rounded-xl px-3 py-2 text-left text-sm transition",
-                        formatting.fontSize === size ? "bg-[#EAF6F3] text-[#0C5C57]" : "text-slate-600 hover:bg-slate-50"
+                        formatting.fontSize === size ? "bg-[var(--ud-brand-light)] text-[var(--ud-brand-primary)]" : "text-[var(--ud-text-secondary)] hover:bg-[var(--ud-bg-subtle)]"
                       )}
                     >
                       {size === "small" ? "Small" : size === "medium" ? "Medium" : "Large"}
@@ -178,7 +178,7 @@ export function CreateDeetModal({
             <button
               type="button"
               onClick={applyBold}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 transition hover:border-slate-300"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--ud-border)] text-sm font-semibold text-[var(--ud-text-secondary)] transition hover:border-[var(--ud-border)]"
             >
               B
             </button>
@@ -186,7 +186,7 @@ export function CreateDeetModal({
             <button
               type="button"
               onClick={applyItalic}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-sm italic text-slate-600 transition hover:border-slate-300"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--ud-border)] text-sm italic text-[var(--ud-text-secondary)] transition hover:border-[var(--ud-border)]"
             >
               I
             </button>
@@ -194,13 +194,13 @@ export function CreateDeetModal({
             <button
               type="button"
               onClick={applyUnderline}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-sm underline text-slate-600 transition hover:border-slate-300"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--ud-border)] text-sm underline text-[var(--ud-text-secondary)] transition hover:border-[var(--ud-border)]"
             >
               U
             </button>
 
-            <label className="relative inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-slate-200 transition hover:border-slate-300">
-              <span className="text-[#0C5C57]">A</span>
+            <label className="relative inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-[var(--ud-border)] transition hover:border-[var(--ud-border)]">
+              <span className="text-[var(--ud-brand-primary)]">A</span>
               <input
                 type="color"
                 value={formatting.textColor}
@@ -212,7 +212,7 @@ export function CreateDeetModal({
           </div>
 
           {/* Rich text editor container */}
-          <div className="rounded-[24px] border border-slate-300 p-4 bg-white">
+          <div className="rounded-[24px] border border-[var(--ud-border)] p-4 bg-[var(--ud-bg-card)]">
             {/* ContentEditable div */}
             <div
               ref={editorRef}
@@ -220,12 +220,12 @@ export function CreateDeetModal({
               suppressContentEditableWarning
               onInput={handleEditorInput}
               data-placeholder="Write something..."
-              className="min-h-[180px] w-full outline-none text-base text-gray-800 whitespace-pre-wrap [&:empty:before]:content-[attr(data-placeholder)] [&:empty:before]:text-slate-400"
+              className="min-h-[180px] w-full outline-none text-base text-[var(--ud-text-primary)] whitespace-pre-wrap [&:empty:before]:content-[attr(data-placeholder)] [&:empty:before]:text-[var(--ud-text-muted)]"
             />
 
             {/* Photo thumbnails strip (inside editor container) */}
             {selectedPhotoPreviews.length > 0 ? (
-              <div className="mt-4 border-t border-slate-100 pt-4">
+              <div className="mt-4 border-t border-[var(--ud-border)] pt-4">
                 <div className="flex gap-3 overflow-x-auto pb-2">
                   {selectedPhotoPreviews.map((preview, index) => (
                     <div key={`preview-${index}`} className="relative shrink-0">
@@ -251,12 +251,12 @@ export function CreateDeetModal({
             ) : null}
 
             {/* Action icons row (inside editor container, at bottom) */}
-            <div className="mt-4 border-t border-slate-100 pt-4 flex items-center gap-3 text-slate-500">
+            <div className="mt-4 border-t border-[var(--ud-border)] pt-4 flex items-center gap-3 text-[var(--ud-text-muted)]">
               <button
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => onOpenChild("photo")}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[#F1F8F6] hover:text-[#0C5C57]"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
                 title="Photo/Video"
               >
                 <Images className={ICON} />
@@ -266,7 +266,7 @@ export function CreateDeetModal({
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => onOpenChild("emoji")}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[#F1F8F6] hover:text-[#0C5C57]"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
                 title="Sticker/Emoji"
               >
                 <Smile className={ICON} />
@@ -275,7 +275,7 @@ export function CreateDeetModal({
               <button
                 type="button"
                 disabled={isSubmitting}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[#F1F8F6] hover:text-[#0C5C57]"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
                 title="Announcement"
               >
                 <Megaphone className={ICON} />
@@ -284,7 +284,7 @@ export function CreateDeetModal({
               <button
                 type="button"
                 disabled={isSubmitting}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[#F1F8F6] hover:text-[#0C5C57]"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
                 title="Notice"
               >
                 <FileText className={ICON} />
@@ -293,7 +293,7 @@ export function CreateDeetModal({
               <button
                 type="button"
                 disabled={isSubmitting}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[#F1F8F6] hover:text-[#0C5C57]"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
                 title="Poll"
               >
                 <BarChart3 className={ICON} />
@@ -305,9 +305,9 @@ export function CreateDeetModal({
           {attachedItems.length ? (
             <div className="mt-4 space-y-2">
               {attachedItems.map((item) => (
-                <div key={item.id} className="rounded-2xl border border-[#DCEBE6] bg-[#F8FCFB] px-4 py-3 text-sm text-slate-700">
-                  <div className="font-medium text-[#111111]">{item.title}</div>
-                  {item.detail ? <div className="mt-1 text-slate-500">{item.detail}</div> : null}
+                <div key={item.id} className="rounded-2xl border border-[var(--ud-border)] bg-[var(--ud-bg-subtle)] px-4 py-3 text-sm text-[var(--ud-text-secondary)]">
+                  <div className="font-medium text-[var(--ud-text-primary)]">{item.title}</div>
+                  {item.detail ? <div className="mt-1 text-[var(--ud-text-muted)]">{item.detail}</div> : null}
                   {item.previews?.length ? (
                     <div className="mt-3 grid grid-cols-3 gap-2">
                       {item.previews.map((preview, index) => (
@@ -321,12 +321,12 @@ export function CreateDeetModal({
           ) : null}
 
           {/* Deet Settings button */}
-          <div className="mt-5 flex items-center border-t border-[#E5EFEC] pt-5">
+          <div className="mt-5 flex items-center border-t border-[var(--ud-border)] pt-5">
             <button
               type="button"
               disabled={isSubmitting}
               onClick={() => onOpenChild("settings")}
-              className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-[#0C5C57]"
+              className="inline-flex items-center gap-2 text-sm font-medium text-[var(--ud-text-secondary)] transition hover:text-[var(--ud-brand-primary)]"
             >
               <Settings className={ACTION_ICON} />
               Deet Settings

@@ -14,7 +14,7 @@ import {
   Search,
 } from "lucide-react";
 import { UdeetsBrandLockup, UdeetsLogoIcon } from "@/components/brand-logo";
-import { ThemeToggle } from "@/components/theme-provider";
+
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -185,7 +185,6 @@ export default function ResourcesPage() {
             <UdeetsBrandLockup textClassName="text-xl sm:text-2xl" priority />
           </Link>
           <nav className="flex items-center gap-2 sm:gap-3">
-            <ThemeToggle />
             <Link href="/discover" className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]" aria-label="Discover">
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 21l-4.3-4.3" /><circle cx="11" cy="11" r="7" /></svg>
             </Link>

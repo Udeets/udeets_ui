@@ -12,7 +12,7 @@ import { SectionShell } from "../SectionShell";
 function SettingRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-4 py-3">
-      <span className="shrink-0 text-sm text-slate-500">{label}</span>
+      <span className="shrink-0 text-sm text-[var(--ud-text-muted)]">{label}</span>
       <div className="min-w-0 text-right">{children}</div>
     </div>
   );
@@ -27,7 +27,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       onClick={() => onChange(!checked)}
       className={cn(
         "relative inline-flex h-6 w-10 shrink-0 rounded-full transition-colors duration-200",
-        checked ? "bg-[#A9D1CA]" : "bg-slate-200"
+        checked ? "bg-[var(--ud-brand-primary)]" : "bg-slate-200"
       )}
     >
       <span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-200", checked ? "left-[18px]" : "left-0.5")} />
@@ -36,7 +36,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 }
 
 function GroupHeader({ title }: { title: string }) {
-  return <h3 className="pb-1 pt-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">{title}</h3>;
+  return <h3 className="pb-1 pt-2 text-[11px] font-semibold uppercase tracking-widest text-[var(--ud-text-muted)]">{title}</h3>;
 }
 
 function SelectInput({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) {
@@ -44,7 +44,7 @@ function SelectInput({ value, onChange, options }: { value: string; onChange: (v
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="rounded-lg border-0 bg-transparent py-0 pr-6 text-right text-sm font-medium text-[#111111] outline-none"
+      className="rounded-lg border-0 bg-transparent py-0 pr-6 text-right text-sm font-medium text-[var(--ud-text-primary)] outline-none"
     >
       {options.map((o) => (
         <option key={o.value} value={o.value}>{o.label}</option>
@@ -62,7 +62,7 @@ function TextInput({ value, onChange, placeholder }: { value: string; onChange: 
       autoComplete="off"
       data-1p-ignore
       data-lpignore="true"
-      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-[#111111] outline-none transition focus:border-[#A9D1CA] focus:ring-1 focus:ring-[#A9D1CA]"
+      className="w-full rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-3 py-2 text-sm text-[var(--ud-text-primary)] outline-none transition focus:border-[var(--ud-brand-primary)] focus:ring-1 focus:ring-[var(--ud-brand-primary)]"
     />
   );
 }
@@ -147,7 +147,7 @@ export function SettingsSection({
       actions={
         isDirty ? (
           <div className="flex items-center gap-2">
-            <button type="button" onClick={onCancel} disabled={isSavingSettings} className="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100">
+            <button type="button" onClick={onCancel} disabled={isSavingSettings} className="rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)]">
               Cancel
             </button>
             <button
@@ -155,7 +155,7 @@ export function SettingsSection({
               onClick={onSave}
               disabled={isSavingSettings || !isCreatorAdmin}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#0C5C57] to-[#1a8a82] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90",
+                "inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[var(--ud-brand-primary)] to-[var(--ud-brand-primary)] px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90",
                 (isSavingSettings || !isCreatorAdmin) && "cursor-not-allowed opacity-60"
               )}
             >
@@ -170,27 +170,27 @@ export function SettingsSection({
         {/* ── Profile ────────────────────────────────────────── */}
         <div>
           <GroupHeader title="Profile" />
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-[var(--ud-border)]">
             {/* Hub avatar */}
             <div className="flex items-center gap-3 py-3">
-              <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-[#A9D1CA]">
+              <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-primary)]">
                 <ImageWithFallback
                   src={dpImageSrc}
                   sources={[dpImageSrc, coverImageSrc]}
                   alt={settingsHubName}
                   className="h-full w-full object-cover"
-                  fallbackClassName="grid h-full w-full place-items-center bg-[#A9D1CA] text-sm font-semibold text-[#111111]"
+                  fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-primary)] text-sm font-semibold text-[var(--ud-text-primary)]"
                   fallback={initials(settingsHubName)}
                 />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-[#111111]">{settingsHubName || "Hub"}</p>
-                <p className="text-xs text-slate-400">Change photo</p>
+                <p className="text-sm font-medium text-[var(--ud-text-primary)]">{settingsHubName || "Hub"}</p>
+                <p className="text-xs text-[var(--ud-text-muted)]">Change photo</p>
               </div>
             </div>
             {/* Hub name */}
             <div className="py-3">
-              <span className="mb-1.5 block text-xs text-slate-400">Hub Name</span>
+              <span className="mb-1.5 block text-xs text-[var(--ud-text-muted)]">Hub Name</span>
               <TextInput value={settingsHubName} onChange={onSettingsHubNameChange} placeholder="Hub name" />
             </div>
             <div className="py-3">
@@ -200,7 +200,7 @@ export function SettingsSection({
                 onChange={(e) => onSettingsDescriptionChange(e.target.value)}
                 rows={3}
                 autoComplete="off"
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-[#111111] outline-none transition focus:border-[#A9D1CA] focus:ring-1 focus:ring-[#A9D1CA]"
+                className="w-full rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-3 py-2 text-sm text-[var(--ud-text-primary)] outline-none transition focus:border-[var(--ud-brand-primary)] focus:ring-1 focus:ring-[var(--ud-brand-primary)]"
               />
             </div>
             <SettingRow label="Category">
@@ -223,12 +223,12 @@ export function SettingsSection({
               />
             </SettingRow>
             <div className="py-3">
-              <span className="mb-1.5 block text-xs text-slate-400">Location</span>
+              <span className="mb-1.5 block text-xs text-[var(--ud-text-muted)]">Location</span>
               <TextInput value={settingsLocation} onChange={onSettingsLocationChange} placeholder="City or address" />
             </div>
             {/* Accent color theme */}
             <div className="py-3">
-              <span className="mb-1.5 flex items-center gap-1.5 text-xs text-slate-400">
+              <span className="mb-1.5 flex items-center gap-1.5 text-xs text-[var(--ud-text-muted)]">
                 <Palette className="h-3 w-3" /> Hub Color Theme
               </span>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -240,8 +240,8 @@ export function SettingsSection({
                     className={cn(
                       "flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition",
                       settingsAccentColor === theme.key
-                        ? "border-slate-400 bg-slate-50 text-[#111111] shadow-sm"
-                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                        ? "border-[var(--ud-border)] bg-[var(--ud-bg-subtle)] text-[var(--ud-text-primary)] shadow-sm"
+                        : "border-[var(--ud-border)] bg-[var(--ud-bg-card)] text-[var(--ud-text-secondary)] hover:border-[var(--ud-border)]"
                     )}
                   >
                     <span
@@ -259,7 +259,7 @@ export function SettingsSection({
         {/* ── Privacy ────────────────────────────────────────── */}
         <div>
           <GroupHeader title="Privacy" />
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-[var(--ud-border)]">
             <SettingRow label="Visibility">
               <div className="flex gap-1">
                 {(["Public", "Private"] as const).map((v) => (
@@ -269,7 +269,7 @@ export function SettingsSection({
                     onClick={() => onSettingsVisibilityChange(v)}
                     className={cn(
                       "rounded-md px-2.5 py-1 text-xs font-medium transition",
-                      settingsVisibility === v ? "bg-[#0C5C57] text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                      settingsVisibility === v ? "bg-[var(--ud-brand-primary)] text-white" : "bg-[var(--ud-bg-subtle)] text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)]"
                     )}
                   >
                     {v}
@@ -286,7 +286,7 @@ export function SettingsSection({
         {/* ── Notifications ──────────────────────────────────── */}
         <div>
           <GroupHeader title="Notifications" />
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-[var(--ud-border)]">
             <SettingRow label="In-app notifications">
               <Toggle checked={notificationsEnabled} onChange={onNotificationsEnabledChange} />
             </SettingRow>
@@ -296,7 +296,7 @@ export function SettingsSection({
         {/* ── Permissions ────────────────────────────────────── */}
         <div>
           <GroupHeader title="Permissions" />
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-[var(--ud-border)]">
             <SettingRow label="Member approval">
               <SelectInput
                 value={approvalSetting}
@@ -325,17 +325,17 @@ export function SettingsSection({
         {memberRoleItems.length > 0 && (
           <div>
             <GroupHeader title="Members" />
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-[var(--ud-border)]">
               {memberRoleItems.map((member) => (
                 <div key={member.name} className="flex items-center gap-3 py-3">
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#EAF6F3] text-[10px] font-semibold text-[#0C5C57]">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--ud-brand-light)] text-[10px] font-semibold text-[var(--ud-brand-primary)]">
                     {initials(member.name)}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-[#111111]">{member.name}</p>
+                    <p className="truncate text-sm font-medium text-[var(--ud-text-primary)]">{member.name}</p>
                   </div>
-                  <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium capitalize text-slate-500">{member.role}</span>
-                  <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
+                  <span className="shrink-0 rounded-full bg-[var(--ud-bg-subtle)] px-2 py-0.5 text-[10px] font-medium capitalize text-[var(--ud-text-muted)]">{member.role}</span>
+                  <ChevronRight className="h-3.5 w-3.5 text-[var(--ud-border)]" />
                 </div>
               ))}
             </div>
@@ -343,12 +343,12 @@ export function SettingsSection({
         )}
 
         {/* ── Status messages ────────────────────────────────── */}
-        {settingsSaveSuccess && <p className="rounded-lg bg-[#EAF6F3] px-3 py-2 text-xs font-medium text-[#0C5C57]">{settingsSaveSuccess}</p>}
+        {settingsSaveSuccess && <p className="rounded-lg bg-[var(--ud-brand-light)] px-3 py-2 text-xs font-medium text-[var(--ud-brand-primary)]">{settingsSaveSuccess}</p>}
         {settingsSaveError && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-600">{settingsSaveError}</p>}
 
         {/* ── Danger Zone ────────────────────────────────────── */}
         {isCreatorAdmin && (
-          <div className="border-t border-slate-100 pt-6">
+          <div className="border-t border-[var(--ud-border)] pt-6">
             <GroupHeader title="Danger Zone" />
             <div className="rounded-lg border border-red-200 bg-red-50 p-4">
               <div className="flex items-center justify-between gap-4">

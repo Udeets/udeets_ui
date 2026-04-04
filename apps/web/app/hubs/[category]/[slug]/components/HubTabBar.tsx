@@ -48,7 +48,7 @@ export function HubTabBar({
               title={tab === "Posts" ? "Deets" : tab}
               className={cn(
                 "flex-1 rounded-lg px-2 py-2.5 text-center text-[12px] font-semibold tracking-tight transition-colors duration-150 sm:px-2.5 sm:text-[13px] lg:text-sm",
-                isActive ? "bg-[#A9D1CA] text-[#0C5C57]" : "text-[#6b7280] hover:bg-[#E3F1EF] hover:text-[#0C5C57]"
+                isActive ? "bg-[var(--ud-brand-light)] text-[var(--ud-brand-primary)]" : "text-[var(--ud-text-secondary)] hover:bg-[var(--ud-brand-light)] hover:text-[var(--ud-brand-primary)]"
               )}
             >
               {tab === "Posts" ? "Deets" : tab}

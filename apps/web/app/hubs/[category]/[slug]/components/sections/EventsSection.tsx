@@ -200,19 +200,19 @@ export function EventsSection({
 
   if (loading) {
     return (
-      <section className="w-full min-w-0 bg-white px-1 py-5">
+      <section className="w-full min-w-0 bg-[var(--ud-bg-card)] px-1 py-5">
         <div className="flex items-center justify-center py-12">
-          <p className="text-sm text-slate-500">Loading events...</p>
+          <p className="text-sm text-[var(--ud-text-muted)]">Loading events...</p>
         </div>
       </section>
     );
   }
 
   return (
-    <section className="w-full min-w-0 bg-white">
+    <section className="w-full min-w-0 bg-[var(--ud-bg-card)]">
       {/* ═══ TOP BAR — "Events" left, "Add Event" right ═══ */}
       <div className="flex items-center justify-between px-1 pb-5">
-        <h2 className="text-lg font-semibold text-[#111111]">Events</h2>
+        <h2 className="text-lg font-semibold text-[var(--ud-text-primary)]">Events</h2>
         <button
           type="button"
           onClick={() => {
@@ -220,7 +220,7 @@ export function EventsSection({
             setCreateForm({ title: "", description: "", startTime: "", endTime: "", location: "" });
             setShowCreateModal(true);
           }}
-          className="rounded-full border border-[#0C5C57] px-4 py-1.5 text-xs font-semibold text-[#0C5C57] transition hover:bg-[#EAF6F3]"
+          className="rounded-full border border-[var(--ud-brand-primary)] px-4 py-1.5 text-xs font-semibold text-[var(--ud-brand-primary)] transition hover:bg-[var(--ud-brand-light)]"
         >
           Add Event
         </button>
@@ -228,21 +228,21 @@ export function EventsSection({
 
       {/* ═══ MONTH NAV — "Apr 2026 < > [Today]        📅" ═══ */}
       <div className="flex items-center gap-2 px-1 pb-4">
-        <span className="text-xl font-bold tracking-tight text-[#111111]">
+        <span className="text-xl font-bold tracking-tight text-[var(--ud-text-primary)]">
           {SHORT_MONTHS[viewMonth]} {viewYear}
         </span>
 
         <button
           type="button"
           onClick={() => shiftMonth(-1)}
-          className="ml-1 flex h-6 w-6 items-center justify-center text-slate-400 transition hover:text-slate-600"
+          className="ml-1 flex h-6 w-6 items-center justify-center text-[var(--ud-text-muted)] transition hover:text-[var(--ud-text-secondary)]"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
         </button>
         <button
           type="button"
           onClick={() => shiftMonth(1)}
-          className="flex h-6 w-6 items-center justify-center text-slate-400 transition hover:text-slate-600"
+          className="flex h-6 w-6 items-center justify-center text-[var(--ud-text-muted)] transition hover:text-[var(--ud-text-secondary)]"
         >
           <ChevronRight className="h-3.5 w-3.5" />
         </button>
@@ -250,23 +250,23 @@ export function EventsSection({
         <button
           type="button"
           onClick={goToToday}
-          className="ml-1 rounded border border-slate-200 px-3 py-1 text-[11px] font-medium text-slate-600 transition hover:bg-slate-50"
+          className="ml-1 rounded border border-[var(--ud-border)] px-3 py-1 text-[11px] font-medium text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)]"
         >
           Today
         </button>
 
         <span className="flex-1" />
-        <CalendarDays className="h-4 w-4 text-slate-300" />
+        <CalendarDays className="h-4 w-4 text-[var(--ud-text-muted)]" />
       </div>
 
       {/* ═══ CALENDAR TABLE — flat, no rounded corners ═══ */}
-      <div className="select-none border-t border-l border-slate-200">
+      <div className="select-none border-t border-l border-[var(--ud-border)]">
         {/* Day-of-week header row */}
         <div style={GRID7}>
           {DAY_HEADERS.map((d) => (
             <span
               key={d}
-              className="border-b border-r border-slate-200 py-2 text-center text-[12px] font-normal text-slate-400"
+              className="border-b border-r border-[var(--ud-border)] py-2 text-center text-[12px] font-normal text-[var(--ud-text-muted)]"
             >
               {d}
             </span>
@@ -288,10 +288,10 @@ export function EventsSection({
                   onClick={() => setSelectedDate(selected ? null : cell.date)}
                   style={{ minHeight: 80 }}
                   className={cn(
-                    "relative border-b border-r border-slate-200 p-1.5 text-left align-top transition",
-                    todayCell && "ring-2 ring-inset ring-[#0C5C57]",
-                    selected && !todayCell && "bg-[#F7FBFA]",
-                    !selected && !todayCell && "hover:bg-slate-50/30"
+                    "relative border-b border-r border-[var(--ud-border)] p-1.5 text-left align-top transition",
+                    todayCell && "ring-2 ring-inset ring-[var(--ud-brand-primary)]",
+                    selected && !todayCell && "bg-[var(--ud-bg-subtle)]",
+                    !selected && !todayCell && "hover:bg-[var(--ud-bg-subtle)]/30"
                   )}
                 >
                   {/* Date number — top-left */}
@@ -299,10 +299,10 @@ export function EventsSection({
                     className={cn(
                       "block text-[13px] leading-none",
                       !cell.inMonth
-                        ? "text-slate-300"
+                        ? "text-[var(--ud-text-muted)]"
                         : todayCell
-                          ? "font-bold text-[#0C5C57]"
-                          : "text-[#333]"
+                          ? "font-bold text-[var(--ud-brand-primary)]"
+                          : "text-[var(--ud-text-primary)]"
                     )}
                   >
                     {cell.date.getDate()}
@@ -317,13 +317,13 @@ export function EventsSection({
                             className="h-[5px] w-[5px] shrink-0 rounded-full"
                             style={{ backgroundColor: themeColor("Community") }}
                           />
-                          <span className="truncate text-[10px] leading-tight text-slate-500">
+                          <span className="truncate text-[10px] leading-tight text-[var(--ud-text-muted)]">
                             {ev.title.length > 12 ? ev.title.slice(0, 12) + "…" : ev.title}
                           </span>
                         </div>
                       ))}
                       {cellEvents.length > 2 && (
-                        <span className="block pl-2.5 text-[9px] text-slate-400">
+                        <span className="block pl-2.5 text-[9px] text-[var(--ud-text-muted)]">
                           +{cellEvents.length - 2}
                         </span>
                       )}
@@ -340,14 +340,14 @@ export function EventsSection({
       <div className="mt-6 px-1">
         {listEvents.length === 0 ? (
           <div className="flex flex-col items-center py-12 text-center">
-            <CalendarDays className="h-8 w-8 text-slate-200" />
-            <p className="mt-3 text-sm font-medium text-[#111111]">No events</p>
-            <p className="mt-0.5 text-[13px] text-slate-400">
+            <CalendarDays className="h-8 w-8 text-[var(--ud-text-muted)]" />
+            <p className="mt-3 text-sm font-medium text-[var(--ud-text-primary)]">No events</p>
+            <p className="mt-0.5 text-[13px] text-[var(--ud-text-muted)]">
               {selectedDate ? "Nothing scheduled for this date." : "Plan the first event for your hub."}
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-[var(--ud-border)]">
             {listEvents.map((ev) => {
               const parsed = parseDateString(ev.eventDate);
               return (
@@ -356,15 +356,15 @@ export function EventsSection({
                   id={ev.id}
                   type="button"
                   onClick={() => setPopupEvent(ev)}
-                  className="flex w-full items-start gap-5 py-5 text-left transition hover:bg-slate-50/40"
+                  className="flex w-full items-start gap-5 py-5 text-left transition hover:bg-[var(--ud-bg-subtle)]/40"
                 >
                   {/* Large date + full day name */}
                   {parsed && (
                     <div className="flex w-14 shrink-0 flex-col items-center">
-                      <span className="text-[28px] font-bold leading-none text-[#111111]">
+                      <span className="text-[28px] font-bold leading-none text-[var(--ud-text-primary)]">
                         {String(parsed.getDate()).padStart(2, "0")}
                       </span>
-                      <span className="mt-1 text-[11px] text-slate-400">
+                      <span className="mt-1 text-[11px] text-[var(--ud-text-muted)]">
                         {FULL_DAY_NAMES[parsed.getDay()]}
                       </span>
                     </div>
@@ -372,14 +372,14 @@ export function EventsSection({
 
                   {/* Event details */}
                   <div className="min-w-0 flex-1 pt-0.5">
-                    <p className="text-[15px] font-semibold text-[#111111]">{ev.title}</p>
+                    <p className="text-[15px] font-semibold text-[var(--ud-text-primary)]">{ev.title}</p>
                     {ev.startTime && (
-                      <p className="mt-1 text-[13px] text-slate-500">
+                      <p className="mt-1 text-[13px] text-[var(--ud-text-muted)]">
                         {ev.startTime}
                         {ev.endTime ? ` - ${ev.endTime}` : ""}
                       </p>
                     )}
-                    {ev.location && <p className="text-[13px] text-slate-400">{ev.location}</p>}
+                    {ev.location && <p className="text-[13px] text-[var(--ud-text-muted)]">{ev.location}</p>}
                   </div>
                 </button>
               );
@@ -396,7 +396,7 @@ export function EventsSection({
         >
           <div className="fixed inset-0 bg-black/40" />
           <div
-            className="relative z-10 w-full max-w-md rounded-t-2xl bg-white shadow-xl sm:rounded-2xl"
+            className="relative z-10 w-full max-w-md rounded-t-2xl bg-[var(--ud-bg-card)] shadow-xl sm:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Teal header */}
@@ -413,20 +413,20 @@ export function EventsSection({
 
             <div className="p-5">
               {popupEvent.description && (
-                <p className="pb-4 text-sm text-slate-600">{popupEvent.description}</p>
+                <p className="pb-4 text-sm text-[var(--ud-text-secondary)]">{popupEvent.description}</p>
               )}
 
-              <div className="space-y-3 border-t border-slate-100 pt-4">
+              <div className="space-y-3 border-t border-[var(--ud-border)] pt-4">
                 <div className="flex items-center gap-3">
-                  <CalendarDays className="h-4 w-4 text-slate-400" />
-                  <span className="text-sm text-[#111111]">
+                  <CalendarDays className="h-4 w-4 text-[var(--ud-text-muted)]" />
+                  <span className="text-sm text-[var(--ud-text-primary)]">
                     {parseDateString(popupEvent.eventDate)?.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                   </span>
                 </div>
                 {popupEvent.startTime && (
                   <div className="flex items-center gap-3">
-                    <Clock className="h-4 w-4 text-slate-400" />
-                    <span className="text-sm text-[#111111]">
+                    <Clock className="h-4 w-4 text-[var(--ud-text-muted)]" />
+                    <span className="text-sm text-[var(--ud-text-primary)]">
                       {popupEvent.startTime}
                       {popupEvent.endTime ? ` - ${popupEvent.endTime}` : ""}
                     </span>
@@ -434,15 +434,15 @@ export function EventsSection({
                 )}
                 {popupEvent.location && (
                   <div className="flex items-center gap-3">
-                    <MapPin className="h-4 w-4 text-slate-400" />
-                    <span className="text-sm text-[#111111]">{popupEvent.location}</span>
+                    <MapPin className="h-4 w-4 text-[var(--ud-text-muted)]" />
+                    <span className="text-sm text-[var(--ud-text-primary)]">{popupEvent.location}</span>
                   </div>
                 )}
               </div>
 
               {/* RSVP Section */}
-              <div className="mt-5 border-t border-slate-100 pt-4">
-                <p className="mb-3 text-xs font-semibold text-slate-600">RSVP</p>
+              <div className="mt-5 border-t border-[var(--ud-border)] pt-4">
+                <p className="mb-3 text-xs font-semibold text-[var(--ud-text-secondary)]">RSVP</p>
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -451,7 +451,7 @@ export function EventsSection({
                       "flex-1 rounded-lg py-2 text-xs font-semibold transition",
                       userRsvps.get(popupEvent.id) === "going"
                         ? "bg-green-100 text-green-700"
-                        : "border border-slate-200 text-slate-700 hover:bg-slate-50"
+                        : "border border-[var(--ud-border)] text-[var(--ud-text-secondary)] hover:bg-[var(--ud-bg-subtle)]"
                     )}
                   >
                     Going
@@ -463,7 +463,7 @@ export function EventsSection({
                       "flex-1 rounded-lg py-2 text-xs font-semibold transition",
                       userRsvps.get(popupEvent.id) === "maybe"
                         ? "bg-yellow-100 text-yellow-700"
-                        : "border border-slate-200 text-slate-700 hover:bg-slate-50"
+                        : "border border-[var(--ud-border)] text-[var(--ud-text-secondary)] hover:bg-[var(--ud-bg-subtle)]"
                     )}
                   >
                     Maybe
@@ -475,7 +475,7 @@ export function EventsSection({
                       "flex-1 rounded-lg py-2 text-xs font-semibold transition",
                       userRsvps.get(popupEvent.id) === "not_going"
                         ? "bg-red-100 text-red-700"
-                        : "border border-slate-200 text-slate-700 hover:bg-slate-50"
+                        : "border border-[var(--ud-border)] text-[var(--ud-text-secondary)] hover:bg-[var(--ud-bg-subtle)]"
                     )}
                   >
                     Not Going
@@ -484,7 +484,7 @@ export function EventsSection({
 
                 {/* RSVP Counts */}
                 {rsvpCounts.get(popupEvent.id) && (
-                  <div className="mt-3 flex gap-4 text-xs text-slate-600">
+                  <div className="mt-3 flex gap-4 text-xs text-[var(--ud-text-secondary)]">
                     <span>{rsvpCounts.get(popupEvent.id)!.going} Going</span>
                     <span>{rsvpCounts.get(popupEvent.id)!.maybe} Maybe</span>
                     <span>{rsvpCounts.get(popupEvent.id)!.notGoing} Not Going</span>
@@ -494,7 +494,7 @@ export function EventsSection({
 
               {/* Edit/Delete buttons for creator */}
               {isCreatorAdmin && userId === popupEvent.createdBy && (
-                <div className="mt-5 flex gap-2 border-t border-slate-100 pt-4">
+                <div className="mt-5 flex gap-2 border-t border-[var(--ud-border)] pt-4">
                   <button
                     type="button"
                     onClick={() => handleDeleteEvent(popupEvent.id)}
@@ -517,7 +517,7 @@ export function EventsSection({
         >
           <div className="fixed inset-0 bg-black/40" />
           <div
-            className="relative z-10 w-full max-w-md rounded-t-2xl bg-white shadow-xl sm:rounded-2xl"
+            className="relative z-10 w-full max-w-md rounded-t-2xl bg-[var(--ud-bg-card)] shadow-xl sm:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -535,68 +535,68 @@ export function EventsSection({
             <div className="space-y-4 p-5">
               {/* Title */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700">Title *</label>
+                <label className="block text-xs font-semibold text-[var(--ud-text-secondary)]">Title *</label>
                 <input
                   type="text"
                   value={createForm.title}
                   onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#0C5C57] focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-[var(--ud-border)] px-3 py-2 text-sm focus:border-[#0C5C57] focus:outline-none"
                   placeholder="Event title"
                 />
               </div>
 
               {/* Date */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700">Date *</label>
+                <label className="block text-xs font-semibold text-[var(--ud-text-secondary)]">Date *</label>
                 <input
                   type="date"
                   value={createFormDate}
                   onChange={(e) => setCreateFormDate(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#0C5C57] focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-[var(--ud-border)] px-3 py-2 text-sm focus:border-[#0C5C57] focus:outline-none"
                 />
               </div>
 
               {/* Start Time */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700">Start Time</label>
+                <label className="block text-xs font-semibold text-[var(--ud-text-secondary)]">Start Time</label>
                 <input
                   type="time"
                   value={createForm.startTime}
                   onChange={(e) => setCreateForm({ ...createForm, startTime: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#0C5C57] focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-[var(--ud-border)] px-3 py-2 text-sm focus:border-[#0C5C57] focus:outline-none"
                 />
               </div>
 
               {/* End Time */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700">End Time</label>
+                <label className="block text-xs font-semibold text-[var(--ud-text-secondary)]">End Time</label>
                 <input
                   type="time"
                   value={createForm.endTime}
                   onChange={(e) => setCreateForm({ ...createForm, endTime: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#0C5C57] focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-[var(--ud-border)] px-3 py-2 text-sm focus:border-[#0C5C57] focus:outline-none"
                 />
               </div>
 
               {/* Location */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700">Location</label>
+                <label className="block text-xs font-semibold text-[var(--ud-text-secondary)]">Location</label>
                 <input
                   type="text"
                   value={createForm.location}
                   onChange={(e) => setCreateForm({ ...createForm, location: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#0C5C57] focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-[var(--ud-border)] px-3 py-2 text-sm focus:border-[#0C5C57] focus:outline-none"
                   placeholder="Event location"
                 />
               </div>
 
               {/* Description */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700">Description</label>
+                <label className="block text-xs font-semibold text-[var(--ud-text-secondary)]">Description</label>
                 <textarea
                   value={createForm.description}
                   onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#0C5C57] focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-[var(--ud-border)] px-3 py-2 text-sm focus:border-[#0C5C57] focus:outline-none"
                   placeholder="Event description"
                   rows={3}
                 />
@@ -607,7 +607,7 @@ export function EventsSection({
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="flex-1 rounded-lg border border-slate-200 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  className="flex-1 rounded-lg border border-[var(--ud-border)] py-2 text-sm font-semibold text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)]"
                 >
                   Cancel
                 </button>

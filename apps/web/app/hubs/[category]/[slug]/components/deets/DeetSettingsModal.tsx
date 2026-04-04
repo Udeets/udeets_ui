@@ -23,7 +23,7 @@ function Toggle({
     <button
       type="button"
       onClick={onToggle}
-      className={cn("relative h-7 w-12 rounded-full transition", checked ? "bg-[#0C5C57]" : "bg-slate-200")}
+      className={cn("relative h-7 w-12 rounded-full transition", checked ? "bg-[var(--ud-brand-primary)]" : "bg-slate-200")}
     >
       <span className={cn("absolute top-1 h-5 w-5 rounded-full bg-white transition", checked ? "left-6" : "left-1")} />
     </button>
@@ -44,8 +44,8 @@ export function DeetSettingsModal({
   return (
     <div>
       <div className="space-y-4">
-        <div className="rounded-2xl border border-slate-200 px-4 py-4">
-          <span className="mb-2 block text-sm font-medium text-[#111111]">Post Type</span>
+        <div className="rounded-2xl border border-[var(--ud-border)] px-4 py-4">
+          <span className="mb-2 block text-sm font-medium text-[var(--ud-text-primary)]">Post Type</span>
           <div className="flex flex-wrap gap-2">
             {POST_TYPE_OPTIONS.map((opt) => (
               <button
@@ -55,8 +55,8 @@ export function DeetSettingsModal({
                 className={cn(
                   "rounded-full px-3 py-1.5 text-xs font-semibold transition",
                   settings.postType === opt.value
-                    ? "bg-[#0C5C57] text-white"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+                    ? "bg-[var(--ud-brand-primary)] text-white"
+                    : "bg-[var(--ud-bg-subtle)] text-[var(--ud-text-secondary)] hover:bg-[var(--ud-bg-subtle)]",
                   (opt.value === "hazard" || opt.value === "alert") && settings.postType === opt.value && "bg-red-500"
                 )}
               >
@@ -66,8 +66,8 @@ export function DeetSettingsModal({
           </div>
         </div>
 
-        <div className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-4">
-          <span className="text-sm font-medium text-[#111111]">Allow Comments</span>
+        <div className="flex items-center justify-between rounded-2xl border border-[var(--ud-border)] px-4 py-4">
+          <span className="text-sm font-medium text-[var(--ud-text-primary)]">Allow Comments</span>
           <Toggle checked={settings.commentsEnabled} onToggle={() => onChange({ ...settings, commentsEnabled: !settings.commentsEnabled })} />
         </div>
       </div>

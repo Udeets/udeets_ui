@@ -50,19 +50,19 @@ export function DeleteHubModal({
     <>
       {/* Modal overlay */}
       <div
-        className="fixed inset-0 z-40 bg-black/40 transition"
+        className="fixed inset-0 z-40 bg-[var(--ud-bg-overlay)] transition"
         onClick={onClose}
       />
 
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <div className="relative w-full max-w-md rounded-2xl bg-[var(--ud-bg-card)] p-6 shadow-xl">
           {/* Close button */}
           <button
             type="button"
             onClick={onClose}
             disabled={isDeleting}
-            className="absolute right-4 top-4 rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50"
+            className="absolute right-4 top-4 rounded-lg p-1 text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-secondary)] disabled:opacity-50"
             aria-label="Close modal"
           >
             <X className="h-5 w-5" />
@@ -73,14 +73,14 @@ export function DeleteHubModal({
             <h2 className="text-lg font-semibold text-red-600">
               Delete {hubName}?
             </h2>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-[var(--ud-text-secondary)]">
               This action cannot be undone. All hub data will be permanently deleted.
             </p>
           </div>
 
           {/* Confirmation input */}
           <div className="mb-4">
-            <label className="mb-2 block text-xs font-medium text-slate-500">
+            <label className="mb-2 block text-xs font-medium text-[var(--ud-text-muted)]">
               Type <strong>{hubName}</strong> to confirm deletion
             </label>
             <input
@@ -89,7 +89,7 @@ export function DeleteHubModal({
               onChange={(e) => setConfirmationText(e.target.value)}
               placeholder={hubName}
               disabled={isDeleting}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-[#111111] outline-none transition focus:border-red-300 focus:ring-1 focus:ring-red-200 disabled:opacity-50"
+              className="w-full rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-3 py-2 text-sm text-[var(--ud-text-primary)] outline-none transition focus:border-red-300 focus:ring-1 focus:ring-red-200 disabled:opacity-50"
             />
           </div>
 
@@ -106,7 +106,7 @@ export function DeleteHubModal({
               type="button"
               onClick={onClose}
               disabled={isDeleting}
-              className="flex-1 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+              className="flex-1 rounded-lg border border-[var(--ud-border)] px-4 py-2 text-sm font-medium text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)] disabled:opacity-50"
             >
               Cancel
             </button>

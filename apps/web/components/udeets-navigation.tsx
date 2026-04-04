@@ -10,14 +10,17 @@ import {
   LogOut,
   Search,
   Settings,
+  Shield,
   UserRound,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
-import { ThemeToggle } from "@/components/theme-provider";
+import { useTheme } from "@/components/theme-provider";
 import { HOME_EVENTS, HOME_NOTIFICATIONS } from "@/lib/hub-content";
 import { isUdeetsLogoSrc, UDEETS_LOGO_SRC } from "@/lib/branding";
+import { can } from "@/lib/roles";
+import { usePlatformRole } from "@/hooks/useUserRole";
 import { signOut } from "@/services/auth/signOut";
 import { useAuthSession } from "@/services/auth/useAuthSession";
 
@@ -288,6 +291,9 @@ function ProfilePanel({ user, onLogout }: { user: { email?: string; user_metadat
   const displayName = (user?.user_metadata?.full_name as string) || user?.email || "uDeets User";
   const displayEmail = user?.email || "";
   const avatarUrl = (user?.user_metadata?.avatar_url as string) || "";
+  const { theme, toggleTheme } = useTheme();
+  const { role: profilePanelRole } = usePlatformRole();
+  const canAccessAdmin = can(profilePanelRole, "page:admin_panel");
 
   return (
     <div className="absolute right-0 top-full z-[120] mt-3 min-w-[220px] overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-lg">
@@ -326,6 +332,40 @@ function ProfilePanel({ user, onLogout }: { user: { email?: string; user_metadat
         })}
       </div>
 
+      {/* Admin panel link (super_admin only) */}
+      {canAccessAdmin ? (
+        <div className="border-t border-[var(--ud-border-subtle)] py-1">
+          <Link
+            href="/admin"
+            className="flex items-center gap-3 px-4 py-2.5 text-sm text-amber-600 transition hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20"
+          >
+            <Shield className="h-4 w-4 stroke-[1.8]" />
+            <span>Admin Panel</span>
+          </Link>
+        </div>
+      ) : null}
+
+      {/* Theme toggle */}
+      <div className="border-t border-[var(--ud-border-subtle)] py-1">
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)]"
+        >
+          {theme === "dark" ? (
+            <svg viewBox="0 0 24 24" className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            </svg>
+          )}
+          <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
+        </button>
+      </div>
+
       {/* Logout */}
       <div className="border-t border-[var(--ud-border-subtle)] py-1">
         <button
@@ -346,6 +386,8 @@ function UdeetsHeaderContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { isAuthenticated, status, user } = useAuthSession();
+  const { role: platformRole } = usePlatformRole();
+  const canAccessDashboard = can(platformRole, "page:dashboard");
   const [openPanel, setOpenPanel] = useState<OpenPanel>(searchParams.get("demo_open_panel") === "alerts" ? "alerts" : null);
   const controlsRef = useRef<HTMLDivElement | null>(null);
 
@@ -400,40 +442,42 @@ function UdeetsHeaderContent() {
         </button>
 
         <div ref={controlsRef} className="relative flex items-center gap-3">
-          <nav className="hidden items-center gap-4 md:flex lg:gap-5">
-            <NavIconButton
-              aria-label="Home"
-              active={isHomeActive}
-              onClick={handleHome}
-            >
-              <Home className={ICON_BASE} />
-            </NavIconButton>
+          {canAccessDashboard ? (
+            <nav className="hidden items-center gap-4 md:flex lg:gap-5">
+              <NavIconButton
+                aria-label="Home"
+                active={isHomeActive}
+                onClick={handleHome}
+              >
+                <Home className={ICON_BASE} />
+              </NavIconButton>
 
-            <NavIconLink href="/discover" ariaLabel="Discover" active={isDiscoverActive}>
-              <Search className={ICON_BASE} />
-            </NavIconLink>
+              <NavIconLink href="/discover" ariaLabel="Discover" active={isDiscoverActive}>
+                <Search className={ICON_BASE} />
+              </NavIconLink>
 
-            <NavIconButton
-              aria-label="Alerts"
-              active={isAlertsActive}
-              onClick={() => setOpenPanel((panel) => (panel === "alerts" ? null : "alerts"))}
-              data-demo-target={searchParams.get("demo_preview") === "1" ? "dashboard-header-alerts" : undefined}
-            >
-              <Bell className={ICON_BASE} />
-              {unreadNotifications ? (
-                <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-[#0C5C57] ring-2 ring-white" />
-              ) : null}
-            </NavIconButton>
+              <NavIconButton
+                aria-label="Alerts"
+                active={isAlertsActive}
+                onClick={() => setOpenPanel((panel) => (panel === "alerts" ? null : "alerts"))}
+                data-demo-target={searchParams.get("demo_preview") === "1" ? "dashboard-header-alerts" : undefined}
+              >
+                <Bell className={ICON_BASE} />
+                {unreadNotifications ? (
+                  <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-[#0C5C57] ring-2 ring-white" />
+                ) : null}
+              </NavIconButton>
 
-            <NavIconButton
-              aria-label="Events"
-              active={isEventsActive}
-              onClick={() => setOpenPanel((panel) => (panel === "events" ? null : "events"))}
-            >
-              <Calendar className={ICON_BASE} />
-            </NavIconButton>
+              <NavIconButton
+                aria-label="Events"
+                active={isEventsActive}
+                onClick={() => setOpenPanel((panel) => (panel === "events" ? null : "events"))}
+              >
+                <Calendar className={ICON_BASE} />
+              </NavIconButton>
 
-          </nav>
+            </nav>
+          ) : null}
 
           <NavIconLink
             href="/discover"
@@ -442,8 +486,6 @@ function UdeetsHeaderContent() {
           >
             <Search className={ICON_BASE} />
           </NavIconLink>
-
-          <ThemeToggle />
 
           {isAuthenticated ? (
             <button

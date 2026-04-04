@@ -6,6 +6,7 @@ import confetti from "canvas-confetti";
 import { ArrowLeft, CheckCircle, X } from "lucide-react";
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { AuthGuard } from "@/components/AuthGuard";
 import { createHub } from "@/lib/services/hubs/create-hub";
 import { cn, descriptionFor, slugify } from "./helpers";
 import type { Visibility } from "./types";
@@ -360,8 +361,10 @@ function CreateHubPageContent() {
 
 export default function CreateHubPage() {
   return (
-    <Suspense fallback={null}>
-      <CreateHubPageContent />
-    </Suspense>
+    <AuthGuard>
+      <Suspense fallback={null}>
+        <CreateHubPageContent />
+      </Suspense>
+    </AuthGuard>
   );
 }

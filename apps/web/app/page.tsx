@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { UdeetsBrandLockup, UdeetsLogoIcon } from "@/components/brand-logo";
-import { ThemeToggle } from "@/components/theme-provider";
+
 import { listHubs } from "@/lib/services/hubs/list-hubs";
 import type { Hub as SupabaseHub } from "@/types/hub";
 
@@ -558,7 +558,6 @@ export default function Page() {
                 <circle cx="11" cy="11" r="7" />
               </svg>
             </Link>
-            <ThemeToggle />
             <Link
               href="/auth"
               className="inline-flex items-center rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-5 py-2 text-sm font-medium text-white transition hover:opacity-90"

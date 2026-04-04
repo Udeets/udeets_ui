@@ -15,7 +15,7 @@ type HubHeaderActionsProps = {
 };
 
 const ACTION_BUTTON =
-  "inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-600 transition hover:bg-[#F1F8F6] hover:text-[#0C5C57]";
+  "inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]";
 
 export function HubHeaderActions({
   memberCount,
@@ -28,11 +28,11 @@ export function HubHeaderActions({
   onMembershipActionClick,
 }: HubHeaderActionsProps) {
   return (
-    <div className="flex w-full items-center justify-between px-1 text-sm font-medium text-slate-600 sm:px-2">
+    <div className="flex w-full items-center justify-between px-1 text-sm font-medium text-[var(--ud-text-secondary)] sm:px-2">
       <button
         type="button"
         onClick={onMembersClick}
-        className="inline-flex items-center gap-1.5 transition hover:text-[#0C5C57]"
+        className="inline-flex items-center gap-1.5 transition hover:text-[var(--ud-brand-primary)]"
         aria-label="Open members"
         title="Members"
       >
@@ -56,7 +56,7 @@ export function HubHeaderActions({
         disabled={!canManageHub}
         className={cn(
           ACTION_BUTTON,
-          !canManageHub && "cursor-default hover:bg-transparent hover:text-slate-600"
+          !canManageHub && "cursor-default hover:bg-transparent hover:text-[var(--ud-text-secondary)]"
         )}
         aria-label={`Visibility: ${visibilityLabel}`}
         title={`Visibility: ${visibilityLabel}`}

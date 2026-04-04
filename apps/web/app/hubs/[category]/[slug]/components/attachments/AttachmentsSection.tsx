@@ -41,7 +41,7 @@ export function AttachmentsSection({
             onClick={onOpenGalleryUpload}
             disabled={isUploadingGallery}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-[#A9D1CA] hover:text-[#0C5C57]",
+              "inline-flex items-center gap-1.5 rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-3 py-1.5 text-xs font-medium text-[var(--ud-text-secondary)] transition hover:border-[var(--ud-brand-primary)] hover:text-[var(--ud-brand-primary)]",
               isUploadingGallery && "cursor-not-allowed opacity-60"
             )}
           >
@@ -49,7 +49,7 @@ export function AttachmentsSection({
           </button>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-[#A9D1CA] hover:text-[#0C5C57]"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-3 py-1.5 text-xs font-medium text-[var(--ud-text-secondary)] transition hover:border-[var(--ud-brand-primary)] hover:text-[var(--ud-brand-primary)]"
           >
             <Plus className="h-3 w-3" /> Add Files
           </button>
@@ -60,9 +60,9 @@ export function AttachmentsSection({
         {/* Photos section - always show */}
         <div>
           <div className="flex items-center gap-2 pb-3">
-            <Images className="h-4 w-4 text-slate-400" />
-            <span className="text-sm font-medium text-[#111111]">Photos</span>
-            <span className="text-xs text-slate-400">({recentPhotos.length})</span>
+            <Images className="h-4 w-4 text-[var(--ud-text-muted)]" />
+            <span className="text-sm font-medium text-[var(--ud-text-primary)]">Photos</span>
+            <span className="text-xs text-[var(--ud-text-muted)]">({recentPhotos.length})</span>
           </div>
 
           {recentPhotos.length > 0 ? (
@@ -72,22 +72,22 @@ export function AttachmentsSection({
                   key={`${img}-${index}`}
                   type="button"
                   onClick={() => onOpenViewer(recentPhotos, index, `${hubName} Album`, "Recent photos from this hub.")}
-                  className="group relative aspect-square overflow-hidden rounded-lg bg-slate-100"
+                  className="group relative aspect-square overflow-hidden rounded-lg bg-[var(--ud-bg-subtle)]"
                 >
                   <ImageWithFallback
                     src={img}
                     sources={[img]}
                     alt={`${hubName} photo ${index + 1}`}
                     className="h-full w-full object-cover transition group-hover:scale-105"
-                    fallbackClassName="grid h-full w-full place-items-center bg-slate-100 text-xs text-slate-400"
+                    fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-bg-subtle)] text-xs text-[var(--ud-text-muted)]"
                     fallback="Photo"
                   />
                 </button>
               ))}
             </div>
           ) : (
-            <div className="rounded-lg bg-slate-100 px-4 py-8 text-center">
-              <p className="text-sm text-slate-500">No photos yet</p>
+            <div className="rounded-lg bg-[var(--ud-bg-subtle)] px-4 py-8 text-center">
+              <p className="text-sm text-[var(--ud-text-muted)]">No photos yet</p>
             </div>
           )}
         </div>
@@ -95,25 +95,25 @@ export function AttachmentsSection({
         {/* Files section - always show */}
         <div>
           <div className="flex items-center gap-2 pb-3">
-            <Paperclip className="h-4 w-4 text-slate-400" />
-            <span className="text-sm font-medium text-[#111111]">Files</span>
-            <span className="text-xs text-slate-400">({fileItems.length})</span>
+            <Paperclip className="h-4 w-4 text-[var(--ud-text-muted)]" />
+            <span className="text-sm font-medium text-[var(--ud-text-primary)]">Files</span>
+            <span className="text-xs text-[var(--ud-text-muted)]">({fileItems.length})</span>
           </div>
 
           {fileItems.length > 0 ? (
             <div className="space-y-2">
               {fileItems.map((file) => (
-                <div key={file} className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5">
-                  <Paperclip className="h-4 w-4 shrink-0 text-slate-400" />
+                <div key={file} className="flex items-center gap-3 rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-subtle)] px-3 py-2.5">
+                  <Paperclip className="h-4 w-4 shrink-0 text-[var(--ud-text-muted)]" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-[#111111]">{file}</p>
+                    <p className="truncate text-sm font-medium text-[var(--ud-text-primary)]">{file}</p>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="rounded-lg bg-slate-100 px-4 py-8 text-center">
-              <p className="text-sm text-slate-500">No files yet</p>
+            <div className="rounded-lg bg-[var(--ud-bg-subtle)] px-4 py-8 text-center">
+              <p className="text-sm text-[var(--ud-text-muted)]">No files yet</p>
             </div>
           )}
         </div>
