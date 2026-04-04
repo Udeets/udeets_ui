@@ -113,14 +113,20 @@ export async function addDeetComment(deetId: string, body: string): Promise<Deet
     .eq("id", user.id)
     .single();
 
+  // Also ensure the profile has the user's name/email if missing (self-heal)
+  const meta = user.user_metadata ?? {};
+  const authName = (meta.full_name as string) || (meta.name as string) || null;
+  const resolvedName = profile?.full_name || authName || profile?.email?.split("@")[0] || user.email?.split("@")[0] || undefined;
+  const resolvedAvatar = profile?.avatar_url || (meta.avatar_url as string) || undefined;
+
   return {
     id: data.id,
     deetId: data.deet_id,
     userId: data.user_id,
     body: data.body,
     createdAt: data.created_at,
-    authorName: profile?.full_name || profile?.email?.split("@")[0] || user.email?.split("@")[0] || undefined,
-    authorAvatar: profile?.avatar_url ?? undefined,
+    authorName: resolvedName,
+    authorAvatar: resolvedAvatar,
   };
 }
 
@@ -138,6 +144,10 @@ export async function listDeetComments(deetId: string): Promise<DeetComment[]> {
 
   if (!data || data.length === 0) return [];
 
+  // Get current user info for self-comments fallback
+  const { data: { user: currentUser } } = await supabase.auth.getUser();
+  const currentMeta = currentUser?.user_metadata ?? {};
+
   // Fetch profiles for all comment authors
   const userIds = [...new Set(data.map((row) => row.user_id))];
   const { data: profiles } = await supabase
@@ -152,14 +162,22 @@ export async function listDeetComments(deetId: string): Promise<DeetComment[]> {
 
   return data.map((row) => {
     const profile = profileMap.get(row.user_id);
+    // For the current user's own comments, also try auth metadata as fallback
+    const isCurrentUser = currentUser && row.user_id === currentUser.id;
+    const authName = isCurrentUser
+      ? (currentMeta.full_name as string) || (currentMeta.name as string) || null
+      : null;
+    const authEmail = isCurrentUser ? currentUser.email : null;
+    const authAvatar = isCurrentUser ? (currentMeta.avatar_url as string) || null : null;
+
     return {
       id: row.id,
       deetId: row.deet_id,
       userId: row.user_id,
       body: row.body,
       createdAt: row.created_at,
-      authorName: profile?.full_name || profile?.email?.split("@")[0] || undefined,
-      authorAvatar: profile?.avatar_url ?? undefined,
+      authorName: profile?.full_name || authName || profile?.email?.split("@")[0] || authEmail?.split("@")[0] || undefined,
+      authorAvatar: profile?.avatar_url || authAvatar || undefined,
     };
   });
 }

@@ -38,6 +38,7 @@ import { SettingsSection } from "./components/sections/SettingsSection";
 import { CreateDeetModal } from "./components/deets/CreateDeetModal";
 import { DeetChildModal } from "./components/deets/DeetChildModal";
 import { DeetSettingsModal } from "./components/deets/DeetSettingsModal";
+import { AnnouncementChildContent, NoticeChildContent, PollChildContent, EventChildContent, CheckinChildContent } from "./components/deets/ComposerChildPanels";
 import type { HubTab } from "./components/hubTypes";
 import { useHubConnectFlow } from "./hooks/useHubConnectFlow";
 import { useDeetComposer } from "./hooks/useDeetComposer";
@@ -1135,7 +1136,7 @@ export default function HubClient({
               </div>
             ) : (
               <div className="mt-5">
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {albumChoices.map((imageUrl, index) => (
                     <button key={`${imageUrl}-${index}`} type="button" onClick={() => void handleAlbumImageSelect(imageUrl)} className="aspect-square overflow-hidden rounded-2xl border border-[var(--ud-border)] bg-[var(--ud-bg-subtle)] transition hover:border-[var(--ud-brand-primary)]">
                       <ImageWithFallback
@@ -1207,7 +1208,7 @@ export default function HubClient({
                     </button>
 
                     {selectedPhotoPreviews.length ? (
-                      <div className="mt-4 grid grid-cols-3 gap-3">
+                      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
                         {selectedPhotoPreviews.map((preview, index) => (
                           <div key={`${preview}-${index}`} className="aspect-square overflow-hidden rounded-2xl bg-[var(--ud-bg-subtle)]">
                             <img src={preview} alt={`Selected ${index + 1}`} className="h-full w-full object-cover" />
@@ -1246,7 +1247,7 @@ export default function HubClient({
                   <div className="space-y-4">
                     <div>
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Smileys & People</p>
-                      <div className="grid grid-cols-6 gap-2">
+                      <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
                         {["😀","😃","😄","😁","😆","😅","🤣","😂","🙂","🙃","😉","😊","😇","🥰","😍","🤩","😘","😗","😚","😙","🥲","😋","😛","😜","🤪","😝","🤗","🤭","🫣","🤫","🤔","🫡","🤐","🤨","😐","😑","😶","🫥","😏","😒","🙄","😬","🤥","😌","😔","😪","🤤","😴","😷","🤒","🤕","🤢","🤮","🥵","🥶","🥴","😵","🤯","🤠","🥳","🥸","😎","🤓","🧐","😕","🫤","😟","🙁","😮","😯","😲","😳","🥺","🥹","😦","😧","😨","😰","😥","😢","😭","😱","😖","😣","😞","😓","😩","😫","🥱","😤","😡","😠","🤬","😈","👿","💀","☠️","💩","🤡","👹","👺","👻","👽","👾","🤖"].map((e) => (
                           <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
                         ))}
@@ -1254,7 +1255,7 @@ export default function HubClient({
                     </div>
                     <div>
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Gestures & Body</p>
-                      <div className="grid grid-cols-6 gap-2">
+                      <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
                         {["👋","🤚","🖐️","✋","🖖","🫱","🫲","🫳","🫴","👌","🤌","🤏","✌️","🤞","🫰","🤟","🤘","🤙","👈","👉","👆","🖕","👇","☝️","🫵","👍","👎","✊","👊","🤛","🤜","👏","🙌","🫶","👐","🤲","🤝","🙏","✍️","💅","🤳","💪","🦾","🦿","🦵","🦶","👂","🦻","👃","🧠","🫀","🫁","🦷","🦴","👀","👁️","👅","👄"].map((e) => (
                           <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
                         ))}
@@ -1262,7 +1263,7 @@ export default function HubClient({
                     </div>
                     <div>
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Hearts & Symbols</p>
-                      <div className="grid grid-cols-6 gap-2">
+                      <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
                         {["❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💔","❣️","💕","💞","💓","💗","💖","💘","💝","💟","❤️‍🔥","❤️‍🩹","♥️","🔥","⭐","🌟","✨","💫","🎯","💯","💢","💥","💦","💨","🕊️","🎶","🎵","🔔","📢","📣","💬","💭","🗯️","♠️","♣️","♥️","♦️","🏆","🥇","🥈","🥉","🎖️","🏅","🎗️","🎪"].map((e) => (
                           <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
                         ))}
@@ -1270,7 +1271,7 @@ export default function HubClient({
                     </div>
                     <div>
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Food & Nature</p>
-                      <div className="grid grid-cols-6 gap-2">
+                      <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
                         {["🍎","🍊","🍋","🍌","🍉","🍇","🍓","🫐","🍈","🍒","🍑","🥭","🍍","🥥","🥝","🍅","🥑","🥦","🥬","🥒","🌶️","🫑","🌽","🥕","🫒","🧄","🧅","🥔","🍞","🥐","🥖","🫓","🥨","🥯","🧀","🍳","🥞","🧇","🥓","🍔","🍟","🍕","🌭","🌮","🌯","🫔","🥙","🧆","🥗","🍝","🍜","🍲","🍛","🍣","🍱","🥟","🍤","🍚","🍘","🍥","🥮","🍡","🧁","🍰","🎂","🍮","🍭","🍬","🍫","🍩","🍪","☕","🍵","🥤","🧋","🍺","🍻","🥂","🍷"].map((e) => (
                           <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
                         ))}
@@ -1278,7 +1279,7 @@ export default function HubClient({
                     </div>
                     <div>
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Activities & Celebrations</p>
-                      <div className="grid grid-cols-6 gap-2">
+                      <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
                         {["🎉","🎊","🎈","🎁","🎀","🎄","🎃","🎆","🎇","🧨","🪔","🪅","🎋","🎍","🎎","🎏","🎐","🧧","🎑","🎠","🎡","🎢","🎪","🎭","🎨","🎬","🎤","🎧","🎼","🎹","🥁","🎷","🎺","🎸","🪕","🎻","🪘","🎲","♟️","🎯","🎳","🎮","🕹️","⚽","🏀","🏈","⚾","🥎","🎾","🏐","🏉","🥏","🎱","🪀","🏓","🏸","🏒","🥍","🏏","🪃","🥅","⛳","🏹","🎣","🤿","🥊","🥋","🛹","🛼","⛸️","🎿","🛷","🏂","🧗","🏋️","🤸","🤺","⛷️","🏄","🚴"].map((e) => (
                           <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
                         ))}
@@ -1286,7 +1287,7 @@ export default function HubClient({
                     </div>
                     <div>
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Animals</p>
-                      <div className="grid grid-cols-6 gap-2">
+                      <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
                         {["🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐻‍❄️","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🙈","🙉","🙊","🐒","🐔","🐧","🐦","🐤","🐣","🐥","🦆","🦅","🦉","🦇","🐺","🐗","🐴","🦄","🐝","🪱","🐛","🦋","🐌","🐞","🐜","🪰","🪲","🪳","🐢","🐍","🦎","🦖","🦕","🐙","🦑","🦐","🦞","🦀","🐡","🐠","🐟","🐬","🐳","🐋","🦈","🐊","🐅","🐆","🦓","🦍","🦧","🐘","🦛","🦏","🐪","🐫","🦒","🦘","🦬","🐃","🐂","🐄","🐎","🐖","🐏","🐑","🦙","🐐","🦌","🐕","🐩","🦮","🐕‍🦺","🐈","🐈‍⬛","🐓","🦃","🦤","🦚","🦜","🦢","🦩","🕊️","🐇","🦝","🦨","🦡","🦫","🦦","🦥","🐁","🐀","🐿️","🦔"].map((e) => (
                           <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
                         ))}
@@ -1294,7 +1295,7 @@ export default function HubClient({
                     </div>
                     <div>
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Travel & Places</p>
-                      <div className="grid grid-cols-6 gap-2">
+                      <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
                         {["🏠","🏡","🏘️","🏚️","🏗️","🏢","🏣","🏤","🏥","🏦","🏨","🏩","🏪","🏫","🏬","🏭","🏯","🏰","💒","🗼","🗽","⛪","🕌","🛕","🕍","⛩️","🕋","⛲","⛺","🌁","🌃","🏙️","🌄","🌅","🌆","🌇","🌉","🌌","🎠","🛝","🎡","🎢","🚂","🚃","🚄","🚅","🚆","🚇","🚈","🚉","🚊","🚝","🚞","🚋","🚌","🚍","🚎","🚐","🚑","🚒","🚓","🚔","🚕","🚖","🚗","🚘","🚙","🛻","🚚","🚛","🚜","✈️","🛩️","🚀","🛸","🚁","🛶","⛵","🚤","🛥️","🛳️","⛴️","🚢"].map((e) => (
                           <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
                         ))}
@@ -1302,13 +1303,81 @@ export default function HubClient({
                     </div>
                     <div>
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Indian & Cultural</p>
-                      <div className="grid grid-cols-6 gap-2">
+                      <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
                         {["🪔","🕉️","🪷","📿","🛕","🐘","🦚","🙏","🧘","🧿","🪬","🫶","🍛","🥥","🍚","🌶️","🫖","🍵","🎭","🪘","🎶","🎵","💃","🕺","👳","👳‍♀️","🧕","🪭","🏵️","🌺","🌸","🌼","💐","🌻","🌹","🪻"].map((e) => (
                           <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
                         ))}
                       </div>
                     </div>
                   </div>
+                </DeetChildModal>
+              ) : null}
+
+              {/* ── Announcement modal ── */}
+              {activeComposerChild === "announcement" ? (
+                <DeetChildModal title="Announcement" onClose={() => setActiveComposerChild(null)}>
+                  <AnnouncementChildContent
+                    onAttach={(title, body) => {
+                      attachDeetItem({ type: "announcement", title, detail: body });
+                      setDeetSettings((prev) => ({ ...prev, postType: "notice" as import("./components/deets/deetTypes").DeetPostType }));
+                      setActiveComposerChild(null);
+                    }}
+                    onCancel={() => setActiveComposerChild(null)}
+                  />
+                </DeetChildModal>
+              ) : null}
+
+              {/* ── Notice modal ── */}
+              {activeComposerChild === "notice" ? (
+                <DeetChildModal title="Notice" onClose={() => setActiveComposerChild(null)}>
+                  <NoticeChildContent
+                    onAttach={(title, body) => {
+                      attachDeetItem({ type: "notice", title, detail: body });
+                      setDeetSettings((prev) => ({ ...prev, postType: "notice" as import("./components/deets/deetTypes").DeetPostType }));
+                      setActiveComposerChild(null);
+                    }}
+                    onCancel={() => setActiveComposerChild(null)}
+                  />
+                </DeetChildModal>
+              ) : null}
+
+              {/* ── Poll modal ── */}
+              {activeComposerChild === "poll" ? (
+                <DeetChildModal title="Create Poll" onClose={() => setActiveComposerChild(null)}>
+                  <PollChildContent
+                    onAttach={(question, options) => {
+                      attachDeetItem({ type: "poll", title: question, detail: options.join(" · ") });
+                      setActiveComposerChild(null);
+                    }}
+                    onCancel={() => setActiveComposerChild(null)}
+                  />
+                </DeetChildModal>
+              ) : null}
+
+              {/* ── Event modal ── */}
+              {activeComposerChild === "event" ? (
+                <DeetChildModal title="Add Event" onClose={() => setActiveComposerChild(null)}>
+                  <EventChildContent
+                    onAttach={(title, date, time, location) => {
+                      attachDeetItem({ type: "event", title, detail: `${date}${time ? ` at ${time}` : ""}${location ? ` · ${location}` : ""}` });
+                      setDeetSettings((prev) => ({ ...prev, postType: "news" as import("./components/deets/deetTypes").DeetPostType }));
+                      setActiveComposerChild(null);
+                    }}
+                    onCancel={() => setActiveComposerChild(null)}
+                  />
+                </DeetChildModal>
+              ) : null}
+
+              {/* ── Check-in modal ── */}
+              {activeComposerChild === "checkin" ? (
+                <DeetChildModal title="Check In" onClose={() => setActiveComposerChild(null)}>
+                  <CheckinChildContent
+                    onAttach={(placeName, address) => {
+                      attachDeetItem({ type: "checkin", title: `📍 ${placeName}`, detail: address || undefined });
+                      setActiveComposerChild(null);
+                    }}
+                    onCancel={() => setActiveComposerChild(null)}
+                  />
                 </DeetChildModal>
               ) : null}
 

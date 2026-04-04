@@ -76,7 +76,7 @@ function AnimatedValue({ target, suffix = "" }: { target: number; suffix?: strin
 /* ─── Floating orbit graphic ─── */
 function OrbitGraphic() {
   return (
-    <div className="relative flex h-72 w-72 items-center justify-center sm:h-80 sm:w-80">
+    <div className="relative flex h-56 w-56 items-center justify-center sm:h-72 sm:w-72 lg:h-80 lg:w-80">
       {/* Orbits */}
       <div className="absolute inset-0 animate-[spin_20s_linear_infinite] rounded-full border border-dashed border-[#A9D1CA]/40" />
       <div className="absolute inset-6 animate-[spin_15s_linear_infinite_reverse] rounded-full border border-dashed border-[#A9D1CA]/30" />
@@ -300,11 +300,13 @@ export default function AboutPage() {
               <UdeetsLogoIcon className="h-7 w-7 text-white/80" alt="uDeets" />
               <span className="text-lg font-semibold text-white">uDeets</span>
             </div>
-            <div className="flex items-center gap-8">
+            <div className="flex flex-wrap items-center gap-4 sm:gap-8">
               <Link href="/" className="text-sm text-white/60 transition hover:text-white">Home</Link>
               <Link href="/discover" className="text-sm text-white/60 transition hover:text-white">Discover</Link>
               <Link href="/use-cases" className="text-sm text-white/60 transition hover:text-white">Use Cases</Link>
               <Link href="/resources" className="text-sm text-white/60 transition hover:text-white">Resources</Link>
+              <Link href="/terms" className="text-sm text-white/60 transition hover:text-white">Terms</Link>
+              <Link href="/privacy" className="text-sm text-white/60 transition hover:text-white">Privacy</Link>
             </div>
           </div>
           <div className="mt-8 border-t border-white/10 pt-6 text-center">

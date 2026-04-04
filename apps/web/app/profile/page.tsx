@@ -69,6 +69,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -215,22 +216,28 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file || !user?.id) return;
     setIsUploadingAvatar(true);
+    setAvatarError(null);
     try {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
       const ext = file.name.split(".").pop() || "jpg";
       const path = `${user.id}/avatar.${ext}`;
       const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
-      if (uploadError) { console.error("[profile] avatar upload error:", uploadError); return; }
+      if (uploadError) {
+        console.error("[profile] avatar upload error:", uploadError);
+        setAvatarError(uploadError.message.includes("not found") ? "Avatar storage is not set up yet. Please run the latest database migration." : `Upload failed: ${uploadError.message}`);
+        return;
+      }
       const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
       const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
       const { error: updateError } = await supabase.from("profiles").update({ avatar_url: publicUrl, updated_at: new Date().toISOString() }).eq("id", user.id);
-      if (updateError) { console.error("[profile] avatar update error:", updateError); return; }
+      if (updateError) { console.error("[profile] avatar update error:", updateError); setAvatarError(`Profile update failed: ${updateError.message}`); return; }
       // Also sync avatar to auth user metadata so navigation header updates
       await supabase.auth.updateUser({ data: { avatar_url: publicUrl } });
       setProfile((prev) => prev ? { ...prev, avatar_url: publicUrl } : prev);
     } catch (err) {
       console.error("[profile] avatar upload failed:", err);
+      setAvatarError("Something went wrong. Please try again.");
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -345,6 +352,7 @@ export default function ProfilePage() {
                     <button type="button" onClick={() => avatarInputRef.current?.click()} className="mt-2 block w-full text-center text-xs text-[var(--ud-brand-primary)] hover:underline">
                       Change photo
                     </button>
+                    {avatarError ? <p className="mt-1 text-xs text-red-500">{avatarError}</p> : null}
                   </div>
                   <div className="min-w-0 pt-1">
                     <h2 className="text-2xl font-semibold tracking-tight text-[var(--ud-text-primary)]">

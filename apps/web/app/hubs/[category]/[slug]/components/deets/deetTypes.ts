@@ -1,5 +1,5 @@
 export type DeetFontSize = "small" | "medium" | "large";
-export type ComposerChildFlow = "photo" | "emoji" | "settings" | "quit_confirm";
+export type ComposerChildFlow = "photo" | "emoji" | "settings" | "quit_confirm" | "event" | "checkin" | "announcement" | "notice" | "poll";
 
 export type AttachedDeetItem = {
   id: string;

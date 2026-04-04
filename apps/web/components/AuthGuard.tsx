@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthSession } from "@/services/auth/useAuthSession";
+import { useProfileSync } from "@/services/auth/useProfileSync";
 
 /**
  * Wraps a page that requires authentication.
@@ -10,7 +11,8 @@ import { useAuthSession } from "@/services/auth/useAuthSession";
  * Shows nothing while checking auth status (prevents flash).
  */
 export function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { status, isAuthenticated } = useAuthSession();
+  const { status, isAuthenticated, user } = useAuthSession();
+  useProfileSync(user);
   const router = useRouter();
 
   useEffect(() => {

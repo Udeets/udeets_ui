@@ -370,11 +370,13 @@ export default function ResourcesPage() {
               <UdeetsLogoIcon className="h-7 w-7 text-white/80" alt="uDeets" />
               <span className="text-lg font-semibold text-white">uDeets</span>
             </div>
-            <div className="flex items-center gap-8">
+            <div className="flex flex-wrap items-center gap-4 sm:gap-8">
               <Link href="/" className="text-sm text-white/60 transition hover:text-white">Home</Link>
               <Link href="/discover" className="text-sm text-white/60 transition hover:text-white">Discover</Link>
               <Link href="/about" className="text-sm text-white/60 transition hover:text-white">About</Link>
               <Link href="/use-cases" className="text-sm text-white/60 transition hover:text-white">Use Cases</Link>
+              <Link href="/terms" className="text-sm text-white/60 transition hover:text-white">Terms</Link>
+              <Link href="/privacy" className="text-sm text-white/60 transition hover:text-white">Privacy</Link>
             </div>
           </div>
           <div className="mt-8 border-t border-white/10 pt-6 text-center">

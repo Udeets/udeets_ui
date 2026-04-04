@@ -584,7 +584,7 @@ export default function Page() {
               <h1 className="text-5xl font-semibold leading-[1.1] tracking-tight text-[var(--ud-text-primary)] sm:text-6xl lg:text-7xl">
                 Deets that matter.
                 <br />
-                <span className="text-[var(--ud-brand-primary)]">Organized beautifully.</span>
+                <span className="text-[var(--ud-brand-primary)]">Effortlessly connected.</span>
               </h1>
 
               <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[var(--ud-text-secondary)] sm:text-xl">
@@ -901,6 +901,8 @@ export default function Page() {
               <h4 className="text-xs font-semibold uppercase tracking-wider text-white/40">Company</h4>
               <div className="mt-4 flex flex-col gap-2.5">
                 <Link href="/about" className="text-sm text-white/60 transition hover:text-white">About</Link>
+                <Link href="/terms" className="text-sm text-white/60 transition hover:text-white">Terms & Conditions</Link>
+                <Link href="/privacy" className="text-sm text-white/60 transition hover:text-white">Privacy Policy</Link>
                 <Link href="/auth" className="text-sm text-white/60 transition hover:text-white">Sign In</Link>
               </div>
               <div className="mt-6 flex gap-4">

@@ -155,7 +155,7 @@ export function DeetsSection({
                 value={postSearchQuery}
                 onChange={(event) => onPostSearchQueryChange(event.target.value)}
                 placeholder="Search deets"
-                className="w-36 bg-transparent text-sm text-[var(--ud-text-secondary)] outline-none placeholder:text-[var(--ud-text-muted)] sm:w-44"
+                className="w-24 min-w-0 bg-transparent text-sm text-[var(--ud-text-secondary)] outline-none placeholder:text-[var(--ud-text-muted)] sm:w-44"
               />
             </label>
           ) : null}
@@ -376,6 +376,7 @@ export function DeetsSection({
                           type="button"
                           onClick={() => onToggleLike?.(item.id)}
                           disabled={likingDeetIds?.has(item.id)}
+                          title="Like"
                           className={cn(
                             "inline-flex items-center gap-1.5 transition hover:text-[var(--ud-brand-primary)]",
                             likedDeetIds?.has(item.id) && "text-[var(--ud-brand-primary)] font-medium"
@@ -394,6 +395,7 @@ export function DeetsSection({
                         <button
                           type="button"
                           onClick={() => onToggleComments?.(item.id)}
+                          title="Comment"
                           className={cn(
                             "inline-flex items-center gap-1.5 transition hover:text-[var(--ud-brand-primary)]",
                             expandedCommentDeetId === item.id && "text-[var(--ud-brand-primary)] font-medium"
@@ -406,6 +408,7 @@ export function DeetsSection({
                           <button
                             type="button"
                             onClick={() => handleShareDeet(item.id)}
+                            title="Share"
                             className="inline-flex items-center gap-1.5 transition hover:text-[var(--ud-brand-primary)]"
                           >
                             <Send className={ICON} />
@@ -418,7 +421,7 @@ export function DeetsSection({
                           )}
                         </div>
                       </div>
-                      <div className="inline-flex items-center gap-1.5 text-[var(--ud-text-muted)]">
+                      <div className="inline-flex items-center gap-1.5 text-[var(--ud-text-muted)]" title="Views">
                         <Eye className={ICON} />
                         <span>{item.views}</span>
                       </div>
@@ -512,6 +515,7 @@ function DeetCommentsSection({
           disabled={!commentText.trim() || isSubmitting}
           className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-[var(--ud-brand-primary)] to-[#1a8a82] text-white px-3 py-2 transition disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
           aria-label="Send comment"
+          title="Send comment"
         >
           {isSubmitting ? (
             <Loader2 className="h-4 w-4 animate-spin" />

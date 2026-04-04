@@ -1,8 +1,12 @@
 "use client";
 
-import { Images, Smile } from "lucide-react";
-import { ICON, ImageWithFallback, cn, initials } from "../hubUtils";
+import { BarChart3, Calendar, FileText, Images, MapPin, Megaphone, Paperclip, Smile } from "lucide-react";
+import { ImageWithFallback, cn, initials } from "../hubUtils";
 import type { ComposerChildFlow } from "./deetTypes";
+
+const ACTION_BTN =
+  "inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]";
+const ACTION_ICON_CLS = "h-5 w-5 stroke-[1.5]";
 
 export function DeetComposerCard({
   isDemoPreview,
@@ -21,10 +25,29 @@ export function DeetComposerCard({
   hubName: string;
   onOpenComposer: (child?: ComposerChildFlow | null) => void;
 }) {
+  const actionButtons: Array<{
+    key: Exclude<ComposerChildFlow, "quit_confirm" | "settings">;
+    icon: typeof Images;
+    label: string;
+  }> = [
+    { key: "photo", icon: Images, label: "Photo/Video" },
+    { key: "emoji", icon: Smile, label: "Sticker/Emoji" },
+    { key: "announcement", icon: Megaphone, label: "Announcement" },
+    { key: "notice", icon: FileText, label: "Notice" },
+    { key: "poll", icon: BarChart3, label: "Poll" },
+    { key: "photo", icon: Paperclip, label: "Attach File" },
+    { key: "event", icon: Calendar, label: "Event" },
+    { key: "checkin", icon: MapPin, label: "Check-in" },
+  ];
+
   return (
-    <section className="w-full rounded-[30px] border border-[var(--ud-brand-light)] bg-[var(--ud-bg-card)] p-4 shadow-sm sm:p-5">
-      <div data-demo-target={isDemoPreview ? "hub-composer-section" : undefined} className="flex items-start gap-4">
-        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-[var(--ud-border)] bg-[var(--ud-brand-primary)]">
+    <section className="w-full overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-sm">
+      <div
+        data-demo-target={isDemoPreview ? "hub-composer-section" : undefined}
+        className="flex items-start gap-4 p-4 sm:p-5"
+      >
+        {/* Hub avatar */}
+        <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full border border-[var(--ud-border)] bg-[var(--ud-brand-primary)]">
           <ImageWithFallback
             src={dpImageSrc}
             sources={[dpImageSrc, coverImageSrc, ...recentPhotos]}
@@ -35,52 +58,44 @@ export function DeetComposerCard({
           />
         </div>
 
-        <div className="min-w-0 flex-1">
-          <div
+        {/* Text area button */}
+        <button
+          type="button"
+          data-demo-target={isDemoPreview ? "hub-composer-input" : undefined}
+          disabled={!isCreatorAdmin}
+          onClick={() => onOpenComposer()}
+          className={cn(
+            "min-h-[80px] w-full flex-1 rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] px-4 py-3 text-left text-base text-[var(--ud-text-muted)] transition",
+            isCreatorAdmin
+              ? "hover:border-[var(--ud-border)] hover:bg-[var(--ud-bg-subtle)]"
+              : "cursor-not-allowed"
+          )}
+        >
+          Write something...
+        </button>
+      </div>
+
+      {/* Action buttons row — matches CreateDeetModal style */}
+      <div className="flex flex-wrap items-center gap-1 border-t border-[var(--ud-border-subtle)] px-4 py-2 text-[var(--ud-text-muted)]">
+        {actionButtons.map(({ key, icon: Icon, label }, idx) => (
+          <button
+            key={`${key}-${idx}`}
+            type="button"
+            disabled={!isCreatorAdmin}
+            onClick={() => {
+              if (!isCreatorAdmin) return;
+              onOpenComposer(key);
+            }}
+            aria-label={label}
+            title={label}
             className={cn(
-              "flex min-h-[170px] flex-col justify-between rounded-[28px] border border-[var(--ud-border)] bg-[var(--ud-bg-card)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]",
-              !isCreatorAdmin && "bg-[var(--ud-bg-subtle)]"
+              ACTION_BTN,
+              !isCreatorAdmin && "cursor-not-allowed opacity-50"
             )}
           >
-            <button
-              type="button"
-              data-demo-target={isDemoPreview ? "hub-composer-input" : undefined}
-              disabled={!isCreatorAdmin}
-              onClick={() => onOpenComposer()}
-              className={cn(
-                "flex min-h-[110px] w-full items-start rounded-[22px] px-2 py-2 text-left text-base text-[var(--ud-text-muted)] transition",
-                isCreatorAdmin ? "hover:text-[var(--ud-text-secondary)]" : "cursor-not-allowed text-[var(--ud-text-muted)]"
-              )}
-            >
-              What&apos;s on your mind?
-            </button>
-
-            <div className="flex items-center justify-between gap-1 pt-3 text-[var(--ud-text-muted)]">
-              {[
-                { key: "photo" as const, icon: Images, label: "Photo" },
-                { key: "emoji" as const, icon: Smile, label: "Sticker" },
-              ].map(({ key, icon: ComposerIcon, label }) => (
-                <button
-                  key={key}
-                  type="button"
-                  disabled={!isCreatorAdmin}
-                  onClick={() => {
-                    if (!isCreatorAdmin) return;
-                    onOpenComposer(key);
-                  }}
-                  aria-label={label}
-                  title={label}
-                  className={cn(
-                    "inline-flex h-10 w-10 items-center justify-center rounded-full transition",
-                    isCreatorAdmin ? "hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]" : "cursor-not-allowed opacity-50"
-                  )}
-                >
-                  <ComposerIcon className={ICON} />
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+            <Icon className={ACTION_ICON_CLS} />
+          </button>
+        ))}
       </div>
     </section>
   );

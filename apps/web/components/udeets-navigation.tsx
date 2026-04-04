@@ -119,7 +119,7 @@ function NotificationsPanel() {
   return (
     <div
       data-demo-target={isDemoPreview ? "dashboard-alerts-dropdown" : undefined}
-      className="absolute right-16 top-full z-[120] mt-3 w-[360px] rounded-3xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] p-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)]"
+      className="absolute right-0 top-full z-[120] mt-3 w-[calc(100vw-2rem)] max-w-[360px] rounded-3xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] p-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)] sm:right-16"
     >
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-[var(--ud-text-primary)]">Notifications</h3>
@@ -210,7 +210,7 @@ function EventsPanel() {
   }, {});
 
   return (
-    <div className="absolute right-16 top-full z-[120] mt-3 w-[380px] rounded-3xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] p-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)]">
+    <div className="absolute right-0 top-full z-[120] mt-3 w-[calc(100vw-2rem)] max-w-[380px] rounded-3xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] p-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)] sm:right-16">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-[var(--ud-text-primary)]">Events</h3>
         <Link href="/events" className="text-sm font-medium text-[#0C5C57] hover:opacity-80">
@@ -296,7 +296,7 @@ function ProfilePanel({ user, onLogout }: { user: { email?: string; user_metadat
   const canAccessAdmin = can(profilePanelRole, "page:admin_panel");
 
   return (
-    <div className="absolute right-0 top-full z-[120] mt-3 min-w-[220px] overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-lg">
+    <div className="absolute right-0 top-full z-[120] mt-3 w-[calc(100vw-2rem)] max-w-[260px] overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-lg sm:w-auto sm:min-w-[220px]">
       {/* User identity card */}
       <div className="flex items-center gap-3 rounded-t-xl bg-[var(--ud-bg-subtle)] px-4 py-3">
         <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-[#0C5C57] to-[#1a8a82]">

@@ -393,13 +393,13 @@ function AuthPageContent() {
 
             <p className="text-xs text-center text-[var(--ud-text-muted)] mt-4">
               By continuing, I agree to the{" "}
-              <a href="/terms" className="text-[var(--ud-brand-primary)] hover:underline">
+              <Link href="/terms" className="text-[var(--ud-brand-primary)] hover:underline">
                 Terms & Conditions
-              </a>{" "}
+              </Link>{" "}
               and{" "}
-              <a href="/privacy" className="text-[var(--ud-brand-primary)] hover:underline">
+              <Link href="/privacy" className="text-[var(--ud-brand-primary)] hover:underline">
                 Privacy Policy
-              </a>
+              </Link>
               .
             </p>
           </form>
@@ -410,6 +410,10 @@ function AuthPageContent() {
       <footer className={FOOTER_BG}>
         <div className="flex min-h-16 w-full items-center justify-between px-4 py-3 text-white sm:px-6 lg:px-10">
           <p className="text-sm sm:text-base">© uDeets. All rights reserved.</p>
+          <div className="flex gap-4 text-sm">
+            <Link href="/terms" className="hover:underline">Terms</Link>
+            <Link href="/privacy" className="hover:underline">Privacy</Link>
+          </div>
         </div>
       </footer>
     </div>
