@@ -58,7 +58,6 @@ import {
   SettingField,
   categoryMetaFor,
   cn,
-  compactId,
   normalizePublicSrc,
 } from "./components/hubUtils";
 import { useHubRole } from "@/hooks/useUserRole";
