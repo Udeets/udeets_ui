@@ -364,74 +364,68 @@ export function DeetsSection({
                 ) : null}
 
                 {/* ── Action bar ── */}
-                <div className="flex items-center border-t border-[var(--ud-border-subtle)] px-2 py-1 mt-3">
-                  {/* Like */}
-                  <button
-                    type="button"
-                    onClick={() => onToggleLike?.(item.id)}
-                    disabled={likingDeetIds?.has(item.id)}
-                    title="Like"
-                    className={cn(
-                      "flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]",
-                      likedDeetIds?.has(item.id)
-                        ? "text-[var(--ud-brand-primary)] font-medium"
-                        : "text-[var(--ud-text-muted)]"
-                    )}
-                  >
-                    {likingDeetIds?.has(item.id) ? (
-                      <Loader2 className={cn(POST_ICON, "animate-spin")} />
-                    ) : (
-                      <Heart className={POST_ICON} fill={likedDeetIds?.has(item.id) ? "currentColor" : "none"} />
-                    )}
-                    <span>{likeCountOverrides?.[item.id] ?? item.likes}</span>
-                  </button>
-
-                  {/* Divider */}
-                  <div className="h-5 w-px bg-[var(--ud-border-subtle)]" />
-
-                  {/* Comment */}
-                  <button
-                    type="button"
-                    onClick={() => onToggleComments?.(item.id)}
-                    title="Comment"
-                    className={cn(
-                      "flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]",
-                      expandedCommentDeetId === item.id
-                        ? "text-[var(--ud-brand-primary)] font-medium"
-                        : "text-[var(--ud-text-muted)]"
-                    )}
-                  >
-                    <MessageCircle className={POST_ICON} />
-                    <span>{item.comments}</span>
-                  </button>
-
-                  {/* Divider */}
-                  <div className="h-5 w-px bg-[var(--ud-border-subtle)]" />
-
-                  {/* Share */}
-                  <div className="relative flex flex-1 items-center justify-center">
+                <div className="flex items-center justify-between border-t border-[var(--ud-border-subtle)] px-4 py-1.5 mt-3">
+                  {/* Left group: Like · Comment · Share */}
+                  <div className="flex items-center gap-4">
+                    {/* Like */}
                     <button
                       type="button"
-                      onClick={() => handleShareDeet(item.id)}
-                      title="Share"
-                      className="flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm text-[var(--ud-text-muted)] transition-colors hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
+                      onClick={() => onToggleLike?.(item.id)}
+                      disabled={likingDeetIds?.has(item.id)}
+                      title="Like"
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-lg py-2 text-sm transition-colors hover:text-[var(--ud-brand-primary)]",
+                        likedDeetIds?.has(item.id)
+                          ? "text-[var(--ud-brand-primary)] font-medium"
+                          : "text-[var(--ud-text-muted)]"
+                      )}
                     >
-                      <Share2 className={POST_ICON} />
-                      <span>Share</span>
+                      {likingDeetIds?.has(item.id) ? (
+                        <Loader2 className={cn(POST_ICON, "animate-spin")} />
+                      ) : (
+                        <Heart className={POST_ICON} fill={likedDeetIds?.has(item.id) ? "currentColor" : "none"} />
+                      )}
+                      <span>{likeCountOverrides?.[item.id] ?? item.likes}</span>
                     </button>
-                    {copiedDeetId === item.id && (
-                      <span className="absolute -top-8 whitespace-nowrap rounded border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-2 py-1 text-xs font-medium text-[var(--ud-brand-primary)] shadow-sm">
-                        Copied!
-                      </span>
-                    )}
+
+                    {/* Comment */}
+                    <button
+                      type="button"
+                      onClick={() => onToggleComments?.(item.id)}
+                      title="Comment"
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-lg py-2 text-sm transition-colors hover:text-[var(--ud-brand-primary)]",
+                        expandedCommentDeetId === item.id
+                          ? "text-[var(--ud-brand-primary)] font-medium"
+                          : "text-[var(--ud-text-muted)]"
+                      )}
+                    >
+                      <MessageCircle className={POST_ICON} />
+                      <span>{item.comments}</span>
+                    </button>
+
+                    {/* Share */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => handleShareDeet(item.id)}
+                        title="Share"
+                        className="inline-flex items-center gap-1.5 rounded-lg py-2 text-sm text-[var(--ud-text-muted)] transition-colors hover:text-[var(--ud-brand-primary)]"
+                      >
+                        <Share2 className={POST_ICON} />
+                        <span>Share</span>
+                      </button>
+                      {copiedDeetId === item.id && (
+                        <span className="absolute -top-8 left-0 whitespace-nowrap rounded border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-2 py-1 text-xs font-medium text-[var(--ud-brand-primary)] shadow-sm">
+                          Copied!
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Divider */}
-                  <div className="h-5 w-px bg-[var(--ud-border-subtle)]" />
-
-                  {/* Views */}
+                  {/* Right: Views */}
                   <div
-                    className="flex flex-1 items-center justify-center gap-1.5 py-2 text-sm text-[var(--ud-text-muted)]"
+                    className="inline-flex items-center gap-1.5 py-2 text-sm text-[var(--ud-text-muted)]"
                     title="Views"
                   >
                     <Eye className={POST_ICON} />

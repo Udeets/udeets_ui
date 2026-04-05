@@ -1022,46 +1022,46 @@ function DashboardPageContent() {
                             </div>
                           )}
 
-                          {/* Action bar — Band-style with dividers */}
-                          <div className="flex items-center border-t border-[var(--ud-border-subtle)] px-2 py-1">
-                            <button
-                              type="button"
-                              disabled={isLiking}
-                              onClick={() => toggleLike(item.id)}
-                              className={cn(
-                                "flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]",
-                                isLiked ? "text-[var(--ud-brand-primary)] font-medium" : "text-[var(--ud-text-muted)]"
-                              )}
-                            >
-                              {isLiking ? (
-                                <Loader2 className="h-[18px] w-[18px] animate-spin" />
-                              ) : (
-                                <Heart className="h-[18px] w-[18px] stroke-[1.5]" fill={isLiked ? "currentColor" : "none"} />
-                              )}
-                              <span>{likeCount}</span>
-                            </button>
-                            <div className="h-5 w-px bg-[var(--ud-border-subtle)]" />
-                            <button
-                              type="button"
-                              onClick={() => handleToggleComments(item.id)}
-                              className={cn(
-                                "flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]",
-                                isCommentsOpen ? "text-[var(--ud-brand-primary)] font-medium" : "text-[var(--ud-text-muted)]"
-                              )}
-                            >
-                              <MessageCircle className="h-[18px] w-[18px] stroke-[1.5]" />
-                              <span>{commentCount}</span>
-                            </button>
-                            <div className="h-5 w-px bg-[var(--ud-border-subtle)]" />
-                            <div className="relative flex flex-1 items-center justify-center">
+                          {/* Action bar */}
+                          <div className="flex items-center justify-between border-t border-[var(--ud-border-subtle)] px-4 py-1.5">
+                            <div className="flex items-center gap-4">
                               <button
                                 type="button"
-                                onClick={() => handleShareDeet(item.id, item.href)}
-                                className="flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm text-[var(--ud-text-muted)] transition-colors hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
+                                disabled={isLiking}
+                                onClick={() => toggleLike(item.id)}
+                                className={cn(
+                                  "inline-flex items-center gap-1.5 py-2 text-sm transition-colors hover:text-[var(--ud-brand-primary)]",
+                                  isLiked ? "text-[var(--ud-brand-primary)] font-medium" : "text-[var(--ud-text-muted)]"
+                                )}
                               >
-                                <Share2 className="h-[18px] w-[18px] stroke-[1.5]" />
-                                <span>{copiedDeetId === item.id ? "Copied!" : "Share"}</span>
+                                {isLiking ? (
+                                  <Loader2 className="h-[18px] w-[18px] animate-spin" />
+                                ) : (
+                                  <Heart className="h-[18px] w-[18px] stroke-[1.5]" fill={isLiked ? "currentColor" : "none"} />
+                                )}
+                                <span>{likeCount}</span>
                               </button>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleComments(item.id)}
+                                className={cn(
+                                  "inline-flex items-center gap-1.5 py-2 text-sm transition-colors hover:text-[var(--ud-brand-primary)]",
+                                  isCommentsOpen ? "text-[var(--ud-brand-primary)] font-medium" : "text-[var(--ud-text-muted)]"
+                                )}
+                              >
+                                <MessageCircle className="h-[18px] w-[18px] stroke-[1.5]" />
+                                <span>{commentCount}</span>
+                              </button>
+                              <div className="relative">
+                                <button
+                                  type="button"
+                                  onClick={() => handleShareDeet(item.id, item.href)}
+                                  className="inline-flex items-center gap-1.5 py-2 text-sm text-[var(--ud-text-muted)] transition-colors hover:text-[var(--ud-brand-primary)]"
+                                >
+                                  <Share2 className="h-[18px] w-[18px] stroke-[1.5]" />
+                                  <span>{copiedDeetId === item.id ? "Copied!" : "Share"}</span>
+                                </button>
+                              </div>
                             </div>
                           </div>
 

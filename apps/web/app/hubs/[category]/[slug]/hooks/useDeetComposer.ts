@@ -273,6 +273,9 @@ export function useDeetComposer({
       startTransition(() => {
         onDeetCreated(createdDeet);
       });
+    } catch (err) {
+      console.error("[deet-submit]", err);
+      alert(err instanceof Error ? err.message : "Failed to create post. Please try again.");
     } finally {
       setIsSubmittingDeet(false);
     }
