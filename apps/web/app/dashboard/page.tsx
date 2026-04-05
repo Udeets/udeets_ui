@@ -37,6 +37,7 @@ type FeedItem = {
   type: FeedFilter;
   hubName: string;
   hubId: string;
+  authorName: string;
   timeLabel: string;
   previewImage?: string;
   previewImages: string[];
@@ -91,6 +92,10 @@ function formatDeetTime(createdAt: string) {
 /** Type-only labels that shouldn't be shown as prominent titles */
 const GENERIC_TITLE_LABELS = new Set(["Deet", "Notice", "Photo", "Event", "File", "News", "Deal", "Hazard", "Alert"]);
 
+function getInitials(name: string): string {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "U";
+}
+
 function isGenericTitle(title: string | null | undefined): boolean {
   if (!title) return true;
   return GENERIC_TITLE_LABELS.has(title.trim());
@@ -123,6 +128,7 @@ function deetRecordToDashboardItem(item: DeetRecord): FeedItem {
     type: card.type,
     hubName: "",
     hubId: card.hubId,
+    authorName: item.author_name || "Hub member",
     timeLabel: formatDeetTime(card.createdAt ?? item.created_at),
     previewImage: card.previewImageUrl || undefined,
     previewImages: card.previewImageUrls,
@@ -980,16 +986,16 @@ function DashboardPageContent() {
                           {/* Card body — clickable to navigate to hub */}
                           {item.href ? (
                             <Link href={item.href} className="block p-4">
-                              <div className="flex items-start gap-3">
-                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--ud-brand-light)]">
-                                  <span className="text-xs font-semibold text-[var(--ud-brand-primary)]">{item.hubName?.charAt(0)?.toUpperCase() ?? "H"}</span>
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--ud-brand-light)]">
+                                  <span className="text-xs font-bold text-[var(--ud-brand-primary)]">{getInitials(item.authorName)}</span>
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                  <div className="flex items-center justify-between gap-2">
-                                    <p className="truncate text-sm font-semibold text-[var(--ud-text-primary)]">{item.hubName || "Hub"}</p>
-                                    <span className="shrink-0 text-xs text-[var(--ud-text-muted)]">{item.timeLabel}</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold text-[var(--ud-text-primary)]">{item.authorName}</span>
+                                    <span className="text-xs text-[var(--ud-text-muted)]">{item.hubName ? `in ${item.hubName}` : ""}</span>
                                   </div>
-                                  <p className="text-xs text-[var(--ud-text-muted)]">Posted by: Hub Member</p>
+                                  <span className="text-xs text-[var(--ud-text-muted)]">{item.timeLabel}</span>
                                 </div>
                               </div>
                               {item.title && !isGenericTitle(item.title) ? <h3 className={cn("mt-3 text-base font-semibold tracking-tight", TEXT_DARK)}>{item.title}</h3> : null}
@@ -998,16 +1004,16 @@ function DashboardPageContent() {
                             </Link>
                           ) : (
                             <div className="p-4">
-                              <div className="flex items-start gap-3">
-                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--ud-brand-light)]">
-                                  <span className="text-xs font-semibold text-[var(--ud-brand-primary)]">{item.hubName?.charAt(0)?.toUpperCase() ?? "H"}</span>
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--ud-brand-light)]">
+                                  <span className="text-xs font-bold text-[var(--ud-brand-primary)]">{getInitials(item.authorName)}</span>
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                  <div className="flex items-center justify-between gap-2">
-                                    <p className="truncate text-sm font-semibold text-[var(--ud-text-primary)]">{item.hubName || "Hub"}</p>
-                                    <span className="shrink-0 text-xs text-[var(--ud-text-muted)]">{item.timeLabel}</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold text-[var(--ud-text-primary)]">{item.authorName}</span>
+                                    <span className="text-xs text-[var(--ud-text-muted)]">{item.hubName ? `in ${item.hubName}` : ""}</span>
                                   </div>
-                                  <p className="text-xs text-[var(--ud-text-muted)]">Posted by: Hub Member</p>
+                                  <span className="text-xs text-[var(--ud-text-muted)]">{item.timeLabel}</span>
                                 </div>
                               </div>
                               {item.title && !isGenericTitle(item.title) ? <h3 className={cn("mt-3 text-base font-semibold tracking-tight", TEXT_DARK)}>{item.title}</h3> : null}
@@ -1016,47 +1022,44 @@ function DashboardPageContent() {
                             </div>
                           )}
 
-                          {/* Action bar — always outside the link */}
-                          <div className="flex items-center gap-6 border-t border-[var(--ud-border-subtle)] px-4 py-3">
+                          {/* Action bar — Band-style with dividers */}
+                          <div className="flex items-center border-t border-[var(--ud-border-subtle)] px-2 py-1">
                             <button
                               type="button"
                               disabled={isLiking}
                               onClick={() => toggleLike(item.id)}
                               className={cn(
-                                "flex items-center gap-1.5 text-sm transition-colors duration-150 hover:text-[var(--ud-brand-primary)]",
+                                "flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]",
                                 isLiked ? "text-[var(--ud-brand-primary)] font-medium" : "text-[var(--ud-text-muted)]"
                               )}
                             >
                               {isLiking ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <Loader2 className="h-[18px] w-[18px] animate-spin" />
                               ) : (
-                                <Heart
-                                  className="h-4 w-4 stroke-2"
-                                  fill={isLiked ? "currentColor" : "none"}
-                                />
+                                <Heart className="h-[18px] w-[18px] stroke-[1.5]" fill={isLiked ? "currentColor" : "none"} />
                               )}
                               <span>{likeCount}</span>
-                              <span>Like</span>
                             </button>
+                            <div className="h-5 w-px bg-[var(--ud-border-subtle)]" />
                             <button
                               type="button"
                               onClick={() => handleToggleComments(item.id)}
                               className={cn(
-                                "flex items-center gap-1.5 text-sm transition-colors duration-150 hover:text-[var(--ud-brand-primary)]",
+                                "flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]",
                                 isCommentsOpen ? "text-[var(--ud-brand-primary)] font-medium" : "text-[var(--ud-text-muted)]"
                               )}
                             >
-                              <MessageCircle className="h-4 w-4 stroke-2" />
+                              <MessageCircle className="h-[18px] w-[18px] stroke-[1.5]" />
                               <span>{commentCount}</span>
-                              <span>Comment</span>
                             </button>
-                            <div className="relative">
+                            <div className="h-5 w-px bg-[var(--ud-border-subtle)]" />
+                            <div className="relative flex flex-1 items-center justify-center">
                               <button
                                 type="button"
                                 onClick={() => handleShareDeet(item.id, item.href)}
-                                className="flex items-center gap-1.5 text-sm text-[var(--ud-text-muted)] transition-colors duration-150 hover:text-[var(--ud-brand-primary)]"
+                                className="flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm text-[var(--ud-text-muted)] transition-colors hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]"
                               >
-                                <Share2 className="h-4 w-4 stroke-2" />
+                                <Share2 className="h-[18px] w-[18px] stroke-[1.5]" />
                                 <span>{copiedDeetId === item.id ? "Copied!" : "Share"}</span>
                               </button>
                             </div>

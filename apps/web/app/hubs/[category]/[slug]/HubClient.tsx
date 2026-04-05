@@ -914,6 +914,8 @@ export default function HubClient({
         hubName={hubName}
         hubCategory={hub.category}
         hubSlug={hub.slug}
+        userAvatarSrc={creatorAvatarSrc}
+        userName={creatorDisplayName}
         onOpenComposer={openDeetComposer}
         onOpenViewer={openViewer}
         likedDeetIds={likedDeetIds}
