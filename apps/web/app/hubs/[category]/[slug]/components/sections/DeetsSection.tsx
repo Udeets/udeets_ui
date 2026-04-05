@@ -134,8 +134,6 @@ export function DeetsSection({
     <DeetComposerCard
       isDemoPreview={isDemoPreview}
       isCreatorAdmin={isCreatorAdmin}
-      userAvatarSrc={userAvatarSrc}
-      userName={userName}
       onOpenComposer={onOpenComposer}
     />
   );

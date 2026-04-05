@@ -413,7 +413,7 @@ const FAQ_ITEMS = [
   {
     question: "What is a hub?",
     answer:
-      "A hub is your community's home on uDeets. It's a dedicated space where you can share updates (called deets), events, photos, and important information with your members. Think of it as a modern replacement for group chats, Facebook groups, and community bulletin boards — all in one clean, organized place.",
+      "A hub is your community's home on uDeets. It's a dedicated space where you can share updates (called deets), events, photos, and important information with your members. Think of it as a modern replacement for group chats, Facebook groups, and community bulletin boards, all in one clean, organized place.",
   },
   {
     question: "Is uDeets free to use?",
@@ -428,7 +428,7 @@ const FAQ_ITEMS = [
   {
     question: "How is uDeets different from WhatsApp groups or Facebook groups?",
     answer:
-      "Unlike chat apps where important information gets buried in conversations, uDeets organizes everything by type — announcements, events, photos, files. Members can find what they need without scrolling through hundreds of messages. Plus, hub creators get professional tools like custom branding, event RSVPs, and role-based access control.",
+      "Unlike chat apps where important information gets buried in conversations, uDeets organizes everything by type: announcements, events, photos, and files. Members can find what they need without scrolling through hundreds of messages. Plus, hub creators get professional tools like custom branding, event RSVPs, and role-based access control.",
   },
   {
     question: "Can I make my hub private?",
@@ -438,7 +438,7 @@ const FAQ_ITEMS = [
   {
     question: "What are templates and how do they work?",
     answer:
-      "Templates are pre-configured hub setups designed for specific types of communities. For example, the Restaurant template comes with sections for menu, specials, and hours, while the HOA template includes sections for rules, maintenance, and community events. Templates save you setup time — you can always customize them later.",
+      "Templates are pre-configured hub setups designed for specific types of communities. For example, the Restaurant template comes with sections for menu, specials, and hours, while the HOA template includes sections for rules, maintenance, and community events. Templates save you setup time and you can always customize them later.",
   },
   {
     question: "How do members join my hub?",
@@ -609,7 +609,7 @@ export default function Page() {
               </h1>
 
               <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[var(--ud-text-secondary)] sm:text-xl">
-                Create hubs for your community, business, or organization. Share updates, events, and important details — all in one place.
+                Create hubs for your community, business, or organization. Share updates, events, and important details, all in one place.
               </p>
 
               <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -652,7 +652,7 @@ export default function Page() {
                 { icon: Megaphone, title: "Real-time Updates", description: "Post announcements, events, deals, and alerts. Your community sees them instantly." },
                 { icon: Users, title: "Membership & Roles", description: "Manage members with roles like admin, moderator, and member. Control who can post and view." },
                 { icon: Globe, title: "Public or Private", description: "Choose who can find and join your hub. Public hubs are discoverable; private hubs are invite-only." },
-                { icon: Bell, title: "Smart Notifications", description: "Members get notified about the deets that matter to them — no noise, just signal." },
+                { icon: Bell, title: "Smart Notifications", description: "Members get notified about the deets that matter to them. No noise, just signal." },
                 { icon: MapPin, title: "Local Discovery", description: "Discover hubs near you. Find restaurants, communities, and organizations in your neighborhood." },
                 { icon: Shield, title: "Template System", description: "Pre-configured templates for restaurants, HOAs, schools, fitness clubs, and more. Get started in seconds." },
               ].map((f, i) => (
@@ -718,7 +718,7 @@ export default function Page() {
                 <StepCard
                   number={1}
                   title="Create your hub"
-                  description="Pick a template that fits — restaurant, HOA, community group, or start from scratch. Name it, set visibility, and you're live."
+                  description="Pick a template that fits your community: restaurant, HOA, neighborhood group, or start from scratch. Name it, set visibility, and you're live."
                 />
                 <StepCard
                   number={2}
@@ -728,7 +728,7 @@ export default function Page() {
                 <StepCard
                   number={3}
                   title="Grow your community"
-                  description="Members join, subscribe, and stay informed. Everything they need — in one clean, organized hub."
+                  description="Members join, subscribe, and stay informed. Everything they need in one clean, organized hub."
                 />
               </AnimateOnScroll>
             </div>
@@ -890,7 +890,7 @@ export default function Page() {
             </div>
             <h3 className="text-xl font-semibold tracking-tight text-[var(--ud-text-primary)]">Coming Soon!</h3>
             <p className="mt-3 text-sm leading-relaxed text-[var(--ud-text-secondary)]">
-              We&apos;re building native apps for iOS and Android. In the meantime, uDeets works great in your mobile browser — just visit <span className="font-medium text-[var(--ud-brand-primary)]">udeets.com</span> on your phone.
+              We&apos;re building native apps for iOS and Android. In the meantime, uDeets works great in your mobile browser.
             </p>
             <button
               type="button"

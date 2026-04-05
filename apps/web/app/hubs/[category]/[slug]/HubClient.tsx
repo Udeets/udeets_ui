@@ -131,9 +131,35 @@ export default function HubClient({
 
   const canAccessAdmins = canEditHub;
   const creatorMetadata = user?.user_metadata;
-  const creatorDisplayName = isCreatorAdmin ? creatorMetadata?.full_name || creatorMetadata?.name || user?.email || "You" : "Hub Creator";
-  const creatorDetail = isCreatorAdmin ? user?.email || "Admin" : hub.createdBy ? `Admin • ${compactId(hub.createdBy)}` : "Admin";
-  const creatorAvatarSrc = isCreatorAdmin && typeof creatorMetadata?.avatar_url === "string" ? creatorMetadata.avatar_url : "";
+  const [creatorProfile, setCreatorProfile] = useState<{ fullName: string; avatarUrl: string | null } | null>(null);
+
+  // Fetch the hub creator's profile from DB (works for all visitors)
+  useEffect(() => {
+    if (!hub.createdBy) return;
+    if (isCreatorAdmin) return; // We already have the data from auth metadata
+    let ignore = false;
+    (async () => {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name, avatar_url")
+        .eq("id", hub.createdBy!)
+        .single();
+      if (!ignore && data) {
+        setCreatorProfile({ fullName: data.full_name || "Hub Creator", avatarUrl: data.avatar_url });
+      }
+    })();
+    return () => { ignore = true; };
+  }, [hub.createdBy, isCreatorAdmin]);
+
+  const creatorDisplayName = isCreatorAdmin
+    ? creatorMetadata?.full_name || creatorMetadata?.name || user?.email || "You"
+    : creatorProfile?.fullName || "Hub Creator";
+  const creatorDetail = isCreatorAdmin ? user?.email || "Creator" : "Creator";
+  const creatorAvatarSrc = isCreatorAdmin
+    ? (typeof creatorMetadata?.avatar_url === "string" ? creatorMetadata.avatar_url : "")
+    : (creatorProfile?.avatarUrl || "");
   const deetAuthorName =
     creatorMetadata?.full_name ||
     creatorMetadata?.name ||
@@ -366,7 +392,7 @@ export default function HubClient({
   const activeAdminCount = 1;
   const knownActivityCount = feedItemCount + hubContent.events.length + recentPhotos.length;
   const fileItems: string[] = [];
-  const [memberItems, setMemberItems] = useState<Array<{ userId: string; role: string; fullName: string; avatarUrl: string | null; email: string | null }>>([]);
+  const [memberItems, setMemberItems] = useState<Array<{ userId: string; role: string; fullName: string; avatarUrl: string | null; email: string | null; joinedAt: string | null }>>([]);
   const [pendingRequests, setPendingRequests] = useState<Array<{ userId: string; fullName: string; avatarUrl: string | null; email: string | null; requestedAt?: string | null }>>([]);
   const [processingUserIds, setProcessingUserIds] = useState<Set<string>>(new Set());
 
@@ -380,7 +406,7 @@ export default function HubClient({
       // Step 1: get active members
       const { data: members, error: membersError } = await supabase
         .from("hub_members")
-        .select("user_id, role")
+        .select("user_id, role, joined_at")
         .eq("hub_id", hub.id)
         .eq("status", "active");
 
@@ -401,12 +427,16 @@ export default function HubClient({
       if (!ignore) {
         setMemberItems(members.map((m) => {
           const profile = profileMap.get(m.user_id);
+          // Show "Creator" for the hub creator, otherwise proper role label
+          const isHubCreator = hub.createdBy && m.user_id === hub.createdBy;
+          const roleLabel = isHubCreator ? "Creator" : m.role === "admin" ? "Admin" : "Member";
           return {
             userId: m.user_id,
-            role: m.role,
+            role: roleLabel,
             fullName: profile?.full_name ?? m.user_id.slice(0, 8),
             avatarUrl: profile?.avatar_url ?? null,
             email: profile?.email ?? null,
+            joinedAt: m.joined_at ?? null,
           };
         }));
       }
@@ -460,7 +490,7 @@ export default function HubClient({
       const approved = pendingRequests.find((r) => r.userId === userId);
       setPendingRequests((prev) => prev.filter((r) => r.userId !== userId));
       if (approved) {
-        setMemberItems((prev) => [...prev, { userId: approved.userId, role: "member", fullName: approved.fullName, avatarUrl: approved.avatarUrl, email: approved.email }]);
+        setMemberItems((prev) => [...prev, { userId: approved.userId, role: "Member", fullName: approved.fullName, avatarUrl: approved.avatarUrl, email: approved.email, joinedAt: new Date().toISOString() }]);
       }
     } catch (error) {
       console.error("[approve]", error);
