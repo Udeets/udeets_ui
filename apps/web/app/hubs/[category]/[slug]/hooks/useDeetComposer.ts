@@ -250,7 +250,7 @@ export function useDeetComposer({
       const resolvedTitle = deetSettings.noticeEnabled ? "Notice" : postTypeToTitle[deetSettings.postType] || "Deet";
 
       // Sanitize the HTML content before saving
-      const sanitizedBody = sanitizeHtml(trimmedText || newestSticker?.detail || "Shared a new update.");
+      const sanitizedBody = sanitizeHtml(trimmedText || newestSticker?.detail || "");
 
       const createdDeet = await createDeet({
         hubId,

@@ -119,6 +119,8 @@ export default function HubClient({
   const dpInputRef = useRef<HTMLInputElement | null>(null);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
   const isCreatorAdmin = Boolean(user?.id && hub.createdBy && user.id === hub.createdBy);
 
   // ─── Role-based access ───
@@ -613,6 +615,25 @@ export default function HubClient({
     if (tab) setActiveSection(tab);
   };
 
+  const handleFileUpload: React.ChangeEventHandler<HTMLInputElement> = async (event) => {
+    const files = event.target.files;
+    if (!files?.length) return;
+    setIsUploadingFile(true);
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      for (const file of Array.from(files)) {
+        const filePath = `${hub.id}/${Date.now()}-${file.name}`;
+        await supabase.storage.from("deet-media").upload(filePath, file);
+      }
+    } catch (error) {
+      console.error("[file-upload]", error);
+    } finally {
+      setIsUploadingFile(false);
+      if (event.target) event.target.value = "";
+    }
+  };
+
   const openCenterMembers = (mode: "list" | "invite") => {
     requestNavigation({
       tab: "Members",
@@ -843,6 +864,10 @@ export default function HubClient({
           onOpenGalleryUpload={() => galleryInputRef.current?.click()}
           galleryInputRef={galleryInputRef}
           onGalleryChange={handleMediaFileChange("gallery")}
+          fileInputRef={fileInputRef}
+          onFileChange={handleFileUpload}
+          onOpenFileUpload={() => fileInputRef.current?.click()}
+          isUploadingFile={isUploadingFile}
         />
       );
     }
@@ -905,8 +930,17 @@ export default function HubClient({
     );
   };
 
+  // Build CSS custom property overrides so every component on this page
+  // picks up the hub's chosen accent colour via var(--ud-brand-primary) etc.
+  const themeVars: React.CSSProperties = {
+    "--ud-brand-primary": accentTheme.primary,
+    "--ud-brand-light": accentTheme.surface,
+    "--ud-gradient-from": accentTheme.primary,
+    "--ud-gradient-to": accentTheme.primaryHover,
+  } as React.CSSProperties;
+
   return (
-    <div className="min-h-screen bg-[var(--ud-bg-page)] pb-16 md:pb-0">
+    <div className="min-h-screen bg-[var(--ud-bg-page)] pb-16 md:pb-0" style={themeVars}>
       <UdeetsHeader />
 
       <div className="mx-auto w-full max-w-7xl">

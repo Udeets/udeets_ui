@@ -49,31 +49,33 @@ export function HubHeroHeader({
   return (
     <div className="grid w-full grid-cols-1 lg:grid-cols-[240px_1fr]">
       {/* Mobile: Cover image on top */}
-      <div className="relative h-[180px] overflow-hidden lg:hidden" style={{ backgroundColor: accentTheme?.wash }}>
-        <input ref={coverInputRef} type="file" accept="image/*" onChange={onCoverChange} className="hidden" />
-        <button
-          type="button"
-          onClick={onOpenCoverChooser}
-          disabled={!isCreatorAdmin || isUploadingCover}
-          className={cn("h-full w-full", isCreatorAdmin && "cursor-pointer")}
-        >
-          {displayCoverImageSrc ? (
-            <ImageWithFallback
-              src={displayCoverImageSrc}
-              sources={[displayCoverImageSrc, coverImageSrc].filter(Boolean)}
-              alt={`${hubName} cover`}
-              className="h-full w-full object-cover"
-              fallbackClassName="h-full w-full"
-              fallbackStyle={{ backgroundColor: accentTheme?.surface }}
-              fallback=""
-            />
-          ) : (
-            <div className="h-full w-full" style={{ backgroundColor: accentTheme?.surface }} />
-          )}
-        </button>
+      <div className="relative lg:hidden">
+        <div className="h-[180px] overflow-hidden" style={{ backgroundColor: accentTheme?.wash }}>
+          <input ref={coverInputRef} type="file" accept="image/*" onChange={onCoverChange} className="hidden" />
+          <button
+            type="button"
+            onClick={onOpenCoverChooser}
+            disabled={!isCreatorAdmin || isUploadingCover}
+            className={cn("h-full w-full", isCreatorAdmin && "cursor-pointer")}
+          >
+            {displayCoverImageSrc ? (
+              <ImageWithFallback
+                src={displayCoverImageSrc}
+                sources={[displayCoverImageSrc, coverImageSrc].filter(Boolean)}
+                alt={`${hubName} cover`}
+                className="h-full w-full object-cover"
+                fallbackClassName="h-full w-full"
+                fallbackStyle={{ backgroundColor: accentTheme?.surface }}
+                fallback=""
+              />
+            ) : (
+              <div className="h-full w-full" style={{ backgroundColor: accentTheme?.surface }} />
+            )}
+          </button>
+        </div>
 
-        {/* Overlapping DP avatar on mobile */}
-        <div className="absolute -bottom-10 left-4 z-10">
+        {/* DP avatar overlapping cover/info boundary */}
+        <div className="absolute bottom-0 left-4 z-10 translate-y-1/2">
           <button
             type="button"
             onClick={onOpenDpChooser}
@@ -103,7 +105,7 @@ export function HubHeroHeader({
       </div>
 
       {/* Mobile: Hub info row below cover */}
-      <div className="flex items-end justify-between border-b border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] px-4 pb-3 pt-12 lg:hidden">
+      <div className="flex items-end justify-between border-b border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] px-4 pb-3 pt-14 lg:hidden">
         <div>
           <h1 className="text-lg font-semibold tracking-tight text-[var(--ud-text-primary)]">{headerHubName}</h1>
           <p className="text-xs text-[var(--ud-text-secondary)]">

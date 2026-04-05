@@ -335,12 +335,14 @@ export function DeetsSection({
                       </span>
                     </div>
 
-                    <div
-                      className="mt-2 text-sm leading-relaxed text-[var(--ud-text-secondary)]"
-                      dangerouslySetInnerHTML={{
-                        __html: sanitizeHtmlContent(item.body),
-                      }}
-                    />
+                    {item.body ? (
+                      <div
+                        className="mt-2 text-sm leading-relaxed text-[var(--ud-text-secondary)]"
+                        dangerouslySetInnerHTML={{
+                          __html: sanitizeHtmlContent(item.body),
+                        }}
+                      />
+                    ) : null}
 
                     {item.image ? (
                       <button

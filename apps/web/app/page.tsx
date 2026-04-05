@@ -468,6 +468,7 @@ export default function Page() {
   const hubsRowRef = useRef<HTMLDivElement | null>(null);
   const [pauseAutoScroll, setPauseAutoScroll] = useState(false);
   const [topHubs, setTopHubs] = useState<TopHub[]>([]);
+  const [showAppComingSoon, setShowAppComingSoon] = useState(false);
 
   useEffect(() => {
     const el = hubsRowRef.current;
@@ -576,15 +577,35 @@ export default function Page() {
 
           <div className="relative mx-auto max-w-7xl px-4 pb-20 pt-20 sm:px-6 sm:pb-28 sm:pt-28 lg:px-10 lg:pb-32 lg:pt-32">
             <div className="mx-auto max-w-3xl text-center">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#A9D1CA]/50 bg-[var(--ud-brand-light)] px-4 py-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-[var(--ud-brand-primary)]" />
-                <span className="text-xs font-medium text-[var(--ud-brand-primary)]">Your community, simplified</span>
+              <div className="mb-6 flex items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAppComingSoon(true)}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#111111] px-4 py-2.5 text-white transition hover:bg-[#222222]"
+                >
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" /></svg>
+                  <div className="text-left leading-tight">
+                    <div className="text-[9px] uppercase tracking-wide opacity-70">Download on the</div>
+                    <div className="text-sm font-semibold -mt-0.5">App Store</div>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAppComingSoon(true)}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#111111] px-4 py-2.5 text-white transition hover:bg-[#222222]"
+                >
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor"><path d="M3.609 1.814 13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zM14.851 13.06l2.559 1.478-3.041 3.041-2.559-1.478zm3.11-3.538L20.6 11.04c.543.314.543 1.107 0 1.42L17.96 13.98l-2.518-1.98zm-3.11-3.538 2.559-1.478 3.041 3.041-2.559 1.478z" /></svg>
+                  <div className="text-left leading-tight">
+                    <div className="text-[9px] uppercase tracking-wide opacity-70">Get it on</div>
+                    <div className="text-sm font-semibold -mt-0.5">Google Play</div>
+                  </div>
+                </button>
               </div>
 
               <h1 className="text-5xl font-semibold leading-[1.1] tracking-tight text-[var(--ud-text-primary)] sm:text-6xl lg:text-7xl">
                 Deets that matter.
                 <br />
-                <span className="text-[var(--ud-brand-primary)]">Effortlessly connected.</span>
+                <span className="text-[var(--ud-brand-primary)]">Seamlessly managed.</span>
               </h1>
 
               <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[var(--ud-text-secondary)] sm:text-xl">
@@ -859,6 +880,28 @@ export default function Page() {
           </div>
         </section>
       </main>
+
+      {/* ─── App Coming Soon Modal ─── */}
+      {showAppComingSoon && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4" onClick={() => setShowAppComingSoon(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-[var(--ud-bg-card)] p-8 text-center shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)]">
+              <Sparkles className="h-8 w-8 text-white" />
+            </div>
+            <h3 className="text-xl font-semibold tracking-tight text-[var(--ud-text-primary)]">Coming Soon!</h3>
+            <p className="mt-3 text-sm leading-relaxed text-[var(--ud-text-secondary)]">
+              We&apos;re building native apps for iOS and Android. In the meantime, uDeets works great in your mobile browser — just visit <span className="font-medium text-[var(--ud-brand-primary)]">udeets.com</span> on your phone.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowAppComingSoon(false)}
+              className="mt-6 w-full rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ─── FOOTER ─── */}
       <footer className="border-t border-[var(--ud-border-subtle)] bg-[#111111]">

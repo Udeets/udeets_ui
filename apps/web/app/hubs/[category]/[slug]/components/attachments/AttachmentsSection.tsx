@@ -15,6 +15,10 @@ export function AttachmentsSection({
   onOpenGalleryUpload,
   galleryInputRef,
   onGalleryChange,
+  fileInputRef,
+  onFileChange,
+  onOpenFileUpload,
+  isUploadingFile,
 }: {
   activeAttachmentView: "photos" | "files";
   recentPhotos: string[];
@@ -26,6 +30,10 @@ export function AttachmentsSection({
   onOpenGalleryUpload?: () => void;
   galleryInputRef?: React.RefObject<HTMLInputElement | null>;
   onGalleryChange?: React.ChangeEventHandler<HTMLInputElement>;
+  fileInputRef?: React.RefObject<HTMLInputElement | null>;
+  onFileChange?: React.ChangeEventHandler<HTMLInputElement>;
+  onOpenFileUpload?: () => void;
+  isUploadingFile?: boolean;
 }) {
   return (
     <SectionShell
@@ -47,11 +55,17 @@ export function AttachmentsSection({
           >
             {isUploadingGallery ? <><Loader2 className="h-3 w-3 animate-spin" /> Uploading</> : <><Plus className="h-3 w-3" /> Add Photos</>}
           </button>
+          {fileInputRef ? <input ref={fileInputRef} type="file" multiple onChange={onFileChange} className="hidden" /> : null}
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-3 py-1.5 text-xs font-medium text-[var(--ud-text-secondary)] transition hover:border-[var(--ud-brand-primary)] hover:text-[var(--ud-brand-primary)]"
+            onClick={onOpenFileUpload}
+            disabled={isUploadingFile}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-3 py-1.5 text-xs font-medium text-[var(--ud-text-secondary)] transition hover:border-[var(--ud-brand-primary)] hover:text-[var(--ud-brand-primary)]",
+              isUploadingFile && "cursor-not-allowed opacity-60"
+            )}
           >
-            <Plus className="h-3 w-3" /> Add Files
+            {isUploadingFile ? <><Loader2 className="h-3 w-3 animate-spin" /> Uploading</> : <><Plus className="h-3 w-3" /> Add Files</>}
           </button>
         </div>
       )}

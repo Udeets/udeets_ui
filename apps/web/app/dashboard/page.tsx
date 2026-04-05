@@ -88,6 +88,31 @@ function formatDeetTime(createdAt: string) {
   return new Date(createdAt).toLocaleDateString();
 }
 
+/** Type-only labels that shouldn't be shown as prominent titles */
+const GENERIC_TITLE_LABELS = new Set(["Deet", "Notice", "Photo", "Event", "File", "News", "Deal", "Hazard", "Alert"]);
+
+function isGenericTitle(title: string | null | undefined): boolean {
+  if (!title) return true;
+  return GENERIC_TITLE_LABELS.has(title.trim());
+}
+
+function sanitizeHtmlContent(html: string): string {
+  if (typeof document === "undefined") return html;
+  const div = document.createElement("div");
+  div.innerHTML = html;
+  const scripts = div.querySelectorAll("script");
+  scripts.forEach((script) => script.remove());
+  const allElements = div.querySelectorAll("*");
+  allElements.forEach((el) => {
+    Array.from(el.attributes).forEach((attr) => {
+      if (attr.name.startsWith("on")) {
+        el.removeAttribute(attr.name);
+      }
+    });
+  });
+  return div.innerHTML;
+}
+
 function deetRecordToDashboardItem(item: DeetRecord): FeedItem {
   const card = mapDeetToDashboardCard(item);
 
@@ -967,8 +992,8 @@ function DashboardPageContent() {
                                   <p className="text-xs text-[var(--ud-text-muted)]">Posted by: Hub Member</p>
                                 </div>
                               </div>
-                              {item.title ? <h3 className={cn("mt-3 text-base font-semibold tracking-tight", TEXT_DARK)}>{item.title}</h3> : null}
-                              {item.body ? <p className={cn("mt-1 text-sm leading-6", TEXT_MUTED)}>{item.body}</p> : null}
+                              {item.title && !isGenericTitle(item.title) ? <h3 className={cn("mt-3 text-base font-semibold tracking-tight", TEXT_DARK)}>{item.title}</h3> : null}
+                              {item.body ? <div className={cn("mt-1 text-sm leading-6", TEXT_MUTED)} dangerouslySetInnerHTML={{ __html: sanitizeHtmlContent(item.body) }} /> : null}
                               <DashboardDeetImage src={item.previewImage || item.previewImages[0]} alt={item.title} />
                             </Link>
                           ) : (
@@ -985,8 +1010,8 @@ function DashboardPageContent() {
                                   <p className="text-xs text-[var(--ud-text-muted)]">Posted by: Hub Member</p>
                                 </div>
                               </div>
-                              {item.title ? <h3 className={cn("mt-3 text-base font-semibold tracking-tight", TEXT_DARK)}>{item.title}</h3> : null}
-                              {item.body ? <p className={cn("mt-1 text-sm leading-6", TEXT_MUTED)}>{item.body}</p> : null}
+                              {item.title && !isGenericTitle(item.title) ? <h3 className={cn("mt-3 text-base font-semibold tracking-tight", TEXT_DARK)}>{item.title}</h3> : null}
+                              {item.body ? <div className={cn("mt-1 text-sm leading-6", TEXT_MUTED)} dangerouslySetInnerHTML={{ __html: sanitizeHtmlContent(item.body) }} /> : null}
                               <DashboardDeetImage src={item.previewImage || item.previewImages[0]} alt={item.title} />
                             </div>
                           )}
