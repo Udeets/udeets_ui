@@ -93,7 +93,7 @@ function resolveHubFeedItemKind(card: ReturnType<typeof mapDeetToDashboardCard>,
   if (card.sourceType === "poll") return "poll";
   if (card.type === "Photos" || card.isMediaLike) return "photo";
   if (card.attachmentCount > 0 && !hasImage) return "file";
-  return "announcement";
+  return "post";
 }
 
 function defaultFeedLabel(kind: HubFeedItemKind) {
@@ -102,5 +102,6 @@ function defaultFeedLabel(kind: HubFeedItemKind) {
   if (kind === "event") return "Event";
   if (kind === "poll") return "Poll";
   if (kind === "file") return "File";
+  if (kind === "post") return "Post";
   return "Deet";
 }

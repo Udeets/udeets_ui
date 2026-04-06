@@ -822,7 +822,7 @@ function DashboardPageContent() {
             <section className={cn(CARD, "p-4 sm:p-5")}>
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className={cn("text-2xl font-semibold tracking-tight", TEXT_DARK)}>My Deets</h2>
+                  <h2 className={cn("text-2xl font-semibold tracking-tight", TEXT_DARK)}>My Posts</h2>
                 </div>
 
                 <div className="relative flex items-center gap-2">

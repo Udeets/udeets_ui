@@ -15,10 +15,12 @@ import {
   Megaphone,
   MessageSquare,
   MoreVertical,
+  Pencil,
   Search,
   Send,
   Share2,
   SmilePlus,
+  Trash2,
 } from "lucide-react";
 import type { HubFeedItemAttachment } from "@/lib/hub-content";
 import { useEffect, useRef, useState } from "react";
@@ -27,6 +29,7 @@ import { ImageWithFallback, cn, initials } from "../hubUtils";
 import { SectionShell } from "../SectionShell";
 import type { ComposerChildFlow } from "../deets/deetTypes";
 import type { DeetComment } from "@/lib/services/deets/deet-interactions";
+import { deleteDeet } from "@/lib/services/deets/delete-deet";
 
 function sanitizeHtmlContent(html: string): string {
   const div = document.createElement("div");
@@ -467,8 +470,10 @@ export function DeetsSection({
   hubSlug,
   userAvatarSrc,
   userName,
+  currentUserId,
   onOpenComposer,
   onOpenViewer,
+  onDeleteDeet,
   likedDeetIds,
   likingDeetIds,
   likeCountOverrides,
@@ -506,8 +511,10 @@ export function DeetsSection({
   hubSlug: string;
   userAvatarSrc?: string;
   userName?: string;
+  currentUserId?: string;
   onOpenComposer: (child?: ComposerChildFlow | null) => void;
   onOpenViewer: (images: string[], index: number, title: string, body: string, focusId?: string) => void;
+  onDeleteDeet?: (deetId: string) => void;
   likedDeetIds?: Set<string>;
   likingDeetIds?: Set<string>;
   likeCountOverrides?: Record<string, number>;
@@ -526,7 +533,22 @@ export function DeetsSection({
   const [openMenuDeetId, setOpenMenuDeetId] = useState<string | null>(null);
   const [isNoticeExpanded, setIsNoticeExpanded] = useState(false);
   const [copiedDeetId, setCopiedDeetId] = useState<string | null>(null);
+  const [deletingDeetId, setDeletingDeetId] = useState<string | null>(null);
+  const [confirmDeleteDeetId, setConfirmDeleteDeetId] = useState<string | null>(null);
   const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleDeleteDeet = async (deetId: string) => {
+    setDeletingDeetId(deetId);
+    try {
+      await deleteDeet(deetId);
+      onDeleteDeet?.(deetId);
+    } catch (err) {
+      console.error("Failed to delete post:", err);
+    } finally {
+      setDeletingDeetId(null);
+      setConfirmDeleteDeetId(null);
+    }
+  };
 
   const handleShareDeet = async (deetId: string) => {
     const shareUrl = `${window.location.origin}/hubs/${hubCategory}/${hubSlug}?focus=${deetId}`;
@@ -871,24 +893,54 @@ export function DeetsSection({
                       <MoreVertical className="h-[18px] w-[18px] stroke-[1.5]" />
                     </button>
                     {openMenuDeetId === item.id && (
-                      <div className="absolute right-0 top-9 z-20 min-w-[140px] rounded-xl border border-[var(--ud-border)] bg-[var(--ud-bg-card)] p-1.5 shadow-lg">
+                      <div className="absolute right-0 top-9 z-20 min-w-[160px] rounded-xl border border-[var(--ud-border)] bg-[var(--ud-bg-card)] p-1.5 shadow-lg">
                         <button
                           type="button"
                           onClick={() => {
                             handleShareDeet(item.id);
                             setOpenMenuDeetId(null);
                           }}
-                          className="flex w-full items-center rounded-lg px-3 py-2 text-sm text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)]"
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)]"
                         >
+                          <Share2 className="h-3.5 w-3.5" />
                           Copy link
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setOpenMenuDeetId(null)}
-                          className="flex w-full items-center rounded-lg px-3 py-2 text-sm text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)]"
-                        >
-                          Report
-                        </button>
+                        {(currentUserId === item.authorId || isCreatorAdmin) && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenMenuDeetId(null);
+                                onOpenComposer(null);
+                                // TODO: open composer in edit mode with this deet's data
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)]"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenMenuDeetId(null);
+                                setConfirmDeleteDeetId(item.id);
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 transition hover:bg-red-50"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Delete
+                            </button>
+                          </>
+                        )}
+                        {currentUserId !== item.authorId && !isCreatorAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => setOpenMenuDeetId(null)}
+                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)]"
+                          >
+                            Report
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1032,6 +1084,39 @@ export function DeetsSection({
               </article>
             ))}
           </section>
+        </div>
+      )}
+
+      {/* ── Delete confirmation modal ── */}
+      {confirmDeleteDeetId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-sm rounded-2xl border border-[var(--ud-border)] bg-[var(--ud-bg-card)] p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-[var(--ud-text-primary)]">Delete post?</h3>
+            <p className="mt-2 text-sm text-[var(--ud-text-secondary)]">
+              This action cannot be undone. The post and all its comments will be permanently removed.
+            </p>
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteDeetId(null)}
+                disabled={!!deletingDeetId}
+                className="rounded-xl px-4 py-2 text-sm font-medium text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteDeet(confirmDeleteDeetId)}
+                disabled={!!deletingDeetId}
+                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-50"
+              >
+                {deletingDeetId === confirmDeleteDeetId && (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                )}
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </SectionShell>

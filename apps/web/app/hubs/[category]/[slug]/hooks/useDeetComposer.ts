@@ -247,7 +247,7 @@ export function useDeetComposer({
         alert: "Alert",
       };
       const resolvedKind = (deetSettings.noticeEnabled ? "Notices" : postTypeToKind[deetSettings.postType] || "Posts") as import("@/lib/services/deets/deet-types").DeetKind;
-      const resolvedTitle = deetSettings.noticeEnabled ? "Notice" : postTypeToTitle[deetSettings.postType] || "Deet";
+      const fallbackTitle = deetSettings.noticeEnabled ? "Notice" : postTypeToTitle[deetSettings.postType] || "Deet";
 
       // Build body from attached items if the main editor is empty
       let rawBody = trimmedText;
@@ -263,6 +263,14 @@ export function useDeetComposer({
       if (!rawBody && newestSticker?.detail) {
         rawBody = newestSticker.detail;
       }
+
+      // Derive a meaningful title from the content instead of using a generic type name
+      const contentForTitle = trimmedText
+        || finalAttachments.find((a) => a.title)?.title
+        || "";
+      const resolvedTitle = contentForTitle
+        ? contentForTitle.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 100)
+        : fallbackTitle;
 
       // Sanitize the HTML content before saving
       const sanitizedBody = sanitizeHtml(rawBody || "");

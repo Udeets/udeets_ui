@@ -512,7 +512,7 @@ export default function ProfilePage() {
           {activeTab === "My Posts" ? (
             <section className={cardClass("p-6 sm:p-8")}>
               <h2 className={sectionTitleClass()}>My Posts</h2>
-              <p className="mt-1 mb-5 text-sm text-slate-500">Deets you have posted across your hubs.</p>
+              <p className="mt-1 mb-5 text-sm text-slate-500">Posts you have shared across your hubs.</p>
               {isLoadingDeets ? (
                 <div className="flex items-center gap-2 py-8 text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Loading posts...</div>
               ) : userDeets.length === 0 ? (
@@ -527,8 +527,22 @@ export default function ProfilePage() {
                         <span className="rounded-full bg-[var(--ud-brand-light)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--ud-brand-primary)]">{deet.hubName}</span>
                         <span className="text-xs text-slate-400">{formatTimeAgo(deet.createdAt)}</span>
                       </div>
-                      {deet.title ? <p className="mt-2 text-sm font-semibold text-[var(--ud-text-primary)]">{deet.title}</p> : null}
-                      {deet.body ? <p className="mt-1 line-clamp-2 text-sm text-slate-600">{deet.body}</p> : null}
+                      {(() => {
+                        const genericTitles = new Set(["Deet", "Notice", "News", "Deal", "Hazard", "Alert", "Photo"]);
+                        const cleanBody = deet.body ? deet.body.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim() : "";
+                        const displayTitle = deet.title && !genericTitles.has(deet.title) ? deet.title : "";
+                        const titleFromBody = !displayTitle && cleanBody ? cleanBody.slice(0, 100) : "";
+                        return (
+                          <>
+                            {(displayTitle || titleFromBody) && (
+                              <p className="mt-2 text-sm font-semibold text-[var(--ud-text-primary)]">{displayTitle || titleFromBody}</p>
+                            )}
+                            {cleanBody && displayTitle && (
+                              <p className="mt-1 line-clamp-2 text-sm text-slate-600">{cleanBody}</p>
+                            )}
+                          </>
+                        );
+                      })()}
                     </article>
                   ))}
                 </div>

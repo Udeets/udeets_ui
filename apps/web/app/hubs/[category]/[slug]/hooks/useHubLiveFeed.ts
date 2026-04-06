@@ -56,8 +56,15 @@ export function useHubLiveFeed(hubId: string, hubCreatorId?: string) {
     });
   }, [hubCreatorId]);
 
+  const removeDeet = useCallback((deetId: string) => {
+    startTransition(() => {
+      setLiveFeedItems((current) => current.filter((item) => item.id !== deetId));
+    });
+  }, []);
+
   return {
     liveFeedItems,
     prependCreatedDeet,
+    removeDeet,
   };
 }

@@ -174,11 +174,17 @@ export default function AlertsPageClient() {
                   </Link>
                   <span className="text-xs text-[var(--ud-text-muted)]">{alert.time}</span>
                 </div>
-                <h2 className="mt-3 text-lg font-semibold text-[var(--ud-text-primary)]">{alert.title}</h2>
+                <h2 className="mt-3 text-lg font-semibold text-[var(--ud-text-primary)]">
+                  {alert.title && alert.title !== "Notice" && alert.title !== "Untitled Alert"
+                    ? alert.title
+                    : alert.body
+                      ? alert.body.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 80) || badge.label
+                      : badge.label}
+                </h2>
                 <p className="mt-1 text-sm font-medium text-[var(--ud-text-muted)]">{alert.source}</p>
                 {alert.body && (
                   <p className="mt-2 text-sm leading-relaxed text-[var(--ud-text-secondary)] line-clamp-3">
-                    {alert.body.replace(/<[^>]*>/g, "")}
+                    {alert.body.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()}
                   </p>
                 )}
               </article>

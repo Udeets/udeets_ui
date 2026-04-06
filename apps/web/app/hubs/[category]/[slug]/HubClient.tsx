@@ -294,7 +294,7 @@ export default function HubClient({
     loadAttachmentPhotos();
   }, [hub.id]);
 
-  const { liveFeedItems, prependCreatedDeet } = useHubLiveFeed(hub.id, hub.createdBy);
+  const { liveFeedItems, prependCreatedDeet, removeDeet } = useHubLiveFeed(hub.id, hub.createdBy);
   const {
     savedHubName,
     savedHubCategory,
@@ -982,8 +982,10 @@ export default function HubClient({
         hubSlug={hub.slug}
         userAvatarSrc={currentUserAvatarSrc}
         userName={creatorDisplayName}
+        currentUserId={user?.id}
         onOpenComposer={openDeetComposer}
         onOpenViewer={openViewer}
+        onDeleteDeet={removeDeet}
         likedDeetIds={likedDeetIds}
         likingDeetIds={likingDeetIds}
         likeCountOverrides={likeCountOverrides}
