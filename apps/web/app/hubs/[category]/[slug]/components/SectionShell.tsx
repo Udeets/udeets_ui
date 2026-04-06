@@ -14,7 +14,7 @@ export function SectionShell({
   children: React.ReactNode;
 }) {
   return (
-    <section className={cn("w-full min-w-0 overflow-hidden rounded-2xl border border-[var(--ud-border)] bg-[var(--ud-bg-card)] p-3 sm:p-5 md:p-6")}>
+    <section className={cn("w-full min-w-0 overflow-x-clip rounded-2xl border border-[var(--ud-border)] bg-[var(--ud-bg-card)] p-3 sm:p-5 md:p-6")}>
       <div className="flex w-full min-w-0 flex-wrap items-start justify-between gap-3 pb-4">
         <div className="min-w-0 flex-1">
           <h2 className="text-lg font-semibold tracking-tight text-[var(--ud-text-primary)]">{title}</h2>
