@@ -35,7 +35,7 @@ export function useHubSettingsFlow({
   const [whoCanPost, setWhoCanPost] = useState("Admins and members");
   const [whoCanUpload, setWhoCanUpload] = useState("Admins and members");
   const [savedAccentColor, setSavedAccentColor] = useState<HubColorThemeKey>(
-    ((hub as unknown as Record<string, unknown>).accent_color as HubColorThemeKey | undefined) || "teal"
+    (hub.accentColor as HubColorThemeKey | undefined) || "teal"
   );
   const [settingsAccentColor, setSettingsAccentColor] = useState<HubColorThemeKey>(savedAccentColor);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
@@ -59,7 +59,7 @@ export function useHubSettingsFlow({
       "discoverable" in hub ? Boolean((hub as HubRecord & { discoverable?: boolean }).discoverable) : true
     );
     setApprovalSetting(hub.visibility === "Private" ? "Required" : "Open");
-    const hubAccent = ((hub as unknown as Record<string, unknown>).accent_color as HubColorThemeKey | undefined) || "teal";
+    const hubAccent = (hub.accentColor as HubColorThemeKey | undefined) || "teal";
     setSavedAccentColor(hubAccent);
     setSettingsAccentColor(hubAccent);
     setSettingsSaveError(null);
@@ -110,7 +110,7 @@ export function useHubSettingsFlow({
       setSettingsHubName(updatedHub.name);
       setSavedHubCategory(updatedHub.category);
       setSettingsCategory(updatedHub.category);
-      const newAccent = ((updatedHub as unknown as Record<string, unknown>).accent_color as HubColorThemeKey | undefined) || "teal";
+      const newAccent = (settingsAccentColor as HubColorThemeKey) || "teal";
       setSavedAccentColor(newAccent);
       setSettingsAccentColor(newAccent);
       setSettingsSaveSuccess("Hub settings saved.");

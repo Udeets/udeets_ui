@@ -525,6 +525,38 @@ export function DeetsSection({
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [openMenuDeetId, setOpenMenuDeetId] = useState<string | null>(null);
   const [isNoticeExpanded, setIsNoticeExpanded] = useState(false);
+  const [copiedDeetId, setCopiedDeetId] = useState<string | null>(null);
+  const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleShareDeet = async (deetId: string) => {
+    const shareUrl = `${window.location.origin}/hubs/${hubCategory}/${hubSlug}?focus=${deetId}`;
+    // Use native share on mobile when available
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ title: hubName, url: shareUrl });
+        return;
+      } catch {
+        // User cancelled or share failed — fall through to clipboard
+      }
+    }
+    // Clipboard fallback
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+    } catch {
+      // Fallback for older browsers / insecure contexts
+      const textarea = document.createElement("textarea");
+      textarea.value = shareUrl;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+    setCopiedDeetId(deetId);
+    if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+    copiedTimeoutRef.current = setTimeout(() => setCopiedDeetId(null), 2000);
+  };
 
   /* Handle sort change — route through existing feedFilter prop */
   const handleSortChange = (option: SortOption) => {
@@ -843,8 +875,7 @@ export function DeetsSection({
                         <button
                           type="button"
                           onClick={() => {
-                            const shareUrl = `${window.location.origin}/hubs/${hubCategory}/${hubSlug}?focus=${item.id}`;
-                            navigator.clipboard.writeText(shareUrl).catch(() => {});
+                            handleShareDeet(item.id);
                             setOpenMenuDeetId(null);
                           }}
                           className="flex w-full items-center rounded-lg px-3 py-2 text-sm text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)]"
@@ -970,17 +1001,19 @@ export function DeetsSection({
                     )}
                   </button>
 
-                  {/* Share button — copies post URL to clipboard */}
+                  {/* Share button — native share on mobile, clipboard copy on desktop */}
                   <button
                     type="button"
-                    onClick={() => {
-                      const shareUrl = `${window.location.origin}/hubs/${hubCategory}/${hubSlug}?focus=${item.id}`;
-                      navigator.clipboard.writeText(shareUrl).catch(() => {});
-                    }}
-                    className="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm text-[var(--ud-text-muted)] transition-colors hover:bg-[var(--ud-bg-subtle)]"
+                    onClick={() => handleShareDeet(item.id)}
+                    className={cn(
+                      "flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]",
+                      copiedDeetId === item.id
+                        ? "text-[var(--ud-brand-primary)] font-medium"
+                        : "text-[var(--ud-text-muted)]"
+                    )}
                   >
                     <Share2 className={POST_ICON} />
-                    <span>Share</span>
+                    <span>{copiedDeetId === item.id ? "Copied!" : "Share"}</span>
                   </button>
                 </div>
 

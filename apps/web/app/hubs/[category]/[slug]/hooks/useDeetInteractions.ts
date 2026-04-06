@@ -45,9 +45,16 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
   }, [feedItems]);
 
   const handleToggleLike = useCallback(async (deetId: string) => {
-    if (likingDeetIds.has(deetId)) return;
-
-    setLikingDeetIds((prev) => new Set(prev).add(deetId));
+    // Use functional check to avoid stale closure on likingDeetIds
+    let alreadyLiking = false;
+    setLikingDeetIds((prev) => {
+      if (prev.has(deetId)) {
+        alreadyLiking = true;
+        return prev;
+      }
+      return new Set(prev).add(deetId);
+    });
+    if (alreadyLiking) return;
 
     try {
       const result = await toggleDeetLike(deetId);
@@ -67,40 +74,79 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
         return next;
       });
     }
-  }, [likingDeetIds]);
+  }, []);
 
   const handleToggleComments = useCallback(async (deetId: string) => {
-    if (expandedCommentDeetId === deetId) {
-      // Close comments
-      setExpandedCommentDeetId(null);
-    } else {
-      // Open comments — load them if not already cached
-      setExpandedCommentDeetId(deetId);
-      if (!commentsByDeetId[deetId] && !commentLoadingDeetIds.has(deetId)) {
-        setCommentLoadingDeetIds((prev) => new Set(prev).add(deetId));
-        try {
-          const comments = await listDeetComments(deetId);
-          setCommentsByDeetId((prev) => ({
-            ...prev,
-            [deetId]: comments,
-          }));
-        } catch (error) {
-          console.error("Failed to load comments:", error);
-        } finally {
-          setCommentLoadingDeetIds((prev) => {
-            const next = new Set(prev);
-            next.delete(deetId);
-            return next;
-          });
-        }
+    // Use refs via setState to avoid stale closure on expandedCommentDeetId
+    setExpandedCommentDeetId((prev) => {
+      if (prev === deetId) return null; // Close if already open
+      return deetId; // Open
+    });
+
+    // Load comments if not cached
+    setCommentsByDeetId((prevComments) => {
+      if (prevComments[deetId]) return prevComments; // Already cached
+
+      // Kick off fetch (fire-and-forget from within setState, actual fetch below)
+      return prevComments;
+    });
+
+    // Check cache and loading via functional updates to avoid stale refs
+    let shouldLoad = false;
+    setCommentLoadingDeetIds((prev) => {
+      // Only proceed to load if not already loading
+      if (prev.has(deetId)) return prev;
+      shouldLoad = true;
+      return new Set(prev).add(deetId);
+    });
+
+    if (!shouldLoad) return;
+
+    // Check if already cached before fetching
+    let alreadyCached = false;
+    setCommentsByDeetId((prev) => {
+      if (prev[deetId]) {
+        alreadyCached = true;
+        // Also clear loading flag
+        setCommentLoadingDeetIds((loadPrev) => {
+          const next = new Set(loadPrev);
+          next.delete(deetId);
+          return next;
+        });
       }
+      return prev;
+    });
+    if (alreadyCached) return;
+
+    try {
+      const comments = await listDeetComments(deetId);
+      setCommentsByDeetId((prev) => ({
+        ...prev,
+        [deetId]: comments,
+      }));
+    } catch (error) {
+      console.error("Failed to load comments:", error);
+    } finally {
+      setCommentLoadingDeetIds((prev) => {
+        const next = new Set(prev);
+        next.delete(deetId);
+        return next;
+      });
     }
-  }, [expandedCommentDeetId, commentsByDeetId, commentLoadingDeetIds]);
+  }, []);
 
   const handleSubmitComment = useCallback(async (deetId: string, body: string) => {
-    if (commentSubmittingDeetId) return;
+    // Use functional check to avoid stale closure
+    let alreadySubmitting = false;
+    setCommentSubmittingDeetId((prev) => {
+      if (prev) {
+        alreadySubmitting = true;
+        return prev;
+      }
+      return deetId;
+    });
+    if (alreadySubmitting) return;
 
-    setCommentSubmittingDeetId(deetId);
     try {
       const newComment = await addDeetComment(deetId, body);
       setCommentsByDeetId((prev) => {
@@ -115,7 +161,7 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
     } finally {
       setCommentSubmittingDeetId(null);
     }
-  }, [commentSubmittingDeetId]);
+  }, []);
 
   return {
     likedDeetIds,

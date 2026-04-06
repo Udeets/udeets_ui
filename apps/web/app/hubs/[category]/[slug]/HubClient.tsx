@@ -1720,6 +1720,7 @@ export default function HubClient({
           hubName={hubName}
           hubSlug={hub.slug}
           hubCategory={hub.category}
+          hubId={hub.id}
           onClose={() => setIsInviteModalOpen(false)}
         />
       ) : null}
