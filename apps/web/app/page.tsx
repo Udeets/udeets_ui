@@ -8,6 +8,7 @@ import {
   Calendar,
   ChevronDown,
   Church,
+  Download,
   Dumbbell,
   Globe,
   Home,
@@ -16,10 +17,12 @@ import {
   MessageSquare,
   PawPrint,
   Shield,
+  Smartphone,
   Sparkles,
   Store,
   Users,
   UtensilsCrossed,
+  X,
   Zap,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -469,6 +472,7 @@ export default function Page() {
   const [pauseAutoScroll, setPauseAutoScroll] = useState(false);
   const [topHubs, setTopHubs] = useState<TopHub[]>([]);
   const [showAppComingSoon, setShowAppComingSoon] = useState(false);
+  const [showDownloadPopup, setShowDownloadPopup] = useState(false);
 
   useEffect(() => {
     const el = hubsRowRef.current;
@@ -509,11 +513,30 @@ export default function Page() {
       {/* ─── HEADER ─── */}
       <header className="sticky top-0 z-50 border-b border-[var(--ud-border-subtle)] bg-[var(--ud-bg-page)]/80 backdrop-blur-lg">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
-          {/* Left: Logo + nav links */}
+          {/* Left: Logo + Download + nav links */}
           <div className="flex items-center gap-1 sm:gap-2">
-            <Link href="/" className="flex items-center gap-2 mr-4">
+            <Link href="/" className="flex items-center gap-2 mr-2 sm:mr-4">
               <UdeetsBrandLockup textClassName="text-xl sm:text-2xl" priority />
             </Link>
+
+            {/* Download button — text on desktop, icon on mobile */}
+            <button
+              type="button"
+              onClick={() => setShowDownloadPopup(true)}
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-[var(--ud-brand-primary)] transition hover:bg-[var(--ud-brand-light)]"
+            >
+              <Download className="h-4 w-4 stroke-[2]" />
+              Download
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowDownloadPopup(true)}
+              className="sm:hidden inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--ud-brand-primary)] transition hover:bg-[var(--ud-brand-light)]"
+              aria-label="Download app"
+              title="Download"
+            >
+              <Download className="h-5 w-5 stroke-[2]" />
+            </button>
 
             <nav className="hidden items-center gap-0.5 md:flex">
               <Link
@@ -577,23 +600,6 @@ export default function Page() {
 
           <div className="relative mx-auto max-w-7xl px-4 pb-20 pt-20 sm:px-6 sm:pb-28 sm:pt-28 lg:px-10 lg:pb-32 lg:pt-32">
             <div className="mx-auto max-w-3xl text-center">
-              <div className="mb-6 flex items-center justify-center">
-                <button
-                  type="button"
-                  onClick={() => setShowAppComingSoon(true)}
-                  className="inline-flex flex-col items-center gap-1.5 rounded-xl bg-[#111111] px-8 py-3 text-white transition hover:bg-[#222222]"
-                >
-                  <span className="text-lg font-semibold tracking-tight">Download</span>
-                  <div className="flex items-center gap-3">
-                    {/* Apple icon */}
-                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" /></svg>
-                    <span className="text-xs text-white/50">|</span>
-                    {/* Android icon */}
-                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor"><path d="M17.523 2.306a.4.4 0 0 0-.544.152L15.2 5.478a8.24 8.24 0 0 0-3.2-.638 8.24 8.24 0 0 0-3.2.638L7.021 2.458a.4.4 0 1 0-.696.392L8.08 5.82A7.6 7.6 0 0 0 4 12.16h16a7.6 7.6 0 0 0-4.08-6.34l1.755-2.97a.4.4 0 0 0-.152-.544zM9 10a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm6 0a1 1 0 1 1 0-2 1 1 0 0 1 0 2zM4 13v7a1 1 0 0 0 1 1h1v2.5a1.5 1.5 0 0 0 3 0V21h6v2.5a1.5 1.5 0 0 0 3 0V21h1a1 1 0 0 0 1-1v-7zm-2.5 0a1.5 1.5 0 0 0-1.5 1.5v4a1.5 1.5 0 0 0 3 0v-4A1.5 1.5 0 0 0 1.5 13zm21 0a1.5 1.5 0 0 0-1.5 1.5v4a1.5 1.5 0 0 0 3 0v-4a1.5 1.5 0 0 0-1.5-1.5z" /></svg>
-                  </div>
-                </button>
-              </div>
-
               <h1 className="text-5xl font-semibold leading-[1.1] tracking-tight text-[var(--ud-text-primary)] sm:text-6xl lg:text-7xl">
                 Deets that matter.
                 <br />
@@ -873,7 +879,7 @@ export default function Page() {
         </section>
       </main>
 
-      {/* ─── App Coming Soon Modal ─── */}
+      {/* ─── App Coming Soon Modal (legacy) ─── */}
       {showAppComingSoon && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4" onClick={() => setShowAppComingSoon(false)}>
           <div className="w-full max-w-sm rounded-2xl bg-[var(--ud-bg-card)] p-8 text-center shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -891,6 +897,61 @@ export default function Page() {
             >
               Got it
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Download Platform Popup ─── */}
+      {showDownloadPopup && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4" onClick={() => setShowDownloadPopup(false)}>
+          <div className="w-full max-w-xs rounded-2xl bg-[var(--ud-bg-card)] shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-[var(--ud-border-subtle)] px-5 py-4">
+              <div className="flex items-center gap-2">
+                <Smartphone className="h-5 w-5 text-[var(--ud-brand-primary)]" />
+                <h3 className="text-base font-semibold text-[var(--ud-text-primary)]">Download uDeets</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDownloadPopup(false)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Platform choices */}
+            <div className="p-4 space-y-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDownloadPopup(false);
+                  setShowAppComingSoon(true);
+                }}
+                className="flex w-full items-center gap-3 rounded-xl border border-[var(--ud-border)] px-4 py-3 text-left transition hover:border-[var(--ud-brand-primary)] hover:bg-[var(--ud-brand-light)]/50"
+              >
+                <svg viewBox="0 0 24 24" className="h-7 w-7 shrink-0 text-[var(--ud-text-primary)]" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" /></svg>
+                <div>
+                  <span className="text-sm font-semibold text-[var(--ud-text-primary)]">iOS</span>
+                  <p className="text-xs text-[var(--ud-text-muted)]">Download on the App Store</p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDownloadPopup(false);
+                  setShowAppComingSoon(true);
+                }}
+                className="flex w-full items-center gap-3 rounded-xl border border-[var(--ud-border)] px-4 py-3 text-left transition hover:border-[var(--ud-brand-primary)] hover:bg-[var(--ud-brand-light)]/50"
+              >
+                <svg viewBox="0 0 24 24" className="h-7 w-7 shrink-0 text-[var(--ud-text-primary)]" fill="currentColor"><path d="M17.523 2.306a.4.4 0 0 0-.544.152L15.2 5.478a8.24 8.24 0 0 0-3.2-.638 8.24 8.24 0 0 0-3.2.638L7.021 2.458a.4.4 0 1 0-.696.392L8.08 5.82A7.6 7.6 0 0 0 4 12.16h16a7.6 7.6 0 0 0-4.08-6.34l1.755-2.97a.4.4 0 0 0-.152-.544zM9 10a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm6 0a1 1 0 1 1 0-2 1 1 0 0 1 0 2zM4 13v7a1 1 0 0 0 1 1h1v2.5a1.5 1.5 0 0 0 3 0V21h6v2.5a1.5 1.5 0 0 0 3 0V21h1a1 1 0 0 0 1-1v-7zm-2.5 0a1.5 1.5 0 0 0-1.5 1.5v4a1.5 1.5 0 0 0 3 0v-4A1.5 1.5 0 0 0 1.5 13zm21 0a1.5 1.5 0 0 0-1.5 1.5v4a1.5 1.5 0 0 0 3 0v-4a1.5 1.5 0 0 0-1.5-1.5z" /></svg>
+                <div>
+                  <span className="text-sm font-semibold text-[var(--ud-text-primary)]">Android</span>
+                  <p className="text-xs text-[var(--ud-text-muted)]">Get it on Google Play</p>
+                </div>
+              </button>
+            </div>
           </div>
         </div>
       )}
