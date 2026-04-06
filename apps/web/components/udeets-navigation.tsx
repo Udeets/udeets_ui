@@ -17,7 +17,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
 import { useTheme } from "@/components/theme-provider";
-import { HOME_EVENTS, HOME_NOTIFICATIONS } from "@/lib/hub-content";
+import type { HubNotificationItem, HubEventItem } from "@/lib/hub-content";
 import { isUdeetsLogoSrc, UDEETS_LOGO_SRC } from "@/lib/branding";
 import { can } from "@/lib/roles";
 import { usePlatformRole } from "@/hooks/useUserRole";
@@ -110,11 +110,11 @@ function NavIconLink({
   );
 }
 
-function NotificationsPanel() {
+function NotificationsPanel({ notifications }: { notifications: HubNotificationItem[] }) {
   const searchParams = useSearchParams();
   const [activeFilter, setActiveFilter] = useState<(typeof FILTERS)[number]>("All");
   const isDemoPreview = searchParams.get("demo_preview") === "1";
-  const filteredItems = HOME_NOTIFICATIONS.filter((item) => activeFilter === "All" || item.type === activeFilter);
+  const filteredItems = notifications.filter((item) => activeFilter === "All" || item.type === activeFilter);
 
   return (
     <div
@@ -195,15 +195,15 @@ function NotificationsPanel() {
   );
 }
 
-function EventsPanel() {
+function EventsPanel({ events }: { events: HubEventItem[] }) {
   const [activeFilter, setActiveFilter] = useState<(typeof EVENT_FILTERS)[number]>("Today");
-  const filteredGroups = HOME_EVENTS.filter((event) => {
+  const filteredGroups = events.filter((event) => {
     if (activeFilter === "Today") return event.group === "Today";
     if (activeFilter === "Tomorrow") return event.group === "Tomorrow";
     if (activeFilter === "This Week") return event.group === "This Week";
     if (activeFilter === "My Hubs") return event.badge === "My Hubs";
     return event.badge === "Saved";
-  }).reduce<Record<string, typeof HOME_EVENTS>>((acc, event) => {
+  }).reduce<Record<string, HubEventItem[]>>((acc, event) => {
     acc[event.group] ||= [];
     acc[event.group].push(event);
     return acc;
@@ -412,6 +412,235 @@ function UdeetsHeaderContent() {
   }, [user?.id]);
   const resolvedAvatarUrl = profileData?.avatarUrl || (user?.user_metadata?.avatar_url as string) || "";
 
+  // ── Live notifications & events from Supabase ──
+  const [liveNotifications, setLiveNotifications] = useState<HubNotificationItem[]>([]);
+  const [liveEvents, setLiveEvents] = useState<HubEventItem[]>([]);
+  const [headerRefreshKey, setHeaderRefreshKey] = useState(0);
+
+  // Subscribe to deet/event changes so header refreshes when new data arrives
+  useEffect(() => {
+    if (!user?.id) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let channel: any = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let supabaseRef: any = null;
+
+    (async () => {
+      const { createClient: createSupa } = await import("@/lib/supabase/client");
+      supabaseRef = createSupa();
+      channel = supabaseRef
+        .channel("header-deets-live")
+        .on("postgres_changes", { event: "*", schema: "public", table: "deets" }, () => {
+          setHeaderRefreshKey((k) => k + 1);
+        })
+        .on("postgres_changes", { event: "*", schema: "public", table: "events" }, () => {
+          setHeaderRefreshKey((k) => k + 1);
+        })
+        .subscribe();
+    })();
+
+    return () => {
+      if (channel && supabaseRef) {
+        void supabaseRef.removeChannel(channel);
+      }
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setLiveNotifications([]);
+      setLiveEvents([]);
+      return;
+    }
+
+    let ignore = false;
+
+    (async () => {
+      try {
+        const { createClient: createSupa } = await import("@/lib/supabase/client");
+        const supabase = createSupa();
+
+        // 1. Get user's hub memberships
+        const { data: memberships } = await supabase
+          .from("hub_members")
+          .select("hub_id, role, status")
+          .eq("user_id", user.id);
+
+        const activeHubIds = (memberships ?? [])
+          .filter((m: { status: string }) => m.status === "active")
+          .map((m: { hub_id: string }) => m.hub_id);
+
+        if (!activeHubIds.length || ignore) return;
+
+        // 2. Fetch hub metadata for names, slugs, categories, images
+        const { data: hubRows } = await supabase
+          .from("hubs")
+          .select("id, name, slug, category, dp_image_url")
+          .in("id", activeHubIds);
+
+        const hubMap = new Map(
+          (hubRows ?? []).map((h: { id: string; name: string; slug: string; category: string; dp_image_url: string | null }) => [
+            h.id,
+            { name: h.name, slug: h.slug, category: h.category, dpImage: h.dp_image_url },
+          ])
+        );
+
+        // 3. Fetch recent deets for notifications
+        const { data: recentDeets } = await supabase
+          .from("deets")
+          .select("id, hub_id, author_name, title, body, kind, created_at")
+          .in("hub_id", activeHubIds)
+          .order("created_at", { ascending: false })
+          .limit(30);
+
+        if (ignore) return;
+
+        const notifications: HubNotificationItem[] = (recentDeets ?? []).map(
+          (d: { id: string; hub_id: string; author_name: string; title: string; body: string; kind: string; created_at: string }) => {
+            const hub = hubMap.get(d.hub_id);
+            const hubName = hub?.name ?? "Hub";
+            const hubSlug = hub?.slug ?? "";
+            const hubCategory = hub?.category ?? "";
+            const hubImage = hub?.dpImage ?? undefined;
+            const bodyText = (d.body || "").replace(/<[^>]*>/g, "").slice(0, 120);
+
+            // Map kind to notification type
+            let type: "Tagged" | "New Posts" | "Activity" = "New Posts";
+            if (d.kind === "Notices" || d.kind === "Alerts") type = "Tagged";
+            else if (d.kind === "Posts" || d.kind === "Photos" || d.kind === "News") type = "New Posts";
+            else type = "Activity";
+
+            // Relative time label
+            const createdMs = new Date(d.created_at).getTime();
+            const diffMins = Math.round((Date.now() - createdMs) / 60000);
+            let meta = "Just now";
+            if (diffMins >= 1440) meta = `${Math.floor(diffMins / 1440)}d`;
+            else if (diffMins >= 60) meta = `${Math.floor(diffMins / 60)}h`;
+            else if (diffMins >= 1) meta = `${diffMins}m`;
+
+            return {
+              id: d.id,
+              title: d.title || d.author_name,
+              body: bodyText || d.title || "New post",
+              meta,
+              hub: hubName,
+              hubImage,
+              type,
+              category: hubCategory as import("@/lib/hubs").HubCategorySlug,
+              slug: hubSlug,
+              focusId: d.id,
+              href: `/hubs/${hubCategory}/${hubSlug}?focus=${d.id}`,
+            };
+          }
+        );
+
+        // 4. Fetch events for events panel
+        const today = new Date();
+        const todayStr = today.toISOString().split("T")[0];
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split("T")[0];
+        const endOfWeek = new Date(today);
+        endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()));
+        const endOfWeekStr = endOfWeek.toISOString().split("T")[0];
+
+        const { data: eventRows } = await supabase
+          .from("events")
+          .select("id, hub_id, title, description, event_date, start_time, end_time, location")
+          .in("hub_id", activeHubIds)
+          .gte("event_date", todayStr)
+          .lte("event_date", endOfWeekStr)
+          .order("event_date", { ascending: true })
+          .limit(30);
+
+        if (ignore) return;
+
+        // Also check deets with event kind for events added via deet composer
+        const { data: eventDeets } = await supabase
+          .from("deets")
+          .select("id, hub_id, author_name, title, body, kind, attachments, created_at")
+          .in("hub_id", activeHubIds)
+          .or("kind.eq.Hazards,kind.eq.Alerts")
+          .order("created_at", { ascending: false })
+          .limit(20);
+
+        const eventItems: HubEventItem[] = [];
+
+        // Map events table rows
+        for (const ev of eventRows ?? []) {
+          const hub = hubMap.get(ev.hub_id as string);
+          if (!hub) continue;
+          const evDate = ev.event_date as string;
+          let group: "Today" | "Tomorrow" | "This Week" = "This Week";
+          if (evDate === todayStr) group = "Today";
+          else if (evDate === tomorrowStr) group = "Tomorrow";
+
+          eventItems.push({
+            id: ev.id as string,
+            title: (ev.title as string) || "Event",
+            hub: hub.name,
+            hubImage: hub.dpImage ?? undefined,
+            category: hub.category as import("@/lib/hubs").HubCategorySlug,
+            slug: hub.slug,
+            dateLabel: new Date(evDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+            time: (ev.start_time as string) || "",
+            location: (ev.location as string) || "",
+            badge: "My Hubs",
+            theme: "Community" as const,
+            description: (ev.description as string) || "",
+            focusId: ev.id as string,
+            href: `/hubs/${hub.category}/${hub.slug}?focus=${ev.id}`,
+            group,
+          });
+        }
+
+        // Map deets with event-like attachments (events created via composer)
+        for (const d of eventDeets ?? []) {
+          const hub = hubMap.get(d.hub_id as string);
+          if (!hub) continue;
+          const attachments = Array.isArray(d.attachments) ? d.attachments : [];
+          const eventAtt = attachments.find((a: { type?: string }) => a?.type === "event");
+          if (!eventAtt) continue;
+
+          const createdDate = new Date(d.created_at as string);
+          const createdStr = createdDate.toISOString().split("T")[0];
+          let group: "Today" | "Tomorrow" | "This Week" = "This Week";
+          if (createdStr === todayStr) group = "Today";
+          else if (createdStr === tomorrowStr) group = "Tomorrow";
+
+          eventItems.push({
+            id: d.id as string,
+            title: (eventAtt as { title?: string }).title || (d.title as string) || "Event",
+            hub: hub.name,
+            hubImage: hub.dpImage ?? undefined,
+            category: hub.category as import("@/lib/hubs").HubCategorySlug,
+            slug: hub.slug,
+            dateLabel: createdDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+            time: (eventAtt as { detail?: string }).detail || "",
+            location: "",
+            badge: "My Hubs",
+            theme: "Community" as const,
+            description: ((d.body as string) || "").replace(/<[^>]*>/g, "").slice(0, 120),
+            focusId: d.id as string,
+            href: `/hubs/${hub.category}/${hub.slug}?focus=${d.id}`,
+            group,
+          });
+        }
+
+        if (!ignore) {
+          setLiveNotifications(notifications);
+          setLiveEvents(eventItems);
+        }
+      } catch (err) {
+        console.error("[header-live-data]", err);
+      }
+    })();
+
+    return () => {
+      ignore = true;
+    };
+  }, [user?.id, headerRefreshKey]);
+
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
       const target = event.target as Node;
@@ -445,7 +674,7 @@ function UdeetsHeaderContent() {
     router.refresh();
   };
 
-  const unreadNotifications = HOME_NOTIFICATIONS.length > 0;
+  const unreadNotifications = liveNotifications.length > 0;
   const isHomeActive = isAuthenticated ? pathname === "/dashboard" : pathname === "/";
   const isDiscoverActive = pathname === "/discover";
   const isAlertsActive = pathname === "/alerts";
@@ -537,8 +766,8 @@ function UdeetsHeaderContent() {
             </Link>
           )}
 
-          {openPanel === "alerts" ? <NotificationsPanel /> : null}
-          {openPanel === "events" ? <EventsPanel /> : null}
+          {openPanel === "alerts" ? <NotificationsPanel notifications={liveNotifications} /> : null}
+          {openPanel === "events" ? <EventsPanel events={liveEvents} /> : null}
           {openPanel === "profile" && isAuthenticated ? <ProfilePanel user={user} onLogout={handleLogout} profileData={profileData} /> : null}
         </div>
       </div>

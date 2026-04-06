@@ -44,7 +44,7 @@ const POST_ICON = "h-[18px] w-[18px] stroke-[1.5]";
 /* ── Sort options ── */
 type SortOption = "Newest" | "Oldest";
 
-type FeedFilterOption = "Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos" | "News" | "Deals" | "Alerts";
+type FeedFilterOption = "Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos";
 
 /* ── Filter pill options (matches Band) ── */
 const FILTER_PILLS: Array<{ key: string; label: string }> = [
@@ -53,9 +53,6 @@ const FILTER_PILLS: Array<{ key: string; label: string }> = [
   { key: "Events", label: "Event" },
   { key: "Polls", label: "Poll" },
   { key: "Photos", label: "Photo" },
-  { key: "News", label: "News" },
-  { key: "Deals", label: "Deal" },
-  { key: "Alerts", label: "Alert" },
 ];
 
 export function DeetsSection({
@@ -105,8 +102,8 @@ export function DeetsSection({
   onToggleFeedSearch: () => void;
   isFeedFilterOpen: boolean;
   onToggleFeedFilter: () => void;
-  feedFilter: "Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos" | "News" | "Deals" | "Alerts";
-  onSelectFeedFilter: (value: "Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos" | "News" | "Deals" | "Alerts") => void;
+  feedFilter: "Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos";
+  onSelectFeedFilter: (value: "Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos") => void;
   filteredFeedItems: HubContent["feed"];
   showDemoPostedText: boolean;
   demoPostedText: string;

@@ -249,8 +249,23 @@ export function useDeetComposer({
       const resolvedKind = (deetSettings.noticeEnabled ? "Notices" : postTypeToKind[deetSettings.postType] || "Posts") as import("@/lib/services/deets/deet-types").DeetKind;
       const resolvedTitle = deetSettings.noticeEnabled ? "Notice" : postTypeToTitle[deetSettings.postType] || "Deet";
 
+      // Build body from attached items if the main editor is empty
+      let rawBody = trimmedText;
+      if (!rawBody && finalAttachments.length > 0) {
+        const parts: string[] = [];
+        for (const att of finalAttachments) {
+          if (att.type === "photo") continue; // photos render as images, not text
+          if (att.title) parts.push(`<strong>${att.title}</strong>`);
+          if (att.detail) parts.push(att.detail);
+        }
+        rawBody = parts.join("<br/>");
+      }
+      if (!rawBody && newestSticker?.detail) {
+        rawBody = newestSticker.detail;
+      }
+
       // Sanitize the HTML content before saving
-      const sanitizedBody = sanitizeHtml(trimmedText || newestSticker?.detail || "");
+      const sanitizedBody = sanitizeHtml(rawBody || "");
 
       const createdDeet = await createDeet({
         hubId,
