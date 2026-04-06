@@ -513,30 +513,11 @@ export default function Page() {
       {/* ─── HEADER ─── */}
       <header className="sticky top-0 z-50 border-b border-[var(--ud-border-subtle)] bg-[var(--ud-bg-page)]/80 backdrop-blur-lg">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
-          {/* Left: Logo + Download + nav links */}
+          {/* Left: Logo + nav links */}
           <div className="flex items-center gap-1 sm:gap-2">
             <Link href="/" className="flex items-center gap-2 mr-2 sm:mr-4">
               <UdeetsBrandLockup textClassName="text-xl sm:text-2xl" priority />
             </Link>
-
-            {/* Download button — text on desktop, icon on mobile */}
-            <button
-              type="button"
-              onClick={() => setShowDownloadPopup(true)}
-              className="hidden sm:inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-[var(--ud-brand-primary)] transition hover:bg-[var(--ud-brand-light)]"
-            >
-              <Download className="h-4 w-4 stroke-[2]" />
-              Download
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowDownloadPopup(true)}
-              className="sm:hidden inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--ud-brand-primary)] transition hover:bg-[var(--ud-brand-light)]"
-              aria-label="Download app"
-              title="Download"
-            >
-              <Download className="h-5 w-5 stroke-[2]" />
-            </button>
 
             <nav className="hidden items-center gap-0.5 md:flex">
               <Link
@@ -566,11 +547,31 @@ export default function Page() {
                   { label: "Help Centre", href: "/resources#help", description: "Get support" },
                 ]}
               />
+
+              {/* Download button — after nav links, styled like Sign in but teal outline */}
+              <button
+                type="button"
+                onClick={() => setShowDownloadPopup(true)}
+                className="ml-1 inline-flex items-center gap-1.5 rounded-full border border-[#0C5C57] px-4 py-1.5 text-sm font-medium text-[#0C5C57] transition hover:bg-[#0C5C57]/10"
+              >
+                <Download className="h-4 w-4 stroke-[2]" />
+                Download
+              </button>
             </nav>
           </div>
 
-          {/* Right: Search + Theme Toggle + Sign in */}
+          {/* Right: Search + Download (mobile) + Sign in */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Mobile download icon — small teal circle */}
+            <button
+              type="button"
+              onClick={() => setShowDownloadPopup(true)}
+              className="md:hidden inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#0C5C57] text-[#0C5C57] transition hover:bg-[#0C5C57]/10"
+              aria-label="Download app"
+              title="Download"
+            >
+              <Download className="h-4 w-4 stroke-[2]" />
+            </button>
             <Link
               href="/discover"
               className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
