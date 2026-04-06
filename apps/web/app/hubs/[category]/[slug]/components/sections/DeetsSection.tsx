@@ -188,50 +188,8 @@ function DeetTypeContent({ type, attachments }: { type: string; attachments?: Hu
     );
   }
 
-  // Poll: Band-style with status badge, question, and radio options
-  if (type === "poll") {
-    const options = matchingAtt?.options ?? [];
-    // If no options array, try to parse from detail (legacy format "opt1 · opt2")
-    const parsedOptions = options.length > 0
-      ? options
-      : (matchingAtt?.detail?.split(" · ").filter(Boolean) ?? []);
-
-    return (
-      <div className="mx-4 mt-3 overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)]/30">
-        {/* Poll header with status */}
-        <div className="flex items-center gap-3 px-4 py-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
-            <Icon className="h-5 w-5 stroke-[1.5] text-emerald-600" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-emerald-600">Poll Opened</span>
-              <span className="text-xs text-[var(--ud-text-muted)]">0 voted</span>
-            </div>
-            <p className="mt-0.5 text-sm font-semibold text-[var(--ud-text-primary)]">
-              {matchingAtt?.title || "Poll"}
-            </p>
-          </div>
-        </div>
-
-        {/* Poll options */}
-        {parsedOptions.length > 0 && (
-          <div className="border-t border-[var(--ud-border-subtle)] px-4 py-2">
-            {parsedOptions.map((opt, i) => (
-              <button
-                key={i}
-                type="button"
-                className="flex w-full items-center gap-3 rounded-lg px-1 py-2.5 text-sm text-[var(--ud-text-primary)] transition hover:bg-[var(--ud-bg-subtle)]"
-              >
-                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 border-gray-300" />
-                <span>{opt}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
+  // Poll: handled separately by PollContent component (needs state)
+  if (type === "poll") return null;
 
   // Event: date/location card
   if (type === "event") {
@@ -291,6 +249,178 @@ function DeetTypeContent({ type, attachments }: { type: string; attachments?: Hu
   }
 
   return null;
+}
+
+/** Interactive poll component with voting */
+function PollContent({ deetId, attachments }: { deetId: string; attachments?: HubFeedItemAttachment[] }) {
+  const matchingAtt = attachments?.find((a) => a.type === "poll");
+  const options = matchingAtt?.options ?? [];
+  const parsedOptions = options.length > 0
+    ? options
+    : (matchingAtt?.detail?.split(" · ").filter(Boolean) ?? []);
+
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [isVoting, setIsVoting] = useState(false);
+  const [totalVotes, setTotalVotes] = useState(0);
+  const [voteCounts, setVoteCounts] = useState<number[]>(parsedOptions.map(() => 0));
+
+  // Fetch existing votes on mount
+  useEffect(() => {
+    if (!deetId) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { getPollVotes, getMyPollVotes } = await import("@/lib/services/deets/poll-votes");
+        const [allVotes, myVotes] = await Promise.all([
+          getPollVotes([deetId]),
+          getMyPollVotes([deetId]),
+        ]);
+
+        if (cancelled) return;
+
+        // Count votes per option
+        const counts = parsedOptions.map(() => 0);
+        let total = 0;
+        const deetVotes = allVotes.filter((v) => v.deetId === deetId);
+        // Count unique users (not individual option_index entries for multi-select)
+        const uniqueVoters = new Set(deetVotes.map((v) => v.userId));
+        total = uniqueVoters.size;
+        for (const v of deetVotes) {
+          if (v.optionIndex >= 0 && v.optionIndex < counts.length) {
+            counts[v.optionIndex]++;
+          }
+        }
+        setVoteCounts(counts);
+        setTotalVotes(total);
+
+        // Set user's selection
+        const myDeetVotes = myVotes.filter((v) => v.deetId === deetId);
+        if (myDeetVotes.length > 0) {
+          setSelectedIndex(myDeetVotes[0].optionIndex);
+        }
+      } catch {
+        // Table might not exist yet
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [deetId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleVote = async (index: number) => {
+    if (isVoting) return;
+    setIsVoting(true);
+
+    const prevIndex = selectedIndex;
+    // Optimistic update
+    setSelectedIndex(index);
+    setVoteCounts((prev) => {
+      const next = [...prev];
+      if (prevIndex !== null && prevIndex < next.length) next[prevIndex]--;
+      if (index < next.length) next[index]++;
+      return next;
+    });
+    if (prevIndex === null) setTotalVotes((t) => t + 1);
+
+    try {
+      const { castPollVote } = await import("@/lib/services/deets/poll-votes");
+      const success = await castPollVote(deetId, index);
+      if (!success) {
+        // Revert
+        setSelectedIndex(prevIndex);
+        setVoteCounts((prev) => {
+          const next = [...prev];
+          if (index < next.length) next[index]--;
+          if (prevIndex !== null && prevIndex < next.length) next[prevIndex]++;
+          return next;
+        });
+        if (prevIndex === null) setTotalVotes((t) => t - 1);
+      }
+    } catch {
+      // Revert on error
+      setSelectedIndex(prevIndex);
+      setVoteCounts((prev) => {
+        const next = [...prev];
+        if (index < next.length) next[index]--;
+        if (prevIndex !== null && prevIndex < next.length) next[prevIndex]++;
+        return next;
+      });
+      if (prevIndex === null) setTotalVotes((t) => t - 1);
+    } finally {
+      setIsVoting(false);
+    }
+  };
+
+  if (!parsedOptions.length) return null;
+
+  return (
+    <div className="mx-4 mt-3 overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)]/30">
+      {/* Poll header */}
+      <div className="flex items-center gap-3 px-4 py-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
+          <BarChart3 className="h-5 w-5 stroke-[1.5] text-emerald-600" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-emerald-600">Poll Opened</span>
+            <span className="text-xs text-[var(--ud-text-muted)]">{totalVotes} voted</span>
+          </div>
+          <p className="mt-0.5 text-sm font-semibold text-[var(--ud-text-primary)]">
+            {matchingAtt?.title || "Poll"}
+          </p>
+        </div>
+      </div>
+
+      {/* Poll options */}
+      <div className="border-t border-[var(--ud-border-subtle)] px-4 py-2">
+        {parsedOptions.map((opt, i) => {
+          const isSelected = selectedIndex === i;
+          const count = voteCounts[i] ?? 0;
+          const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+
+          return (
+            <button
+              key={i}
+              type="button"
+              disabled={isVoting}
+              onClick={() => handleVote(i)}
+              className={cn(
+                "relative flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-sm transition",
+                isSelected
+                  ? "text-emerald-700"
+                  : "text-[var(--ud-text-primary)] hover:bg-[var(--ud-bg-subtle)]"
+              )}
+            >
+              {/* Progress bar background */}
+              {selectedIndex !== null && totalVotes > 0 && (
+                <div
+                  className={cn(
+                    "absolute inset-0 rounded-lg transition-all",
+                    isSelected ? "bg-emerald-100" : "bg-gray-100"
+                  )}
+                  style={{ width: `${pct}%` }}
+                />
+              )}
+              {/* Radio circle */}
+              <span className={cn(
+                "relative z-10 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition",
+                isSelected ? "border-emerald-500 bg-emerald-500" : "border-gray-300"
+              )}>
+                {isSelected && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                )}
+              </span>
+              <span className="relative z-10 flex-1 text-left">{opt}</span>
+              {/* Vote count shown after voting */}
+              {selectedIndex !== null && totalVotes > 0 && (
+                <span className="relative z-10 text-xs text-[var(--ud-text-muted)]">{count}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 /* ── Icon sizing ── */
@@ -751,7 +881,11 @@ export function DeetsSection({
                       ) : null}
 
                       {/* Rich type content section */}
-                      {deetType ? <DeetTypeContent type={deetType} attachments={item.deetAttachments} /> : null}
+                      {deetType === "poll" ? (
+                        <PollContent deetId={item.id} attachments={item.deetAttachments} />
+                      ) : deetType ? (
+                        <DeetTypeContent type={deetType} attachments={item.deetAttachments} />
+                      ) : null}
                     </>
                   );
                 })()}

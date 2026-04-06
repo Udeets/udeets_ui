@@ -36,6 +36,8 @@ type FeedItem = {
   hubName: string;
   hubId: string;
   authorName: string;
+  authorId?: string;
+  authorAvatar?: string;
   timeLabel: string;
   previewImage?: string;
   previewImages: string[];
@@ -127,6 +129,7 @@ function deetRecordToDashboardItem(item: DeetRecord): FeedItem {
     hubName: "",
     hubId: card.hubId,
     authorName: item.author_name || "Hub member",
+    authorId: item.created_by || undefined,
     timeLabel: formatDeetTime(card.createdAt ?? item.created_at),
     previewImage: card.previewImageUrl || undefined,
     previewImages: card.previewImageUrls,
@@ -638,19 +641,49 @@ function DashboardPageContent() {
 
       try {
         const items = await listDeets({ hubIds: visibleHubIds });
+        if (cancelled) return;
+
+        const feedItems = items
+          .map(deetRecordToDashboardItem)
+          .map((item) => {
+            const hub = hubById.get(item.hubId);
+            return {
+              ...item,
+              hubName: hub?.name || "Hub",
+              href: hub?.href,
+            };
+          });
+
+        // Fetch author avatars in the same pass
+        const authorIds = [...new Set(feedItems.map((i) => i.authorId).filter(Boolean))] as string[];
+        if (authorIds.length) {
+          try {
+            const { createClient: createSupa } = await import("@/lib/supabase/client");
+            const supabase = createSupa();
+            const { data: profiles } = await supabase
+              .from("profiles")
+              .select("id, avatar_url")
+              .in("id", authorIds);
+
+            if (!cancelled && profiles?.length) {
+              const avatarMap = new Map(
+                profiles
+                  .filter((p: { avatar_url: string | null }) => p.avatar_url)
+                  .map((p: { id: string; avatar_url: string }) => [p.id, p.avatar_url])
+              );
+              for (const item of feedItems) {
+                if (item.authorId && avatarMap.has(item.authorId)) {
+                  item.authorAvatar = avatarMap.get(item.authorId);
+                }
+              }
+            }
+          } catch {
+            // Avatars are non-critical
+          }
+        }
+
         if (!cancelled) {
-          setMyDeetsItems(
-            items
-              .map(deetRecordToDashboardItem)
-              .map((item) => {
-                const hub = hubById.get(item.hubId);
-                return {
-                  ...item,
-                  hubName: hub?.name || "Hub",
-                  href: hub?.href,
-                };
-              }),
-          );
+          setMyDeetsItems(feedItems);
         }
       } catch {
         if (!cancelled) {
@@ -880,8 +913,13 @@ function DashboardPageContent() {
                           {item.href ? (
                             <Link href={item.href} className="block p-4">
                               <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--ud-brand-light)]">
-                                  <span className="text-xs font-bold text-[var(--ud-brand-primary)]">{getInitials(item.authorName)}</span>
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
+                                  {item.authorAvatar ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={item.authorAvatar} alt="" className="h-full w-full object-cover" />
+                                  ) : (
+                                    <span className="text-xs font-bold text-[var(--ud-brand-primary)]">{getInitials(item.authorName)}</span>
+                                  )}
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
@@ -898,8 +936,13 @@ function DashboardPageContent() {
                           ) : (
                             <div className="p-4">
                               <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--ud-brand-light)]">
-                                  <span className="text-xs font-bold text-[var(--ud-brand-primary)]">{getInitials(item.authorName)}</span>
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
+                                  {item.authorAvatar ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={item.authorAvatar} alt="" className="h-full w-full object-cover" />
+                                  ) : (
+                                    <span className="text-xs font-bold text-[var(--ud-brand-primary)]">{getInitials(item.authorName)}</span>
+                                  )}
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
