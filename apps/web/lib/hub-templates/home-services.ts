@@ -6,7 +6,7 @@ export const homeServicesConfig: HubTemplateConfig = {
   variants: ["Plumber", "Electrician", "Landscaper", "Handyman", "Cleaner", "HVAC"],
   terminology: {
     hub: "Service Provider",
-    deets: "Updates",
+    deets: "Posts",
     members: "Clients",
     admin: "Owner",
     about: "About Us",

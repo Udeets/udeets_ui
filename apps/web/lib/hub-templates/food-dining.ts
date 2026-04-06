@@ -6,7 +6,7 @@ export const foodDiningConfig: HubTemplateConfig = {
   variants: ["Restaurant", "Food Truck", "Cloud Kitchen"],
   terminology: {
     hub: "Restaurant / Kitchen / Food Truck",
-    deets: "Updates",
+    deets: "Posts",
     members: "Followers",
     admin: "Owner / Manager",
     about: "Our Story",

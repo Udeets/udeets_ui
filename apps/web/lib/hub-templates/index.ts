@@ -18,7 +18,7 @@ const generalConfig: HubTemplateConfig = {
   variants: [],
   terminology: {
     hub: "Hub",
-    deets: "Deets",
+    deets: "Posts",
     members: "Members",
     admin: "Admin",
     about: "About",

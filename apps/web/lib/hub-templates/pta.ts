@@ -6,7 +6,7 @@ export const ptaConfig: HubTemplateConfig = {
   variants: ["PTA", "PTO", "Booster Club", "School Group"],
   terminology: {
     hub: "School Group",
-    deets: "Updates",
+    deets: "Posts",
     members: "Parents & Staff",
     admin: "Board Member",
     about: "About Us",

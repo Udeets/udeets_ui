@@ -6,7 +6,7 @@ export const healthWellnessConfig: HubTemplateConfig = {
   variants: ["Gym", "Yoga Studio", "Spa", "Wellness Center", "Clinic"],
   terminology: {
     hub: "Wellness Center",
-    deets: "Updates",
+    deets: "Posts",
     members: "Members",
     admin: "Owner / Instructor",
     about: "About Us",

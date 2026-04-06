@@ -6,7 +6,7 @@ export const sportsConfig: HubTemplateConfig = {
   variants: ["Sports League", "Gym / Fitness Club", "Running Club", "Rec Team"],
   terminology: {
     hub: "Team / Club",
-    deets: "Updates",
+    deets: "Posts",
     members: "Members",
     admin: "Coach / Admin",
     about: "About Us",

@@ -6,7 +6,7 @@ export const retailConfig: HubTemplateConfig = {
   variants: ["Boutique", "Grocery", "Salon", "General Store", "Specialty Shop"],
   terminology: {
     hub: "Store",
-    deets: "Updates",
+    deets: "Posts",
     members: "Customers",
     admin: "Owner / Manager",
     about: "About Us",

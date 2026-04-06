@@ -6,7 +6,7 @@ export const eventsConfig: HubTemplateConfig = {
   variants: ["Festival", "Conference", "Meetup", "Workshop", "Concert"],
   terminology: {
     hub: "Event",
-    deets: "Updates",
+    deets: "Posts",
     members: "Attendees",
     admin: "Organizer",
     about: "Event Details",

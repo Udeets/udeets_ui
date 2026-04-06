@@ -6,7 +6,7 @@ export const faithConfig: HubTemplateConfig = {
   variants: ["Temple", "Church", "Mosque", "Synagogue", "Gurdwara", "Spiritual Center"],
   terminology: {
     hub: "Place of Worship",
-    deets: "Announcements",
+    deets: "Posts",
     members: "Congregation",
     admin: "Leader",
     about: "About Us",

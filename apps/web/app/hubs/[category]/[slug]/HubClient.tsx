@@ -131,6 +131,7 @@ export default function HubClient({
   const canAccessAdmins = canEditHub;
   const creatorMetadata = user?.user_metadata;
   const [creatorProfile, setCreatorProfile] = useState<{ fullName: string; avatarUrl: string | null } | null>(null);
+  const [currentUserProfile, setCurrentUserProfile] = useState<{ fullName: string; avatarUrl: string | null } | null>(null);
 
   // Always fetch the hub creator's profile from DB so custom name/avatar are used
   useEffect(() => {
@@ -151,6 +152,27 @@ export default function HubClient({
     return () => { ignore = true; };
   }, [hub.createdBy]);
 
+  // Fetch the current logged-in user's profile (for comment input avatar etc.)
+  useEffect(() => {
+    if (!user?.id) return;
+    // If the current user IS the creator, reuse that profile
+    if (user.id === hub.createdBy) return;
+    let ignore = false;
+    (async () => {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name, avatar_url")
+        .eq("id", user.id)
+        .single();
+      if (!ignore && data) {
+        setCurrentUserProfile({ fullName: data.full_name || "User", avatarUrl: data.avatar_url });
+      }
+    })();
+    return () => { ignore = true; };
+  }, [user?.id, hub.createdBy]);
+
   // Prefer profile DB values over auth metadata (user may have customised them)
   const creatorDisplayName =
     creatorProfile?.fullName ||
@@ -159,6 +181,13 @@ export default function HubClient({
   const creatorAvatarSrc =
     creatorProfile?.avatarUrl ||
     (isCreatorAdmin && typeof creatorMetadata?.avatar_url === "string" ? creatorMetadata.avatar_url : "");
+
+  // Current logged-in user's avatar (for comment input, etc.)
+  const currentUserAvatarSrc =
+    isCreatorAdmin
+      ? creatorAvatarSrc
+      : currentUserProfile?.avatarUrl ||
+        (typeof user?.user_metadata?.avatar_url === "string" ? user.user_metadata.avatar_url : "");
   const deetAuthorName =
     creatorProfile?.fullName ||
     (creatorMetadata?.full_name as string) ||
@@ -951,7 +980,7 @@ export default function HubClient({
         hubName={hubName}
         hubCategory={hub.category}
         hubSlug={hub.slug}
-        userAvatarSrc={creatorAvatarSrc}
+        userAvatarSrc={currentUserAvatarSrc}
         userName={creatorDisplayName}
         onOpenComposer={openDeetComposer}
         onOpenViewer={openViewer}

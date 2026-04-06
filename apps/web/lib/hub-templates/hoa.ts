@@ -6,7 +6,7 @@ export const hoaConfig: HubTemplateConfig = {
   variants: ["HOA", "Apartment/Condo", "Neighborhood"],
   terminology: {
     hub: "Community",
-    deets: "Notices",
+    deets: "Posts",
     members: "Residents",
     admin: "Board Member",
     about: "Community Info",

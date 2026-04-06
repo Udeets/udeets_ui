@@ -589,7 +589,7 @@ export function DeetsSection({
 
   return (
     <SectionShell
-      title="Deets"
+      title="Posts"
       description={
         normalizedPostSearch
           ? "Showing filtered updates, announcements, moments, reminders, and conversations from this hub."
