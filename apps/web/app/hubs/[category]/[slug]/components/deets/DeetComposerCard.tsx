@@ -55,7 +55,7 @@ export function DeetComposerCard({
       </div>
 
       {/* Quick-action icon row */}
-      <div className="flex items-center justify-around border-t border-[var(--ud-border-subtle)] px-2 py-1.5">
+      <div className="flex items-center justify-around border-t border-[var(--ud-border-subtle)] px-1 py-1.5 overflow-x-auto">
         {actionButtons.map(({ key, icon: Icon, label }, idx) => (
           <button
             key={`${key}-${idx}`}

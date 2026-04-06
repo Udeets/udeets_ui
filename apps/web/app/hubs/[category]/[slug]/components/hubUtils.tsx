@@ -4,15 +4,19 @@
 import { useMemo, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
+  AlertTriangle,
   Bell,
   Building2,
   CalendarDays,
+  DollarSign,
   Dumbbell,
   Files,
   Images,
   Landmark,
   Megaphone,
+  Newspaper,
   Plus,
+  ShieldAlert,
   UsersRound,
   UtensilsCrossed,
 } from "lucide-react";
@@ -133,7 +137,35 @@ export function FeedItemIcon({ kind }: { kind: HubFeedItemKind }) {
   if (kind === "photo") return <Images className={ICON} />;
   if (kind === "notice") return <Bell className={ICON} />;
   if (kind === "event") return <CalendarDays className={ICON} />;
+  if (kind === "news") return <Newspaper className={ICON} />;
+  if (kind === "deal") return <DollarSign className={ICON} />;
+  if (kind === "hazard") return <AlertTriangle className={ICON} />;
+  if (kind === "alert") return <ShieldAlert className={ICON} />;
   return <Files className={ICON} />;
+}
+
+/** Band-style badge colors and labels for each post kind */
+export function feedKindMeta(kind: HubFeedItemKind): { label: string; badgeClass: string } {
+  switch (kind) {
+    case "announcement":
+      return { label: "Announcement", badgeClass: "bg-orange-50 text-orange-600 border-orange-200" };
+    case "notice":
+      return { label: "Notice", badgeClass: "bg-blue-50 text-blue-600 border-blue-200" };
+    case "photo":
+      return { label: "Photo", badgeClass: "bg-emerald-50 text-emerald-600 border-emerald-200" };
+    case "event":
+      return { label: "Event", badgeClass: "bg-purple-50 text-purple-600 border-purple-200" };
+    case "news":
+      return { label: "News", badgeClass: "bg-sky-50 text-sky-600 border-sky-200" };
+    case "deal":
+      return { label: "Deal", badgeClass: "bg-amber-50 text-amber-600 border-amber-200" };
+    case "hazard":
+      return { label: "Hazard", badgeClass: "bg-red-50 text-red-600 border-red-200" };
+    case "alert":
+      return { label: "Alert", badgeClass: "bg-red-50 text-red-600 border-red-200" };
+    default:
+      return { label: "Post", badgeClass: "bg-gray-50 text-gray-600 border-gray-200" };
+  }
 }
 
 export function SettingField({

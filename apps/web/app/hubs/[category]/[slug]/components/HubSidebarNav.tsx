@@ -20,7 +20,7 @@ const TAB_ICON_MAP: Record<string, typeof Home> = {
 
 const DEFAULT_NAV_ITEMS: Array<{ tab: HubTab; label: string; icon: typeof Home }> = [
   { tab: "About", label: "About", icon: Home },
-  { tab: "Posts", label: "Deets", icon: MessageSquare },
+  { tab: "Posts", label: "Posts", icon: MessageSquare },
   { tab: "Attachments", label: "Attachments", icon: Paperclip },
   { tab: "Members", label: "Members", icon: Users },
 ];

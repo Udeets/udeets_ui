@@ -971,7 +971,7 @@ export default function HubClient({
   } as React.CSSProperties;
 
   return (
-    <div className="min-h-screen bg-[var(--ud-bg-page)] pb-16 md:pb-0" style={themeVars}>
+    <div className="min-h-screen overflow-x-hidden bg-[var(--ud-bg-page)] pb-16 md:pb-0" style={themeVars}>
       <UdeetsHeader />
 
       <div className="mx-auto w-full max-w-7xl">
@@ -1027,7 +1027,7 @@ export default function HubClient({
                 {tab === "About"
                   ? hubTemplateConfig.terminology.about
                   : tab === "Posts"
-                    ? hubTemplateConfig.terminology.deets
+                    ? "Posts"
                     : tab === "Members"
                       ? hubTemplateConfig.terminology.members
                       : tab}
@@ -1064,7 +1064,7 @@ export default function HubClient({
           </aside>
 
           {/* Content area */}
-          <main className="min-h-[calc(100vh-200px)] bg-[var(--ud-bg-subtle)] p-4 sm:p-6">
+          <main className="min-h-[calc(100vh-200px)] min-w-0 overflow-x-hidden bg-[var(--ud-bg-subtle)] p-3 sm:p-6">
             {renderMainContent()}
           </main>
         </div>

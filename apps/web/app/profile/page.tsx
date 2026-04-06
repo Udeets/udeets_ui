@@ -210,7 +210,14 @@ export default function ProfilePage() {
 
   const displayName = profile?.full_name || (user?.user_metadata?.full_name as string) || user?.email || "uDeets User";
   const displayEmail = user?.email || profile?.email || "";
-  const avatarUrl = profile?.avatar_url || (user?.user_metadata?.avatar_url as string | undefined) || "";
+  const rawAvatarUrl = profile?.avatar_url || (user?.user_metadata?.avatar_url as string | undefined) || "";
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
+  const avatarUrl = avatarLoadFailed ? "" : rawAvatarUrl;
+
+  // Reset avatar load state when url changes
+  useEffect(() => {
+    setAvatarLoadFailed(false);
+  }, [rawAvatarUrl]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -234,6 +241,7 @@ export default function ProfilePage() {
       if (updateError) { console.error("[profile] avatar update error:", updateError); setAvatarError(`Profile update failed: ${updateError.message}`); return; }
       // Also sync avatar to auth user metadata so navigation header updates
       await supabase.auth.updateUser({ data: { avatar_url: publicUrl } });
+      setAvatarLoadFailed(false);
       setProfile((prev) => prev ? { ...prev, avatar_url: publicUrl } : prev);
     } catch (err) {
       console.error("[profile] avatar upload failed:", err);
@@ -330,10 +338,10 @@ export default function ProfilePage() {
                     <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
                     <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={isUploadingAvatar} className="group relative h-20 w-20 overflow-hidden rounded-full">
                       {avatarUrl ? (
-                        <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" />
+                        <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" onError={() => setAvatarLoadFailed(true)} />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)]">
-                          <span className="text-2xl font-semibold text-white/80">{displayName.charAt(0).toUpperCase()}</span>
+                          <span className="text-2xl font-semibold text-white/80">{displayName.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "U"}</span>
                         </div>
                       )}
                       {isUploadingAvatar ? (

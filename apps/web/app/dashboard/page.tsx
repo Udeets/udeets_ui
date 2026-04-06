@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { Calendar, Heart, Loader2, MessageCircle, Send, Share2 } from "lucide-react";
+import { Heart, Loader2, MessageCircle, Send, Share2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -20,8 +20,6 @@ import {
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import { listHubs } from "@/lib/services/hubs/list-hubs";
 import { listMyMemberships, type MyMembership } from "@/lib/services/members/list-my-memberships";
-import { listHubEvents } from "@/lib/services/events/list-events";
-import type { HubEvent } from "@/lib/services/events/event-types";
 import type { Hub as SupabaseHub } from "@/types/hub";
 import { DashboardHubCard, type DashboardHubCardData } from "./components/DashboardHubCard";
 
@@ -407,16 +405,12 @@ function DashboardPageContent() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
-  const [isEventsDropdownOpen, setIsEventsDropdownOpen] = useState(false);
 
   const [hubs, setHubs] = useState<DashboardHub[]>([]);
   const [memberships, setMemberships] = useState<MyMembership[]>([]);
   const [isLoadingHubs, setIsLoadingHubs] = useState(true);
   const [hubsLoadError, setHubsLoadError] = useState<string | null>(null);
   const [myDeetsItems, setMyDeetsItems] = useState<FeedItem[]>([]);
-  const [upcomingEvents, setUpcomingEvents] = useState<Array<{ id: string; title: string; eventDate: string; hubId: string; hubName: string; href: string }>>([]);
-  const [isLoadingEvents, setIsLoadingEvents] = useState(false);
-  const eventsButtonRef = useRef<HTMLButtonElement | null>(null);
 
   // ── Interaction state (likes, comments, share) ──
   const [likedDeets, setLikedDeets] = useState<Set<string>>(new Set());
@@ -624,63 +618,6 @@ function DashboardPageContent() {
       : requestedHubs;
   const relevantHubIds = useMemo(() => new Set(visibleHubs.map((hub) => hub.id)), [visibleHubs]);
 
-  // Load upcoming events for all user's hubs
-  useEffect(() => {
-    if (authStatus !== "authenticated" || hubs.length === 0) {
-      setUpcomingEvents([]);
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadUpcomingEvents = async () => {
-      setIsLoadingEvents(true);
-      try {
-        const today = new Date().toISOString().split('T')[0];
-        const allEvents: Array<{ id: string; title: string; eventDate: string; hubId: string; hubName: string; href: string }> = [];
-
-        // Fetch events for each hub
-        const hubById = new Map(hubs.map((h) => [h.id, h]));
-
-        for (const hub of hubs) {
-          try {
-            const hubEvents = await listHubEvents(hub.id);
-            // Filter for future events only
-            const futureEvents = hubEvents.filter((event) => event.eventDate >= today);
-            allEvents.push(
-              ...futureEvents.map((evt) => ({
-                id: evt.id,
-                title: evt.title,
-                eventDate: evt.eventDate,
-                hubId: hub.id,
-                hubName: hub.name,
-                href: `${hub.href}/events`,
-              }))
-            );
-          } catch {
-            // Silently skip hub if event fetch fails
-          }
-        }
-
-        // Sort by event date and limit to 5
-        const sorted = allEvents.sort((a, b) => a.eventDate.localeCompare(b.eventDate)).slice(0, 5);
-
-        if (!cancelled) {
-          setUpcomingEvents(sorted);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoadingEvents(false);
-        }
-      }
-    };
-
-    void loadUpcomingEvents();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authStatus, hubs]);
   useEffect(() => {
     if (authStatus !== "authenticated") {
       setMyDeetsItems([]);
@@ -900,50 +837,6 @@ function DashboardPageContent() {
                       <path d="M10 18h4" strokeLinecap="round" />
                     </svg>
                   </button>
-
-                  <div className="relative">
-                    <button
-                      ref={eventsButtonRef}
-                      type="button"
-                      className={cn(
-                        "flex h-10 w-10 items-center justify-center rounded-full bg-[var(--ud-bg-subtle)] text-[var(--ud-text-primary)] transition-colors duration-150 hover:bg-[var(--ud-bg-subtle)]",
-                        isEventsDropdownOpen && "bg-[var(--ud-bg-subtle)]",
-                      )}
-                      onClick={() => setIsEventsDropdownOpen((current) => !current)}
-                      aria-label="Show upcoming events"
-                    >
-                      <Calendar className="h-4.5 w-4.5" />
-                    </button>
-
-                    {isEventsDropdownOpen ? (
-                      <div className="absolute right-0 top-12 z-10 w-64 rounded-xl bg-[var(--ud-bg-card)] shadow-lg border border-[var(--ud-border-subtle)]">
-                        <div className="p-3">
-                          {isLoadingEvents ? (
-                            <p className="text-center text-sm text-slate-500 py-4">Loading events…</p>
-                          ) : upcomingEvents.length > 0 ? (
-                            <div className="space-y-2">
-                              {upcomingEvents.map((event) => (
-                                <Link
-                                  key={event.id}
-                                  href={event.href}
-                                  className="block rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-slate-50"
-                                  onClick={() => setIsEventsDropdownOpen(false)}
-                                >
-                                  <p className="font-semibold text-[var(--ud-text-primary)] truncate">{event.title}</p>
-                                  <p className="text-xs text-slate-500 mt-0.5">{event.hubName}</p>
-                                  <p className="text-xs text-slate-400 mt-1">
-                                    {new Date(event.eventDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: event.eventDate.startsWith(new Date().getFullYear().toString()) ? undefined : "numeric" })}
-                                  </p>
-                                </Link>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-center text-sm text-slate-500 py-4">No upcoming events</p>
-                          )}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
 
                   {isFilterMenuOpen ? (
                     <div className="absolute right-0 top-12 z-10 w-48 rounded-xl bg-[var(--ud-bg-card)] p-2 shadow-sm border border-[var(--ud-border-subtle)]">

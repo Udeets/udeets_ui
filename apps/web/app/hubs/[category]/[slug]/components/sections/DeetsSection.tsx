@@ -4,7 +4,7 @@ import type { HubContent } from "@/lib/hub-content";
 import { Eye, Heart, Loader2, Megaphone, MessageCircle, Search, SlidersHorizontal, Send, Share2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { DeetComposerCard } from "../deets/DeetComposerCard";
-import { ICON, FeedItemIcon, ImageWithFallback, cn, initials } from "../hubUtils";
+import { ICON, FeedItemIcon, ImageWithFallback, cn, initials, feedKindMeta } from "../hubUtils";
 import { SectionShell } from "../SectionShell";
 import type { ComposerChildFlow } from "../deets/deetTypes";
 import type { DeetComment } from "@/lib/services/deets/deet-interactions";
@@ -294,11 +294,29 @@ export function DeetsSection({
                 className={cn(
                   "w-full overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-sm transition",
                   highlightedItemId === item.id && "ring-2 ring-[var(--ud-brand-primary)] ring-offset-2",
-                  (item.kind === "hazard" || item.kind === "alert") && "border-l-4 border-l-red-500"
+                  (item.kind === "hazard" || item.kind === "alert") && "border-l-4 border-l-red-500",
+                  item.kind === "announcement" && "border-l-4 border-l-orange-400",
+                  item.kind === "notice" && "border-l-4 border-l-blue-400",
+                  item.kind === "event" && "border-l-4 border-l-purple-400",
+                  item.kind === "deal" && "border-l-4 border-l-amber-400",
+                  item.kind === "news" && "border-l-4 border-l-sky-400"
                 )}
               >
+                {/* ── Band-style type banner for special post types ── */}
+                {item.kind !== "photo" && item.kind !== "file" && (() => {
+                  const meta = feedKindMeta(item.kind);
+                  return (
+                    <div className={cn("flex items-center gap-2 px-4 pt-3 pb-1")}>
+                      <span className={cn("inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold [&_svg]:h-3 [&_svg]:w-3", meta.badgeClass)}>
+                        <FeedItemIcon kind={item.kind} />
+                        {meta.label}
+                      </span>
+                    </div>
+                  );
+                })()}
+
                 {/* ── Author header ── */}
-                <div className="flex items-center gap-3 px-4 pt-4">
+                <div className="flex items-center gap-3 px-4 pt-3">
                   <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
                     <ImageWithFallback
                       src=""
@@ -320,10 +338,6 @@ export function DeetsSection({
                     </div>
                     <span className="text-xs text-[var(--ud-text-muted)]">{item.time}</span>
                   </div>
-                  {/* Subtle type indicator */}
-                  <span className="inline-flex items-center gap-1 text-[var(--ud-text-muted)]" title={item.title}>
-                    <FeedItemIcon kind={item.kind} />
-                  </span>
                 </div>
 
                 {/* ── Body content ── */}
@@ -364,9 +378,9 @@ export function DeetsSection({
                 ) : null}
 
                 {/* ── Action bar ── */}
-                <div className="flex items-center justify-between border-t border-[var(--ud-border-subtle)] px-4 py-1.5 mt-3">
+                <div className="flex items-center justify-between border-t border-[var(--ud-border-subtle)] px-3 sm:px-4 py-1.5 mt-3">
                   {/* Left group: Like · Comment · Share */}
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 sm:gap-4">
                     {/* Like */}
                     <button
                       type="button"
@@ -413,7 +427,7 @@ export function DeetsSection({
                         className="inline-flex items-center gap-1.5 rounded-lg py-2 text-sm text-[var(--ud-text-muted)] transition-colors hover:text-[var(--ud-brand-primary)]"
                       >
                         <Share2 className={POST_ICON} />
-                        <span>Share</span>
+                        <span className="hidden sm:inline">Share</span>
                       </button>
                       {copiedDeetId === item.id && (
                         <span className="absolute -top-8 left-0 whitespace-nowrap rounded border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-2 py-1 text-xs font-medium text-[var(--ud-brand-primary)] shadow-sm">
