@@ -23,9 +23,11 @@ export function sectionTitleClass(extra?: string) {
 function MockAppShellContent({
   children,
   activeNav = "home",
+  skipAuth = false,
 }: {
   children: React.ReactNode;
   activeNav?: NavKey;
+  skipAuth?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -33,11 +35,11 @@ function MockAppShellContent({
   const isDemoPreview = searchParams.get("demo_preview") === "1";
 
   useEffect(() => {
-    if (status === "loading" || isAuthenticated || isDemoPreview) return;
+    if (skipAuth || status === "loading" || isAuthenticated || isDemoPreview) return;
     router.replace("/auth");
-  }, [isAuthenticated, isDemoPreview, router, status]);
+  }, [skipAuth, isAuthenticated, isDemoPreview, router, status]);
 
-  if (status === "loading" && !isDemoPreview) {
+  if (!skipAuth && status === "loading" && !isDemoPreview) {
     return (
       <div className={cn("min-h-screen", PAGE_BG)}>
         <UdeetsHeader />
@@ -55,7 +57,7 @@ function MockAppShellContent({
     );
   }
 
-  if (!isAuthenticated && !isDemoPreview) {
+  if (!skipAuth && !isAuthenticated && !isDemoPreview) {
     return null;
   }
 
@@ -74,6 +76,7 @@ function MockAppShellContent({
 export default function MockAppShell(props: {
   children: React.ReactNode;
   activeNav?: NavKey;
+  skipAuth?: boolean;
 }) {
   return (
     <Suspense fallback={null}>

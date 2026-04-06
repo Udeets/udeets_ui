@@ -287,10 +287,10 @@ function EventsPanel() {
   );
 }
 
-function ProfilePanel({ user, onLogout }: { user: { email?: string; user_metadata?: Record<string, unknown> } | null; onLogout: () => void }) {
-  const displayName = (user?.user_metadata?.full_name as string) || user?.email || "uDeets User";
+function ProfilePanel({ user, onLogout, profileData }: { user: { email?: string; user_metadata?: Record<string, unknown> } | null; onLogout: () => void; profileData?: { fullName: string | null; avatarUrl: string | null } | null }) {
+  const displayName = profileData?.fullName || (user?.user_metadata?.full_name as string) || user?.email || "uDeets User";
   const displayEmail = user?.email || "";
-  const avatarUrl = (user?.user_metadata?.avatar_url as string) || "";
+  const avatarUrl = profileData?.avatarUrl || (user?.user_metadata?.avatar_url as string) || "";
   const { theme, toggleTheme } = useTheme();
   const { role: profilePanelRole } = usePlatformRole();
   const canAccessAdmin = can(profilePanelRole, "page:admin_panel");
@@ -390,6 +390,27 @@ function UdeetsHeaderContent() {
   const canAccessDashboard = can(platformRole, "page:dashboard");
   const [openPanel, setOpenPanel] = useState<OpenPanel>(searchParams.get("demo_open_panel") === "alerts" ? "alerts" : null);
   const controlsRef = useRef<HTMLDivElement | null>(null);
+
+  // Fetch profile from DB so custom name/avatar are shown (not just OAuth metadata)
+  const [profileData, setProfileData] = useState<{ fullName: string | null; avatarUrl: string | null } | null>(null);
+  useEffect(() => {
+    if (!user?.id) return;
+    let ignore = false;
+    (async () => {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name, avatar_url")
+        .eq("id", user.id)
+        .single();
+      if (!ignore && data) {
+        setProfileData({ fullName: data.full_name, avatarUrl: data.avatar_url });
+      }
+    })();
+    return () => { ignore = true; };
+  }, [user?.id]);
+  const resolvedAvatarUrl = profileData?.avatarUrl || (user?.user_metadata?.avatar_url as string) || "";
 
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
@@ -494,10 +515,10 @@ function UdeetsHeaderContent() {
               aria-label="Open profile menu"
               className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-[#F7FBFA]"
             >
-              {user?.user_metadata?.avatar_url ? (
+              {resolvedAvatarUrl ? (
                 <Image
-                  src={user.user_metadata.avatar_url as string}
-                  alt={user.email ? `${user.email} profile photo` : "User profile photo"}
+                  src={resolvedAvatarUrl}
+                  alt={user?.email ? `${user.email} profile photo` : "User profile photo"}
                   fill
                   className="object-cover object-center"
                   sizes="40px"
@@ -518,7 +539,7 @@ function UdeetsHeaderContent() {
 
           {openPanel === "alerts" ? <NotificationsPanel /> : null}
           {openPanel === "events" ? <EventsPanel /> : null}
-          {openPanel === "profile" && isAuthenticated ? <ProfilePanel user={user} onLogout={handleLogout} /> : null}
+          {openPanel === "profile" && isAuthenticated ? <ProfilePanel user={user} onLogout={handleLogout} profileData={profileData} /> : null}
         </div>
       </div>
     </header>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Image, CalendarDays, FileText, MapPin, Megaphone, Smile, ListChecks, DollarSign } from "lucide-react";
+import { Camera, Calendar, MapPin, Megaphone, Smile, BarChart3, CircleDollarSign } from "lucide-react";
 import { cn } from "../hubUtils";
 import type { ComposerChildFlow } from "./deetTypes";
 
@@ -19,17 +19,16 @@ export function DeetComposerCard({
 }) {
   const actionButtons: Array<{
     key: Exclude<ComposerChildFlow, "quit_confirm" | "settings">;
-    icon: typeof Image;
+    icon: typeof Camera;
     label: string;
   }> = [
-    { key: "photo", icon: Image, label: "Photo" },
+    { key: "photo", icon: Camera, label: "Photo" },
     { key: "emoji", icon: Smile, label: "Emoji" },
     { key: "announcement", icon: Megaphone, label: "Announcement" },
-    { key: "notice", icon: FileText, label: "Notice" },
-    { key: "poll", icon: ListChecks, label: "Poll" },
-    { key: "event", icon: CalendarDays, label: "Event" },
+    { key: "poll", icon: BarChart3, label: "Poll" },
+    { key: "event", icon: Calendar, label: "Event" },
     { key: "checkin", icon: MapPin, label: "Check-in" },
-    { key: "money", icon: DollarSign, label: "Money" },
+    { key: "money", icon: CircleDollarSign, label: "Money" },
   ];
 
   return (
@@ -55,8 +54,8 @@ export function DeetComposerCard({
         </button>
       </div>
 
-      {/* Quick-action icon row (Band style — thin outline icons, evenly spaced) */}
-      <div className="flex items-center justify-around border-t border-[var(--ud-border-subtle)] px-1 py-1.5 overflow-x-auto">
+      {/* Quick-action icon row — thin outline icons, left-aligned */}
+      <div className="flex items-center justify-start border-t border-[var(--ud-border-subtle)] px-1 py-1.5 overflow-x-auto">
         {actionButtons.map(({ key, icon: Icon, label }, idx) => (
           <button
             key={`${key}-${idx}`}

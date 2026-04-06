@@ -3,7 +3,7 @@
 
 import type { FormEvent } from "react";
 import { useEffect, useRef } from "react";
-import { BarChart3, Calendar, FileText, Images, MapPin, Megaphone, Paperclip, Settings, Smile, X } from "lucide-react";
+import { BarChart3, Calendar, Images, MapPin, Megaphone, Paperclip, Settings, Smile, X } from "lucide-react";
 import { BUTTON_PRIMARY, cn } from "../hubUtils";
 import type { AttachedDeetItem, ComposerChildFlow, DeetFormattingState } from "./deetTypes";
 
@@ -28,6 +28,8 @@ export function CreateDeetModal({
   authorName = "You",
   authorAvatarSrc,
   onSetPostType,
+  isNotice,
+  onToggleNotice,
 }: {
   draftText: string;
   onDraftTextChange: (value: string) => void;
@@ -46,6 +48,8 @@ export function CreateDeetModal({
   authorName?: string;
   authorAvatarSrc?: string;
   onSetPostType?: (postType: string) => void;
+  isNotice?: boolean;
+  onToggleNotice?: () => void;
 }) {
   const fontMenuRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
@@ -168,9 +172,6 @@ export function CreateDeetModal({
             <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("announcement")} className={ACTION_BTN} title="Announcement">
               <Megaphone className={ACTION_ICON_CLS} />
             </button>
-            <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("notice")} className={ACTION_BTN} title="Notice">
-              <FileText className={ACTION_ICON_CLS} />
-            </button>
             <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("poll")} className={ACTION_BTN} title="Poll">
               <BarChart3 className={ACTION_ICON_CLS} />
             </button>
@@ -204,12 +205,23 @@ export function CreateDeetModal({
             </div>
           ) : null}
 
-          {/* Deet Settings */}
-          <div className="mt-4 flex items-center border-t border-[var(--ud-border-subtle)] pt-4">
+          {/* Deet Settings + Mark as notice */}
+          <div className="mt-4 flex items-center justify-between border-t border-[var(--ud-border-subtle)] pt-4">
             <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("settings")} className="inline-flex items-center gap-2 text-sm font-medium text-[var(--ud-text-secondary)] transition hover:text-[var(--ud-brand-primary)]">
               <Settings className="h-5 w-5 stroke-[1.5]" />
               Deet Settings
             </button>
+            {onToggleNotice && (
+              <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-[var(--ud-text-secondary)]">
+                <input
+                  type="checkbox"
+                  checked={isNotice ?? false}
+                  onChange={onToggleNotice}
+                  className="h-4 w-4 rounded border-[var(--ud-border)] text-[var(--ud-brand-primary)] accent-[var(--ud-brand-primary)]"
+                />
+                Mark as notice
+              </label>
+            )}
           </div>
         </form>
       </div>

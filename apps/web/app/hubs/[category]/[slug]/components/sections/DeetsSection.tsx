@@ -12,6 +12,7 @@ import {
   MoreVertical,
   Search,
   Send,
+  Share2,
   SmilePlus,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -232,28 +233,35 @@ export function DeetsSection({
         <div className="w-full space-y-3">
           {composerCard}
 
-          {/* ── Notice strip (Band shows pinned notices above feed) ── */}
-          {noticeItems.length > 0 && activeFilterPill === "All" && (
+          {/* ── Notice section (pinned notices above feed) ── */}
+          {noticeItems.length > 0 && (
             <div className="overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)]">
               <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--ud-border-subtle)]">
-                <span className="text-sm font-semibold text-[var(--ud-text-primary)]">Notice</span>
+                <span className="text-sm font-bold text-[var(--ud-text-primary)]">Notice</span>
                 <div className="flex items-center gap-1.5">
                   <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--ud-brand-primary)] px-1.5 text-[10px] font-bold text-white">{noticeItems.length}</span>
                   <ChevronDown className="h-4 w-4 text-[var(--ud-text-muted)] -rotate-90" />
                 </div>
               </div>
-              {noticeItems.slice(0, 2).map((notice) => (
-                <div key={notice.id} className="flex items-center gap-2 px-4 py-2 text-sm border-b border-[var(--ud-border-subtle)] last:border-b-0">
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
-                  <span className="truncate text-[var(--ud-text-secondary)]">
+              {noticeItems.map((notice) => (
+                <button
+                  key={notice.id}
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById(notice.id);
+                    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  }}
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-sm border-b border-[var(--ud-border-subtle)] last:border-b-0 hover:bg-[var(--ud-bg-subtle)] transition text-left"
+                >
+                  <span className="truncate flex-1 text-[var(--ud-text-secondary)]">
                     {notice.title && notice.title !== "Notice" ? (
-                      <><span className="text-red-500 font-medium">[Important]</span> {notice.title}</>
+                      notice.title
                     ) : (
                       <span dangerouslySetInnerHTML={{ __html: sanitizeHtmlContent(notice.body).slice(0, 80) }} />
                     )}
                   </span>
-                  <ChevronDown className="ml-auto h-4 w-4 shrink-0 text-[var(--ud-text-muted)] -rotate-90" />
-                </div>
+                  <ChevronDown className="h-4 w-4 shrink-0 text-[var(--ud-text-muted)] -rotate-90" />
+                </button>
               ))}
             </div>
           )}
@@ -505,7 +513,7 @@ export function DeetsSection({
                   </div>
                 </div>
 
-                {/* ── Action bar (Band style: React + Comment, evenly spread) ── */}
+                {/* ── Action bar: React + Comment + Share ── */}
                 <div className="flex items-center border-t border-[var(--ud-border-subtle)] mt-1">
                   {/* React button */}
                   <button
@@ -513,7 +521,7 @@ export function DeetsSection({
                     onClick={() => onToggleLike?.(item.id)}
                     disabled={likingDeetIds?.has(item.id)}
                     className={cn(
-                      "flex flex-1 items-center justify-center gap-2 py-2.5 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]",
+                      "flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]",
                       likedDeetIds?.has(item.id)
                         ? "text-[var(--ud-brand-primary)] font-medium"
                         : "text-[var(--ud-text-muted)]"
@@ -525,6 +533,9 @@ export function DeetsSection({
                       <SmilePlus className={POST_ICON} />
                     )}
                     <span>React</span>
+                    {(likeCountOverrides?.[item.id] ?? item.likes) > 0 && (
+                      <span className="text-xs">({likeCountOverrides?.[item.id] ?? item.likes})</span>
+                    )}
                   </button>
 
                   {/* Comment button */}
@@ -532,7 +543,7 @@ export function DeetsSection({
                     type="button"
                     onClick={() => onToggleComments?.(item.id)}
                     className={cn(
-                      "flex flex-1 items-center justify-center gap-2 py-2.5 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]",
+                      "flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]",
                       expandedCommentDeetId === item.id
                         ? "text-[var(--ud-brand-primary)] font-medium"
                         : "text-[var(--ud-text-muted)]"
@@ -540,6 +551,22 @@ export function DeetsSection({
                   >
                     <MessageSquare className={POST_ICON} />
                     <span>Comment</span>
+                    {item.comments > 0 && (
+                      <span className="text-xs">({item.comments})</span>
+                    )}
+                  </button>
+
+                  {/* Share button — copies post URL to clipboard */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const shareUrl = `${window.location.origin}/hubs/${hubCategory}/${hubSlug}?focus=${item.id}`;
+                      navigator.clipboard.writeText(shareUrl).catch(() => {});
+                    }}
+                    className="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm text-[var(--ud-text-muted)] transition-colors hover:bg-[var(--ud-bg-subtle)]"
+                  >
+                    <Share2 className={POST_ICON} />
+                    <span>Share</span>
                   </button>
                 </div>
 

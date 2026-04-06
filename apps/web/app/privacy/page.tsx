@@ -3,7 +3,7 @@ import MockAppShell from "@/components/mock-app-shell";
 
 export default function PrivacyPage() {
   return (
-    <MockAppShell activeNav="home">
+    <MockAppShell activeNav="home" skipAuth>
       <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold tracking-tight text-[var(--ud-text-primary)]">
           Privacy Policy

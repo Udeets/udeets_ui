@@ -132,10 +132,9 @@ export default function HubClient({
   const creatorMetadata = user?.user_metadata;
   const [creatorProfile, setCreatorProfile] = useState<{ fullName: string; avatarUrl: string | null } | null>(null);
 
-  // Fetch the hub creator's profile from DB (works for all visitors)
+  // Always fetch the hub creator's profile from DB so custom name/avatar are used
   useEffect(() => {
     if (!hub.createdBy) return;
-    if (isCreatorAdmin) return; // We already have the data from auth metadata
     let ignore = false;
     (async () => {
       const { createClient } = await import("@/lib/supabase/client");
@@ -150,18 +149,20 @@ export default function HubClient({
       }
     })();
     return () => { ignore = true; };
-  }, [hub.createdBy, isCreatorAdmin]);
+  }, [hub.createdBy]);
 
-  const creatorDisplayName = isCreatorAdmin
-    ? creatorMetadata?.full_name || creatorMetadata?.name || user?.email || "You"
-    : creatorProfile?.fullName || "Hub Creator";
+  // Prefer profile DB values over auth metadata (user may have customised them)
+  const creatorDisplayName =
+    creatorProfile?.fullName ||
+    (isCreatorAdmin ? (creatorMetadata?.full_name as string) || (creatorMetadata?.name as string) || user?.email || "You" : "Hub Creator");
   const creatorDetail = isCreatorAdmin ? user?.email || "Creator" : "Creator";
-  const creatorAvatarSrc = isCreatorAdmin
-    ? (typeof creatorMetadata?.avatar_url === "string" ? creatorMetadata.avatar_url : "")
-    : (creatorProfile?.avatarUrl || "");
+  const creatorAvatarSrc =
+    creatorProfile?.avatarUrl ||
+    (isCreatorAdmin && typeof creatorMetadata?.avatar_url === "string" ? creatorMetadata.avatar_url : "");
   const deetAuthorName =
-    creatorMetadata?.full_name ||
-    creatorMetadata?.name ||
+    creatorProfile?.fullName ||
+    (creatorMetadata?.full_name as string) ||
+    (creatorMetadata?.name as string) ||
     user?.email?.split("@")[0] ||
     "You";
   const [isJoined, setIsJoined] = useState(isCreatorAdmin);
@@ -965,9 +966,11 @@ export default function HubClient({
   // picks up the hub's chosen accent colour via var(--ud-brand-primary) etc.
   const themeVars: React.CSSProperties = {
     "--ud-brand-primary": accentTheme.primary,
+    "--ud-brand-primary-hover": accentTheme.primaryHover,
     "--ud-brand-light": accentTheme.surface,
     "--ud-gradient-from": accentTheme.primary,
     "--ud-gradient-to": accentTheme.primaryHover,
+    "--ud-border-focus": accentTheme.primary,
   } as React.CSSProperties;
 
   return (
@@ -1252,6 +1255,12 @@ export default function HubClient({
               authorName={deetAuthorName}
               authorAvatarSrc={creatorAvatarSrc}
               onSetPostType={(postType) => setDeetSettings((prev) => ({ ...prev, postType: postType as import("./components/deets/deetTypes").DeetPostType }))}
+              isNotice={deetSettings.noticeEnabled}
+              onToggleNotice={() => setDeetSettings((prev) => ({
+                ...prev,
+                noticeEnabled: !prev.noticeEnabled,
+                postType: !prev.noticeEnabled ? "notice" : "post",
+              }))}
             />,
             document.body
           )
