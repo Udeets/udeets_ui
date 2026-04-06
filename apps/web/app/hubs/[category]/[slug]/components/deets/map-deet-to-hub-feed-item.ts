@@ -26,7 +26,7 @@ function formatDeetTime(createdAt?: string | null) {
 
 export function mapDeetToHubFeedItem(item: Partial<DeetRecord>, hubCreatorId?: string): HubContent["feed"][number] {
   const card = mapDeetToDashboardCard(item);
-  const kind = resolveHubFeedItemKind(card);
+  const kind = resolveHubFeedItemKind(card, item);
   const images = card.previewImageUrls?.length ? card.previewImageUrls : undefined;
   const image = card.previewImageUrl ?? images?.[0] ?? undefined;
 
@@ -75,12 +75,22 @@ function asNonEmptyString(value: unknown) {
   return typeof value === "string" && value.trim() ? value : null;
 }
 
-function resolveHubFeedItemKind(card: ReturnType<typeof mapDeetToDashboardCard>): HubFeedItemKind {
+function resolveHubFeedItemKind(card: ReturnType<typeof mapDeetToDashboardCard>, item?: Partial<DeetRecord>): HubFeedItemKind {
   const hasImage = Boolean(card.previewImageUrl ?? card.previewImageUrls?.[0]);
 
+  // Check attachments for specific types (poll, event, etc.)
+  if (Array.isArray(item?.attachments)) {
+    const attTypes = item.attachments.map((a) => a?.type).filter(Boolean);
+    if (attTypes.includes("poll")) return "poll";
+  }
+
+  // Notice: only alert sourceType or explicit "Notices" bucket
   if (card.sourceType === "alert") return "notice";
+  if (card.type === "Notices") return "notice";
+  // Announcement: explicit announcement sourceType
+  if (card.sourceType === "announcement") return "announcement";
   if (card.sourceType === "event") return "event";
-  if (card.type === "Notices" || card.isNoticeLike) return "notice";
+  if (card.sourceType === "poll") return "poll";
   if (card.type === "Photos" || card.isMediaLike) return "photo";
   if (card.attachmentCount > 0 && !hasImage) return "file";
   return "announcement";
@@ -90,6 +100,7 @@ function defaultFeedLabel(kind: HubFeedItemKind) {
   if (kind === "notice") return "Notice";
   if (kind === "photo") return "Photo";
   if (kind === "event") return "Event";
+  if (kind === "poll") return "Poll";
   if (kind === "file") return "File";
   return "Deet";
 }

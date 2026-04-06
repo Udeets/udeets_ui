@@ -1,6 +1,6 @@
 import type { HubCategorySlug } from "@/lib/hubs";
 
-export type HubFeedItemKind = "announcement" | "photo" | "notice" | "event" | "file" | "news" | "deal" | "hazard" | "alert";
+export type HubFeedItemKind = "announcement" | "photo" | "notice" | "event" | "poll" | "file" | "news" | "deal" | "hazard" | "alert";
 export type HubEventTheme =
   | "Pooja"
   | "Temple"

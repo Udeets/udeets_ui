@@ -117,6 +117,7 @@ function resolveDeetType(kind: string, attachments?: HubFeedItemAttachment[]): s
   if (kind === "notice") return "notice";
   if (kind === "announcement") return "announcement";
   if (kind === "event") return "event";
+  if (kind === "poll") return "poll";
   return null;
 }
 
@@ -187,39 +188,45 @@ function DeetTypeContent({ type, attachments }: { type: string; attachments?: Hu
     );
   }
 
-  // Poll: options list
+  // Poll: Band-style with status badge, question, and radio options
   if (type === "poll") {
     const options = matchingAtt?.options ?? [];
+    // If no options array, try to parse from detail (legacy format "opt1 · opt2")
+    const parsedOptions = options.length > 0
+      ? options
+      : (matchingAtt?.detail?.split(" · ").filter(Boolean) ?? []);
+
     return (
-      <div className={cn("mx-4 mt-3 overflow-hidden rounded-xl border", config.border)}>
-        <div className={cn("flex items-center gap-2 px-3 py-2", config.bg)}>
-          <Icon className={cn("h-4 w-4 stroke-[2]", config.text)} />
-          <span className={cn("text-sm font-bold", config.text)}>
-            {matchingAtt?.title || "Poll"}
-          </span>
+      <div className="mx-4 mt-3 overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)]/30">
+        {/* Poll header with status */}
+        <div className="flex items-center gap-3 px-4 py-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
+            <Icon className="h-5 w-5 stroke-[1.5] text-emerald-600" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-emerald-600">Poll Opened</span>
+              <span className="text-xs text-[var(--ud-text-muted)]">0 voted</span>
+            </div>
+            <p className="mt-0.5 text-sm font-semibold text-[var(--ud-text-primary)]">
+              {matchingAtt?.title || "Poll"}
+            </p>
+          </div>
         </div>
-        {options.length > 0 && (
-          <div className="divide-y divide-[var(--ud-border-subtle)] px-3">
-            {options.map((opt, i) => (
+
+        {/* Poll options */}
+        {parsedOptions.length > 0 && (
+          <div className="border-t border-[var(--ud-border-subtle)] px-4 py-2">
+            {parsedOptions.map((opt, i) => (
               <button
                 key={i}
                 type="button"
-                className="flex w-full items-center gap-2 py-2.5 text-sm text-[var(--ud-text-primary)] transition hover:bg-[var(--ud-bg-subtle)]"
+                className="flex w-full items-center gap-3 rounded-lg px-1 py-2.5 text-sm text-[var(--ud-text-primary)] transition hover:bg-[var(--ud-bg-subtle)]"
               >
-                <span className={cn(
-                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-bold",
-                  config.border, config.text
-                )}>
-                  {i + 1}
-                </span>
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 border-gray-300" />
                 <span>{opt}</span>
               </button>
             ))}
-          </div>
-        )}
-        {matchingAtt?.detail && !options.length && (
-          <div className="px-3 py-2.5">
-            <p className="text-sm text-[var(--ud-text-secondary)]">{matchingAtt.detail}</p>
           </div>
         )}
       </div>
@@ -387,6 +394,7 @@ export function DeetsSection({
   const [activeFilterPill, setActiveFilterPill] = useState<string>("All");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [openMenuDeetId, setOpenMenuDeetId] = useState<string | null>(null);
+  const [isNoticeExpanded, setIsNoticeExpanded] = useState(false);
 
   /* Handle sort change — route through existing feedFilter prop */
   const handleSortChange = (option: SortOption) => {
@@ -478,36 +486,48 @@ export function DeetsSection({
         <div className="w-full space-y-3">
           {composerCard}
 
-          {/* ── Notice section (pinned notices above feed) ── */}
+          {/* ── Notice section (pinned notices above feed, collapsible) ── */}
           {noticeItems.length > 0 && (
-            <div className="overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)]">
-              <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--ud-border-subtle)]">
-                <span className="text-sm font-bold text-[var(--ud-text-primary)]">Notice</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--ud-brand-primary)] px-1.5 text-[10px] font-bold text-white">{noticeItems.length}</span>
-                  <ChevronDown className="h-4 w-4 text-[var(--ud-text-muted)] -rotate-90" />
+            <div className="overflow-hidden rounded-xl border border-amber-200 bg-amber-50/50">
+              <button
+                type="button"
+                onClick={() => setIsNoticeExpanded(!isNoticeExpanded)}
+                className="flex w-full items-center justify-between px-4 py-2.5 transition hover:bg-amber-100/50"
+              >
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 stroke-[2] text-amber-600" />
+                  <span className="text-sm font-bold text-amber-800">Notices</span>
                 </div>
-              </div>
-              {noticeItems.map((notice) => (
-                <button
-                  key={notice.id}
-                  type="button"
-                  onClick={() => {
-                    const el = document.getElementById(notice.id);
-                    el?.scrollIntoView({ behavior: "smooth", block: "center" });
-                  }}
-                  className="flex w-full items-center gap-2 px-4 py-2.5 text-sm border-b border-[var(--ud-border-subtle)] last:border-b-0 hover:bg-[var(--ud-bg-subtle)] transition text-left"
-                >
-                  <span className="truncate flex-1 text-[var(--ud-text-secondary)]">
-                    {notice.title && notice.title !== "Notice" ? (
-                      notice.title
-                    ) : (
-                      <span dangerouslySetInnerHTML={{ __html: sanitizeHtmlContent(notice.body).slice(0, 80) }} />
-                    )}
-                  </span>
-                  <ChevronDown className="h-4 w-4 shrink-0 text-[var(--ud-text-muted)] -rotate-90" />
-                </button>
-              ))}
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white">{noticeItems.length}</span>
+                  <ChevronDown className={cn("h-4 w-4 text-amber-500 transition-transform", isNoticeExpanded ? "rotate-0" : "-rotate-90")} />
+                </div>
+              </button>
+              {isNoticeExpanded && (
+                <div className="border-t border-amber-200">
+                  {noticeItems.map((notice) => (
+                    <button
+                      key={notice.id}
+                      type="button"
+                      onClick={() => {
+                        const el = document.getElementById(notice.id);
+                        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      }}
+                      className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm border-b border-amber-100 last:border-b-0 hover:bg-amber-100/60 transition text-left"
+                    >
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                      <span className="truncate flex-1 text-amber-900">
+                        {notice.title && notice.title !== "Notice" ? (
+                          notice.title
+                        ) : (
+                          <span dangerouslySetInnerHTML={{ __html: sanitizeHtmlContent(notice.body).slice(0, 80) }} />
+                        )}
+                      </span>
+                      <ChevronDown className="h-4 w-4 shrink-0 text-amber-400 -rotate-90" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -713,24 +733,27 @@ export function DeetsSection({
                   </div>
                 </div>
 
-                {/* ── Type badge ── */}
+                {/* ── Type badge + rich content ── */}
                 {(() => {
                   const deetType = resolveDeetType(item.kind, item.deetAttachments);
-                  return deetType ? <DeetTypeBadge type={deetType} /> : null;
-                })()}
+                  const hasRichSection = deetType && item.deetAttachments?.some((a) => a.type === deetType);
 
-                {/* ── Body content ── */}
-                {item.body ? (
-                  <div
-                    className="px-4 pt-3 text-[15px] leading-relaxed text-[var(--ud-text-primary)]"
-                    dangerouslySetInnerHTML={{ __html: sanitizeHtmlContent(item.body) }}
-                  />
-                ) : null}
+                  return (
+                    <>
+                      {deetType ? <DeetTypeBadge type={deetType} /> : null}
 
-                {/* ── Rich type content section ── */}
-                {(() => {
-                  const deetType = resolveDeetType(item.kind, item.deetAttachments);
-                  return deetType ? <DeetTypeContent type={deetType} attachments={item.deetAttachments} /> : null;
+                      {/* Body content — skip if rich section will render the same info */}
+                      {item.body && !hasRichSection ? (
+                        <div
+                          className="px-4 pt-3 text-[15px] leading-relaxed text-[var(--ud-text-primary)]"
+                          dangerouslySetInnerHTML={{ __html: sanitizeHtmlContent(item.body) }}
+                        />
+                      ) : null}
+
+                      {/* Rich type content section */}
+                      {deetType ? <DeetTypeContent type={deetType} attachments={item.deetAttachments} /> : null}
+                    </>
+                  );
                 })()}
 
                 {/* ── Image / gallery ── */}

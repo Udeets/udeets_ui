@@ -36,7 +36,7 @@ export function useHubFilters({
       }
       if (feedFilter === "Events") return item.kind === "event";
       if (feedFilter === "Photos") return item.kind === "photo";
-      if (feedFilter === "Polls") return item.kind === "announcement"; // polls stored as announcements currently
+      if (feedFilter === "Polls") return item.kind === "poll";
       return false;
     });
   }, [allFeedItems, feedFilter, normalizedPostSearch]);

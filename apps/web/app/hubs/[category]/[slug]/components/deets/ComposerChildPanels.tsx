@@ -104,18 +104,47 @@ export function NoticeChildContent({
 
 /* ── Poll ─────────────────────────────────────────────────────── */
 
+const TOGGLE =
+  "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200";
+const TOGGLE_KNOB =
+  "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200";
+const SELECT =
+  "rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-input)] px-3 py-1.5 text-sm text-[var(--ud-text-primary)] outline-none transition focus:border-[var(--ud-border-focus)]";
+
+const SHOW_RESULTS_OPTIONS = [
+  { value: "always", label: "Always view" },
+  { value: "after_voting", label: "View after voting" },
+  { value: "after_closed", label: "View after poll is closed" },
+  { value: "private", label: "Private" },
+] as const;
+
+const SORT_OPTIONS = [
+  { value: "option_no", label: "By option no." },
+  { value: "votes", label: "By votes" },
+] as const;
+
+type PollSettings = import("./deetTypes").PollSettings;
+
 export function PollChildContent({
   onAttach,
   onCancel,
 }: {
-  onAttach: (question: string, options: string[]) => void;
+  onAttach: (question: string, options: string[], settings: PollSettings) => void;
   onCancel: () => void;
 }) {
   const [question, setQuestion] = useState("");
-  const [options, setOptions] = useState(["", ""]);
+  const [options, setOptions] = useState(["", "", ""]);
+  const [allowAnyoneToAdd, setAllowAnyoneToAdd] = useState(false);
+  const [allowMultiSelect, setAllowMultiSelect] = useState(false);
+  const [multiSelectLimit, setMultiSelectLimit] = useState<number | null>(null);
+  const [allowSecretVoting, setAllowSecretVoting] = useState(false);
+  const [deadlineEnabled, setDeadlineEnabled] = useState(false);
+  const [deadline, setDeadline] = useState("");
+  const [showResults, setShowResults] = useState<PollSettings["showResults"]>("always");
+  const [sortBy, setSortBy] = useState<PollSettings["sortBy"]>("option_no");
 
   const addOption = () => {
-    if (options.length < 6) setOptions([...options, ""]);
+    if (options.length < 10) setOptions([...options, ""]);
   };
 
   const removeOption = (index: number) => {
@@ -131,48 +160,183 @@ export function PollChildContent({
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-[var(--ud-text-secondary)]">
-        Ask your community a question and let them vote.
-      </p>
+      {/* Question */}
       <div>
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Question</label>
-        <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="What would you like to ask?" className={INPUT} />
+        <input
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          placeholder="Question"
+          className={`${INPUT} text-base font-medium`}
+        />
       </div>
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Options</label>
-        <div className="space-y-2">
-          {options.map((opt, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <input
-                value={opt}
-                onChange={(e) => updateOption(i, e.target.value)}
-                placeholder={`Option ${i + 1}`}
-                className={INPUT}
-              />
-              {options.length > 2 ? (
-                <button type="button" onClick={() => removeOption(i)} className="shrink-0 rounded-full p-2 text-[var(--ud-text-muted)] transition hover:bg-rose-50 hover:text-rose-500">
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              ) : null}
-            </div>
-          ))}
-        </div>
-        {options.length < 6 ? (
-          <button type="button" onClick={addOption} className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--ud-brand-primary)] transition hover:opacity-80">
+
+      {/* Options */}
+      <div className="space-y-2">
+        {options.map((opt, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[var(--ud-border)] text-xs font-semibold text-[var(--ud-text-muted)]">{i + 1}</span>
+            <input
+              value={opt}
+              onChange={(e) => updateOption(i, e.target.value)}
+              placeholder="Option"
+              className={`${INPUT} flex-1`}
+            />
+            {options.length > 2 ? (
+              <button type="button" onClick={() => removeOption(i)} className="shrink-0 rounded-full p-1.5 text-[var(--ud-text-muted)] transition hover:bg-rose-50 hover:text-rose-500">
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+          </div>
+        ))}
+        {options.length < 10 ? (
+          <button type="button" onClick={addOption} className="inline-flex items-center gap-1.5 pl-8 text-sm font-medium text-[var(--ud-brand-primary)] transition hover:opacity-80">
             <Plus className="h-4 w-4" />
-            Add option
+            Option
           </button>
         ) : null}
       </div>
-      <div className="flex justify-end gap-3 pt-2">
-        <button type="button" onClick={onCancel} className={BTN_SECONDARY}>Cancel</button>
+
+      {/* Divider */}
+      <div className="border-t border-[var(--ud-border-subtle)]" />
+
+      {/* Toggle settings */}
+      <div className="space-y-3">
+        {/* Allow anyone to add */}
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-[var(--ud-text-primary)]">Allow anyone to add</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={allowAnyoneToAdd}
+            onClick={() => setAllowAnyoneToAdd(!allowAnyoneToAdd)}
+            className={`${TOGGLE} ${allowAnyoneToAdd ? "bg-[var(--ud-brand-primary)]" : "bg-gray-300"}`}
+          >
+            <span className={`${TOGGLE_KNOB} ${allowAnyoneToAdd ? "translate-x-4" : "translate-x-0.5"}`} />
+          </button>
+        </div>
+
+        {/* Allow multi-select */}
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm text-[var(--ud-text-primary)]">Allow multi-select</span>
+          <div className="flex items-center gap-2">
+            {allowMultiSelect && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-[var(--ud-text-muted)]">Limit</span>
+                <select
+                  value={multiSelectLimit ?? ""}
+                  onChange={(e) => setMultiSelectLimit(e.target.value ? Number(e.target.value) : null)}
+                  className={`${SELECT} min-w-[100px]`}
+                >
+                  <option value="">Unlimited</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                </select>
+              </div>
+            )}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={allowMultiSelect}
+              onClick={() => setAllowMultiSelect(!allowMultiSelect)}
+              className={`${TOGGLE} ${allowMultiSelect ? "bg-[var(--ud-brand-primary)]" : "bg-gray-300"}`}
+            >
+              <span className={`${TOGGLE_KNOB} ${allowMultiSelect ? "translate-x-4" : "translate-x-0.5"}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Allow secret voting */}
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-[var(--ud-text-primary)]">Allow secret voting</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={allowSecretVoting}
+            onClick={() => setAllowSecretVoting(!allowSecretVoting)}
+            className={`${TOGGLE} ${allowSecretVoting ? "bg-[var(--ud-brand-primary)]" : "bg-gray-300"}`}
+          >
+            <span className={`${TOGGLE_KNOB} ${allowSecretVoting ? "translate-x-4" : "translate-x-0.5"}`} />
+          </button>
+        </div>
+
+        {/* Deadline */}
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm text-[var(--ud-text-primary)]">Deadline</span>
+          <div className="flex items-center gap-2">
+            {deadlineEnabled && (
+              <input
+                type="datetime-local"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+                className={`${SELECT} text-xs`}
+              />
+            )}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={deadlineEnabled}
+              onClick={() => setDeadlineEnabled(!deadlineEnabled)}
+              className={`${TOGGLE} ${deadlineEnabled ? "bg-[var(--ud-brand-primary)]" : "bg-gray-300"}`}
+            >
+              <span className={`${TOGGLE_KNOB} ${deadlineEnabled ? "translate-x-4" : "translate-x-0.5"}`} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="border-t border-[var(--ud-border-subtle)]" />
+
+      {/* Dropdowns */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-[var(--ud-text-primary)]">Show Results</span>
+          <select
+            value={showResults}
+            onChange={(e) => setShowResults(e.target.value as PollSettings["showResults"])}
+            className={SELECT}
+          >
+            {SHOW_RESULTS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-[var(--ud-text-primary)]">Sort poll options</span>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as PollSettings["sortBy"])}
+            className={SELECT}
+          >
+            {SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Attach button */}
+      <div className="flex justify-center pt-2">
         <button
           type="button"
           disabled={!canSubmit}
-          onClick={() => onAttach(question.trim(), validOptions)}
-          className={`${BTN_PRIMARY} disabled:opacity-50 disabled:cursor-not-allowed`}
+          onClick={() =>
+            onAttach(question.trim(), validOptions, {
+              allowAnyoneToAdd,
+              allowMultiSelect,
+              multiSelectLimit: allowMultiSelect ? multiSelectLimit : null,
+              allowSecretVoting,
+              deadline: deadlineEnabled && deadline ? deadline : null,
+              showResults,
+              sortBy,
+            })
+          }
+          className={`${BTN_PRIMARY} w-full max-w-[200px] py-2.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          Add Poll
+          Attach
         </button>
       </div>
     </div>

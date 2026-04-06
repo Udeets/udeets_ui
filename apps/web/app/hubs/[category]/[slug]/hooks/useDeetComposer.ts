@@ -281,6 +281,8 @@ export function useDeetComposer({
           detail: item.detail,
           previews: item.type === "photo" ? uploadedPhotoUrls : item.previews,
           storagePaths: item.type === "photo" ? uploadedPhotoPaths : undefined,
+          ...("options" in item && item.options ? { options: item.options } : {}),
+          ...("pollSettings" in item && item.pollSettings ? { pollSettings: item.pollSettings } : {}),
         })),
       });
 

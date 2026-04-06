@@ -1424,10 +1424,16 @@ export default function HubClient({
 
               {/* ── Poll modal ── */}
               {activeComposerChild === "poll" ? (
-                <DeetChildModal title="Create Poll" onClose={() => setActiveComposerChild(null)}>
+                <DeetChildModal title="Poll" onClose={() => setActiveComposerChild(null)}>
                   <PollChildContent
-                    onAttach={(question, options) => {
-                      attachDeetItem({ type: "poll", title: question, detail: options.join(" · ") });
+                    onAttach={(question, options, settings) => {
+                      attachDeetItem({
+                        type: "poll",
+                        title: question,
+                        detail: options.join(" · "),
+                        options,
+                        pollSettings: settings,
+                      });
                       setActiveComposerChild(null);
                     }}
                     onCancel={() => setActiveComposerChild(null)}
