@@ -1,12 +1,12 @@
 "use client";
 
-import { Camera, Calendar, FileText, MapPin, Megaphone, Smile, BarChart3 } from "lucide-react";
+import { Image, CalendarDays, FileText, MapPin, Megaphone, Smile, ListChecks, DollarSign } from "lucide-react";
 import { cn } from "../hubUtils";
 import type { ComposerChildFlow } from "./deetTypes";
 
 const ACTION_BTN =
   "inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-[var(--ud-bg-subtle)] text-[var(--ud-text-muted)] hover:text-[var(--ud-brand-primary)]";
-const ACTION_ICON_CLS = "h-[18px] w-[18px] stroke-[1.5]";
+const ACTION_ICON_CLS = "h-5 w-5 stroke-[1.5]";
 
 export function DeetComposerCard({
   isDemoPreview,
@@ -19,16 +19,17 @@ export function DeetComposerCard({
 }) {
   const actionButtons: Array<{
     key: Exclude<ComposerChildFlow, "quit_confirm" | "settings">;
-    icon: typeof Camera;
+    icon: typeof Image;
     label: string;
   }> = [
-    { key: "photo", icon: Camera, label: "Photo" },
-    { key: "emoji", icon: Smile, label: "Sticker" },
+    { key: "photo", icon: Image, label: "Photo" },
+    { key: "emoji", icon: Smile, label: "Emoji" },
     { key: "announcement", icon: Megaphone, label: "Announcement" },
     { key: "notice", icon: FileText, label: "Notice" },
-    { key: "poll", icon: BarChart3, label: "Poll" },
-    { key: "event", icon: Calendar, label: "Event" },
+    { key: "poll", icon: ListChecks, label: "Poll" },
+    { key: "event", icon: CalendarDays, label: "Event" },
     { key: "checkin", icon: MapPin, label: "Check-in" },
+    { key: "money", icon: DollarSign, label: "Money" },
   ];
 
   return (
@@ -50,11 +51,11 @@ export function DeetComposerCard({
               : "cursor-not-allowed opacity-60"
           )}
         >
-          Write something...
+          What&apos;s on your mind?
         </button>
       </div>
 
-      {/* Quick-action icon row */}
+      {/* Quick-action icon row (Band style — thin outline icons, evenly spaced) */}
       <div className="flex items-center justify-around border-t border-[var(--ud-border-subtle)] px-1 py-1.5 overflow-x-auto">
         {actionButtons.map(({ key, icon: Icon, label }, idx) => (
           <button
