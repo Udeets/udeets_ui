@@ -15,11 +15,20 @@ export type HubEventTheme =
   | "Sports"
   | "Community";
 
+export type HubFeedItemAttachment = {
+  type: string;
+  title?: string;
+  detail?: string;
+  options?: string[];
+  previews?: string[];
+};
+
 export type HubFeedItem = {
   id: string;
   kind: HubFeedItemKind;
   author: string;
   authorId: string;
+  authorAvatar?: string;
   role?: "creator" | "admin" | "member";
   time: string;
   title: string;
@@ -29,6 +38,7 @@ export type HubFeedItem = {
   likes: number;
   comments: number;
   views: number;
+  deetAttachments?: HubFeedItemAttachment[];
 };
 
 export type HubEventItem = {

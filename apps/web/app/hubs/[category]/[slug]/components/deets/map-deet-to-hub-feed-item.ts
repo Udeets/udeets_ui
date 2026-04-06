@@ -1,4 +1,4 @@
-import type { HubContent, HubFeedItemKind } from "@/lib/hub-content";
+import type { HubContent, HubFeedItemAttachment, HubFeedItemKind } from "@/lib/hub-content";
 import { mapDeetToDashboardCard } from "@/lib/mappers/deets/map-deet-to-dashboard-card";
 import type { DeetRecord } from "@/lib/services/deets/deet-types";
 
@@ -36,6 +36,23 @@ export function mapDeetToHubFeedItem(item: Partial<DeetRecord>, hubCreatorId?: s
     role = "creator";
   }
 
+  // Extract structured attachment data for rich rendering
+  const deetAttachments: HubFeedItemAttachment[] = Array.isArray(item.attachments)
+    ? item.attachments
+        .filter((a) => a && typeof a === "object" && a.type)
+        .map((a) => ({
+          type: a.type,
+          title: a.title || undefined,
+          detail: a.detail || undefined,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          options: Array.isArray((a as any).options)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ? ((a as any).options as string[])
+            : undefined,
+          previews: a.previews || undefined,
+        }))
+    : [];
+
   return {
     id: item.id ?? "",
     kind,
@@ -50,6 +67,7 @@ export function mapDeetToHubFeedItem(item: Partial<DeetRecord>, hubCreatorId?: s
     likes: item.like_count ?? 0,
     comments: item.comment_count ?? 0,
     views: item.view_count ?? 0,
+    deetAttachments: deetAttachments.length > 0 ? deetAttachments : undefined,
   };
 }
 

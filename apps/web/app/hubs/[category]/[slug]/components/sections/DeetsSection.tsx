@@ -2,11 +2,16 @@
 
 import type { HubContent } from "@/lib/hub-content";
 import {
+  AlertTriangle,
+  BarChart3,
+  Calendar,
   ChevronDown,
+  CircleDollarSign,
   Eye,
   Loader2,
   List,
   LayoutGrid,
+  MapPin,
   Megaphone,
   MessageSquare,
   MoreVertical,
@@ -15,6 +20,7 @@ import {
   Share2,
   SmilePlus,
 } from "lucide-react";
+import type { HubFeedItemAttachment } from "@/lib/hub-content";
 import { useEffect, useRef, useState } from "react";
 import { DeetComposerCard } from "../deets/DeetComposerCard";
 import { ImageWithFallback, cn, initials } from "../hubUtils";
@@ -38,7 +44,249 @@ function sanitizeHtmlContent(html: string): string {
   return div.innerHTML;
 }
 
-/* ── Band-style icon sizing ── */
+/* ── Deet type styling config ── */
+const DEET_TYPE_CONFIG: Record<string, {
+  icon: typeof Megaphone;
+  label: string;
+  bg: string;
+  text: string;
+  border: string;
+  accent: string;
+}> = {
+  announcement: {
+    icon: Megaphone,
+    label: "Announcement",
+    bg: "bg-blue-50",
+    text: "text-blue-700",
+    border: "border-blue-200",
+    accent: "bg-blue-100",
+  },
+  notice: {
+    icon: AlertTriangle,
+    label: "Notice",
+    bg: "bg-amber-50",
+    text: "text-amber-700",
+    border: "border-amber-300",
+    accent: "bg-amber-100",
+  },
+  event: {
+    icon: Calendar,
+    label: "Event",
+    bg: "bg-purple-50",
+    text: "text-purple-700",
+    border: "border-purple-200",
+    accent: "bg-purple-100",
+  },
+  poll: {
+    icon: BarChart3,
+    label: "Poll",
+    bg: "bg-emerald-50",
+    text: "text-emerald-700",
+    border: "border-emerald-200",
+    accent: "bg-emerald-100",
+  },
+  checkin: {
+    icon: MapPin,
+    label: "Check-in",
+    bg: "bg-rose-50",
+    text: "text-rose-700",
+    border: "border-rose-200",
+    accent: "bg-rose-100",
+  },
+  money: {
+    icon: CircleDollarSign,
+    label: "Payment Request",
+    bg: "bg-teal-50",
+    text: "text-teal-700",
+    border: "border-teal-200",
+    accent: "bg-teal-100",
+  },
+};
+
+/** Resolve the deet type from kind + attachments */
+function resolveDeetType(kind: string, attachments?: HubFeedItemAttachment[]): string | null {
+  // Check attachments for specific types first
+  if (attachments?.length) {
+    for (const a of attachments) {
+      if (a.type === "announcement" || a.type === "poll" || a.type === "event" || a.type === "checkin" || a.type === "money") {
+        return a.type;
+      }
+    }
+  }
+  // Fall back to kind
+  if (kind === "notice") return "notice";
+  if (kind === "announcement") return "announcement";
+  if (kind === "event") return "event";
+  return null;
+}
+
+/** Type badge shown below author header */
+function DeetTypeBadge({ type }: { type: string }) {
+  const config = DEET_TYPE_CONFIG[type];
+  if (!config) return null;
+  const Icon = config.icon;
+
+  return (
+    <div className="px-4 pt-2">
+      <span className={cn(
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
+        config.accent, config.text
+      )}>
+        <Icon className="h-3.5 w-3.5 stroke-[2]" />
+        {config.label}
+      </span>
+    </div>
+  );
+}
+
+/** Rich content section for specific deet types */
+function DeetTypeContent({ type, attachments }: { type: string; attachments?: HubFeedItemAttachment[] }) {
+  const config = DEET_TYPE_CONFIG[type];
+  if (!config) return null;
+  const Icon = config.icon;
+
+  const matchingAtt = attachments?.find((a) => a.type === type);
+
+  // Notice: special highlighted section
+  if (type === "notice") {
+    return (
+      <div className={cn("mx-4 mt-3 rounded-xl border-l-4 p-3", config.border, config.bg)}>
+        <div className="flex items-start gap-2.5">
+          <div className={cn("mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg", config.accent)}>
+            <Icon className={cn("h-4 w-4 stroke-[2]", config.text)} />
+          </div>
+          <div className="min-w-0 flex-1">
+            {matchingAtt?.title && (
+              <p className={cn("text-sm font-bold", config.text)}>{matchingAtt.title}</p>
+            )}
+            {matchingAtt?.detail && (
+              <p className="mt-0.5 text-sm text-[var(--ud-text-secondary)]">{matchingAtt.detail}</p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Announcement: colored header bar with content
+  if (type === "announcement") {
+    return (
+      <div className={cn("mx-4 mt-3 overflow-hidden rounded-xl border", config.border)}>
+        <div className={cn("flex items-center gap-2 px-3 py-2", config.bg)}>
+          <Icon className={cn("h-4 w-4 stroke-[2]", config.text)} />
+          <span className={cn("text-sm font-bold", config.text)}>
+            {matchingAtt?.title || "Announcement"}
+          </span>
+        </div>
+        {matchingAtt?.detail && (
+          <div className="px-3 py-2.5">
+            <p className="text-sm leading-relaxed text-[var(--ud-text-secondary)]">{matchingAtt.detail}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Poll: options list
+  if (type === "poll") {
+    const options = matchingAtt?.options ?? [];
+    return (
+      <div className={cn("mx-4 mt-3 overflow-hidden rounded-xl border", config.border)}>
+        <div className={cn("flex items-center gap-2 px-3 py-2", config.bg)}>
+          <Icon className={cn("h-4 w-4 stroke-[2]", config.text)} />
+          <span className={cn("text-sm font-bold", config.text)}>
+            {matchingAtt?.title || "Poll"}
+          </span>
+        </div>
+        {options.length > 0 && (
+          <div className="divide-y divide-[var(--ud-border-subtle)] px-3">
+            {options.map((opt, i) => (
+              <button
+                key={i}
+                type="button"
+                className="flex w-full items-center gap-2 py-2.5 text-sm text-[var(--ud-text-primary)] transition hover:bg-[var(--ud-bg-subtle)]"
+              >
+                <span className={cn(
+                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-bold",
+                  config.border, config.text
+                )}>
+                  {i + 1}
+                </span>
+                <span>{opt}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {matchingAtt?.detail && !options.length && (
+          <div className="px-3 py-2.5">
+            <p className="text-sm text-[var(--ud-text-secondary)]">{matchingAtt.detail}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Event: date/location card
+  if (type === "event") {
+    return (
+      <div className={cn("mx-4 mt-3 overflow-hidden rounded-xl border", config.border)}>
+        <div className={cn("flex items-center gap-2 px-3 py-2", config.bg)}>
+          <Icon className={cn("h-4 w-4 stroke-[2]", config.text)} />
+          <span className={cn("text-sm font-bold", config.text)}>
+            {matchingAtt?.title || "Event"}
+          </span>
+        </div>
+        {matchingAtt?.detail && (
+          <div className="px-3 py-2.5">
+            <p className="text-sm leading-relaxed text-[var(--ud-text-secondary)]">{matchingAtt.detail}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Check-in: location display
+  if (type === "checkin") {
+    return (
+      <div className={cn("mx-4 mt-3 overflow-hidden rounded-xl border", config.border)}>
+        <div className={cn("flex items-center gap-2 px-3 py-2", config.bg)}>
+          <Icon className={cn("h-4 w-4 stroke-[2]", config.text)} />
+          <span className={cn("text-sm font-bold", config.text)}>
+            {matchingAtt?.title || "Checked in"}
+          </span>
+        </div>
+        {matchingAtt?.detail && (
+          <div className="px-3 py-2.5">
+            <p className="text-sm text-[var(--ud-text-secondary)]">{matchingAtt.detail}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Money / payment request
+  if (type === "money") {
+    return (
+      <div className={cn("mx-4 mt-3 overflow-hidden rounded-xl border", config.border)}>
+        <div className={cn("flex items-center gap-2 px-3 py-2", config.bg)}>
+          <Icon className={cn("h-4 w-4 stroke-[2]", config.text)} />
+          <span className={cn("text-sm font-bold", config.text)}>
+            {matchingAtt?.title || "Payment Request"}
+          </span>
+        </div>
+        {matchingAtt?.detail && (
+          <div className="px-3 py-2.5">
+            <p className="text-sm text-[var(--ud-text-secondary)]">{matchingAtt.detail}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return null;
+}
+
+/* ── Icon sizing ── */
 const POST_ICON = "h-[18px] w-[18px] stroke-[1.5]";
 
 /* ── Sort options ── */
@@ -411,8 +659,8 @@ export function DeetsSection({
                 <div className="flex items-center gap-3 px-4 pt-4">
                   <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
                     <ImageWithFallback
-                      src=""
-                      sources={[]}
+                      src={item.authorAvatar || ""}
+                      sources={item.authorAvatar ? [item.authorAvatar] : []}
                       alt={item.author}
                       className="h-full w-full object-cover"
                       fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-xs font-bold text-[var(--ud-brand-primary)]"
@@ -465,6 +713,12 @@ export function DeetsSection({
                   </div>
                 </div>
 
+                {/* ── Type badge ── */}
+                {(() => {
+                  const deetType = resolveDeetType(item.kind, item.deetAttachments);
+                  return deetType ? <DeetTypeBadge type={deetType} /> : null;
+                })()}
+
                 {/* ── Body content ── */}
                 {item.body ? (
                   <div
@@ -472,6 +726,12 @@ export function DeetsSection({
                     dangerouslySetInnerHTML={{ __html: sanitizeHtmlContent(item.body) }}
                   />
                 ) : null}
+
+                {/* ── Rich type content section ── */}
+                {(() => {
+                  const deetType = resolveDeetType(item.kind, item.deetAttachments);
+                  return deetType ? <DeetTypeContent type={deetType} attachments={item.deetAttachments} /> : null;
+                })()}
 
                 {/* ── Image / gallery ── */}
                 {item.image ? (

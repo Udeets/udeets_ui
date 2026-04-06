@@ -371,7 +371,14 @@ export default function HubClient({
   const visibilityLabel: "Public" | "Private" = hub.visibility;
   const accentTheme = getHubColorTheme(settingsAccentColor || hub.accentColor);
 
-  const allFeedItems = [...liveFeedItems, ...hubContent.feed];
+  // Inject author avatars into feed items
+  const allFeedItems = [...liveFeedItems, ...hubContent.feed].map((item) => ({
+    ...item,
+    authorAvatar:
+      item.authorAvatar ||
+      (item.authorId && item.authorId === hub.createdBy ? creatorAvatarSrc : undefined) ||
+      undefined,
+  }));
   const {
     likedDeetIds,
     likingDeetIds,
