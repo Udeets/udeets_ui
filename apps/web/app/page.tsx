@@ -577,27 +577,19 @@ export default function Page() {
 
           <div className="relative mx-auto max-w-7xl px-4 pb-20 pt-20 sm:px-6 sm:pb-28 sm:pt-28 lg:px-10 lg:pb-32 lg:pt-32">
             <div className="mx-auto max-w-3xl text-center">
-              <div className="mb-6 flex items-center justify-center gap-3">
+              <div className="mb-6 flex items-center justify-center">
                 <button
                   type="button"
                   onClick={() => setShowAppComingSoon(true)}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#111111] px-4 py-2.5 text-white transition hover:bg-[#222222]"
+                  className="inline-flex flex-col items-center gap-1.5 rounded-xl bg-[#111111] px-8 py-3 text-white transition hover:bg-[#222222]"
                 >
-                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" /></svg>
-                  <div className="text-left leading-tight">
-                    <div className="text-[9px] uppercase tracking-wide opacity-70">Download on the</div>
-                    <div className="text-sm font-semibold -mt-0.5">App Store</div>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAppComingSoon(true)}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#111111] px-4 py-2.5 text-white transition hover:bg-[#222222]"
-                >
-                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor"><path d="M3.609 1.814 13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zM14.851 13.06l2.559 1.478-3.041 3.041-2.559-1.478zm3.11-3.538L20.6 11.04c.543.314.543 1.107 0 1.42L17.96 13.98l-2.518-1.98zm-3.11-3.538 2.559-1.478 3.041 3.041-2.559 1.478z" /></svg>
-                  <div className="text-left leading-tight">
-                    <div className="text-[9px] uppercase tracking-wide opacity-70">Get it on</div>
-                    <div className="text-sm font-semibold -mt-0.5">Google Play</div>
+                  <span className="text-lg font-semibold tracking-tight">Download</span>
+                  <div className="flex items-center gap-3">
+                    {/* Apple icon */}
+                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" /></svg>
+                    <span className="text-xs text-white/50">|</span>
+                    {/* Android icon */}
+                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor"><path d="M17.523 2.306a.4.4 0 0 0-.544.152L15.2 5.478a8.24 8.24 0 0 0-3.2-.638 8.24 8.24 0 0 0-3.2.638L7.021 2.458a.4.4 0 1 0-.696.392L8.08 5.82A7.6 7.6 0 0 0 4 12.16h16a7.6 7.6 0 0 0-4.08-6.34l1.755-2.97a.4.4 0 0 0-.152-.544zM9 10a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm6 0a1 1 0 1 1 0-2 1 1 0 0 1 0 2zM4 13v7a1 1 0 0 0 1 1h1v2.5a1.5 1.5 0 0 0 3 0V21h6v2.5a1.5 1.5 0 0 0 3 0V21h1a1 1 0 0 0 1-1v-7zm-2.5 0a1.5 1.5 0 0 0-1.5 1.5v4a1.5 1.5 0 0 0 3 0v-4A1.5 1.5 0 0 0 1.5 13zm21 0a1.5 1.5 0 0 0-1.5 1.5v4a1.5 1.5 0 0 0 3 0v-4a1.5 1.5 0 0 0-1.5-1.5z" /></svg>
                   </div>
                 </button>
               </div>
