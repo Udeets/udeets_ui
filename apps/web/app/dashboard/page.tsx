@@ -118,6 +118,24 @@ function sanitizeHtmlContent(html: string): string {
   return div.innerHTML;
 }
 
+/**
+ * Strip body text that duplicates the title to avoid showing the same content twice.
+ * This handles posts where attachments (announcements, events, polls) have their title
+ * duplicated into the body text.
+ */
+function deduplicateBodyFromTitle(body: string | undefined | null, title: string | undefined | null): string {
+  if (!body || !title || isGenericTitle(title)) return body || "";
+  const plainBody = body.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  const plainTitle = title.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  if (!plainTitle) return body;
+  // If the plain body starts with the title text, strip it
+  if (plainBody.startsWith(plainTitle)) {
+    const remainder = plainBody.slice(plainTitle.length).trim();
+    return remainder;
+  }
+  return body;
+}
+
 function deetRecordToDashboardItem(item: DeetRecord): FeedItem {
   const card = mapDeetToDashboardCard(item);
 
@@ -930,7 +948,7 @@ function DashboardPageContent() {
                                 </div>
                               </div>
                               {item.title && !isGenericTitle(item.title) ? <h3 className={cn("mt-3 text-base font-semibold tracking-tight", TEXT_DARK)}>{item.title}</h3> : null}
-                              {item.body ? <div className={cn("mt-1 text-sm leading-6", TEXT_MUTED)} dangerouslySetInnerHTML={{ __html: sanitizeHtmlContent(item.body) }} /> : null}
+                              {(() => { const cleaned = deduplicateBodyFromTitle(item.body, item.title); return cleaned ? <div className={cn("mt-1 text-sm leading-6", TEXT_MUTED)} dangerouslySetInnerHTML={{ __html: sanitizeHtmlContent(cleaned) }} /> : null; })()}
                               <DashboardDeetImage src={item.previewImage || item.previewImages[0]} alt={item.title} />
                             </Link>
                           ) : (
@@ -953,7 +971,7 @@ function DashboardPageContent() {
                                 </div>
                               </div>
                               {item.title && !isGenericTitle(item.title) ? <h3 className={cn("mt-3 text-base font-semibold tracking-tight", TEXT_DARK)}>{item.title}</h3> : null}
-                              {item.body ? <div className={cn("mt-1 text-sm leading-6", TEXT_MUTED)} dangerouslySetInnerHTML={{ __html: sanitizeHtmlContent(item.body) }} /> : null}
+                              {(() => { const cleaned = deduplicateBodyFromTitle(item.body, item.title); return cleaned ? <div className={cn("mt-1 text-sm leading-6", TEXT_MUTED)} dangerouslySetInnerHTML={{ __html: sanitizeHtmlContent(cleaned) }} /> : null; })()}
                               <DashboardDeetImage src={item.previewImage || item.previewImages[0]} alt={item.title} />
                             </div>
                           )}

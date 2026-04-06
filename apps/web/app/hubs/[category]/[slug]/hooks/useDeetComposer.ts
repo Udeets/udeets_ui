@@ -249,21 +249,6 @@ export function useDeetComposer({
       const resolvedKind = (deetSettings.noticeEnabled ? "Notices" : postTypeToKind[deetSettings.postType] || "Posts") as import("@/lib/services/deets/deet-types").DeetKind;
       const fallbackTitle = deetSettings.noticeEnabled ? "Notice" : postTypeToTitle[deetSettings.postType] || "Deet";
 
-      // Build body from attached items if the main editor is empty
-      let rawBody = trimmedText;
-      if (!rawBody && finalAttachments.length > 0) {
-        const parts: string[] = [];
-        for (const att of finalAttachments) {
-          if (att.type === "photo") continue; // photos render as images, not text
-          if (att.title) parts.push(`<strong>${att.title}</strong>`);
-          if (att.detail) parts.push(att.detail);
-        }
-        rawBody = parts.join("<br/>");
-      }
-      if (!rawBody && newestSticker?.detail) {
-        rawBody = newestSticker.detail;
-      }
-
       // Derive a meaningful title from the content instead of using a generic type name
       const contentForTitle = trimmedText
         || finalAttachments.find((a) => a.title)?.title
@@ -271,6 +256,25 @@ export function useDeetComposer({
       const resolvedTitle = contentForTitle
         ? contentForTitle.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 100)
         : fallbackTitle;
+
+      // Build body from attached items if the main editor is empty.
+      // Skip the attachment title if it was already used as the post title
+      // to avoid title/body duplication.
+      let rawBody = trimmedText;
+      if (!rawBody && finalAttachments.length > 0) {
+        const titleUsedFromAttachment = !trimmedText && finalAttachments.find((a) => a.title)?.title;
+        const parts: string[] = [];
+        for (const att of finalAttachments) {
+          if (att.type === "photo") continue; // photos render as images, not text
+          // Skip the title if it's already used as the post title
+          if (att.title && att.title !== titleUsedFromAttachment) parts.push(`<strong>${att.title}</strong>`);
+          if (att.detail) parts.push(att.detail);
+        }
+        rawBody = parts.join("<br/>");
+      }
+      if (!rawBody && newestSticker?.detail) {
+        rawBody = newestSticker.detail;
+      }
 
       // Sanitize the HTML content before saving
       const sanitizedBody = sanitizeHtml(rawBody || "");

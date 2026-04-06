@@ -532,13 +532,17 @@ export default function ProfilePage() {
                         const cleanBody = deet.body ? deet.body.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim() : "";
                         const displayTitle = deet.title && !genericTitles.has(deet.title) ? deet.title : "";
                         const titleFromBody = !displayTitle && cleanBody ? cleanBody.slice(0, 100) : "";
+                        // Strip body text that starts with the title to avoid duplication
+                        const dedupedBody = (cleanBody && displayTitle && cleanBody.startsWith(displayTitle))
+                          ? cleanBody.slice(displayTitle.length).trim()
+                          : cleanBody;
                         return (
                           <>
                             {(displayTitle || titleFromBody) && (
                               <p className="mt-2 text-sm font-semibold text-[var(--ud-text-primary)]">{displayTitle || titleFromBody}</p>
                             )}
-                            {cleanBody && displayTitle && (
-                              <p className="mt-1 line-clamp-2 text-sm text-slate-600">{cleanBody}</p>
+                            {dedupedBody && displayTitle && (
+                              <p className="mt-1 line-clamp-2 text-sm text-slate-600">{dedupedBody}</p>
                             )}
                           </>
                         );
