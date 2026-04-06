@@ -174,21 +174,23 @@ export default function AlertsPageClient() {
                   </Link>
                   <span className="text-xs text-[var(--ud-text-muted)]">{alert.time}</span>
                 </div>
-                <h2 className="mt-3 text-lg font-semibold text-[var(--ud-text-primary)]">
-                  {(() => {
-                    const genericTitles = new Set(["Notice", "Untitled Alert", "Deet", "News", "Deal", "Hazard", "Alert", "Photo"]);
-                    const cleanBody = alert.body ? alert.body.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 80) : "";
-                    if (alert.title && !genericTitles.has(alert.title)) return alert.title;
-                    if (cleanBody) return cleanBody;
-                    return badge.label;
-                  })()}
-                </h2>
-                <p className="mt-1 text-sm font-medium text-[var(--ud-text-muted)]">{alert.source}</p>
-                {alert.body && (
-                  <p className="mt-2 text-sm leading-relaxed text-[var(--ud-text-secondary)] line-clamp-3">
-                    {alert.body.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()}
-                  </p>
-                )}
+                {(() => {
+                  const genericTitles = new Set(["Notice", "Untitled Alert", "Deet", "News", "Deal", "Hazard", "Alert", "Photo"]);
+                  const cleanBody = alert.body ? alert.body.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim() : "";
+                  const hasOriginalTitle = !!(alert.title && !genericTitles.has(alert.title));
+                  const displayTitle = hasOriginalTitle ? alert.title : (cleanBody.slice(0, 80) || badge.label);
+                  return (
+                    <>
+                      <h2 className="mt-3 text-lg font-semibold text-[var(--ud-text-primary)]">{displayTitle}</h2>
+                      <p className="mt-1 text-sm font-medium text-[var(--ud-text-muted)]">{alert.source}</p>
+                      {hasOriginalTitle && cleanBody && (
+                        <p className="mt-2 text-sm leading-relaxed text-[var(--ud-text-secondary)] line-clamp-3">
+                          {cleanBody}
+                        </p>
+                      )}
+                    </>
+                  );
+                })()}
               </article>
             );
           })
