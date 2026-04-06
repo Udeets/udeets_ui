@@ -548,11 +548,11 @@ export default function Page() {
                 ]}
               />
 
-              {/* Download button — after nav links, styled like Sign in but teal outline */}
+              {/* Download button — after nav links, filled teal like Sign in */}
               <button
                 type="button"
                 onClick={() => setShowDownloadPopup(true)}
-                className="ml-1 inline-flex items-center gap-1.5 rounded-full border border-[#0C5C57] px-4 py-1.5 text-sm font-medium text-[#0C5C57] transition hover:bg-[#0C5C57]/10"
+                className="ml-1 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-5 py-2 text-sm font-medium text-white transition hover:opacity-90"
               >
                 <Download className="h-4 w-4 stroke-[2]" />
                 Download
@@ -562,11 +562,11 @@ export default function Page() {
 
           {/* Right: Search + Download (mobile) + Sign in */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Mobile download icon — small teal circle */}
+            {/* Mobile download icon — small filled teal circle */}
             <button
               type="button"
               onClick={() => setShowDownloadPopup(true)}
-              className="md:hidden inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#0C5C57] text-[#0C5C57] transition hover:bg-[#0C5C57]/10"
+              className="md:hidden inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] text-white transition hover:opacity-90"
               aria-label="Download app"
               title="Download"
             >
