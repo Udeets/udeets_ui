@@ -186,14 +186,14 @@ export function HubHeroHeader({
           </button>
 
           {/* DP avatar — half overlapping cover bottom (Band-style) */}
-          <div className="absolute -bottom-10 left-4 z-10">
+          <div className="absolute -bottom-12 left-4 z-10">
             <input ref={dpInputRef} type="file" accept="image/*" onChange={onDpChange} className="hidden" />
             <button
               type="button"
               onClick={onOpenDpChooser}
               disabled={!isCreatorAdmin || isUploadingDp}
               className={cn(
-                "h-20 w-20 overflow-hidden rounded-full border-4 border-white shadow-lg",
+                "h-24 w-24 overflow-hidden rounded-full border-4 border-white shadow-lg",
                 isCreatorAdmin && "cursor-pointer"
               )}
               style={{ backgroundColor: accentTheme?.wash }}
@@ -217,7 +217,7 @@ export function HubHeroHeader({
         </div>
 
         {/* Hub info below cover — with padding-top for DP overlap */}
-        <div className="bg-[var(--ud-bg-card)] px-4 pb-3 pt-14">
+        <div className="bg-[var(--ud-bg-card)] px-4 pb-3 pt-16">
           {/* Hub name */}
           <h1 className="text-xl font-bold tracking-tight text-[var(--ud-text-primary)]">{headerHubName}</h1>
 
@@ -230,28 +230,28 @@ export function HubHeroHeader({
             {creatorDisplayName && (
               <>
                 <span className="text-[var(--ud-text-muted)]">·</span>
-                <span>{creatorDisplayName}</span>
+                <span>Creator ({creatorDisplayName})</span>
               </>
             )}
           </div>
 
           {/* ─── Action Row: Members, Invite, Theme, Settings ─── */}
           <div className="mt-3 flex items-center gap-2">
-            {/* Members count button */}
+            {/* Members count button — flex-1 to fill space */}
             <button
               type="button"
               onClick={onOpenMembers}
-              className="flex items-center gap-1.5 rounded-full border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-3 py-1.5 text-xs font-medium text-[var(--ud-text-primary)] shadow-sm transition hover:bg-[var(--ud-bg-subtle)]"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--ud-border)] bg-[var(--ud-bg-card)] py-2 text-xs font-medium text-[var(--ud-text-primary)] shadow-sm transition hover:bg-[var(--ud-bg-subtle)]"
             >
               <Users className="h-3.5 w-3.5 stroke-[1.5]" />
               <span>{memberCount} {memberCount === 1 ? "Member" : "Members"}</span>
             </button>
 
-            {/* Invite button */}
+            {/* Invite button — flex-1 to fill space */}
             <button
               type="button"
               onClick={onInviteMembers}
-              className="flex items-center gap-1.5 rounded-full border border-[var(--ud-brand-primary)] px-3 py-1.5 text-xs font-medium transition hover:bg-[var(--ud-brand-light)]"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-full border py-2 text-xs font-medium transition hover:bg-[var(--ud-brand-light)]"
               style={{ color: accentTheme?.primary, borderColor: accentTheme?.primary }}
             >
               <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -275,7 +275,7 @@ export function HubHeroHeader({
               <button
                 type="button"
                 onClick={onOpenSettings}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--ud-border)] bg-[var(--ud-bg-card)] shadow-sm transition hover:bg-[var(--ud-bg-subtle)]"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--ud-border)] bg-[var(--ud-bg-card)] shadow-sm transition hover:bg-[var(--ud-bg-subtle)]"
                 title="Hub settings"
                 aria-label="Open hub settings"
               >

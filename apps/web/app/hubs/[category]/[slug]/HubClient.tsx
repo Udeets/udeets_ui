@@ -1062,7 +1062,7 @@ export default function HubClient({
         {mediaError ? <p className="px-4 pt-3 text-sm font-medium text-[var(--ud-danger)]">{mediaError}</p> : null}
 
         {/* Mobile horizontal tab bar — Band-style: About, Posts, Events, Attachments */}
-        <div className="flex overflow-x-auto border-b border-[var(--ud-border)] bg-[var(--ud-bg-card)] lg:hidden" style={{ scrollbarWidth: "none" as never }}>
+        <div className="flex border-b border-[var(--ud-border)] bg-[var(--ud-bg-card)] lg:hidden">
           {(["About", "Posts", "Events", "Attachments"] as const)
             .filter((tab) => canAccessFullContent || tab === "About")
             .map((tab) => (
@@ -1077,7 +1077,7 @@ export default function HubClient({
                   }
                 }}
                 className={cn(
-                  "shrink-0 border-b-2 px-4 py-3 text-sm font-medium transition",
+                  "flex-1 border-b-2 py-3 text-center text-sm font-medium transition",
                   activeSection === tab && activePanel !== "settings" && activePanel !== "members"
                     ? "border-[var(--ud-brand-primary)] text-[var(--ud-brand-primary)]"
                     : "border-transparent text-[var(--ud-text-muted)] hover:text-[var(--ud-text-secondary)]"
