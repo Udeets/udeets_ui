@@ -209,6 +209,7 @@ export function EventsSection({
   }
 
   return (
+    <>
     <section className="w-full min-w-0 bg-[var(--ud-bg-card)]">
       {/* ═══ TOP BAR — "Events" left, "Add Event" right ═══ */}
       <div className="flex items-center justify-between px-1 pb-5">
@@ -220,7 +221,7 @@ export function EventsSection({
             setCreateForm({ title: "", description: "", startTime: "", endTime: "", location: "" });
             setShowCreateModal(true);
           }}
-          className="rounded-full border border-[var(--ud-brand-primary)] px-4 py-1.5 text-xs font-semibold text-[var(--ud-brand-primary)] transition hover:bg-[var(--ud-brand-light)]"
+          className="hidden rounded-full border border-[var(--ud-brand-primary)] px-4 py-1.5 text-xs font-semibold text-[var(--ud-brand-primary)] transition hover:bg-[var(--ud-brand-light)] lg:inline-flex"
         >
           Add Event
         </button>
@@ -625,5 +626,21 @@ export function EventsSection({
         </div>
       )}
     </section>
+
+    {/* ── Mobile FAB — opens create event modal (Band-style) ── */}
+    <button
+      type="button"
+      onClick={() => {
+        setCreateFormDate(dateToString(today));
+        setCreateForm({ title: "", description: "", startTime: "", endTime: "", location: "" });
+        setShowCreateModal(true);
+      }}
+      className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full shadow-lg lg:hidden"
+      style={{ backgroundColor: "var(--ud-brand-primary)" }}
+      aria-label="Create event"
+    >
+      <CalendarDays className="h-6 w-6 text-white" />
+    </button>
+    </>
   );
 }

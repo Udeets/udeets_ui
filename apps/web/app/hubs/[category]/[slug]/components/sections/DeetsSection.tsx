@@ -704,19 +704,22 @@ export function DeetsSection({
     }
   };
 
-  /* ── Composer card (shared between empty & populated states) ── */
+  /* ── Composer card (desktop only — mobile uses FAB) ── */
   const composerCard = (
-    <DeetComposerCard
-      isDemoPreview={isDemoPreview}
-      isCreatorAdmin={isCreatorAdmin}
-      onOpenComposer={onOpenComposer}
-    />
+    <div className="hidden lg:block">
+      <DeetComposerCard
+        isDemoPreview={isDemoPreview}
+        isCreatorAdmin={isCreatorAdmin}
+        onOpenComposer={onOpenComposer}
+      />
+    </div>
   );
 
   /* ── Notice items (Band shows them in a separate strip above feed) ── */
   const noticeItems = filteredFeedItems.filter((item) => item.kind === "notice");
 
   return (
+    <>
     <SectionShell
       title="Posts"
       description={
@@ -1213,6 +1216,20 @@ export function DeetsSection({
         </div>
       )}
     </SectionShell>
+
+    {/* ── Mobile FAB — opens composer (Band-style) ── */}
+    {isCreatorAdmin && (
+      <button
+        type="button"
+        onClick={() => onOpenComposer()}
+        className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full shadow-lg lg:hidden"
+        style={{ backgroundColor: "var(--ud-brand-primary)" }}
+        aria-label="Create post"
+      >
+        <Pencil className="h-6 w-6 text-white" />
+      </button>
+    )}
+    </>
   );
 }
 

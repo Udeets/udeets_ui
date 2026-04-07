@@ -33,14 +33,15 @@ function truncateLine(value: string, max = 64) {
   return `${value.slice(0, max - 1)}...`;
 }
 
-export type NavKey = "home" | "alerts" | "events";
+export type NavKey = "home" | "search" | "create" | "alerts" | "profile";
 
 type OpenPanel = "alerts" | "events" | "profile" | null;
 
 const HEADER_BG = "bg-[var(--ud-bg-card)] border-b border-[var(--ud-border-subtle)]";
 const FOOTER_BG = "bg-[#0C5C57]";
-const BOTTOM_NAV_BG = "bg-[#A9D1CA]";
-const TEXT_DARK_GREEN = "text-[#0C5C57]";
+const BOTTOM_NAV_BG = "bg-white";
+const TEXT_MUTED = "text-gray-400";
+const TEXT_ACTIVE = "text-[#0C5C57]";
 const ICON_BASE = "h-5 w-5 stroke-[1.8]";
 
 const PRIMARY_ITEMS = [
@@ -804,24 +805,66 @@ export function UdeetsFooter() {
 
 export function UdeetsBottomNav({ activeNav = "home" }: { activeNav?: NavKey }) {
   return (
-    <nav className={cn("fixed bottom-0 left-0 right-0 z-50 border-t border-white/40 md:hidden", BOTTOM_NAV_BG)}>
-      <div className="mx-auto grid max-w-7xl grid-cols-3 px-2 py-2 sm:px-4">
-        {PRIMARY_ITEMS.map((item) => (
+    <nav className={cn("fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 lg:hidden", BOTTOM_NAV_BG)}>
+      <div className="mx-auto grid max-w-lg grid-cols-5">
+        {/* Home */}
+        <Link
+          href="/dashboard"
+          className={cn(
+            "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
+            activeNav === "home" ? TEXT_ACTIVE : TEXT_MUTED
+          )}
+        >
+          <Home className={ICON_BASE} />
+          <span className="text-[10px] font-medium">Home</span>
+        </Link>
+
+        {/* Search */}
+        <Link
+          href="/search"
+          className={cn(
+            "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
+            activeNav === "search" ? TEXT_ACTIVE : TEXT_MUTED
+          )}
+        >
+          <Search className={ICON_BASE} />
+          <span className="text-[10px] font-medium">Search</span>
+        </Link>
+
+        {/* Center Create button — Band-style raised circle */}
+        <div className="flex items-center justify-center">
           <Link
-            key={item.key}
-            href={item.href}
-            className={cn(
-              "flex flex-col items-center justify-center gap-1 rounded-2xl py-1",
-              TEXT_DARK_GREEN,
-              activeNav === item.key && "bg-white/35"
-            )}
+            href="/create-hub"
+            className="flex h-12 w-12 -translate-y-3 items-center justify-center rounded-full bg-[#0C5C57] shadow-lg transition active:scale-95"
+            aria-label="Create"
           >
-            {item.key === "home" ? <Home className={ICON_BASE} /> : null}
-            {item.key === "alerts" ? <Bell className={ICON_BASE} /> : null}
-            {item.key === "events" ? <Calendar className={ICON_BASE} /> : null}
-            <span className="text-xs font-medium">{item.label}</span>
+            <CirclePlus className="h-6 w-6 text-white stroke-[2]" />
           </Link>
-        ))}
+        </div>
+
+        {/* Alerts */}
+        <Link
+          href="/alerts"
+          className={cn(
+            "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
+            activeNav === "alerts" ? TEXT_ACTIVE : TEXT_MUTED
+          )}
+        >
+          <Bell className={ICON_BASE} />
+          <span className="text-[10px] font-medium">Alerts</span>
+        </Link>
+
+        {/* Profile */}
+        <Link
+          href="/profile"
+          className={cn(
+            "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
+            activeNav === "profile" ? TEXT_ACTIVE : TEXT_MUTED
+          )}
+        >
+          <UserRound className={ICON_BASE} />
+          <span className="text-[10px] font-medium">Profile</span>
+        </Link>
       </div>
     </nav>
   );
