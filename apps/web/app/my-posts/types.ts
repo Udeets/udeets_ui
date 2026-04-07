@@ -6,6 +6,9 @@ export type MyPost = {
   audience: string;
   dateLabel: string;
   body: string;
+  likeCount: number;
+  commentCount: number;
+  viewCount: number;
 };
 
 export type WorkflowStat = {

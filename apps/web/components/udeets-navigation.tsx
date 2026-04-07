@@ -113,6 +113,7 @@ function NavIconLink({
 function NotificationsPanel({ notifications }: { notifications: HubNotificationItem[] }) {
   const searchParams = useSearchParams();
   const [activeFilter, setActiveFilter] = useState<(typeof FILTERS)[number]>("All");
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const isDemoPreview = searchParams.get("demo_preview") === "1";
   const filteredItems = notifications.filter((item) => activeFilter === "All" || item.type === activeFilter);
 
@@ -123,7 +124,11 @@ function NotificationsPanel({ notifications }: { notifications: HubNotificationI
     >
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-[var(--ud-text-primary)]">Notifications</h3>
-        <button type="button" className="text-sm font-medium text-[#0C5C57] hover:opacity-80">
+        <button
+          type="button"
+          onClick={() => setReadIds(new Set(notifications.map((n) => n.id)))}
+          className="text-sm font-medium text-[#0C5C57] hover:opacity-80"
+        >
           Mark all as read
         </button>
       </div>
@@ -165,7 +170,11 @@ function NotificationsPanel({ notifications }: { notifications: HubNotificationI
                       ? "dashboard-alert-item"
                       : undefined
                   }
-                  className="group relative flex items-center gap-3 rounded-2xl px-2 py-2.5 transition hover:bg-[#EEF7F5]"
+                  className={cn(
+                    "group relative flex items-center gap-3 rounded-2xl px-2 py-2.5 transition hover:bg-[#EEF7F5]",
+                    readIds.has(item.id) && "opacity-55",
+                  )}
+                  onClick={() => setReadIds((prev) => new Set([...prev, item.id]))}
                 >
                   <div className={cn("relative h-9 w-9 shrink-0 overflow-hidden", !isLogo && "rounded-full border border-slate-200 bg-[#E3F1EF]")}>
                     <Image
