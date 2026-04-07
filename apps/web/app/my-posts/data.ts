@@ -9,6 +9,9 @@ export const MY_POSTS: MyPost[] = [
     audience: "Subscribers",
     dateLabel: "Today, 9:15 AM",
     body: "Shared a quick volunteer callout for this weekend with time slots and setup notes.",
+    likeCount: 0,
+    commentCount: 0,
+    viewCount: 0,
   },
   {
     id: "mp2",
@@ -18,6 +21,9 @@ export const MY_POSTS: MyPost[] = [
     audience: "Hub Members",
     dateLabel: "Tomorrow, 7:00 PM",
     body: "Queued a reminder post for the upcoming meetup with parking details and RSVP links.",
+    likeCount: 0,
+    commentCount: 0,
+    viewCount: 0,
   },
   {
     id: "mp3",
@@ -27,6 +33,9 @@ export const MY_POSTS: MyPost[] = [
     audience: "Public",
     dateLabel: "Edited 2 days ago",
     body: "Preparing a short gallery post with captions before publishing it to the community feed.",
+    likeCount: 0,
+    commentCount: 0,
+    viewCount: 0,
   },
 ];
 
