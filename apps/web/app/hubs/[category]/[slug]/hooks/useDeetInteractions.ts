@@ -1,13 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { toggleDeetLike, getDeetLikeStatus, addDeetComment, listDeetComments, type DeetComment } from "@/lib/services/deets/deet-interactions";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toggleDeetLike, getDeetLikeStatus, addDeetComment, listDeetComments, incrementDeetView, type DeetComment } from "@/lib/services/deets/deet-interactions";
 import type { HubContent } from "@/lib/hub-content";
 
 export function useDeetInteractions(feedItems: HubContent["feed"]) {
   const [likedDeetIds, setLikedDeetIds] = useState<Set<string>>(new Set());
   const [likingDeetIds, setLikingDeetIds] = useState<Set<string>>(new Set());
   const [likeCountOverrides, setLikeCountOverrides] = useState<Record<string, number>>({});
+  const viewedDeetIds = useRef<Set<string>>(new Set());
+  const [viewCountOverrides, setViewCountOverrides] = useState<Record<string, number>>({});
 
   // Comment state
   const [expandedCommentDeetId, setExpandedCommentDeetId] = useState<string | null>(null);
@@ -163,11 +165,37 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
     }
   }, []);
 
+  // Increment view count once per deet per session
+  const handleIncrementView = useCallback(async (deetId: string) => {
+    if (viewedDeetIds.current.has(deetId)) return;
+    viewedDeetIds.current.add(deetId);
+    try {
+      await incrementDeetView(deetId);
+      setViewCountOverrides((prev) => ({
+        ...prev,
+        [deetId]: (prev[deetId] ?? 0) + 1,
+      }));
+    } catch {
+      // Silently fail — view tracking is non-critical
+    }
+  }, []);
+
+  // Auto-increment views for all feed items when they load
+  useEffect(() => {
+    for (const item of feedItems) {
+      if (item.id && !viewedDeetIds.current.has(item.id)) {
+        void handleIncrementView(item.id);
+      }
+    }
+  }, [feedItems, handleIncrementView]);
+
   return {
     likedDeetIds,
     likingDeetIds,
     likeCountOverrides,
+    viewCountOverrides,
     handleToggleLike,
+    handleIncrementView,
     expandedCommentDeetId,
     commentsByDeetId,
     commentLoadingDeetIds,

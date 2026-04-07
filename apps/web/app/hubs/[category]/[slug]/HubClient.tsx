@@ -340,6 +340,18 @@ export default function HubClient({
     },
   });
   const hubName = savedHubName;
+
+  // Accent color change from header action row — updates local state AND saves to DB immediately
+  const handleAccentColorChange = async (color: import("@/lib/hub-color-themes").HubColorThemeKey) => {
+    setSettingsAccentColor(color);
+    try {
+      const { updateHub } = await import("@/lib/services/hubs/update-hub");
+      await updateHub(hub.id, { accentColor: color });
+    } catch (err) {
+      console.error("[accent-color-save]", err);
+    }
+  };
+
   const {
     isConnectEditorOpen,
     isSavingConnect,
@@ -412,7 +424,9 @@ export default function HubClient({
     likedDeetIds,
     likingDeetIds,
     likeCountOverrides,
+    viewCountOverrides,
     handleToggleLike,
+    handleIncrementView,
     expandedCommentDeetId,
     commentsByDeetId,
     commentLoadingDeetIds,
@@ -1036,23 +1050,27 @@ export default function HubClient({
           categoryLabel={categoryMeta.label}
           visibilityLabel={visibilityLabel}
           accentTheme={accentTheme}
+          creatorDisplayName={creatorDisplayName}
+          settingsAccentColor={settingsAccentColor}
+          onSettingsAccentColorChange={handleAccentColorChange}
+          onOpenSettings={openSettingsPanel}
+          onOpenMembers={() => openCenterMembers("list")}
+          onInviteMembers={() => setIsInviteModalOpen(true)}
         />
 
         {mediaSuccess ? <p className="px-4 pt-3 text-sm font-medium text-[var(--ud-brand-primary)]">{mediaSuccess}</p> : null}
         {mediaError ? <p className="px-4 pt-3 text-sm font-medium text-[var(--ud-danger)]">{mediaError}</p> : null}
 
-        {/* Mobile horizontal tab bar — visible below lg */}
+        {/* Mobile horizontal tab bar — Band-style: About, Posts, Events, Attachments */}
         <div className="flex overflow-x-auto border-b border-[var(--ud-border)] bg-[var(--ud-bg-card)] lg:hidden" style={{ scrollbarWidth: "none" as never }}>
-          {(hubTemplateConfig.tabs.filter((t) => t !== "Settings") as string[])
+          {(["About", "Posts", "Events", "Attachments"] as const)
             .filter((tab) => canAccessFullContent || tab === "About")
             .map((tab) => (
               <button
                 key={tab}
                 type="button"
                 onClick={() => {
-                  if (tab === "Members") {
-                    requestNavigation({ tab: tab as HubTab, panel: "members", membersMode: "list", membersView: "members" });
-                  } else if (tab === "Attachments") {
+                  if (tab === "Attachments") {
                     requestNavigation({ tab: tab as HubTab, panel: "posts", attachmentsView: "photos" });
                   } else {
                     requestNavigation({ tab: tab as HubTab, panel: "posts" });
@@ -1060,34 +1078,14 @@ export default function HubClient({
                 }}
                 className={cn(
                   "shrink-0 border-b-2 px-4 py-3 text-sm font-medium transition",
-                  activeSection === tab && activePanel !== "settings"
+                  activeSection === tab && activePanel !== "settings" && activePanel !== "members"
                     ? "border-[var(--ud-brand-primary)] text-[var(--ud-brand-primary)]"
                     : "border-transparent text-[var(--ud-text-muted)] hover:text-[var(--ud-text-secondary)]"
                 )}
               >
-                {tab === "About"
-                  ? hubTemplateConfig.terminology.about
-                  : tab === "Posts"
-                    ? "Posts"
-                    : tab === "Members"
-                      ? hubTemplateConfig.terminology.members
-                      : tab}
+                {tab === "About" ? hubTemplateConfig.terminology.about : tab}
               </button>
             ))}
-          {isCreatorAdmin && (
-            <button
-              type="button"
-              onClick={() => requestNavigation({ tab: activeSection, panel: "settings" })}
-              className={cn(
-                "shrink-0 border-b-2 px-4 py-3 text-sm font-medium transition",
-                activePanel === "settings"
-                  ? "border-[var(--ud-brand-primary)] text-[var(--ud-brand-primary)]"
-                  : "border-transparent text-[var(--ud-text-muted)] hover:text-[var(--ud-text-secondary)]"
-              )}
-            >
-              Settings
-            </button>
-          )}
         </div>
 
         {/* Below header — 2-column on desktop, single column on mobile */}

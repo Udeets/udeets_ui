@@ -429,6 +429,113 @@ function PollContent({ deetId, attachments }: { deetId: string; attachments?: Hu
 /* ── Icon sizing ── */
 const POST_ICON = "h-[18px] w-[18px] stroke-[1.5]";
 
+/* ── Emoji reactions (Band-style) ── */
+const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+
+function EmojiReactButton({
+  deetId,
+  isLiked,
+  isLiking,
+  likeCount,
+  onToggleLike,
+}: {
+  deetId: string;
+  isLiked: boolean;
+  isLiking: boolean;
+  likeCount: number;
+  onToggleLike?: (deetId: string) => void;
+}) {
+  const [showPicker, setShowPicker] = useState(false);
+  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const pickerRef = useRef<HTMLDivElement | null>(null);
+
+  // Close picker on outside click
+  useEffect(() => {
+    if (!showPicker) return;
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        pickerRef.current && !pickerRef.current.contains(target) &&
+        buttonRef.current && !buttonRef.current.contains(target)
+      ) {
+        setShowPicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showPicker]);
+
+  const handleReactClick = () => {
+    if (isLiked) {
+      // If already reacted, un-react
+      onToggleLike?.(deetId);
+      setSelectedEmoji(null);
+    } else {
+      // Show emoji picker
+      setShowPicker((v) => !v);
+    }
+  };
+
+  const handleEmojiSelect = (emoji: string) => {
+    setSelectedEmoji(emoji);
+    setShowPicker(false);
+    if (!isLiked) {
+      onToggleLike?.(deetId);
+    }
+  };
+
+  const displayEmoji = isLiked ? (selectedEmoji || "👍") : null;
+
+  return (
+    <div className="relative flex-1">
+      {/* Emoji picker popup */}
+      {showPicker && (
+        <div
+          ref={pickerRef}
+          className="absolute -top-12 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 rounded-full border border-[var(--ud-border)] bg-white px-2 py-1.5 shadow-lg"
+        >
+          {REACTION_EMOJIS.map((emoji) => (
+            <button
+              key={emoji}
+              type="button"
+              onClick={() => handleEmojiSelect(emoji)}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-xl transition-transform hover:scale-125 active:scale-95"
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={handleReactClick}
+        disabled={isLiking}
+        className={cn(
+          "flex w-full items-center justify-center gap-1.5 py-2.5 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]",
+          isLiked
+            ? "text-[var(--ud-brand-primary)] font-medium"
+            : "text-[var(--ud-text-muted)]"
+        )}
+      >
+        {isLiking ? (
+          <Loader2 className={cn(POST_ICON, "animate-spin")} />
+        ) : displayEmoji ? (
+          <span className="text-base">{displayEmoji}</span>
+        ) : (
+          <SmilePlus className={POST_ICON} />
+        )}
+        <span>{isLiked ? "Reacted" : "React"}</span>
+        {likeCount > 0 && (
+          <span className="text-xs">({likeCount})</span>
+        )}
+      </button>
+    </div>
+  );
+}
+
 /* ── Sort options ── */
 type SortOption = "Newest" | "Oldest";
 
@@ -1012,28 +1119,14 @@ export function DeetsSection({
 
                 {/* ── Action bar: React + Comment + Share ── */}
                 <div className="flex items-center border-t border-[var(--ud-border-subtle)] mt-1">
-                  {/* React button */}
-                  <button
-                    type="button"
-                    onClick={() => onToggleLike?.(item.id)}
-                    disabled={likingDeetIds?.has(item.id)}
-                    className={cn(
-                      "flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]",
-                      likedDeetIds?.has(item.id)
-                        ? "text-[var(--ud-brand-primary)] font-medium"
-                        : "text-[var(--ud-text-muted)]"
-                    )}
-                  >
-                    {likingDeetIds?.has(item.id) ? (
-                      <Loader2 className={cn(POST_ICON, "animate-spin")} />
-                    ) : (
-                      <SmilePlus className={POST_ICON} />
-                    )}
-                    <span>React</span>
-                    {(likeCountOverrides?.[item.id] ?? item.likes) > 0 && (
-                      <span className="text-xs">({likeCountOverrides?.[item.id] ?? item.likes})</span>
-                    )}
-                  </button>
+                  {/* React button with emoji picker */}
+                  <EmojiReactButton
+                    deetId={item.id}
+                    isLiked={likedDeetIds?.has(item.id) ?? false}
+                    isLiking={likingDeetIds?.has(item.id) ?? false}
+                    likeCount={likeCountOverrides?.[item.id] ?? item.likes}
+                    onToggleLike={onToggleLike}
+                  />
 
                   {/* Comment button */}
                   <button
