@@ -1041,7 +1041,7 @@ export default function HubClient({
           creatorDisplayName={creatorDisplayName}
           onOpenMembers={() => openCenterMembers("list")}
           onInviteMembers={() => setIsInviteModalOpen(true)}
-          onOpenAlerts={() => router.push("/alerts")}
+          onOpenAlerts={() => router.push(`/alerts?hub_id=${hub.id}`)}
         />
 
         {mediaSuccess ? <p className="px-4 pt-3 text-sm font-medium text-[var(--ud-brand-primary)]">{mediaSuccess}</p> : null}

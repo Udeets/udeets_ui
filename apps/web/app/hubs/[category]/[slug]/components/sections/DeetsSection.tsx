@@ -716,7 +716,12 @@ export function DeetsSection({
   );
 
   /* ── Notice items (Band shows them in a separate strip above feed) ── */
-  const noticeItems = filteredFeedItems.filter((item) => item.kind === "notice");
+  const noticeItems = filteredFeedItems.filter((item) => {
+    if (item.kind !== "notice") return false;
+    // Exclude items that resolve to "announcement" display type
+    const resolved = resolveDeetType(item.kind, item.deetAttachments);
+    return resolved !== "announcement";
+  });
 
   return (
     <>
@@ -1222,7 +1227,7 @@ export function DeetsSection({
       <button
         type="button"
         onClick={() => onOpenComposer()}
-        className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full shadow-lg lg:hidden"
+        className="fixed bottom-6 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full shadow-lg lg:hidden"
         style={{ backgroundColor: "var(--ud-brand-primary)" }}
         aria-label="Create post"
       >

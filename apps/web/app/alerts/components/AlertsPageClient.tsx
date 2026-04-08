@@ -3,6 +3,7 @@
 import { AlertTriangle, Bell, BellOff, Loader2, Megaphone } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import MockAppShell, { cardClass, sectionTitleClass } from "@/components/mock-app-shell";
 import { listDeets, subscribeToDeets } from "@/lib/services/deets/list-deets";
 import { listMyMemberships } from "@/lib/services/members/list-my-memberships";
@@ -57,9 +58,12 @@ const ALERT_BADGE_STYLES: Record<string, { bg: string; text: string; label: stri
 };
 
 export default function AlertsPageClient() {
+  const searchParams = useSearchParams();
+  const scopedHubId = searchParams.get("hub_id");
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hubMap, setHubMap] = useState<Map<string, { name: string; href: string }>>(new Map());
+  const [scopedHubName, setScopedHubName] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,7 +72,12 @@ export default function AlertsPageClient() {
       try {
         // Get user's hub memberships
         const memberships = await listMyMemberships();
-        const hubIds = memberships.map((m) => m.hubId);
+        let hubIds = memberships.map((m) => m.hubId);
+
+        // If scoped to a specific hub, filter to only that hub
+        if (scopedHubId) {
+          hubIds = hubIds.filter((id) => id === scopedHubId);
+        }
 
         if (!hubIds.length) {
           if (!cancelled) {
@@ -84,19 +93,29 @@ export default function AlertsPageClient() {
         for (const hub of hubs) {
           hMap.set(hub.id, { name: hub.name, href: `/hubs/${hub.category}/${hub.slug}` });
         }
-        if (!cancelled) setHubMap(hMap);
+        if (!cancelled) {
+          setHubMap(hMap);
+          if (scopedHubId && hMap.has(scopedHubId)) {
+            setScopedHubName(hMap.get(scopedHubId)!.name);
+          }
+        }
 
-        // Fetch all deets from user's hubs, then filter for alert-like types
+        // Fetch all deets from user's hubs
         const allDeets = await listDeets({ hubIds, limit: 200 });
 
-        const alertKinds = new Set(["Alerts", "Notices", "Hazards"]);
-        const alertDeets = allDeets.filter((d) => {
-          // Include deets with alert-like kinds
-          if (alertKinds.has(d.kind)) return true;
-          // Include deets with alert/notice/hazard attachments
-          if (d.attachments?.some((a) => a.type === "notice" || a.type === "alert" || a.type === "hazard")) return true;
-          return false;
-        });
+        // When scoped to a single hub, show ALL activity (posts, reactions, etc.)
+        // When viewing global alerts, only show alert-like types
+        let alertDeets: DeetRecord[];
+        if (scopedHubId) {
+          alertDeets = allDeets; // Show all hub activity
+        } else {
+          const alertKinds = new Set(["Alerts", "Notices", "Hazards"]);
+          alertDeets = allDeets.filter((d) => {
+            if (alertKinds.has(d.kind)) return true;
+            if (d.attachments?.some((a) => a.type === "notice" || a.type === "alert" || a.type === "hazard")) return true;
+            return false;
+          });
+        }
 
         if (!cancelled) {
           setAlerts(
@@ -138,7 +157,7 @@ export default function AlertsPageClient() {
       cancelled = true;
       unsubscribe();
     };
-  }, []);
+  }, [scopedHubId]);
 
   const importantCount = alerts.filter((a) => a.isAlert).length;
   const totalCount = alerts.length;
@@ -146,9 +165,13 @@ export default function AlertsPageClient() {
   return (
     <MockAppShell activeNav="alerts">
       <section className="mb-4">
-        <h1 className="text-3xl font-semibold tracking-tight text-[var(--ud-text-primary)]">Alerts</h1>
+        <h1 className="text-3xl font-semibold tracking-tight text-[var(--ud-text-primary)]">
+          {scopedHubName ? `${scopedHubName} Alerts` : "Alerts"}
+        </h1>
         <p className="mt-2 text-sm leading-relaxed text-[var(--ud-text-secondary)]">
-          Notifications from the hubs and communities you follow.
+          {scopedHubName
+            ? `Activity and notifications from ${scopedHubName}.`
+            : "Notifications from the hubs and communities you follow."}
         </p>
       </section>
 
