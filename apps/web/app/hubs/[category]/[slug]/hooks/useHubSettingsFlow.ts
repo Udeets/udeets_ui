@@ -10,7 +10,7 @@ type UseHubSettingsFlowArgs = {
   initialHubName: string;
   hubDescription: string;
   isCreatorAdmin: boolean;
-  onAfterSave?: () => void;
+  onAfterSave?: (savedCategory: string) => void;
 };
 
 export function useHubSettingsFlow({
@@ -177,7 +177,7 @@ export function useHubSettingsFlow({
       setSettingsLocation(newLoc);
 
       setSettingsSaveSuccess("Hub settings saved.");
-      onAfterSave?.();
+      onAfterSave?.(updatedHub.category);
     } catch (error) {
       setSettingsSaveError(error instanceof Error ? error.message : "Hub settings could not be saved.");
     } finally {

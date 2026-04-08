@@ -97,7 +97,6 @@ export default function HubClient({
 
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
 
-  const hubBaseHref = `/hubs/${hub.category}/${hub.slug}`;
   const focusTarget = searchParams.get("focus");
   const requestedTab = searchParams.get("tab");
   const isDemoPreview = searchParams.get("demo_preview") === "1";
@@ -234,7 +233,8 @@ export default function HubClient({
     return () => { ignore = true; };
   }, [hub.id, user?.id, isCreatorAdmin]);
 
-  const isPublicHub = hub.visibility === "Public";
+  // isPublicHub is redefined after useHubSettingsFlow to use settingsVisibility
+  let isPublicHub = hub.visibility === "Public";
   // Content gating: non-members see Header + About only
   const canAccessFullContent = canViewFullContent || isMember || isCreatorAdmin;
 
@@ -330,15 +330,20 @@ export default function HubClient({
     initialHubName,
     hubDescription,
     isCreatorAdmin,
-    onAfterSave: () => {
+    onAfterSave: (newCategory: string) => {
       if (pendingNavigation) {
         applyNavigation(pendingNavigation);
         setPendingNavigation(null);
         setIsUnsavedChangesOpen(false);
       }
+      // Refresh page with potentially updated category in URL so header re-renders
+      router.replace(`/hubs/${newCategory}/${hub.slug}?tab=About`);
     },
   });
   const hubName = savedHubName;
+  const hubBaseHref = `/hubs/${savedHubCategory || hub.category}/${hub.slug}`;
+  // Override isPublicHub with the live settings value
+  isPublicHub = settingsVisibility === "Public";
 
   const {
     isConnectEditorOpen,
@@ -397,7 +402,7 @@ export default function HubClient({
   const hubTemplateConfig = useMemo(() => getHubConfigByCategory(savedHubCategory), [savedHubCategory]);
   const memberCount = Math.max(1, Number.parseInt(hub.membersLabel, 10) || 0);
   const headerHubName = hub.name?.trim() || hubName;
-  const visibilityLabel: "Public" | "Private" = hub.visibility;
+  const visibilityLabel: "Public" | "Private" = settingsVisibility;
   const accentTheme = getHubColorTheme(hub.accentColor || "teal");
 
   // Inject author avatars into feed items
@@ -977,7 +982,7 @@ export default function HubClient({
         coverImageSrc={coverImageSrc}
         recentPhotos={recentPhotos}
         hubName={hubName}
-        hubCategory={hub.category}
+        hubCategory={savedHubCategory}
         hubSlug={hub.slug}
         userAvatarSrc={currentUserAvatarSrc}
         userName={creatorDisplayName}
@@ -1735,7 +1740,7 @@ export default function HubClient({
         <InviteModal
           hubName={hubName}
           hubSlug={hub.slug}
-          hubCategory={hub.category}
+          hubCategory={savedHubCategory}
           hubId={hub.id}
           onClose={() => setIsInviteModalOpen(false)}
         />

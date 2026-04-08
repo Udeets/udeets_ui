@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { HubPanel, HubTab, PendingNavigation } from "../components/hubTypes";
 import { HUB_TABS } from "../components/hubUtils";
 
@@ -27,6 +27,11 @@ export function useHubSectionState({
 
   const [activeSection, setActiveSection] = useState<HubTab>(initialActiveSection);
   const [activePanel, setActivePanel] = useState<HubPanel>("posts");
+
+  // Reset tab when URL search params change (e.g. after settings save redirect)
+  useEffect(() => {
+    setActiveSection(normalizeRequestedTab(requestedTab));
+  }, [requestedTab]);
   const [membersPanelMode, setMembersPanelMode] = useState<"list" | "invite">("list");
   const [activePeopleView, setActivePeopleView] = useState<"members" | "admins">(
     requestedTab === "Admins" && canAccessAdmins ? "admins" : "members"
