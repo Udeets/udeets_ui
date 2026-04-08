@@ -189,31 +189,15 @@ function toDashboardHub(hub: SupabaseHub): DashboardHub {
 
 function CreateHubTile() {
   return (
-    <Link
-      href="/create-hub"
-      className={cn(
-        "block h-full w-full overflow-hidden rounded-[24px] bg-[var(--ud-brand-light)] shadow-[0_10px_26px_rgba(12,92,87,0.06)] transition-transform duration-200 hover:-translate-y-0.5",
-      )}
-    >
-      <div className="relative h-full w-full overflow-hidden rounded-t-[24px] bg-[var(--ud-brand-light)]">
-        <div className="flex h-full w-full flex-col items-center justify-center gap-2">
-            <svg viewBox="0 0 24 24" className="h-9 w-9 text-[var(--ud-brand-primary)]" fill="none" stroke="currentColor" strokeWidth="2.2">
-              <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-            </svg>
-            <h3 className={cn("text-[15px] font-semibold tracking-tight leading-5", TEXT_DARK)}>Create Hub</h3>
-        </div>
+    <Link href="/create-hub" className="flex flex-col items-center gap-1.5">
+      <div className="flex aspect-square w-full items-center justify-center rounded-[22%] bg-[var(--ud-brand-light)] shadow-[0_2px_0_0_rgba(0,0,0,0.05),0_4px_12px_rgba(0,0,0,0.10),0_8px_24px_rgba(0,0,0,0.05)] transition-transform duration-200 hover:-translate-y-0.5">
+        <svg viewBox="0 0 24 24" className="h-9 w-9 text-[var(--ud-brand-primary)]" fill="none" stroke="currentColor" strokeWidth="2.2">
+          <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+        </svg>
       </div>
-
-      <div className="bg-[var(--ud-brand-light)] px-3.5 pb-3 pt-5">
-        <div className="flex items-start justify-between gap-3">
-          <span className="text-[15px] leading-5 opacity-0">Create Hub</span>
-          <span className="mt-0.5 h-4.5 w-4.5 shrink-0" aria-hidden="true" />
-        </div>
-        <div className={cn("mt-1.5 flex items-center justify-between gap-3 text-xs", TEXT_MUTED)}>
-          <span>&nbsp;</span>
-          <span>&nbsp;</span>
-        </div>
-      </div>
+      <span className={cn("w-full truncate text-center text-[12px] font-medium leading-tight", TEXT_DARK)}>
+        Create Hub
+      </span>
     </Link>
   );
 }
@@ -286,7 +270,7 @@ function HubLauncher({
       </div>
 
       {hubs.length ? (
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
+        <div className="mt-5 grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
           {selectedView === "my-hubs" ? <CreateHubTile /> : null}
           {hubs.map((hub) => (
             <DashboardHubCard
@@ -300,7 +284,7 @@ function HubLauncher({
       ) : (
         <>
           {selectedView === "my-hubs" ? (
-            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
+            <div className="mt-5 grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
               <CreateHubTile />
             </div>
           ) : null}
