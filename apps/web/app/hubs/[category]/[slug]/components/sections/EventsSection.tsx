@@ -1,25 +1,19 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Clock, MapPin, X, Plus } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, MapPin, X } from "lucide-react";
 import { cn } from "../hubUtils";
 import { listHubEvents } from "@/lib/services/events/list-events";
-import { createEvent, updateEvent, deleteEvent } from "@/lib/services/events/create-event";
+import { createEvent, deleteEvent } from "@/lib/services/events/create-event";
 import { rsvpToEvent, getUserRsvp, getEventRsvpCounts } from "@/lib/services/events/event-rsvps";
 import type { HubEvent } from "@/lib/services/events/event-types";
 
 /* ── constants ───────────────────────────────────────────────────── */
 
-const DAY_HEADERS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"] as const;
-const FULL_DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
+const DAY_HEADERS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"] as const;
+const SHORT_DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const FULL_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"] as const;
 const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
-
-const THEME_COLORS: Record<string, string> = {
-  Pooja: "#0C5C57", Temple: "#0C5C57", Church: "#6366f1", Food: "#f59e0b",
-  Service: "#8b5cf6", Party: "#ec4899", Trek: "#22c55e", Voluntary: "#06b6d4",
-  Cultural: "#f97316", Kids: "#a855f7", Sports: "#ef4444", Community: "#0C5C57",
-};
-function themeColor(t: string) { return THEME_COLORS[t] ?? "#0C5C57"; }
 
 /* ── date helpers ────────────────────────────────────────────────── */
 
@@ -56,7 +50,6 @@ function parseDateString(dateStr: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-/* ── inline grid style ───────────────────────────────────────────── */
 const GRID7: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(7, 1fr)" };
 
 /* ── component ───────────────────────────────────────────────────── */
@@ -73,7 +66,7 @@ export function EventsSection({
   const today = useMemo(() => new Date(), []);
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [popupEvent, setPopupEvent] = useState<HubEvent | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createFormDate, setCreateFormDate] = useState<string>(dateToString(today));
@@ -99,7 +92,6 @@ export function EventsSection({
       const data = await listHubEvents(hubId);
       setEvents(data);
 
-      // Load RSVPs and counts for each event
       const rsvps = new Map<string, "going" | "maybe" | "not_going">();
       const counts = new Map<string, { going: number; maybe: number; notGoing: number }>();
 
@@ -133,20 +125,48 @@ export function EventsSection({
 
   function shiftMonth(dir: -1 | 1) {
     const n = new Date(viewYear, viewMonth + dir, 1);
-    setViewYear(n.getFullYear()); setViewMonth(n.getMonth()); setSelectedDate(null);
+    setViewYear(n.getFullYear()); setViewMonth(n.getMonth());
   }
 
   function goToToday() {
     const n = new Date();
-    setViewYear(n.getFullYear()); setViewMonth(n.getMonth()); setSelectedDate(n);
+    setViewYear(n.getFullYear()); setViewMonth(n.getMonth());
   }
 
-  const listEvents = useMemo(() => {
-    if (selectedDate) return eventsByDate.get(dateToString(selectedDate)) ?? [];
-    return events
-      .filter((ev) => { const d = parseDateString(ev.eventDate); return d && d.getMonth() === viewMonth && d.getFullYear() === viewYear; })
-      .sort((a, b) => (parseDateString(a.eventDate)?.getTime() ?? 0) - (parseDateString(b.eventDate)?.getTime() ?? 0));
-  }, [selectedDate, eventsByDate, events, viewMonth, viewYear]);
+  function openCreateForDate(date: Date) {
+    setCreateFormDate(dateToString(date));
+    setCreateForm({ title: "", description: "", startTime: "", endTime: "", location: "" });
+    setShowCreateModal(true);
+  }
+
+  // Group all events by month for the list view
+  const eventsByMonth = useMemo(() => {
+    const sorted = [...events].sort((a, b) => {
+      const da = parseDateString(a.eventDate)?.getTime() ?? 0;
+      const db = parseDateString(b.eventDate)?.getTime() ?? 0;
+      return da - db;
+    });
+
+    const groups: { label: string; events: HubEvent[] }[] = [];
+    let currentLabel = "";
+    let currentGroup: HubEvent[] = [];
+
+    for (const ev of sorted) {
+      const d = parseDateString(ev.eventDate);
+      if (!d) continue;
+      const label = `${FULL_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+      if (label !== currentLabel) {
+        if (currentGroup.length > 0) groups.push({ label: currentLabel, events: currentGroup });
+        currentLabel = label;
+        currentGroup = [ev];
+      } else {
+        currentGroup.push(ev);
+      }
+    }
+    if (currentGroup.length > 0) groups.push({ label: currentLabel, events: currentGroup });
+
+    return groups;
+  }, [events]);
 
   async function handleCreateEvent() {
     if (!createForm.title.trim() || !userId) return;
@@ -184,16 +204,57 @@ export function EventsSection({
 
     await rsvpToEvent(eventId, userId, status);
 
-    // Update user's RSVP
     const newRsvps = new Map(userRsvps);
     newRsvps.set(eventId, status);
     setUserRsvps(newRsvps);
 
-    // Update counts
     const counts = await getEventRsvpCounts(eventId);
     const newCounts = new Map(rsvpCounts);
     newCounts.set(eventId, counts);
     setRsvpCounts(newCounts);
+  }
+
+  /* ── render helpers ──────────────────────────────────────────── */
+
+  function renderEventListItem(ev: HubEvent) {
+    const parsed = parseDateString(ev.eventDate);
+    if (!parsed) return null;
+
+    return (
+      <button
+        key={ev.id}
+        id={ev.id}
+        type="button"
+        onClick={() => setPopupEvent(ev)}
+        className="flex w-full items-center gap-4 border-b border-[var(--ud-border-subtle)] py-4 text-left transition hover:bg-[var(--ud-bg-subtle)]/40"
+      >
+        {/* Date number + short day */}
+        <div className="flex w-12 shrink-0 flex-col items-center">
+          <span className="text-2xl font-bold leading-none text-[var(--ud-text-primary)]">
+            {parsed.getDate()}
+          </span>
+          <span className="mt-0.5 text-[11px] text-[var(--ud-text-muted)]">
+            {SHORT_DAY[parsed.getDay()]}
+          </span>
+        </div>
+
+        {/* Divider line */}
+        <div className="h-10 w-px bg-[var(--ud-border)]" />
+
+        {/* Event title */}
+        <div className="min-w-0 flex-1">
+          <p className="text-[15px] font-medium text-[var(--ud-text-primary)]">{ev.title}</p>
+          {ev.startTime && (
+            <p className="mt-0.5 text-[12px] text-[var(--ud-text-muted)]">
+              {ev.startTime}{ev.endTime ? ` - ${ev.endTime}` : ""}
+            </p>
+          )}
+        </div>
+
+        {/* Green calendar icon */}
+        <CalendarDays className="h-5 w-5 shrink-0 text-[#0C5C57]" />
+      </button>
+    );
   }
 
   /* ── render ──────────────────────────────────────────────────── */
@@ -211,8 +272,8 @@ export function EventsSection({
   return (
     <>
     <section className="w-full min-w-0 bg-[var(--ud-bg-card)]">
-      {/* ═══ TOP BAR — "Events" left, "Add Event" right ═══ */}
-      <div className="flex items-center justify-between px-1 pb-5">
+      {/* ═══ TOP BAR ═══ */}
+      <div className="flex items-center justify-between px-4 pb-4">
         <h2 className="text-lg font-semibold text-[var(--ud-text-primary)]">Events</h2>
         <button
           type="button"
@@ -227,165 +288,128 @@ export function EventsSection({
         </button>
       </div>
 
-      {/* ═══ MONTH NAV — "Apr 2026 < > [Today]        📅" ═══ */}
-      <div className="flex items-center gap-2 px-1 pb-4">
-        <span className="text-xl font-bold tracking-tight text-[var(--ud-text-primary)]">
-          {SHORT_MONTHS[viewMonth]} {viewYear}
-        </span>
-
+      {/* ═══ Calendar View toggle button (Band-style) ═══ */}
+      <div className="px-4 pb-4">
         <button
           type="button"
-          onClick={() => shiftMonth(-1)}
-          className="ml-1 flex h-6 w-6 items-center justify-center text-[var(--ud-text-muted)] transition hover:text-[var(--ud-text-secondary)]"
+          onClick={() => setViewMode(viewMode === "list" ? "calendar" : "list")}
+          className={cn(
+            "flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition",
+            viewMode === "list"
+              ? "bg-[#E8F5F3] text-[#0C5C57]"
+              : "bg-[var(--ud-bg-subtle)] text-[var(--ud-text-secondary)]"
+          )}
         >
-          <ChevronLeft className="h-3.5 w-3.5" />
+          <CalendarDays className="h-4 w-4" />
+          {viewMode === "list" ? "Calendar View" : "List View"}
         </button>
-        <button
-          type="button"
-          onClick={() => shiftMonth(1)}
-          className="flex h-6 w-6 items-center justify-center text-[var(--ud-text-muted)] transition hover:text-[var(--ud-text-secondary)]"
-        >
-          <ChevronRight className="h-3.5 w-3.5" />
-        </button>
-
-        <button
-          type="button"
-          onClick={goToToday}
-          className="ml-1 rounded border border-[var(--ud-border)] px-3 py-1 text-[11px] font-medium text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)]"
-        >
-          Today
-        </button>
-
-        <span className="flex-1" />
-        <CalendarDays className="h-4 w-4 text-[var(--ud-text-muted)]" />
       </div>
 
-      {/* ═══ CALENDAR TABLE — flat, no rounded corners ═══ */}
-      <div className="select-none border-t border-l border-[var(--ud-border)]">
-        {/* Day-of-week header row */}
-        <div style={GRID7}>
-          {DAY_HEADERS.map((d) => (
-            <span
-              key={d}
-              className="border-b border-r border-[var(--ud-border)] py-2 text-center text-[12px] font-normal text-[var(--ud-text-muted)]"
+      {/* ═══ CALENDAR VIEW ═══ */}
+      {viewMode === "calendar" && (
+        <div className="px-4">
+          {/* Month nav */}
+          <div className="flex items-center justify-between pb-4">
+            <button
+              type="button"
+              onClick={goToToday}
+              className="text-sm font-medium text-[var(--ud-text-secondary)]"
             >
-              {d}
-            </span>
-          ))}
-        </div>
+              Today
+            </button>
 
-        {/* Date rows */}
-        {grid.map((row, ri) => (
-          <div key={ri} style={GRID7}>
-            {row.map((cell) => {
-              const todayCell = isToday(cell.date);
-              const selected = selectedDate && isSameDay(cell.date, selectedDate);
-              const cellEvents = eventsOn(cell.date);
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => shiftMonth(-1)} className="p-1 text-[var(--ud-text-muted)]">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-base font-bold text-[var(--ud-text-primary)]">
+                {SHORT_MONTHS[viewMonth]} {viewYear}
+              </span>
+              <button type="button" onClick={() => shiftMonth(1)} className="p-1 text-[var(--ud-text-muted)]">
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
 
-              return (
-                <button
-                  key={cell.date.toISOString()}
-                  type="button"
-                  onClick={() => setSelectedDate(selected ? null : cell.date)}
-                  style={{ minHeight: 80 }}
-                  className={cn(
-                    "relative border-b border-r border-[var(--ud-border)] p-1.5 text-left align-top transition",
-                    todayCell && "ring-2 ring-inset ring-[var(--ud-brand-primary)]",
-                    selected && !todayCell && "bg-[var(--ud-bg-subtle)]",
-                    !selected && !todayCell && "hover:bg-[var(--ud-bg-subtle)]/30"
-                  )}
-                >
-                  {/* Date number — top-left */}
-                  <span
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-[var(--ud-text-muted)]" />
+            </div>
+          </div>
+
+          {/* Day headers */}
+          <div style={GRID7} className="pb-2">
+            {DAY_HEADERS.map((d) => (
+              <span key={d} className="text-center text-[11px] font-medium text-[var(--ud-text-muted)]">
+                {d}
+              </span>
+            ))}
+          </div>
+
+          {/* Calendar grid — clean, no borders (Band-style) */}
+          {grid.map((row, ri) => (
+            <div key={ri} style={GRID7}>
+              {row.map((cell) => {
+                const todayCell = isToday(cell.date);
+                const hasEvents = eventsOn(cell.date).length > 0;
+
+                return (
+                  <button
+                    key={cell.date.toISOString()}
+                    type="button"
+                    onClick={() => {
+                      if (isCreatorAdmin) {
+                        openCreateForDate(cell.date);
+                      }
+                    }}
                     className={cn(
-                      "block text-[13px] leading-none",
-                      !cell.inMonth
-                        ? "text-[var(--ud-text-muted)]"
-                        : todayCell
-                          ? "font-bold text-[var(--ud-brand-primary)]"
-                          : "text-[var(--ud-text-primary)]"
+                      "flex h-10 items-center justify-center text-sm transition",
+                      !cell.inMonth && "text-gray-300",
+                      cell.inMonth && !todayCell && "text-[var(--ud-text-primary)]",
+                      todayCell && "font-bold",
                     )}
                   >
-                    {cell.date.getDate()}
-                  </span>
-
-                  {/* Event previews inside cell */}
-                  {cellEvents.length > 0 && (
-                    <div className="mt-1.5 space-y-0.5 overflow-hidden">
-                      {cellEvents.slice(0, 2).map((ev) => (
-                        <div key={ev.id} className="flex items-center gap-1">
-                          <span
-                            className="h-[5px] w-[5px] shrink-0 rounded-full"
-                            style={{ backgroundColor: themeColor("Community") }}
-                          />
-                          <span className="truncate text-[10px] leading-tight text-[var(--ud-text-muted)]">
-                            {ev.title.length > 12 ? ev.title.slice(0, 12) + "…" : ev.title}
-                          </span>
-                        </div>
-                      ))}
-                      {cellEvents.length > 2 && (
-                        <span className="block pl-2.5 text-[9px] text-[var(--ud-text-muted)]">
-                          +{cellEvents.length - 2}
-                        </span>
+                    <span
+                      className={cn(
+                        "flex h-8 w-8 items-center justify-center rounded-full",
+                        todayCell && "bg-[#0C5C57] text-white",
+                        hasEvents && !todayCell && "ring-2 ring-[#0C5C57]/30"
                       )}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        ))}
-      </div>
+                    >
+                      {cell.date.getDate()}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
 
-      {/* ═══ EVENT LIST — below calendar ═══ */}
-      <div className="mt-6 px-1">
-        {listEvents.length === 0 ? (
+          {/* Collapse indicator */}
+          <div className="flex justify-center pb-2 pt-1">
+            <ChevronLeft className="h-4 w-4 rotate-90 text-[var(--ud-text-muted)]" />
+          </div>
+        </div>
+      )}
+
+      {/* ═══ EVENT LIST — grouped by month (Band-style) ═══ */}
+      <div className="px-4">
+        {eventsByMonth.length === 0 ? (
           <div className="flex flex-col items-center py-12 text-center">
             <CalendarDays className="h-8 w-8 text-[var(--ud-text-muted)]" />
-            <p className="mt-3 text-sm font-medium text-[var(--ud-text-primary)]">No events</p>
+            <p className="mt-3 text-sm font-medium text-[var(--ud-text-primary)]">No events scheduled.</p>
             <p className="mt-0.5 text-[13px] text-[var(--ud-text-muted)]">
-              {selectedDate ? "Nothing scheduled for this date." : "Plan the first event for your hub."}
+              Plan the first event for your hub.
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-[var(--ud-border)]">
-            {listEvents.map((ev) => {
-              const parsed = parseDateString(ev.eventDate);
-              return (
-                <button
-                  key={ev.id}
-                  id={ev.id}
-                  type="button"
-                  onClick={() => setPopupEvent(ev)}
-                  className="flex w-full items-start gap-5 py-5 text-left transition hover:bg-[var(--ud-bg-subtle)]/40"
-                >
-                  {/* Large date + full day name */}
-                  {parsed && (
-                    <div className="flex w-14 shrink-0 flex-col items-center">
-                      <span className="text-[28px] font-bold leading-none text-[var(--ud-text-primary)]">
-                        {String(parsed.getDate()).padStart(2, "0")}
-                      </span>
-                      <span className="mt-1 text-[11px] text-[var(--ud-text-muted)]">
-                        {FULL_DAY_NAMES[parsed.getDay()]}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Event details */}
-                  <div className="min-w-0 flex-1 pt-0.5">
-                    <p className="text-[15px] font-semibold text-[var(--ud-text-primary)]">{ev.title}</p>
-                    {ev.startTime && (
-                      <p className="mt-1 text-[13px] text-[var(--ud-text-muted)]">
-                        {ev.startTime}
-                        {ev.endTime ? ` - ${ev.endTime}` : ""}
-                      </p>
-                    )}
-                    {ev.location && <p className="text-[13px] text-[var(--ud-text-muted)]">{ev.location}</p>}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+          eventsByMonth.map((group) => (
+            <div key={group.label}>
+              {/* Month header */}
+              <div className="bg-[#F0F8F6] px-3 py-2 text-sm font-semibold text-[var(--ud-text-secondary)]">
+                {group.label}
+              </div>
+              {/* Event items */}
+              {group.events.map((ev) => renderEventListItem(ev))}
+            </div>
+          ))
         )}
       </div>
 
@@ -400,14 +424,9 @@ export function EventsSection({
             className="relative z-10 w-full max-w-md rounded-t-2xl bg-[var(--ud-bg-card)] shadow-xl sm:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Teal header */}
             <div className="flex items-center justify-between rounded-t-2xl bg-[#0C5C57] px-5 py-3.5 sm:rounded-t-2xl">
               <h3 className="text-sm font-semibold text-white">{popupEvent.title}</h3>
-              <button
-                type="button"
-                onClick={() => setPopupEvent(null)}
-                className="text-white/60 transition hover:text-white"
-              >
+              <button type="button" onClick={() => setPopupEvent(null)} className="text-white/60 transition hover:text-white">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -428,8 +447,7 @@ export function EventsSection({
                   <div className="flex items-center gap-3">
                     <Clock className="h-4 w-4 text-[var(--ud-text-muted)]" />
                     <span className="text-sm text-[var(--ud-text-primary)]">
-                      {popupEvent.startTime}
-                      {popupEvent.endTime ? ` - ${popupEvent.endTime}` : ""}
+                      {popupEvent.startTime}{popupEvent.endTime ? ` - ${popupEvent.endTime}` : ""}
                     </span>
                   </div>
                 )}
@@ -441,49 +459,29 @@ export function EventsSection({
                 )}
               </div>
 
-              {/* RSVP Section */}
+              {/* RSVP */}
               <div className="mt-5 border-t border-[var(--ud-border)] pt-4">
                 <p className="mb-3 text-xs font-semibold text-[var(--ud-text-secondary)]">RSVP</p>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleRsvp(popupEvent.id, "going")}
-                    className={cn(
-                      "flex-1 rounded-lg py-2 text-xs font-semibold transition",
-                      userRsvps.get(popupEvent.id) === "going"
-                        ? "bg-green-100 text-green-700"
-                        : "border border-[var(--ud-border)] text-[var(--ud-text-secondary)] hover:bg-[var(--ud-bg-subtle)]"
-                    )}
-                  >
-                    Going
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleRsvp(popupEvent.id, "maybe")}
-                    className={cn(
-                      "flex-1 rounded-lg py-2 text-xs font-semibold transition",
-                      userRsvps.get(popupEvent.id) === "maybe"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "border border-[var(--ud-border)] text-[var(--ud-text-secondary)] hover:bg-[var(--ud-bg-subtle)]"
-                    )}
-                  >
-                    Maybe
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleRsvp(popupEvent.id, "not_going")}
-                    className={cn(
-                      "flex-1 rounded-lg py-2 text-xs font-semibold transition",
-                      userRsvps.get(popupEvent.id) === "not_going"
-                        ? "bg-red-100 text-red-700"
-                        : "border border-[var(--ud-border)] text-[var(--ud-text-secondary)] hover:bg-[var(--ud-bg-subtle)]"
-                    )}
-                  >
-                    Not Going
-                  </button>
+                  {(["going", "maybe", "not_going"] as const).map((status) => (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => handleRsvp(popupEvent.id, status)}
+                      className={cn(
+                        "flex-1 rounded-lg py-2 text-xs font-semibold transition",
+                        userRsvps.get(popupEvent.id) === status
+                          ? status === "going" ? "bg-green-100 text-green-700"
+                            : status === "maybe" ? "bg-yellow-100 text-yellow-700"
+                            : "bg-red-100 text-red-700"
+                          : "border border-[var(--ud-border)] text-[var(--ud-text-secondary)] hover:bg-[var(--ud-bg-subtle)]"
+                      )}
+                    >
+                      {status === "going" ? "Going" : status === "maybe" ? "Maybe" : "Not Going"}
+                    </button>
+                  ))}
                 </div>
 
-                {/* RSVP Counts */}
                 {rsvpCounts.get(popupEvent.id) && (
                   <div className="mt-3 flex gap-4 text-xs text-[var(--ud-text-secondary)]">
                     <span>{rsvpCounts.get(popupEvent.id)!.going} Going</span>
@@ -493,7 +491,7 @@ export function EventsSection({
                 )}
               </div>
 
-              {/* Edit/Delete buttons for creator */}
+              {/* Delete for creator */}
               {isCreatorAdmin && userId === popupEvent.createdBy && (
                 <div className="mt-5 flex gap-2 border-t border-[var(--ud-border)] pt-4">
                   <button
@@ -521,20 +519,14 @@ export function EventsSection({
             className="relative z-10 w-full max-w-md rounded-t-2xl bg-[var(--ud-bg-card)] shadow-xl sm:rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
             <div className="flex items-center justify-between rounded-t-2xl bg-[#0C5C57] px-5 py-3.5 sm:rounded-t-2xl">
               <h3 className="text-sm font-semibold text-white">Create Event</h3>
-              <button
-                type="button"
-                onClick={() => setShowCreateModal(false)}
-                className="text-white/60 transition hover:text-white"
-              >
+              <button type="button" onClick={() => setShowCreateModal(false)} className="text-white/60 transition hover:text-white">
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             <div className="space-y-4 p-5">
-              {/* Title */}
               <div>
                 <label className="block text-xs font-semibold text-[var(--ud-text-secondary)]">Title *</label>
                 <input
@@ -546,7 +538,6 @@ export function EventsSection({
                 />
               </div>
 
-              {/* Date */}
               <div>
                 <label className="block text-xs font-semibold text-[var(--ud-text-secondary)]">Date *</label>
                 <input
@@ -557,7 +548,6 @@ export function EventsSection({
                 />
               </div>
 
-              {/* Start Time */}
               <div>
                 <label className="block text-xs font-semibold text-[var(--ud-text-secondary)]">Start Time</label>
                 <input
@@ -568,7 +558,6 @@ export function EventsSection({
                 />
               </div>
 
-              {/* End Time */}
               <div>
                 <label className="block text-xs font-semibold text-[var(--ud-text-secondary)]">End Time</label>
                 <input
@@ -579,7 +568,6 @@ export function EventsSection({
                 />
               </div>
 
-              {/* Location */}
               <div>
                 <label className="block text-xs font-semibold text-[var(--ud-text-secondary)]">Location</label>
                 <input
@@ -591,7 +579,6 @@ export function EventsSection({
                 />
               </div>
 
-              {/* Description */}
               <div>
                 <label className="block text-xs font-semibold text-[var(--ud-text-secondary)]">Description</label>
                 <textarea
@@ -603,7 +590,6 @@ export function EventsSection({
                 />
               </div>
 
-              {/* Buttons */}
               <div className="flex gap-2 pt-4">
                 <button
                   type="button"
@@ -627,20 +613,18 @@ export function EventsSection({
       )}
     </section>
 
-    {/* ── Mobile FAB — opens create event modal (Band-style) ── */}
-    <button
-      type="button"
-      onClick={() => {
-        setCreateFormDate(dateToString(today));
-        setCreateForm({ title: "", description: "", startTime: "", endTime: "", location: "" });
-        setShowCreateModal(true);
-      }}
-      className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full shadow-lg lg:hidden"
-      style={{ backgroundColor: "var(--ud-brand-primary)" }}
-      aria-label="Create event"
-    >
-      <CalendarDays className="h-6 w-6 text-white" />
-    </button>
+    {/* ── Mobile FAB — opens create event modal ── */}
+    {isCreatorAdmin && (
+      <button
+        type="button"
+        onClick={() => openCreateForDate(today)}
+        className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full shadow-lg lg:hidden"
+        style={{ backgroundColor: "#0C5C57" }}
+        aria-label="Create event"
+      >
+        <CalendarDays className="h-6 w-6 text-white" />
+      </button>
+    )}
     </>
   );
 }

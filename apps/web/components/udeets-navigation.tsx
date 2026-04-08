@@ -693,13 +693,38 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
   return (
     <header className={cn("sticky top-0 z-30", HEADER_BG)}>
       <div className="flex min-h-16 w-full items-center justify-between px-4 py-2 sm:px-6 lg:px-10">
-        <button type="button" onClick={handleHome} className="flex min-w-0 items-center gap-3">
-          <UdeetsBrandLockup
-            logoClassName="h-10 w-10"
-            textClassName="text-2xl"
-            priority
-          />
-        </button>
+        {/* Left side: Back arrow on mobile inside hub, logo elsewhere */}
+        {hubSettings ? (
+          <>
+            {/* Mobile: back arrow */}
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="flex items-center gap-1 lg:hidden"
+              aria-label="Go back"
+            >
+              <svg className="h-6 w-6 text-[var(--ud-text-primary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m15 18-6-6 6-6" />
+              </svg>
+            </button>
+            {/* Desktop: keep logo */}
+            <button type="button" onClick={handleHome} className="hidden min-w-0 items-center gap-3 lg:flex">
+              <UdeetsBrandLockup
+                logoClassName="h-10 w-10"
+                textClassName="text-2xl"
+                priority
+              />
+            </button>
+          </>
+        ) : (
+          <button type="button" onClick={handleHome} className="flex min-w-0 items-center gap-3">
+            <UdeetsBrandLockup
+              logoClassName="h-10 w-10"
+              textClassName="text-2xl"
+              priority
+            />
+          </button>
+        )}
 
         <div ref={controlsRef} className="relative flex items-center gap-3">
           {canAccessDashboard ? (
