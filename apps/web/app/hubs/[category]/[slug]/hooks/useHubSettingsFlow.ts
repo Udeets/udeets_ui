@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import type { HubRecord } from "@/lib/hubs";
-import type { HubColorThemeKey } from "@/lib/hub-color-themes";
 import { updateHub } from "@/lib/services/hubs/update-hub";
 
 type UseHubSettingsFlowArgs = {
@@ -34,18 +33,13 @@ export function useHubSettingsFlow({
   const [approvalSetting, setApprovalSetting] = useState(hub.visibility === "Private" ? "Required" : "Open");
   const [whoCanPost, setWhoCanPost] = useState("Admins and members");
   const [whoCanUpload, setWhoCanUpload] = useState("Admins and members");
-  const [savedAccentColor, setSavedAccentColor] = useState<HubColorThemeKey>(
-    (hub.accentColor as HubColorThemeKey | undefined) || "teal"
-  );
-  const [settingsAccentColor, setSettingsAccentColor] = useState<HubColorThemeKey>(savedAccentColor);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [settingsSaveError, setSettingsSaveError] = useState<string | null>(null);
   const [settingsSaveSuccess, setSettingsSaveSuccess] = useState<string | null>(null);
 
   const isDirty =
     settingsHubName.trim() !== savedHubName.trim() ||
-    settingsCategory !== savedHubCategory ||
-    settingsAccentColor !== savedAccentColor;
+    settingsCategory !== savedHubCategory;
 
   useEffect(() => {
     setSavedHubName(initialHubName);
@@ -59,9 +53,6 @@ export function useHubSettingsFlow({
       "discoverable" in hub ? Boolean((hub as HubRecord & { discoverable?: boolean }).discoverable) : true
     );
     setApprovalSetting(hub.visibility === "Private" ? "Required" : "Open");
-    const hubAccent = (hub.accentColor as HubColorThemeKey | undefined) || "teal";
-    setSavedAccentColor(hubAccent);
-    setSettingsAccentColor(hubAccent);
     setSettingsSaveError(null);
     setSettingsSaveSuccess(null);
   }, [
@@ -104,15 +95,11 @@ export function useHubSettingsFlow({
       const updatedHub = await updateHub(hub.id, {
         name: settingsHubName,
         category: settingsCategory,
-        accentColor: settingsAccentColor,
       });
       setSavedHubName(updatedHub.name);
       setSettingsHubName(updatedHub.name);
       setSavedHubCategory(updatedHub.category);
       setSettingsCategory(updatedHub.category);
-      const newAccent = (settingsAccentColor as HubColorThemeKey) || "teal";
-      setSavedAccentColor(newAccent);
-      setSettingsAccentColor(newAccent);
       setSettingsSaveSuccess("Hub settings saved.");
       onAfterSave?.();
     } catch (error) {
@@ -125,7 +112,6 @@ export function useHubSettingsFlow({
   const resetSettings = () => {
     setSettingsHubName(savedHubName);
     setSettingsCategory(savedHubCategory);
-    setSettingsAccentColor(savedAccentColor);
     setSettingsSaveError(null);
     setSettingsSaveSuccess(null);
   };
@@ -143,7 +129,6 @@ export function useHubSettingsFlow({
     approvalSetting,
     whoCanPost,
     whoCanUpload,
-    settingsAccentColor,
     isSavingSettings,
     settingsSaveError,
     settingsSaveSuccess,
@@ -156,7 +141,6 @@ export function useHubSettingsFlow({
     setApprovalSetting,
     setWhoCanPost,
     setWhoCanUpload,
-    setSettingsAccentColor,
     updateSettingsHubName,
     updateSettingsCategory,
     saveSettings,

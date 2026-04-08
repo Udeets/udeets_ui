@@ -1,8 +1,7 @@
 "use client";
 
-import { ChevronRight, Loader2, Palette, Save } from "lucide-react";
+import { ChevronRight, Loader2, Save } from "lucide-react";
 import type { HubRecord } from "@/lib/hubs";
-import { HUB_COLOR_THEMES, type HubColorThemeKey } from "@/lib/hub-color-themes";
 import type { HubMemberRoleItem } from "../hubTypes";
 import { ImageWithFallback, cn, initials } from "../hubUtils";
 import { SectionShell } from "../SectionShell";
@@ -70,6 +69,7 @@ function TextInput({ value, onChange, placeholder }: { value: string; onChange: 
 /* ── main component ──────────────────────────────────────────────── */
 
 export function SettingsSection({
+  hubName,
   isDirty,
   isSavingSettings,
   isCreatorAdmin,
@@ -98,13 +98,12 @@ export function SettingsSection({
   onWhoCanPostChange,
   whoCanUpload,
   onWhoCanUploadChange,
-  settingsAccentColor,
-  onSettingsAccentColorChange,
   settingsSaveSuccess,
   settingsSaveError,
   hubId,
   onShowDeleteModal,
 }: {
+  hubName?: string;
   isDirty: boolean;
   isSavingSettings: boolean;
   isCreatorAdmin: boolean;
@@ -133,8 +132,6 @@ export function SettingsSection({
   onWhoCanPostChange: (value: string) => void;
   whoCanUpload: string;
   onWhoCanUploadChange: (value: string) => void;
-  settingsAccentColor: HubColorThemeKey;
-  onSettingsAccentColorChange: (value: HubColorThemeKey) => void;
   settingsSaveSuccess: string | null;
   settingsSaveError: string | null;
   hubId: string;
@@ -143,7 +140,7 @@ export function SettingsSection({
   return (
     <SectionShell
       title="Settings"
-      description="Manage how this hub appears and behaves."
+      description={hubName ? `${hubName} settings` : "Manage how this hub appears and behaves."}
       actions={
         isDirty ? (
           <div className="flex items-center gap-2">
@@ -226,33 +223,7 @@ export function SettingsSection({
               <span className="mb-1.5 block text-xs text-[var(--ud-text-muted)]">Location</span>
               <TextInput value={settingsLocation} onChange={onSettingsLocationChange} placeholder="City or address" />
             </div>
-            {/* Accent color theme */}
-            <div className="py-3">
-              <span className="mb-1.5 flex items-center gap-1.5 text-xs text-[var(--ud-text-muted)]">
-                <Palette className="h-3 w-3" /> Hub Color Theme
-              </span>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {HUB_COLOR_THEMES.map((theme) => (
-                  <button
-                    key={theme.key}
-                    type="button"
-                    onClick={() => onSettingsAccentColorChange(theme.key)}
-                    className={cn(
-                      "flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition",
-                      settingsAccentColor === theme.key
-                        ? "border-[var(--ud-border)] bg-[var(--ud-bg-subtle)] text-[var(--ud-text-primary)] shadow-sm"
-                        : "border-[var(--ud-border)] bg-[var(--ud-bg-card)] text-[var(--ud-text-secondary)] hover:border-[var(--ud-border)]"
-                    )}
-                  >
-                    <span
-                      className="inline-block h-4 w-4 rounded-full border border-white shadow-sm"
-                      style={{ backgroundColor: theme.swatch }}
-                    />
-                    {theme.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* Hub Color Theme — removed */}
           </div>
         </div>
 

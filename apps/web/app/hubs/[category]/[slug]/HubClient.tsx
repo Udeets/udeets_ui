@@ -308,7 +308,6 @@ export default function HubClient({
     approvalSetting,
     whoCanPost,
     whoCanUpload,
-    settingsAccentColor,
     isSavingSettings,
     settingsSaveError,
     settingsSaveSuccess,
@@ -321,7 +320,6 @@ export default function HubClient({
     setApprovalSetting,
     setWhoCanPost,
     setWhoCanUpload,
-    setSettingsAccentColor,
     updateSettingsHubName,
     updateSettingsCategory,
     saveSettings,
@@ -340,17 +338,6 @@ export default function HubClient({
     },
   });
   const hubName = savedHubName;
-
-  // Accent color change from header action row — updates local state AND saves to DB immediately
-  const handleAccentColorChange = async (color: import("@/lib/hub-color-themes").HubColorThemeKey) => {
-    setSettingsAccentColor(color);
-    try {
-      const { updateHub } = await import("@/lib/services/hubs/update-hub");
-      await updateHub(hub.id, { accentColor: color });
-    } catch (err) {
-      console.error("[accent-color-save]", err);
-    }
-  };
 
   const {
     isConnectEditorOpen,
@@ -410,7 +397,7 @@ export default function HubClient({
   const memberCount = Math.max(1, Number.parseInt(hub.membersLabel, 10) || 0);
   const headerHubName = hub.name?.trim() || hubName;
   const visibilityLabel: "Public" | "Private" = hub.visibility;
-  const accentTheme = getHubColorTheme(settingsAccentColor || hub.accentColor);
+  const accentTheme = getHubColorTheme(hub.accentColor || "teal");
 
   // Inject author avatars into feed items
   const allFeedItems = [...liveFeedItems, ...hubContent.feed].map((item) => ({
@@ -815,6 +802,7 @@ export default function HubClient({
     if (activePanel === "settings") {
       return (
         <SettingsSection
+          hubName={hubName}
           isDirty={isDirty}
           isSavingSettings={isSavingSettings}
           isCreatorAdmin={isCreatorAdmin}
@@ -843,8 +831,6 @@ export default function HubClient({
           onWhoCanPostChange={setWhoCanPost}
           whoCanUpload={whoCanUpload}
           onWhoCanUploadChange={setWhoCanUpload}
-          settingsAccentColor={settingsAccentColor}
-          onSettingsAccentColorChange={setSettingsAccentColor}
           settingsSaveSuccess={settingsSaveSuccess}
           settingsSaveError={settingsSaveError}
           hubId={hub.id}
@@ -925,8 +911,6 @@ export default function HubClient({
           onOpenViewer={openViewer}
           customSections={customSections}
           onOpenSectionEditor={() => setIsSectionEditorOpen(true)}
-          settingsAccentColor={settingsAccentColor}
-          onSettingsAccentColorChange={setSettingsAccentColor}
           accentTheme={accentTheme}
         />
       );
@@ -1051,12 +1035,40 @@ export default function HubClient({
           visibilityLabel={visibilityLabel}
           accentTheme={accentTheme}
           creatorDisplayName={creatorDisplayName}
-          settingsAccentColor={settingsAccentColor}
-          onSettingsAccentColorChange={handleAccentColorChange}
-          onOpenSettings={openSettingsPanel}
           onOpenMembers={() => openCenterMembers("list")}
           onInviteMembers={() => setIsInviteModalOpen(true)}
+          onOpenAlerts={() => router.push("/alerts")}
         />
+
+        {/* Mobile hub toolbar — Search & Settings icons (Band-style) */}
+        <div className="flex items-center justify-end gap-2 bg-[var(--ud-bg-card)] px-4 py-2 lg:hidden">
+          <button
+            type="button"
+            onClick={() => {
+              /* TODO: open hub-specific search */
+            }}
+            className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-[var(--ud-bg-subtle)] transition"
+            aria-label="Search this hub"
+          >
+            <svg className="h-5 w-5 text-[var(--ud-text-secondary)] stroke-[1.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+          </button>
+          {isCreatorAdmin && (
+            <button
+              type="button"
+              onClick={openSettingsPanel}
+              className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-[var(--ud-bg-subtle)] transition"
+              aria-label="Hub settings"
+            >
+              <svg className="h-5 w-5 text-[var(--ud-text-secondary)] stroke-[1.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+          )}
+        </div>
 
         {mediaSuccess ? <p className="px-4 pt-3 text-sm font-medium text-[var(--ud-brand-primary)]">{mediaSuccess}</p> : null}
         {mediaError ? <p className="px-4 pt-3 text-sm font-medium text-[var(--ud-danger)]">{mediaError}</p> : null}
@@ -1110,7 +1122,7 @@ export default function HubClient({
       </div>
 
       {!isDemoPreview ? <UdeetsFooter /> : null}
-      {!isDemoPreview ? <UdeetsBottomNav activeNav="home" /> : null}
+      {/* Bottom nav only shows on /dashboard, not inside hub pages */}
 
       {/* Join Hub Confirmation Modal */}
       {showJoinConfirm ? (

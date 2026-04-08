@@ -1,117 +1,16 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { Camera, Check, CheckCircle2, ChevronDown, Facebook, Globe, Instagram, Loader2, MapPin, Pencil, Phone, Settings, UsersRound, X, Youtube } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { Camera, Check, ChevronDown, Facebook, Globe, Instagram, Loader2, MapPin, Pencil, Phone, Settings, UsersRound, X, Youtube } from "lucide-react";
+import { useState } from "react";
 import type { HubCTARecord } from "@/lib/services/ctas/cta-types";
 import type { HubSection } from "@/lib/services/sections/section-types";
-import { HUB_COLOR_THEMES, type HubColorThemeKey, type HubColorTheme } from "@/lib/hub-color-themes";
+import type { HubColorTheme } from "@/lib/hub-color-themes";
 import { CTADisplay } from "../ctas/CTADisplay";
 import { CustomSectionDisplay } from "./custom/CustomSectionDisplay";
 import { ACTION_ICON, ACTION_ICON_BUTTON, CARD, displayLinkValue, ImageWithFallback, initials, cn } from "../hubUtils";
 
-/* ── Color Palette Picker ────────────────────────────────────────── */
 
-function ColorPalettePickerButton({
-  selectedColor,
-  onColorChange,
-}: {
-  selectedColor?: HubColorThemeKey;
-  onColorChange: (color: HubColorThemeKey) => void;
-}) {
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
-
-  const updateDropdownPos = () => {
-    if (!buttonRef.current) return;
-    const rect = buttonRef.current.getBoundingClientRect();
-    setDropdownPos({
-      top: rect.bottom + 8,
-      left: Math.max(8, rect.left - 60),
-    });
-  };
-
-  const handleButtonClick = () => {
-    updateDropdownPos();
-    setIsOpen((v) => !v);
-  };
-
-  const handleColorSelect = (color: HubColorThemeKey) => {
-    onColorChange(color);
-    setIsOpen(false);
-  };
-
-  // Close dropdown on outside click
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (buttonRef.current && !buttonRef.current.contains(target)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
-
-  // Create a gradient circle from all 6 colors
-  const gradientStops = HUB_COLOR_THEMES.map((theme, idx) => {
-    const angle = (idx / HUB_COLOR_THEMES.length) * 360;
-    return `${theme.swatch} ${angle}deg ${angle + 60}deg`;
-  }).join(", ");
-
-  return (
-    <div className="relative">
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={handleButtonClick}
-        className="h-8 w-8 rounded-full border-2 transition shadow-sm hover:shadow-md"
-        style={{
-          background: `conic-gradient(${HUB_COLOR_THEMES.map((t) => t.swatch).join(", ")})`,
-          borderColor: selectedColor ? HUB_COLOR_THEMES.find(t => t.key === selectedColor)?.swatch : "#cbd5e1",
-        }}
-        title="Select theme color"
-        aria-label="Open color theme picker"
-      />
-
-      {isOpen &&
-        typeof document !== "undefined" &&
-        createPortal(
-          <div
-            className="fixed z-50 rounded-lg bg-[var(--ud-bg-elevated)] shadow-lg border border-[var(--ud-border)] p-3"
-            style={{ top: dropdownPos.top, left: dropdownPos.left, minWidth: "220px" }}
-          >
-            <div className="space-y-1.5">
-              {HUB_COLOR_THEMES.map((theme) => (
-                <button
-                  key={theme.key}
-                  type="button"
-                  onClick={() => handleColorSelect(theme.key)}
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]"
-                >
-                  <div
-                    className="h-5 w-5 rounded border border-[var(--ud-border)]"
-                    style={{ backgroundColor: theme.swatch }}
-                  />
-                  <span className="flex-1 text-left text-[var(--ud-text-secondary)]">{theme.label}</span>
-                  {selectedColor === theme.key ? (
-                    <CheckCircle2 className="h-4 w-4 text-[var(--ud-text-muted)] shrink-0" />
-                  ) : null}
-                </button>
-              ))}
-            </div>
-          </div>,
-          document.body
-        )}
-    </div>
-  );
-}
 
 /* ── Collapsible Card ────────────────────────────────────────────── */
 
@@ -196,8 +95,6 @@ export function AboutSection({
   onOpenViewer,
   customSections,
   onOpenSectionEditor,
-  settingsAccentColor,
-  onSettingsAccentColorChange,
   accentTheme,
 }: {
   CategoryIcon: LucideIcon;
@@ -237,8 +134,6 @@ export function AboutSection({
   onOpenViewer?: (images: string[], index: number, title: string, body: string) => void;
   customSections?: HubSection[];
   onOpenSectionEditor?: () => void;
-  settingsAccentColor?: HubColorThemeKey;
-  onSettingsAccentColorChange?: (value: HubColorThemeKey) => void;
   accentTheme?: HubColorTheme;
 }) {
   const [isEditingDesc, setIsEditingDesc] = useState(false);
@@ -314,35 +209,6 @@ export function AboutSection({
                 >
                   Join
                 </button>
-              ) : null}
-              {userRole === "creator" || userRole === "admin" ? (
-                <button
-                  type="button"
-                  onClick={onInviteMembers}
-                  className="rounded-lg px-4 py-1.5 text-sm font-medium transition-colors duration-150"
-                  style={{
-                    borderColor: accentTheme?.primary,
-                    color: accentTheme?.primary,
-                    border: `1px solid ${accentTheme?.primary}`,
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = accentTheme?.wash ?? "";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent" as string;
-                  }}
-                >
-                  Invite
-                </button>
-              ) : null}
-              {isCreatorAdmin && onSettingsAccentColorChange ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400">Theme:</span>
-                  <ColorPalettePickerButton
-                    selectedColor={settingsAccentColor}
-                    onColorChange={onSettingsAccentColorChange}
-                  />
-                </div>
               ) : null}
             </div>
           </div>
