@@ -74,6 +74,10 @@ export interface UpdateHubInput {
   name?: string | null;
   description?: string | null;
   category?: HubCategory;
+  visibility?: HubVisibility;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
   websiteUrl?: string | null;
   facebookUrl?: string | null;
   instagramUrl?: string | null;

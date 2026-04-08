@@ -95,6 +95,22 @@ export async function updateHub(hubId: string, input: UpdateHubInput): Promise<H
     payload.accent_color = normalizeText(input.accentColor);
   }
 
+  if (input.visibility !== undefined) {
+    payload.visibility = input.visibility;
+  }
+
+  if (input.city !== undefined) {
+    payload.city = normalizeText(input.city);
+  }
+
+  if (input.state !== undefined) {
+    payload.state = normalizeText(input.state);
+  }
+
+  if (input.country !== undefined) {
+    payload.country = normalizeText(input.country);
+  }
+
   const initialResult = await supabase
     .from("hubs")
     .update(payload)

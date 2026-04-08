@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { Calendar, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MockAppShell from "@/components/mock-app-shell";
 import { AuthGuard } from "@/components/AuthGuard";
 import { createClient } from "@/lib/supabase/client";
@@ -117,11 +117,34 @@ function isSameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
+/** Find the nearest event on or after the clicked date */
+function findNearestEventId(events: EventDisplay[], clickedDate: Date): string | null {
+  // First: exact date match
+  const exact = events.find((e) => isSameDay(e.eventDate, clickedDate));
+  if (exact) return exact.id;
+
+  // Second: nearest future event after clicked date
+  const clickedMs = clickedDate.getTime();
+  let closest: EventDisplay | null = null;
+  let closestDist = Infinity;
+
+  for (const ev of events) {
+    const dist = Math.abs(ev.eventDate.getTime() - clickedMs);
+    if (dist < closestDist) {
+      closestDist = dist;
+      closest = ev;
+    }
+  }
+
+  return closest?.id ?? null;
+}
+
 /* ── main page ── */
 export default function EventsPage() {
   const [events, setEvents] = useState<EventDisplay[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
   const today = useMemo(() => new Date(), []);
   const [viewMonth, setViewMonth] = useState(today.getMonth());
@@ -204,6 +227,25 @@ export default function EventsPage() {
     setViewYear(y);
   };
 
+  /* Handle calendar date click — scroll to nearest event */
+  const handleDateClick = useCallback((clickedDate: Date) => {
+    const targetId = findNearestEventId(events, clickedDate);
+    if (!targetId) return;
+
+    setHighlightedId(targetId);
+
+    // Scroll the event into view
+    requestAnimationFrame(() => {
+      const el = document.getElementById(`event-${targetId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    });
+
+    // Remove highlight after a short time
+    setTimeout(() => setHighlightedId(null), 2000);
+  }, [events]);
+
   return (
     <AuthGuard>
       <MockAppShell activeNav="events">
@@ -263,32 +305,34 @@ export default function EventsPage() {
                   ))}
                 </div>
 
-                {/* Calendar grid */}
+                {/* Calendar grid — clickable dates */}
                 {grid.map((row, ri) => (
                   <div key={ri} style={GRID7}>
                     {row.map((cell) => {
-                      const isToday = isSameDay(cell.date, today);
+                      const isTodayCell = isSameDay(cell.date, today);
                       const hasEvents = eventsOn(cell.date).length > 0;
                       return (
-                        <div
+                        <button
                           key={cell.date.toISOString()}
+                          type="button"
+                          onClick={() => handleDateClick(cell.date)}
                           className={cn(
-                            "flex h-10 items-center justify-center text-sm",
+                            "flex h-10 items-center justify-center text-sm transition",
                             !cell.inMonth && "text-gray-300",
-                            cell.inMonth && !isToday && "text-gray-900",
-                            isToday && "font-bold",
+                            cell.inMonth && !isTodayCell && "text-gray-900",
+                            isTodayCell && "font-bold",
                           )}
                         >
                           <span
                             className={cn(
                               "flex h-8 w-8 items-center justify-center rounded-full",
-                              isToday && "bg-[#0C5C57] text-white",
-                              hasEvents && !isToday && "ring-2 ring-[#0C5C57]/30"
+                              isTodayCell && "bg-[#0C5C57] text-white",
+                              hasEvents && !isTodayCell && "ring-2 ring-[#0C5C57]/30"
                             )}
                           >
                             {cell.date.getDate()}
                           </span>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -304,8 +348,16 @@ export default function EventsPage() {
                 </div>
                 {group.items.map((ev) => {
                   const d = ev.eventDate;
+                  const isHighlighted = highlightedId === ev.id;
                   return (
-                    <div key={ev.id} className="flex items-center gap-3 border-b border-gray-100 bg-white px-4 py-3">
+                    <div
+                      key={ev.id}
+                      id={`event-${ev.id}`}
+                      className={cn(
+                        "flex items-center gap-3 border-b border-gray-100 px-4 py-3 transition-colors duration-500",
+                        isHighlighted ? "bg-[#E8F5F3]" : "bg-white"
+                      )}
+                    >
                       <div className="flex w-10 shrink-0 flex-col items-center">
                         <span className="text-lg font-bold leading-none text-gray-900">{d.getDate()}</span>
                         <span className="mt-0.5 text-[11px] font-medium text-gray-400">{SHORT_DAY[d.getDay()]}</span>

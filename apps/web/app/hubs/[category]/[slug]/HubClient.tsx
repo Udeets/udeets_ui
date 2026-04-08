@@ -120,13 +120,14 @@ export default function HubClient({
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
-  const isCreatorAdmin = Boolean(user?.id && hub.createdBy && user.id === hub.createdBy);
-
   // ─── Role-based access ───
   const { role: hubRole, isMember: roleMember, isPending: rolePending } = useHubRole(hub.id, hub.createdBy ?? null);
   const canEditHub = can(hubRole, "hub:edit_settings");
   const canManageMembers = can(hubRole, "hub:manage_members");
   const canViewFullContent = can(hubRole, "hub:view_full_content");
+
+  const isHubCreator = Boolean(user?.id && hub.createdBy && user.id === hub.createdBy);
+  const isCreatorAdmin = isHubCreator || (hubRole === "admin" || hubRole === "super_admin");
 
   const canAccessAdmins = canEditHub;
   const creatorMetadata = user?.user_metadata;
