@@ -391,7 +391,7 @@ function ProfilePanel({ user, onLogout, profileData }: { user: { email?: string;
   );
 }
 
-function UdeetsHeaderContent() {
+function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?: () => void; onOpenSearch?: () => void; isCreatorAdmin?: boolean } }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -739,13 +739,35 @@ function UdeetsHeaderContent() {
             </nav>
           ) : null}
 
-          <NavIconLink
-            href="/discover"
-            ariaLabel="Discover"
-            className="border border-slate-200 md:hidden"
-          >
-            <Search className={ICON_BASE} />
-          </NavIconLink>
+          {/* Mobile: Search icon (hub-specific or global discover) */}
+          {hubSettings?.onOpenSearch ? (
+            <NavIconButton
+              aria-label="Search this hub"
+              onClick={hubSettings.onOpenSearch}
+              className="border border-slate-200 md:hidden"
+            >
+              <Search className={ICON_BASE} />
+            </NavIconButton>
+          ) : (
+            <NavIconLink
+              href="/discover"
+              ariaLabel="Discover"
+              className="border border-slate-200 md:hidden"
+            >
+              <Search className={ICON_BASE} />
+            </NavIconLink>
+          )}
+
+          {/* Mobile: Hub settings gear (only inside hub for admin) */}
+          {hubSettings?.isCreatorAdmin && hubSettings?.onOpenSettings ? (
+            <NavIconButton
+              aria-label="Hub settings"
+              onClick={hubSettings.onOpenSettings}
+              className="border border-slate-200 md:hidden"
+            >
+              <Settings className={ICON_BASE} />
+            </NavIconButton>
+          ) : null}
 
           {isAuthenticated ? (
             <button
@@ -785,10 +807,10 @@ function UdeetsHeaderContent() {
   );
 }
 
-export function UdeetsHeader() {
+export function UdeetsHeader({ hubSettings }: { hubSettings?: { onOpenSettings?: () => void; onOpenSearch?: () => void; isCreatorAdmin?: boolean } } = {}) {
   return (
     <Suspense fallback={null}>
-      <UdeetsHeaderContent />
+      <UdeetsHeaderContent hubSettings={hubSettings} />
     </Suspense>
   );
 }

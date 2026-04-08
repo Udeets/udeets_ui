@@ -59,28 +59,31 @@ export function HubHeroHeader({
       {/* ─── Mobile Layout ─── */}
       <div className="lg:hidden">
         {/* Cover image */}
-        <div className="relative h-[200px] overflow-hidden" style={{ backgroundColor: accentTheme?.wash }}>
-          <input ref={coverInputRef} type="file" accept="image/*" onChange={onCoverChange} className="hidden" />
-          <button
-            type="button"
-            onClick={onOpenCoverChooser}
-            disabled={!isCreatorAdmin || isUploadingCover}
-            className={cn("h-full w-full", isCreatorAdmin && "cursor-pointer")}
-          >
-            {displayCoverImageSrc ? (
-              <ImageWithFallback
-                src={displayCoverImageSrc}
-                sources={[displayCoverImageSrc, coverImageSrc].filter(Boolean)}
-                alt={`${hubName} cover`}
-                className="h-full w-full object-cover"
-                fallbackClassName="h-full w-full"
-                fallbackStyle={{ backgroundColor: accentTheme?.surface }}
-                fallback=""
-              />
-            ) : (
-              <div className="h-full w-full" style={{ backgroundColor: accentTheme?.surface }} />
-            )}
-          </button>
+        <div className="relative" style={{ backgroundColor: accentTheme?.wash }}>
+          {/* Cover image — clipped independently */}
+          <div className="h-[200px] overflow-hidden">
+            <input ref={coverInputRef} type="file" accept="image/*" onChange={onCoverChange} className="hidden" />
+            <button
+              type="button"
+              onClick={onOpenCoverChooser}
+              disabled={!isCreatorAdmin || isUploadingCover}
+              className={cn("h-full w-full", isCreatorAdmin && "cursor-pointer")}
+            >
+              {displayCoverImageSrc ? (
+                <ImageWithFallback
+                  src={displayCoverImageSrc}
+                  sources={[displayCoverImageSrc, coverImageSrc].filter(Boolean)}
+                  alt={`${hubName} cover`}
+                  className="h-full w-full object-cover"
+                  fallbackClassName="h-full w-full"
+                  fallbackStyle={{ backgroundColor: accentTheme?.surface }}
+                  fallback=""
+                />
+              ) : (
+                <div className="h-full w-full" style={{ backgroundColor: accentTheme?.surface }} />
+              )}
+            </button>
+          </div>
 
           {/* DP avatar — half inside hero, half below */}
           <div className="absolute -bottom-12 left-4 z-10">
