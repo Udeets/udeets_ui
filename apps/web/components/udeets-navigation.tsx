@@ -34,7 +34,7 @@ function truncateLine(value: string, max = 64) {
   return `${value.slice(0, max - 1)}...`;
 }
 
-export type NavKey = "home" | "alerts" | "events" | "tv";
+export type NavKey = "home" | "alerts" | "events" | "news";
 
 type OpenPanel = "alerts" | "events" | "profile" | null;
 
@@ -852,57 +852,82 @@ export function UdeetsFooter() {
 }
 
 export function UdeetsBottomNav({ activeNav = "home" }: { activeNav?: NavKey }) {
+  const [showNewsPopup, setShowNewsPopup] = useState(false);
+
   return (
-    <nav className={cn("fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 lg:hidden", BOTTOM_NAV_BG)}>
-      <div className="mx-auto grid max-w-lg grid-cols-4">
-        {/* Home */}
-        <Link
-          href="/dashboard"
-          className={cn(
-            "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
-            activeNav === "home" ? TEXT_ACTIVE : TEXT_MUTED
-          )}
-        >
-          <Home className={ICON_BASE} />
-          <span className="text-[10px] font-medium">Home</span>
-        </Link>
+    <>
+      <nav className={cn("fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 lg:hidden", BOTTOM_NAV_BG)}>
+        <div className="mx-auto grid max-w-lg grid-cols-4">
+          {/* Home */}
+          <Link
+            href="/dashboard"
+            className={cn(
+              "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
+              activeNav === "home" ? TEXT_ACTIVE : TEXT_MUTED
+            )}
+          >
+            <Home className={ICON_BASE} />
+            <span className="text-[10px] font-medium">Home</span>
+          </Link>
 
-        {/* Notifications */}
-        <Link
-          href="/alerts"
-          className={cn(
-            "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
-            activeNav === "alerts" ? TEXT_ACTIVE : TEXT_MUTED
-          )}
-        >
-          <Bell className={ICON_BASE} />
-          <span className="text-[10px] font-medium">Notifications</span>
-        </Link>
+          {/* Notifications */}
+          <Link
+            href="/alerts"
+            className={cn(
+              "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
+              activeNav === "alerts" ? TEXT_ACTIVE : TEXT_MUTED
+            )}
+          >
+            <Bell className={ICON_BASE} />
+            <span className="text-[10px] font-medium">Notifications</span>
+          </Link>
 
-        {/* Events */}
-        <Link
-          href="/events"
-          className={cn(
-            "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
-            activeNav === "events" ? TEXT_ACTIVE : TEXT_MUTED
-          )}
-        >
-          <Calendar className={ICON_BASE} />
-          <span className="text-[10px] font-medium">Events</span>
-        </Link>
+          {/* Events */}
+          <Link
+            href="/events"
+            className={cn(
+              "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
+              activeNav === "events" ? TEXT_ACTIVE : TEXT_MUTED
+            )}
+          >
+            <Calendar className={ICON_BASE} />
+            <span className="text-[10px] font-medium">Events</span>
+          </Link>
 
-        {/* Local TV */}
-        <Link
-          href="/tv"
-          className={cn(
-            "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
-            activeNav === "tv" ? TEXT_ACTIVE : TEXT_MUTED
-          )}
-        >
-          <Tv className={ICON_BASE} />
-          <span className="text-[10px] font-medium">Local TV</span>
-        </Link>
-      </div>
-    </nav>
+          {/* Local News */}
+          <button
+            type="button"
+            onClick={() => setShowNewsPopup(true)}
+            className={cn(
+              "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
+              activeNav === "news" ? TEXT_ACTIVE : TEXT_MUTED
+            )}
+          >
+            <Tv className={ICON_BASE} />
+            <span className="text-[10px] font-medium">Local News</span>
+          </button>
+        </div>
+      </nav>
+
+      {/* Local News coming soon popup */}
+      {showNewsPopup && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 lg:hidden">
+          <div className="mx-6 w-full max-w-xs rounded-2xl bg-white p-6 text-center shadow-xl">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#E3F1EF]">
+              <Tv className="h-6 w-6 text-[#0C5C57]" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">Local News</h3>
+            <p className="mt-2 text-sm text-gray-500">Local news around you coming soon here!</p>
+            <button
+              type="button"
+              onClick={() => setShowNewsPopup(false)}
+              className="mt-5 w-full rounded-xl bg-[#0C5C57] py-2.5 text-sm font-semibold text-white transition hover:bg-[#0a4f4b]"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

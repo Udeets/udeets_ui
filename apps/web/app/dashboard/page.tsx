@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { Heart, Loader2, MessageCircle, Send, Share2 } from "lucide-react";
+import { Loader2, MessageCircle, Send, Share2, SmilePlus, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -15,7 +15,9 @@ import {
   getDeetLikeStatus,
   addDeetComment,
   listDeetComments,
+  listDeetReactors,
   type DeetComment,
+  type DeetReactor,
 } from "@/lib/services/deets/deet-interactions";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import { listHubs } from "@/lib/services/hubs/list-hubs";
@@ -400,6 +402,196 @@ function DashboardCommentSection({
   );
 }
 
+/* ── Emoji reactions (Band-style) ── */
+const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+
+function DashboardEmojiReactButton({
+  deetId,
+  isLiked,
+  isLiking,
+  likeCount,
+  onToggleLike,
+  onShowReactors,
+}: {
+  deetId: string;
+  isLiked: boolean;
+  isLiking: boolean;
+  likeCount: number;
+  onToggleLike: (deetId: string) => void;
+  onShowReactors: (deetId: string) => void;
+}) {
+  const [showPicker, setShowPicker] = useState(false);
+  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const pickerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!showPicker) return;
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        pickerRef.current && !pickerRef.current.contains(target) &&
+        buttonRef.current && !buttonRef.current.contains(target)
+      ) {
+        setShowPicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showPicker]);
+
+  const handleReactClick = () => {
+    if (isLiked) {
+      onToggleLike(deetId);
+      setSelectedEmoji(null);
+    } else {
+      setShowPicker((v) => !v);
+    }
+  };
+
+  const handleEmojiSelect = (emoji: string) => {
+    setSelectedEmoji(emoji);
+    setShowPicker(false);
+    if (!isLiked) {
+      onToggleLike(deetId);
+    }
+  };
+
+  const displayEmoji = isLiked ? (selectedEmoji || "👍") : null;
+
+  return (
+    <div className="relative inline-flex items-center">
+      {/* Emoji picker popup */}
+      {showPicker && (
+        <div
+          ref={pickerRef}
+          className="absolute -top-12 left-0 z-30 flex items-center gap-1 rounded-full border border-[var(--ud-border)] bg-white px-2 py-1.5 shadow-lg"
+        >
+          {REACTION_EMOJIS.map((emoji) => (
+            <button
+              key={emoji}
+              type="button"
+              onClick={() => handleEmojiSelect(emoji)}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-xl transition-transform hover:scale-125 active:scale-95"
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={handleReactClick}
+        disabled={isLiking}
+        className={cn(
+          "inline-flex items-center gap-1.5 py-2 text-sm transition-colors hover:text-[var(--ud-brand-primary)]",
+          isLiked ? "text-[var(--ud-brand-primary)] font-medium" : "text-[var(--ud-text-muted)]"
+        )}
+      >
+        {isLiking ? (
+          <Loader2 className="h-[18px] w-[18px] animate-spin" />
+        ) : displayEmoji ? (
+          <span className="text-base">{displayEmoji}</span>
+        ) : (
+          <SmilePlus className="h-[18px] w-[18px] stroke-[1.5]" />
+        )}
+        <span>{isLiked ? "Reacted" : "React"}</span>
+      </button>
+
+      {likeCount > 0 && (
+        <button
+          type="button"
+          onClick={() => onShowReactors(deetId)}
+          className="ml-1 text-xs text-[var(--ud-text-muted)] underline decoration-dotted hover:text-[var(--ud-brand-primary)]"
+        >
+          ({likeCount})
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ── Who Reacted popup ── */
+function ReactorsPopup({
+  deetId,
+  onClose,
+}: {
+  deetId: string;
+  onClose: () => void;
+}) {
+  const [reactors, setReactors] = useState<DeetReactor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const popupRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const data = await listDeetReactors(deetId);
+        if (!cancelled) setReactors(data);
+      } catch {
+        // ignore
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void load();
+    return () => { cancelled = true; };
+  }, [deetId]);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div
+        ref={popupRef}
+        className="mx-4 w-full max-w-sm rounded-2xl bg-white p-4 shadow-xl"
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-base font-semibold text-[var(--ud-text-primary)]">Reactions</h3>
+          <button type="button" onClick={onClose} className="rounded-full p-1 hover:bg-gray-100">
+            <X className="h-4 w-4 text-gray-500" />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="h-5 w-5 animate-spin text-[var(--ud-brand-primary)]" />
+          </div>
+        ) : reactors.length === 0 ? (
+          <p className="py-4 text-center text-sm text-gray-400">No reactions yet</p>
+        ) : (
+          <div className="max-h-64 space-y-2 overflow-y-auto">
+            {reactors.map((r) => (
+              <div key={r.userId} className="flex items-center gap-3 rounded-xl px-2 py-1.5">
+                {r.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={r.avatar} alt={r.name} className="h-8 w-8 rounded-full object-cover" />
+                ) : (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--ud-brand-light)] text-sm font-semibold text-[var(--ud-brand-primary)]">
+                    {r.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <span className="text-sm font-medium text-[var(--ud-text-primary)]">{r.name}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function DashboardPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -426,6 +618,7 @@ function DashboardPageContent() {
   const [commentLoadingDeetIds, setCommentLoadingDeetIds] = useState<Set<string>>(new Set());
   const [commentSubmittingDeetId, setCommentSubmittingDeetId] = useState<string | null>(null);
   const [copiedDeetId, setCopiedDeetId] = useState<string | null>(null);
+  const [reactorsDeetId, setReactorsDeetId] = useState<string | null>(null);
   const copiedTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const toggleLike = useCallback(async (deetId: string) => {
@@ -623,6 +816,19 @@ function DashboardPageContent() {
       : requestedHubs;
   const relevantHubIds = useMemo(() => new Set(visibleHubs.map((hub) => hub.id)), [visibleHubs]);
 
+  /* All active hubs (created + joined) — used for the posts feed */
+  const allActiveHubs = useMemo(() => {
+    const seen = new Set<string>();
+    const combined: DashboardHub[] = [];
+    for (const hub of [...myHubs, ...joinedHubs]) {
+      if (!seen.has(hub.id)) {
+        seen.add(hub.id);
+        combined.push(hub);
+      }
+    }
+    return combined;
+  }, [myHubs, joinedHubs]);
+
   useEffect(() => {
     if (authStatus !== "authenticated") {
       setMyDeetsItems([]);
@@ -630,11 +836,11 @@ function DashboardPageContent() {
     }
 
     let cancelled = false;
-    const visibleHubIds = visibleHubs.map((hub) => hub.id);
-    const hubById = new Map(visibleHubs.map((hub) => [hub.id, hub]));
+    const allHubIds = allActiveHubs.map((hub) => hub.id);
+    const hubById = new Map(allActiveHubs.map((hub) => [hub.id, hub]));
 
     const syncDeets = async () => {
-      if (!visibleHubIds.length) {
+      if (!allHubIds.length) {
         if (!cancelled) {
           setMyDeetsItems([]);
         }
@@ -642,7 +848,7 @@ function DashboardPageContent() {
       }
 
       try {
-        const items = await listDeets({ hubIds: visibleHubIds });
+        const items = await listDeets({ hubIds: allHubIds });
         if (cancelled) return;
 
         const feedItems = items
@@ -697,13 +903,13 @@ function DashboardPageContent() {
     void syncDeets();
     const unsubscribe = subscribeToDeets(() => {
       void syncDeets();
-    }, { hubIds: visibleHubIds });
+    }, { hubIds: allHubIds });
 
     return () => {
       cancelled = true;
       unsubscribe();
     };
-  }, [authStatus, visibleHubs]);
+  }, [authStatus, allActiveHubs]);
 
   // Fetch like statuses when deets items change
   useEffect(() => {
@@ -963,22 +1169,14 @@ function DashboardPageContent() {
                           {/* Action bar */}
                           <div className="flex items-center justify-between border-t border-[var(--ud-border-subtle)] px-4 py-1.5">
                             <div className="flex items-center gap-4">
-                              <button
-                                type="button"
-                                disabled={isLiking}
-                                onClick={() => toggleLike(item.id)}
-                                className={cn(
-                                  "inline-flex items-center gap-1.5 py-2 text-sm transition-colors hover:text-[var(--ud-brand-primary)]",
-                                  isLiked ? "text-[var(--ud-brand-primary)] font-medium" : "text-[var(--ud-text-muted)]"
-                                )}
-                              >
-                                {isLiking ? (
-                                  <Loader2 className="h-[18px] w-[18px] animate-spin" />
-                                ) : (
-                                  <Heart className="h-[18px] w-[18px] stroke-[1.5]" fill={isLiked ? "currentColor" : "none"} />
-                                )}
-                                <span>{likeCount}</span>
-                              </button>
+                              <DashboardEmojiReactButton
+                                deetId={item.id}
+                                isLiked={isLiked}
+                                isLiking={isLiking}
+                                likeCount={likeCount}
+                                onToggleLike={toggleLike}
+                                onShowReactors={setReactorsDeetId}
+                              />
                               <button
                                 type="button"
                                 onClick={() => handleToggleComments(item.id)}
@@ -1056,6 +1254,11 @@ function DashboardPageContent() {
 
       <UdeetsFooter />
       <UdeetsBottomNav activeNav="home" />
+
+      {/* Who reacted popup */}
+      {reactorsDeetId && (
+        <ReactorsPopup deetId={reactorsDeetId} onClose={() => setReactorsDeetId(null)} />
+      )}
     </div>
   );
 }

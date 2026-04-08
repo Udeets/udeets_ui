@@ -182,6 +182,47 @@ export async function listDeetComments(deetId: string): Promise<DeetComment[]> {
   });
 }
 
+// ── Reactors (who liked) ──────────────────────────────────────────
+
+export interface DeetReactor {
+  userId: string;
+  name: string;
+  avatar?: string;
+}
+
+export async function listDeetReactors(deetId: string): Promise<DeetReactor[]> {
+  const supabase = createClient();
+
+  const { data: likes, error } = await supabase
+    .from("deet_likes")
+    .select("user_id")
+    .eq("deet_id", deetId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error || !likes?.length) return [];
+
+  const userIds = likes.map((l) => l.user_id);
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, avatar_url, email")
+    .in("id", userIds);
+
+  const profileMap = new Map<string, { full_name: string | null; avatar_url: string | null; email: string | null }>();
+  for (const p of profiles ?? []) {
+    profileMap.set(p.id, { full_name: p.full_name, avatar_url: p.avatar_url, email: p.email });
+  }
+
+  return userIds.map((uid) => {
+    const p = profileMap.get(uid);
+    return {
+      userId: uid,
+      name: p?.full_name || p?.email?.split("@")[0] || "Member",
+      avatar: p?.avatar_url || undefined,
+    };
+  });
+}
+
 // ── Views ──────────────────────────────────────────────────────────
 
 export async function incrementDeetView(deetId: string): Promise<void> {
