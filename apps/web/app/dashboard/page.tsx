@@ -30,10 +30,19 @@ type DashboardHub = DashboardHubCardData & { createdBy: string };
 type AuthStatus = "checking" | "authenticated" | "unauthenticated";
 type HubView = "my-hubs" | "joined" | "requested";
 type FeedFilter = "All" | "Posts" | "Notices" | "Deals" | "Announcements" | "Polls" | "Photos" | "Videos" | "News" | "Hazards" | "Alerts";
+type FeedAttachment = {
+  type: string;
+  title?: string;
+  detail?: string;
+  options?: string[];
+  previews?: string[];
+};
+
 type FeedItem = {
   id: string;
   title: string;
   body: string;
+  kind: string;
   type: FeedFilter;
   hubName: string;
   hubId: string;
@@ -44,6 +53,7 @@ type FeedItem = {
   previewImage?: string;
   previewImages: string[];
   href?: string;
+  attachments: FeedAttachment[];
 };
 
 const PAGE_BG = "bg-[var(--ud-bg-page)]";
@@ -141,10 +151,20 @@ function deduplicateBodyFromTitle(body: string | undefined | null, title: string
 function deetRecordToDashboardItem(item: DeetRecord): FeedItem {
   const card = mapDeetToDashboardCard(item);
 
+  // Normalize attachments to FeedAttachment shape
+  const attachments: FeedAttachment[] = (item.attachments ?? []).map((a) => ({
+    type: a.type,
+    title: a.title || undefined,
+    detail: a.detail || undefined,
+    options: (a as unknown as Record<string, unknown>).options as string[] | undefined,
+    previews: a.previews || undefined,
+  }));
+
   return {
     id: card.id,
     title: card.title ?? "",
     body: card.body ?? "",
+    kind: item.kind,
     type: card.type,
     hubName: "",
     hubId: card.hubId,
@@ -154,6 +174,7 @@ function deetRecordToDashboardItem(item: DeetRecord): FeedItem {
     previewImage: card.previewImageUrl || undefined,
     previewImages: card.previewImageUrls,
     href: undefined,
+    attachments,
   };
 }
 
@@ -399,6 +420,216 @@ function DashboardCommentSection({
         </button>
       </div>
     </div>
+  );
+}
+
+/* ── Interactive Poll (same as hub DeetsSection) ── */
+function DashboardPollContent({ deetId, attachments }: { deetId: string; attachments: FeedAttachment[] }) {
+  const matchingAtt = attachments.find((a) => a.type === "poll");
+  const options = matchingAtt?.options ?? [];
+  const parsedOptions = options.length > 0
+    ? options
+    : (matchingAtt?.detail?.split(" · ").filter(Boolean) ?? []);
+
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [isVoting, setIsVoting] = useState(false);
+  const [totalVotes, setTotalVotes] = useState(0);
+  const [voteCounts, setVoteCounts] = useState<number[]>(parsedOptions.map(() => 0));
+
+  useEffect(() => {
+    if (!deetId) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { getPollVotes, getMyPollVotes } = await import("@/lib/services/deets/poll-votes");
+        const [allVotes, myVotes] = await Promise.all([
+          getPollVotes([deetId]),
+          getMyPollVotes([deetId]),
+        ]);
+        if (cancelled) return;
+
+        const counts = parsedOptions.map(() => 0);
+        const deetVotes = allVotes.filter((v) => v.deetId === deetId);
+        const uniqueVoters = new Set(deetVotes.map((v) => v.userId));
+        for (const v of deetVotes) {
+          if (v.optionIndex >= 0 && v.optionIndex < counts.length) {
+            counts[v.optionIndex]++;
+          }
+        }
+        setVoteCounts(counts);
+        setTotalVotes(uniqueVoters.size);
+
+        const myDeetVotes = myVotes.filter((v) => v.deetId === deetId);
+        if (myDeetVotes.length > 0) {
+          setSelectedIndex(myDeetVotes[0].optionIndex);
+        }
+      } catch {
+        // Table might not exist yet
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [deetId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleVote = async (index: number) => {
+    if (isVoting) return;
+    setIsVoting(true);
+
+    const prevIndex = selectedIndex;
+    setSelectedIndex(index);
+    setVoteCounts((prev) => {
+      const next = [...prev];
+      if (prevIndex !== null && prevIndex < next.length) next[prevIndex]--;
+      if (index < next.length) next[index]++;
+      return next;
+    });
+    if (prevIndex === null) setTotalVotes((t) => t + 1);
+
+    try {
+      const { castPollVote } = await import("@/lib/services/deets/poll-votes");
+      const success = await castPollVote(deetId, index);
+      if (!success) {
+        setSelectedIndex(prevIndex);
+        setVoteCounts((prev) => {
+          const next = [...prev];
+          if (index < next.length) next[index]--;
+          if (prevIndex !== null && prevIndex < next.length) next[prevIndex]++;
+          return next;
+        });
+        if (prevIndex === null) setTotalVotes((t) => t - 1);
+      }
+    } catch {
+      setSelectedIndex(prevIndex);
+      setVoteCounts((prev) => {
+        const next = [...prev];
+        if (index < next.length) next[index]--;
+        if (prevIndex !== null && prevIndex < next.length) next[prevIndex]++;
+        return next;
+      });
+      if (prevIndex === null) setTotalVotes((t) => t - 1);
+    } finally {
+      setIsVoting(false);
+    }
+  };
+
+  if (!parsedOptions.length) return null;
+
+  return (
+    <div className="mx-4 mt-3 overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)]/30">
+      <div className="flex items-center gap-3 px-4 py-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
+          <svg className="h-5 w-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 20V10M12 20V4M6 20v-6" /></svg>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-emerald-600">Poll</span>
+            <span className="text-xs text-[var(--ud-text-muted)]">{totalVotes} voted</span>
+          </div>
+          <p className="mt-0.5 text-sm font-semibold text-[var(--ud-text-primary)]">
+            {matchingAtt?.title || "Poll"}
+          </p>
+        </div>
+      </div>
+
+      <div className="border-t border-[var(--ud-border-subtle)] px-4 py-2">
+        {parsedOptions.map((opt, i) => {
+          const isSelected = selectedIndex === i;
+          const count = voteCounts[i] ?? 0;
+          const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+
+          return (
+            <button
+              key={i}
+              type="button"
+              disabled={isVoting}
+              onClick={() => handleVote(i)}
+              className={cn(
+                "relative flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-sm transition",
+                isSelected ? "text-emerald-700" : "text-[var(--ud-text-primary)] hover:bg-[var(--ud-bg-subtle)]"
+              )}
+            >
+              {selectedIndex !== null && totalVotes > 0 && (
+                <div
+                  className={cn("absolute inset-0 rounded-lg transition-all", isSelected ? "bg-emerald-100" : "bg-gray-100")}
+                  style={{ width: `${pct}%` }}
+                />
+              )}
+              <span className={cn(
+                "relative z-10 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition",
+                isSelected ? "border-emerald-500 bg-emerald-500" : "border-gray-300"
+              )}>
+                {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+              </span>
+              <span className="relative z-10 flex-1 text-left">{opt}</span>
+              {selectedIndex !== null && totalVotes > 0 && (
+                <span className="relative z-10 text-xs text-[var(--ud-text-muted)]">{count}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ── Rich content renderer for dashboard deets ── */
+function DashboardDeetRichContent({ item }: { item: FeedItem }) {
+  const hasPoll = item.attachments.some((a) => a.type === "poll");
+  const announcement = item.attachments.find((a) => a.type === "announcement");
+  const notice = item.attachments.find((a) => a.type === "notice");
+  const event = item.attachments.find((a) => a.type === "event");
+
+  return (
+    <>
+      {/* Announcement banner */}
+      {announcement && (
+        <div className="mx-4 mt-3 overflow-hidden rounded-xl border border-blue-200">
+          <div className="flex items-center gap-2 bg-blue-50 px-3 py-2">
+            <svg className="h-4 w-4 text-blue-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 11 18-5v12L3 13v-2z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></svg>
+            <span className="text-sm font-bold text-blue-700">{announcement.title || "Announcement"}</span>
+          </div>
+          {announcement.detail && (
+            <div className="px-3 py-2.5">
+              <p className="text-sm leading-relaxed text-[var(--ud-text-secondary)]">{announcement.detail}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Notice highlight */}
+      {notice && !announcement && (
+        <div className="mx-4 mt-3 rounded-xl border-l-4 border-amber-300 bg-amber-50 p-3">
+          <div className="flex items-start gap-2.5">
+            <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-100">
+              <svg className="h-4 w-4 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4M12 17h.01" /></svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              {notice.title && <p className="text-sm font-bold text-amber-700">{notice.title}</p>}
+              {notice.detail && <p className="mt-0.5 text-sm text-[var(--ud-text-secondary)]">{notice.detail}</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Event card */}
+      {event && (
+        <div className="mx-4 mt-3 overflow-hidden rounded-xl border border-purple-200">
+          <div className="flex items-center gap-2 bg-purple-50 px-3 py-2">
+            <svg className="h-4 w-4 text-purple-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></svg>
+            <span className="text-sm font-bold text-purple-700">{event.title || "Event"}</span>
+          </div>
+          {event.detail && (
+            <div className="px-3 py-2.5">
+              <p className="text-sm leading-relaxed text-[var(--ud-text-secondary)]">{event.detail}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Interactive poll */}
+      {hasPoll && <DashboardPollContent deetId={item.id} attachments={item.attachments} />}
+    </>
   );
 }
 
@@ -816,18 +1047,18 @@ function DashboardPageContent() {
       : requestedHubs;
   const relevantHubIds = useMemo(() => new Set(visibleHubs.map((hub) => hub.id)), [visibleHubs]);
 
-  /* All active hubs (created + joined) — used for the posts feed */
+  /* All hubs the user is a member of — used for the posts feed.
+     Uses membership hub IDs (same source as alerts page) so posts and
+     notifications stay in sync. */
+  const allMemberHubIds = useMemo(
+    () => memberships.map((m) => m.hubId),
+    [memberships],
+  );
+
   const allActiveHubs = useMemo(() => {
-    const seen = new Set<string>();
-    const combined: DashboardHub[] = [];
-    for (const hub of [...myHubs, ...joinedHubs]) {
-      if (!seen.has(hub.id)) {
-        seen.add(hub.id);
-        combined.push(hub);
-      }
-    }
-    return combined;
-  }, [myHubs, joinedHubs]);
+    const memberSet = new Set(allMemberHubIds);
+    return hubs.filter((hub) => memberSet.has(hub.id));
+  }, [hubs, allMemberHubIds]);
 
   useEffect(() => {
     if (authStatus !== "authenticated") {
@@ -1117,9 +1348,9 @@ function DashboardPageContent() {
 
                       return (
                         <article key={item.id} className="overflow-hidden rounded-lg border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] transition-colors duration-150 hover:border-[var(--ud-border)]">
-                          {/* Card body — clickable to navigate to hub */}
+                          {/* Header — author, title, text (clickable to hub) */}
                           {item.href ? (
-                            <Link href={item.href} className="block p-4">
+                            <Link href={item.href} className="block px-4 pt-4">
                               <div className="flex items-center gap-3">
                                 <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
                                   {item.authorAvatar ? (
@@ -1139,10 +1370,9 @@ function DashboardPageContent() {
                               </div>
                               {item.title && !isGenericTitle(item.title) ? <h3 className={cn("mt-3 text-base font-semibold tracking-tight", TEXT_DARK)}>{item.title}</h3> : null}
                               {(() => { const cleaned = deduplicateBodyFromTitle(item.body, item.title); return cleaned ? <div className={cn("mt-1 text-sm leading-6", TEXT_MUTED)} dangerouslySetInnerHTML={{ __html: sanitizeHtmlContent(cleaned) }} /> : null; })()}
-                              <DashboardDeetImage src={item.previewImage || item.previewImages[0]} alt={item.title} />
                             </Link>
                           ) : (
-                            <div className="p-4">
+                            <div className="px-4 pt-4">
                               <div className="flex items-center gap-3">
                                 <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
                                   {item.authorAvatar ? (
@@ -1162,9 +1392,16 @@ function DashboardPageContent() {
                               </div>
                               {item.title && !isGenericTitle(item.title) ? <h3 className={cn("mt-3 text-base font-semibold tracking-tight", TEXT_DARK)}>{item.title}</h3> : null}
                               {(() => { const cleaned = deduplicateBodyFromTitle(item.body, item.title); return cleaned ? <div className={cn("mt-1 text-sm leading-6", TEXT_MUTED)} dangerouslySetInnerHTML={{ __html: sanitizeHtmlContent(cleaned) }} /> : null; })()}
-                              <DashboardDeetImage src={item.previewImage || item.previewImages[0]} alt={item.title} />
                             </div>
                           )}
+
+                          {/* Rich content — polls, announcements, events, notices (outside Link so interactive) */}
+                          {item.attachments.length > 0 && <DashboardDeetRichContent item={item} />}
+
+                          {/* Preview image */}
+                          <div className="px-4 pb-4">
+                            <DashboardDeetImage src={item.previewImage || item.previewImages[0]} alt={item.title} />
+                          </div>
 
                           {/* Action bar */}
                           <div className="flex items-center justify-between border-t border-[var(--ud-border-subtle)] px-4 py-1.5">
