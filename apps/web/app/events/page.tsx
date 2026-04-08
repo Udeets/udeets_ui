@@ -130,7 +130,7 @@ export default function EventsPage() {
 
   return (
     <AuthGuard>
-      <MockAppShell activeNav="home">
+      <MockAppShell activeNav="events">
         <section className="mb-4">
           <h1 className="text-3xl font-semibold tracking-tight text-[var(--ud-text-primary)]">Events</h1>
           <p className="mt-2 text-sm leading-relaxed text-[var(--ud-text-secondary)]">

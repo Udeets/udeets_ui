@@ -11,6 +11,7 @@ import {
   Search,
   Settings,
   Shield,
+  Tv,
   UserRound,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -33,7 +34,7 @@ function truncateLine(value: string, max = 64) {
   return `${value.slice(0, max - 1)}...`;
 }
 
-export type NavKey = "home" | "search" | "create" | "alerts" | "profile";
+export type NavKey = "home" | "alerts" | "events" | "tv";
 
 type OpenPanel = "alerts" | "events" | "profile" | null;
 
@@ -853,7 +854,7 @@ export function UdeetsFooter() {
 export function UdeetsBottomNav({ activeNav = "home" }: { activeNav?: NavKey }) {
   return (
     <nav className={cn("fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 lg:hidden", BOTTOM_NAV_BG)}>
-      <div className="mx-auto grid max-w-lg grid-cols-5">
+      <div className="mx-auto grid max-w-lg grid-cols-4">
         {/* Home */}
         <Link
           href="/dashboard"
@@ -866,30 +867,7 @@ export function UdeetsBottomNav({ activeNav = "home" }: { activeNav?: NavKey }) 
           <span className="text-[10px] font-medium">Home</span>
         </Link>
 
-        {/* Search */}
-        <Link
-          href="/search"
-          className={cn(
-            "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
-            activeNav === "search" ? TEXT_ACTIVE : TEXT_MUTED
-          )}
-        >
-          <Search className={ICON_BASE} />
-          <span className="text-[10px] font-medium">Search</span>
-        </Link>
-
-        {/* Center Create button — Band-style raised circle */}
-        <div className="flex items-center justify-center">
-          <Link
-            href="/create-hub"
-            className="flex h-12 w-12 -translate-y-3 items-center justify-center rounded-full bg-[#0C5C57] shadow-lg transition active:scale-95"
-            aria-label="Create"
-          >
-            <CirclePlus className="h-6 w-6 text-white stroke-[2]" />
-          </Link>
-        </div>
-
-        {/* Alerts */}
+        {/* Notifications */}
         <Link
           href="/alerts"
           className={cn(
@@ -898,19 +876,31 @@ export function UdeetsBottomNav({ activeNav = "home" }: { activeNav?: NavKey }) 
           )}
         >
           <Bell className={ICON_BASE} />
-          <span className="text-[10px] font-medium">Alerts</span>
+          <span className="text-[10px] font-medium">Notifications</span>
         </Link>
 
-        {/* Profile */}
+        {/* Events */}
         <Link
-          href="/profile"
+          href="/events"
           className={cn(
             "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
-            activeNav === "profile" ? TEXT_ACTIVE : TEXT_MUTED
+            activeNav === "events" ? TEXT_ACTIVE : TEXT_MUTED
           )}
         >
-          <UserRound className={ICON_BASE} />
-          <span className="text-[10px] font-medium">Profile</span>
+          <Calendar className={ICON_BASE} />
+          <span className="text-[10px] font-medium">Events</span>
+        </Link>
+
+        {/* Local TV */}
+        <Link
+          href="/tv"
+          className={cn(
+            "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
+            activeNav === "tv" ? TEXT_ACTIVE : TEXT_MUTED
+          )}
+        >
+          <Tv className={ICON_BASE} />
+          <span className="text-[10px] font-medium">Local TV</span>
         </Link>
       </div>
     </nav>
