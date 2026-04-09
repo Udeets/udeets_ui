@@ -233,8 +233,6 @@ export default function HubClient({
     return () => { ignore = true; };
   }, [hub.id, user?.id, isCreatorAdmin]);
 
-  // isPublicHub is redefined after useHubSettingsFlow to use settingsVisibility
-  let isPublicHub = hub.visibility === "Public";
   // Content gating: non-members see Header + About only
   const canAccessFullContent = canViewFullContent || isMember || isCreatorAdmin;
 
@@ -331,19 +329,14 @@ export default function HubClient({
     hubDescription,
     isCreatorAdmin,
     onAfterSave: (newCategory: string) => {
-      if (pendingNavigation) {
-        applyNavigation(pendingNavigation);
-        setPendingNavigation(null);
-        setIsUnsavedChangesOpen(false);
-      }
-      // Refresh page with potentially updated category in URL so header re-renders
+      // Refresh page with updated category in URL — this re-fetches server data
+      // and resets all client state (including any pending navigation)
       router.replace(`/hubs/${newCategory}/${hub.slug}?tab=About`);
     },
   });
   const hubName = savedHubName;
   const hubBaseHref = `/hubs/${savedHubCategory || hub.category}/${hub.slug}`;
-  // Override isPublicHub with the live settings value
-  isPublicHub = settingsVisibility === "Public";
+  const isPublicHub = settingsVisibility === "Public";
 
   const {
     isConnectEditorOpen,
@@ -401,7 +394,7 @@ export default function HubClient({
   const CategoryIcon = categoryMeta.icon;
   const hubTemplateConfig = useMemo(() => getHubConfigByCategory(savedHubCategory), [savedHubCategory]);
   const memberCount = Math.max(1, Number.parseInt(hub.membersLabel, 10) || 0);
-  const headerHubName = hub.name?.trim() || hubName;
+  const headerHubName = hubName || hub.name?.trim() || "Hub";
   const visibilityLabel: "Public" | "Private" = settingsVisibility;
   const accentTheme = getHubColorTheme(hub.accentColor || "teal");
 

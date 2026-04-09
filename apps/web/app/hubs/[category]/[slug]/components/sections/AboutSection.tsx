@@ -2,7 +2,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import { Camera, Check, ChevronDown, Facebook, Globe, Instagram, Loader2, MapPin, Pencil, Phone, Settings, UsersRound, X, Youtube } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { HubCTARecord } from "@/lib/services/ctas/cta-types";
 import type { HubSection } from "@/lib/services/sections/section-types";
 import type { HubColorTheme } from "@/lib/hub-color-themes";
@@ -139,6 +139,13 @@ export function AboutSection({
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [draftDesc, setDraftDesc] = useState(hubDescription);
   const [isSavingDesc, setIsSavingDesc] = useState(false);
+
+  // Sync draft when prop changes (e.g. after settings save or hub navigation)
+  useEffect(() => {
+    if (!isEditingDesc) {
+      setDraftDesc(hubDescription || "");
+    }
+  }, [hubDescription, isEditingDesc]);
 
   const handleStartEditDesc = () => {
     setDraftDesc(hubDescription || "");
