@@ -78,9 +78,10 @@ function asNonEmptyString(value: unknown) {
 function resolveHubFeedItemKind(card: ReturnType<typeof mapDeetToDashboardCard>, item?: Partial<DeetRecord>): HubFeedItemKind {
   const hasImage = Boolean(card.previewImageUrl ?? card.previewImageUrls?.[0]);
 
-  // Check attachments for specific types (poll, event, etc.)
+  // Check attachments for specific types (poll, event, jobs, etc.)
   if (Array.isArray(item?.attachments)) {
     const attTypes = item.attachments.map((a) => a?.type).filter(Boolean);
+    if (attTypes.includes("jobs")) return "jobs";
     if (attTypes.includes("poll")) return "poll";
   }
 
@@ -101,6 +102,7 @@ function defaultFeedLabel(kind: HubFeedItemKind) {
   if (kind === "photo") return "Photo";
   if (kind === "event") return "Event";
   if (kind === "poll") return "Poll";
+  if (kind === "jobs") return "Jobs";
   if (kind === "file") return "File";
   if (kind === "post") return "Post";
   return "Deet";

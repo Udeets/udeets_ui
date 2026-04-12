@@ -240,6 +240,7 @@ export function useDeetComposer({
         deal: "Deals",
         hazard: "Hazards",
         alert: "Alerts",
+        jobs: "Jobs",
       };
       const postTypeToTitle: Record<string, string> = {
         post: primaryImage ? "Photo" : "Deet",
@@ -248,6 +249,7 @@ export function useDeetComposer({
         deal: "Deal",
         hazard: "Hazard",
         alert: "Alert",
+        jobs: "Job",
       };
       const resolvedKind = (deetSettings.noticeEnabled ? "Notices" : postTypeToKind[deetSettings.postType] || "Posts") as import("@/lib/services/deets/deet-types").DeetKind;
       const fallbackTitle = deetSettings.noticeEnabled ? "Notice" : postTypeToTitle[deetSettings.postType] || "Deet";
@@ -299,12 +301,14 @@ export function useDeetComposer({
           ...("options" in item && item.options ? { options: item.options } : {}),
           ...("pollSettings" in item && item.pollSettings ? { pollSettings: item.pollSettings } : {}),
           ...("eventData" in item && item.eventData ? { eventData: item.eventData } : {}),
+          ...("jobData" in item && item.jobData ? { jobData: item.jobData } : {}),
+          ...("meta" in item && item.meta ? { meta: item.meta } : {}),
         })),
       });
 
       // Bridge: also create an entry in the events table so it appears
       // in the hub Events tab and the global Events page.
-      const eventAttachment = finalAttachments.find((item) => item.type === "event" && item.eventData);
+      const eventAttachment = finalAttachments.find((item): item is import("../components/deets/deetTypes").AttachedDeetItem => item.type === "event" && "eventData" in item && !!item.eventData);
       if (eventAttachment?.eventData && userId) {
         try {
           await createEvent(

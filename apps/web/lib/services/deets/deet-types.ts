@@ -76,7 +76,7 @@ export interface BaseDeet {
 
 export type Deet = BaseDeet;
 
-export type DeetKind = "Posts" | "Notices" | "Photos" | "News" | "Deals" | "Hazards" | "Alerts";
+export type DeetKind = "Posts" | "Notices" | "Photos" | "News" | "Deals" | "Hazards" | "Alerts" | "Jobs";
 
 export interface DeetAttachment {
   id?: string;

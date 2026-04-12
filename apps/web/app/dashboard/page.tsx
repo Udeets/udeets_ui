@@ -29,7 +29,7 @@ type DashboardHub = DashboardHubCardData & { createdBy: string };
 
 type AuthStatus = "checking" | "authenticated" | "unauthenticated";
 type HubView = "my-hubs" | "joined" | "requested";
-type FeedFilter = "All" | "Posts" | "Notices" | "Deals" | "Announcements" | "Polls" | "Photos" | "Videos" | "News" | "Hazards" | "Alerts";
+type FeedFilter = "All" | "Posts" | "Notices" | "Deals" | "Announcements" | "Polls" | "Photos" | "Videos" | "News" | "Hazards" | "Alerts" | "Jobs";
 type FeedAttachment = {
   type: string;
   title?: string;
@@ -240,7 +240,7 @@ function HubLauncher({
   requestedCount: number;
   joinedDot?: boolean;
   acceptedHubIds?: Set<string>;
-  onAcceptedClick?: (hub: DashboardHub) => void;
+  onAcceptedClick?: (hub: DashboardHubCardData) => void;
 }) {
   const emptyMessages: Record<HubView, { title: string; description: string; ctaLabel: string; ctaHref: string }> = {
     "my-hubs": {
@@ -1140,7 +1140,7 @@ function DashboardPageContent() {
   );
 
   // Handler: when user clicks an accepted hub card in the Requested section
-  const handleAcceptedHubClick = async (hub: DashboardHub) => {
+  const handleAcceptedHubClick = async (hub: DashboardHubCardData) => {
     celebratedIdsRef.current.add(hub.id);
     setNewlyAcceptedHub({ id: hub.id, name: hub.name, href: hub.href });
     // Fire confetti

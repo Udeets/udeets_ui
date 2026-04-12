@@ -1,5 +1,5 @@
 export type DeetFontSize = "small" | "medium" | "large";
-export type ComposerChildFlow = "photo" | "emoji" | "settings" | "quit_confirm" | "event" | "checkin" | "announcement" | "notice" | "poll" | "money" | "alert" | "survey" | "payment";
+export type ComposerChildFlow = "photo" | "emoji" | "settings" | "quit_confirm" | "event" | "checkin" | "announcement" | "notice" | "poll" | "money" | "alert" | "survey" | "payment" | "jobs";
 
 export type PollSettings = {
   allowAnyoneToAdd?: boolean;
@@ -22,6 +22,14 @@ export type AttachedDeetItem = {
   options?: string[];
   pollSettings?: PollSettings;
   eventData?: { date: string; time: string; location: string };
+  jobData?: {
+    jobTitle: string;
+    rolesAndResponsibilities: string;
+    pay: string;
+    kind: string;
+    timings: string;
+    daysPerWeek: string;
+  };
 };
 
 export type DeetFormattingState = {
@@ -32,7 +40,7 @@ export type DeetFormattingState = {
   textColor: string;
 };
 
-export type DeetPostType = "post" | "notice" | "news" | "deal" | "hazard" | "alert";
+export type DeetPostType = "post" | "notice" | "news" | "deal" | "hazard" | "alert" | "jobs";
 
 export type DeetSettingsState = {
   noticeEnabled: boolean;

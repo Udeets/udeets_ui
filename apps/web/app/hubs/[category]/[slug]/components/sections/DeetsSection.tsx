@@ -4,6 +4,7 @@ import type { HubContent } from "@/lib/hub-content";
 import {
   AlertTriangle,
   BarChart3,
+  Briefcase,
   Calendar,
   ChevronDown,
   CircleDollarSign,
@@ -104,6 +105,14 @@ const DEET_TYPE_CONFIG: Record<string, {
     border: "border-teal-200",
     accent: "bg-teal-100",
   },
+  jobs: {
+    icon: Briefcase,
+    label: "Job Posting",
+    bg: "bg-indigo-50",
+    text: "text-indigo-700",
+    border: "border-indigo-200",
+    accent: "bg-indigo-100",
+  },
 };
 
 /** Resolve the deet type from kind + attachments */
@@ -111,7 +120,7 @@ function resolveDeetType(kind: string, attachments?: HubFeedItemAttachment[]): s
   // Check attachments for specific types first
   if (attachments?.length) {
     for (const a of attachments) {
-      if (a.type === "announcement" || a.type === "poll" || a.type === "event" || a.type === "checkin" || a.type === "money") {
+      if (a.type === "announcement" || a.type === "poll" || a.type === "event" || a.type === "checkin" || a.type === "money" || a.type === "jobs") {
         return a.type;
       }
     }
@@ -121,6 +130,7 @@ function resolveDeetType(kind: string, attachments?: HubFeedItemAttachment[]): s
   if (kind === "announcement") return "announcement";
   if (kind === "event") return "event";
   if (kind === "poll") return "poll";
+  if (kind === "jobs") return "jobs";
   return null;
 }
 
@@ -247,6 +257,36 @@ function DeetTypeContent({ type, attachments }: { type: string; attachments?: Hu
             <p className="text-sm text-[var(--ud-text-secondary)]">{matchingAtt.detail}</p>
           </div>
         )}
+      </div>
+    );
+  }
+
+  // Jobs: rich job listing card
+  if (type === "jobs") {
+    const jobMeta = matchingAtt?.meta;
+    const detailParts = matchingAtt?.detail?.split(" · ").filter(Boolean) ?? [];
+    return (
+      <div className={cn("mx-4 mt-3 overflow-hidden rounded-xl border", config.border)}>
+        <div className={cn("flex items-center gap-2 px-3 py-2", config.bg)}>
+          <Icon className={cn("h-4 w-4 stroke-[2]", config.text)} />
+          <span className={cn("text-sm font-bold", config.text)}>
+            {matchingAtt?.title || "Job Posting"}
+          </span>
+        </div>
+        <div className="px-3 py-2.5 space-y-2">
+          {detailParts.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {detailParts.map((part, i) => (
+                <span key={i} className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
+                  {part}
+                </span>
+              ))}
+            </div>
+          )}
+          {jobMeta && (
+            <p className="text-sm leading-relaxed text-[var(--ud-text-secondary)]">{jobMeta}</p>
+          )}
+        </div>
       </div>
     );
   }

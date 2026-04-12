@@ -38,7 +38,7 @@ import { SettingsSection } from "./components/sections/SettingsSection";
 import { CreateDeetModal } from "./components/deets/CreateDeetModal";
 import { DeetChildModal } from "./components/deets/DeetChildModal";
 import { DeetSettingsModal } from "./components/deets/DeetSettingsModal";
-import { AnnouncementChildContent, NoticeChildContent, PollChildContent, EventChildContent, CheckinChildContent, AlertChildContent, SurveyChildContent, PaymentChildContent } from "./components/deets/ComposerChildPanels";
+import { AnnouncementChildContent, NoticeChildContent, PollChildContent, EventChildContent, CheckinChildContent, AlertChildContent, SurveyChildContent, PaymentChildContent, JobsChildContent } from "./components/deets/ComposerChildPanels";
 import type { HubTab } from "./components/hubTypes";
 import { useHubConnectFlow } from "./hooks/useHubConnectFlow";
 import { useDeetComposer } from "./hooks/useDeetComposer";
@@ -953,7 +953,7 @@ export default function HubClient({
           onApproveRequest={handleApproveRequest}
           onRejectRequest={handleRejectRequest}
           currentUserId={user?.id}
-          onLeaveHub={isJoined && !isHubCreator ? () => setShowLeaveConfirm(true) : undefined}
+          onLeaveHub={!isHubCreator ? () => setShowLeaveConfirm(true) : undefined}
           onMuteNotifications={() => { /* TODO: implement mute */ }}
           onReportHub={() => { /* TODO: implement report */ }}
         />
@@ -1002,7 +1002,7 @@ export default function HubClient({
           onOpenViewer={openViewer}
           customSections={customSections}
           onOpenSectionEditor={() => setIsSectionEditorOpen(true)}
-          onLeaveHub={isJoined && !isHubCreator ? () => setShowLeaveConfirm(true) : undefined}
+          onLeaveHub={!isHubCreator ? () => setShowLeaveConfirm(true) : undefined}
           accentTheme={accentTheme}
         />
       );
@@ -1686,6 +1686,27 @@ export default function HubClient({
                   <PaymentChildContent
                     onAttach={(title, amount, paymentNote) => {
                       attachDeetItem({ type: "payment", title, detail: `$${amount}${paymentNote ? ` — ${paymentNote}` : ""}` });
+                      setActiveComposerChild(null);
+                    }}
+                    onCancel={() => setActiveComposerChild(null)}
+                  />
+                </DeetChildModal>
+              ) : null}
+
+              {/* ── Jobs modal ── */}
+              {activeComposerChild === "jobs" ? (
+                <DeetChildModal title="Post a Job" onClose={() => setActiveComposerChild(null)}>
+                  <JobsChildContent
+                    onAttach={(data) => {
+                      const kindLabel = { full_time: "Full-Time", part_time: "Part-Time", contract: "Contract", freelance: "Freelance", internship: "Internship" }[data.kind] ?? data.kind;
+                      attachDeetItem({
+                        type: "jobs",
+                        title: data.jobTitle,
+                        detail: `${kindLabel}${data.pay ? ` · ${data.pay}` : ""}${data.timings ? ` · ${data.timings}` : ""}${data.daysPerWeek ? ` · ${data.daysPerWeek} days/wk` : ""}`,
+                        meta: data.rolesAndResponsibilities,
+                        jobData: data,
+                      });
+                      setDeetSettings((prev) => ({ ...prev, postType: "jobs" as import("./components/deets/deetTypes").DeetPostType }));
                       setActiveComposerChild(null);
                     }}
                     onCancel={() => setActiveComposerChild(null)}

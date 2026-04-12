@@ -859,3 +859,92 @@ export function PaymentChildContent({
     </div>
   );
 }
+
+/* ── Jobs ─────────────────────────────────────────────────────── */
+
+const JOB_KINDS = [
+  { value: "full_time", label: "Full-Time" },
+  { value: "part_time", label: "Part-Time" },
+  { value: "contract", label: "Contract" },
+  { value: "freelance", label: "Freelance" },
+  { value: "internship", label: "Internship" },
+] as const;
+
+export function JobsChildContent({
+  onAttach,
+  onCancel,
+}: {
+  onAttach: (data: {
+    jobTitle: string;
+    rolesAndResponsibilities: string;
+    pay: string;
+    kind: string;
+    timings: string;
+    daysPerWeek: string;
+  }) => void;
+  onCancel: () => void;
+}) {
+  const [jobTitle, setJobTitle] = useState("");
+  const [rolesAndResponsibilities, setRolesAndResponsibilities] = useState("");
+  const [pay, setPay] = useState("");
+  const [kind, setKind] = useState<string>("full_time");
+  const [timings, setTimings] = useState("");
+  const [daysPerWeek, setDaysPerWeek] = useState("");
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-[var(--ud-text-secondary)]">
+        Post a job listing visible to all hub members.
+      </p>
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Job Title</label>
+        <input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="e.g. Community Manager" className={INPUT} />
+      </div>
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Roles &amp; Responsibilities</label>
+        <textarea
+          value={rolesAndResponsibilities}
+          onChange={(e) => setRolesAndResponsibilities(e.target.value)}
+          placeholder="Describe key responsibilities..."
+          rows={3}
+          className={`${INPUT} resize-none`}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Pay</label>
+          <input value={pay} onChange={(e) => setPay(e.target.value)} placeholder="e.g. $25/hr or $50k/yr" className={INPUT} />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Type</label>
+          <select value={kind} onChange={(e) => setKind(e.target.value)} className={INPUT}>
+            {JOB_KINDS.map((k) => (
+              <option key={k.value} value={k.value}>{k.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Timings</label>
+          <input value={timings} onChange={(e) => setTimings(e.target.value)} placeholder="e.g. 9 AM – 5 PM" className={INPUT} />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Days / Week</label>
+          <input value={daysPerWeek} onChange={(e) => setDaysPerWeek(e.target.value)} placeholder="e.g. 5" className={INPUT} />
+        </div>
+      </div>
+      <div className="flex justify-end gap-3 pt-2">
+        <button type="button" onClick={onCancel} className={BTN_SECONDARY}>Cancel</button>
+        <button
+          type="button"
+          disabled={!jobTitle.trim()}
+          onClick={() => onAttach({ jobTitle: jobTitle.trim(), rolesAndResponsibilities: rolesAndResponsibilities.trim(), pay: pay.trim(), kind, timings: timings.trim(), daysPerWeek: daysPerWeek.trim() })}
+          className={`${BTN_PRIMARY} disabled:opacity-50 disabled:cursor-not-allowed`}
+        >
+          Post Job
+        </button>
+      </div>
+    </div>
+  );
+}

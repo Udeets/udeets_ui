@@ -6,6 +6,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   AlertTriangle,
   Bell,
+  Briefcase,
   Building2,
   CalendarDays,
   DollarSign,
@@ -141,6 +142,7 @@ export function FeedItemIcon({ kind }: { kind: HubFeedItemKind }) {
   if (kind === "deal") return <DollarSign className={ICON} />;
   if (kind === "hazard") return <AlertTriangle className={ICON} />;
   if (kind === "alert") return <ShieldAlert className={ICON} />;
+  if (kind === "jobs") return <Briefcase className={ICON} />;
   return <Files className={ICON} />;
 }
 
@@ -163,6 +165,8 @@ export function feedKindMeta(kind: HubFeedItemKind): { label: string; badgeClass
       return { label: "Hazard", badgeClass: "bg-red-50 text-red-600 border-red-200" };
     case "alert":
       return { label: "Alert", badgeClass: "bg-red-50 text-red-600 border-red-200" };
+    case "jobs":
+      return { label: "Jobs", badgeClass: "bg-indigo-50 text-indigo-600 border-indigo-200" };
     default:
       return { label: "Post", badgeClass: "bg-gray-50 text-gray-600 border-gray-200" };
   }
