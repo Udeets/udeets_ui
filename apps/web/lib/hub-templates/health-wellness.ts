@@ -9,7 +9,7 @@ export const healthWellnessConfig: HubTemplateConfig = {
     deets: "Posts",
     members: "Members",
     admin: "Owner / Instructor",
-    about: "About Us",
+    about: "About",
   },
   tabs: ["About", "Posts", "Attachments", "Events", "Members"],
   postTypes: [

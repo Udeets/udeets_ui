@@ -11,7 +11,7 @@ import {
   Search,
   Settings,
   Shield,
-  Tv,
+  MapPin,
   UserRound,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -34,7 +34,7 @@ function truncateLine(value: string, max = 64) {
   return `${value.slice(0, max - 1)}...`;
 }
 
-export type NavKey = "home" | "alerts" | "events" | "news";
+export type NavKey = "home" | "alerts" | "events" | "local";
 
 type OpenPanel = "alerts" | "events" | "profile" | null;
 
@@ -112,7 +112,7 @@ function NavIconLink({
   );
 }
 
-function NotificationsPanel({ notifications }: { notifications: HubNotificationItem[] }) {
+function NotificationsPanel({ notifications, onUnreadChange }: { notifications: HubNotificationItem[]; onUnreadChange?: (hasUnread: boolean) => void }) {
   const searchParams = useSearchParams();
   const [activeFilter, setActiveFilter] = useState<(typeof FILTERS)[number]>("All");
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
@@ -128,7 +128,10 @@ function NotificationsPanel({ notifications }: { notifications: HubNotificationI
         <h3 className="text-lg font-semibold text-[var(--ud-text-primary)]">Notifications</h3>
         <button
           type="button"
-          onClick={() => setReadIds(new Set(notifications.map((n) => n.id)))}
+          onClick={() => {
+            setReadIds(new Set(notifications.map((n) => n.id)));
+            onUnreadChange?.(false);
+          }}
           className="text-sm font-medium text-[#0C5C57] hover:opacity-80"
         >
           Mark all as read
@@ -187,9 +190,22 @@ function NotificationsPanel({ notifications }: { notifications: HubNotificationI
                       sizes="36px"
                     />
                   </div>
-                  <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--ud-text-primary)]">
-                    {`${item.hub} — ${item.title}`}
-                  </p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-[var(--ud-text-primary)]">
+                      {`${item.hub} — ${item.title}`}
+                    </p>
+                    {item.id.startsWith("join-") ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                        Needs action
+                      </span>
+                    ) : item.id.startsWith("accepted-") ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        Accepted
+                      </span>
+                    ) : null}
+                  </div>
                   <span className="shrink-0 text-[11px] font-medium text-slate-500">{item.meta}</span>
                   <span className="pointer-events-none absolute left-12 top-full z-10 mt-1 max-w-[280px] rounded-full bg-[#111111] px-3 py-1 text-[11px] font-medium text-white opacity-0 shadow-sm transition group-hover:opacity-100">
                     {truncateLine(item.body, 78)}
@@ -392,6 +408,14 @@ function ProfilePanel({ user, onLogout, profileData }: { user: { email?: string;
   );
 }
 
+function formatRelativeTime(iso: string): string {
+  const diffMins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (diffMins >= 1440) return `${Math.floor(diffMins / 1440)}d`;
+  if (diffMins >= 60) return `${Math.floor(diffMins / 60)}h`;
+  if (diffMins >= 1) return `${diffMins}m`;
+  return "just now";
+}
+
 function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?: () => void; onOpenSearch?: () => void; isCreatorAdmin?: boolean } }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -447,10 +471,21 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
         .on("postgres_changes", { event: "*", schema: "public", table: "events" }, () => {
           setHeaderRefreshKey((k) => k + 1);
         })
+        .on("postgres_changes", { event: "*", schema: "public", table: "hub_members" }, () => {
+          setHeaderRefreshKey((k) => k + 1);
+        })
         .subscribe();
     })();
 
+    // Also listen for direct "hub-members-changed" events dispatched after approve/reject
+    const onMembersChanged = () => {
+      // Small delay so the DB write is fully committed before we re-query
+      setTimeout(() => setHeaderRefreshKey((k) => k + 1), 600);
+    };
+    window.addEventListener("hub-members-changed", onMembersChanged);
+
     return () => {
+      window.removeEventListener("hub-members-changed", onMembersChanged);
       if (channel && supabaseRef) {
         void supabaseRef.removeChannel(channel);
       }
@@ -505,6 +540,94 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
           .limit(30);
 
         if (ignore) return;
+
+        // ── Fetch pending join requests for hubs the user created ──
+        const { data: createdHubs } = await supabase
+          .from("hubs")
+          .select("id, name, slug, category, dp_image_url")
+          .eq("created_by", user.id);
+
+        const createdHubIds = (createdHubs ?? []).map((h: { id: string }) => h.id);
+        let joinRequestNotifications: HubNotificationItem[] = [];
+
+        if (createdHubIds.length > 0) {
+          const { data: pendingMembers } = await supabase
+            .from("hub_members")
+            .select("id, hub_id, user_id, joined_at")
+            .in("hub_id", createdHubIds)
+            .eq("status", "pending")
+            .order("joined_at", { ascending: false })
+            .limit(20);
+
+          if (pendingMembers && pendingMembers.length > 0 && !ignore) {
+            // Fetch requester profiles
+            const requesterIds = (pendingMembers as { user_id: string }[]).map((m) => m.user_id);
+            const { data: requesterProfiles } = await supabase
+              .from("profiles")
+              .select("id, full_name, avatar_url")
+              .in("id", requesterIds);
+
+            const profileMap = new Map(
+              (requesterProfiles ?? []).map((p: { id: string; full_name: string | null; avatar_url: string | null }) => [p.id, p])
+            );
+
+            joinRequestNotifications = (pendingMembers as { id: string; hub_id: string; user_id: string; joined_at: string }[]).map((m) => {
+              const hub = (createdHubs ?? []).find((h: { id: string }) => h.id === m.hub_id) as { id: string; name: string; slug: string; category: string; dp_image_url: string | null } | undefined;
+              const profile = profileMap.get(m.user_id);
+              const requesterName = profile?.full_name ?? "Someone";
+              const hubName = hub?.name ?? "Hub";
+
+              return {
+                id: `join-${m.id}`,
+                title: `${requesterName} wants to join`,
+                body: `Pending join request for ${hubName}`,
+                meta: formatRelativeTime(m.joined_at),
+                hub: hubName,
+                hubImage: hub?.dp_image_url ?? undefined,
+                type: "Activity" as const,
+                category: (hub?.category ?? "") as import("@/lib/hubs").HubCategorySlug,
+                slug: hub?.slug ?? "",
+                focusId: "",
+                href: `/hubs/${hub?.category ?? ""}/${hub?.slug ?? ""}?tab=Members`,
+              };
+            });
+          }
+        }
+
+        // ── Fetch recently-accepted join requests for the current user ──
+        let acceptedNotifications: HubNotificationItem[] = [];
+        {
+          const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+          const { data: acceptedMemberships } = await supabase
+            .from("hub_members")
+            .select("id, hub_id, joined_at")
+            .eq("user_id", user.id)
+            .eq("status", "active")
+            .neq("role", "creator")
+            .gte("joined_at", sevenDaysAgo)
+            .order("joined_at", { ascending: false })
+            .limit(10);
+
+          if (acceptedMemberships && acceptedMemberships.length > 0 && !ignore) {
+            for (const m of acceptedMemberships as { id: string; hub_id: string; joined_at: string }[]) {
+              const hub = hubMap.get(m.hub_id);
+              if (!hub) continue;
+              acceptedNotifications.push({
+                id: `accepted-${m.id}`,
+                title: "You've been accepted!",
+                body: `You're now a member of ${hub.name}`,
+                meta: formatRelativeTime(m.joined_at),
+                hub: hub.name,
+                hubImage: hub.dpImage ?? undefined,
+                type: "Activity" as const,
+                category: hub.category as import("@/lib/hubs").HubCategorySlug,
+                slug: hub.slug,
+                focusId: "",
+                href: `/dashboard?tab=joined`,
+              });
+            }
+          }
+        }
 
         const notifications: HubNotificationItem[] = (recentDeets ?? []).map(
           (d: { id: string; hub_id: string; author_name: string; title: string; body: string; kind: string; created_at: string }) => {
@@ -639,8 +762,12 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
         }
 
         if (!ignore) {
-          setLiveNotifications(notifications);
+          const allNotifs = [...joinRequestNotifications, ...acceptedNotifications, ...notifications];
+          const newActionableCount = allNotifs.filter((n) => n.id.startsWith("join-") || n.id.startsWith("accepted-")).length;
+          setLiveNotifications(allNotifs);
           setLiveEvents(eventItems);
+          // Reset "mark all read" only when new actionable items appear
+          if (newActionableCount > 0) setAllMarkedRead(false);
         }
       } catch (err) {
         console.error("[header-live-data]", err);
@@ -685,7 +812,10 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
     router.refresh();
   };
 
-  const unreadNotifications = liveNotifications.length > 0;
+  const [allMarkedRead, setAllMarkedRead] = useState(false);
+  // Bell dot only shows for actionable items (join requests / acceptances), not regular posts
+  const actionableCount = liveNotifications.filter((n) => n.id.startsWith("join-") || n.id.startsWith("accepted-")).length;
+  const unreadNotifications = actionableCount > 0 && !allMarkedRead;
   const isHomeActive = isAuthenticated ? pathname === "/dashboard" : pathname === "/";
   const isDiscoverActive = pathname === "/discover";
   const isAlertsActive = pathname === "/alerts";
@@ -824,7 +954,7 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
             </Link>
           )}
 
-          {openPanel === "alerts" ? <NotificationsPanel notifications={liveNotifications} /> : null}
+          {openPanel === "alerts" ? <NotificationsPanel notifications={liveNotifications} onUnreadChange={(hasUnread) => setAllMarkedRead(!hasUnread)} /> : null}
           {openPanel === "events" ? <EventsPanel events={liveEvents} /> : null}
           {openPanel === "profile" && isAuthenticated ? <ProfilePanel user={user} onLogout={handleLogout} profileData={profileData} /> : null}
         </div>
@@ -852,82 +982,59 @@ export function UdeetsFooter() {
 }
 
 export function UdeetsBottomNav({ activeNav = "home" }: { activeNav?: NavKey }) {
-  const [showNewsPopup, setShowNewsPopup] = useState(false);
-
   return (
-    <>
-      <nav className={cn("fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 lg:hidden", BOTTOM_NAV_BG)}>
-        <div className="mx-auto grid max-w-lg grid-cols-4">
-          {/* Home */}
-          <Link
-            href="/dashboard"
-            className={cn(
-              "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
-              activeNav === "home" ? TEXT_ACTIVE : TEXT_MUTED
-            )}
-          >
-            <Home className={ICON_BASE} />
-            <span className="text-[10px] font-medium">Home</span>
-          </Link>
+    <nav className={cn("fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 lg:hidden", BOTTOM_NAV_BG)}>
+      <div className="mx-auto grid max-w-lg grid-cols-4">
+        {/* Home */}
+        <Link
+          href="/dashboard"
+          className={cn(
+            "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
+            activeNav === "home" ? TEXT_ACTIVE : TEXT_MUTED
+          )}
+        >
+          <Home className={ICON_BASE} />
+          <span className="text-[10px] font-medium">Home</span>
+        </Link>
 
-          {/* Notifications */}
-          <Link
-            href="/alerts"
-            className={cn(
-              "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
-              activeNav === "alerts" ? TEXT_ACTIVE : TEXT_MUTED
-            )}
-          >
-            <Bell className={ICON_BASE} />
-            <span className="text-[10px] font-medium">Notifications</span>
-          </Link>
+        {/* Notifications */}
+        <Link
+          href="/alerts"
+          className={cn(
+            "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
+            activeNav === "alerts" ? TEXT_ACTIVE : TEXT_MUTED
+          )}
+        >
+          <Bell className={ICON_BASE} />
+          <span className="text-[10px] font-medium">Notifications</span>
+        </Link>
 
-          {/* Events */}
-          <Link
-            href="/events"
-            className={cn(
-              "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
-              activeNav === "events" ? TEXT_ACTIVE : TEXT_MUTED
-            )}
-          >
-            <Calendar className={ICON_BASE} />
-            <span className="text-[10px] font-medium">Events</span>
-          </Link>
+        {/* Events */}
+        <Link
+          href="/events"
+          className={cn(
+            "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
+            activeNav === "events" ? TEXT_ACTIVE : TEXT_MUTED
+          )}
+        >
+          <Calendar className={ICON_BASE} />
+          <span className="text-[10px] font-medium">Events</span>
+        </Link>
 
-          {/* Local News */}
-          <button
-            type="button"
-            onClick={() => setShowNewsPopup(true)}
-            className={cn(
-              "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
-              activeNav === "news" ? TEXT_ACTIVE : TEXT_MUTED
-            )}
-          >
-            <Tv className={ICON_BASE} />
-            <span className="text-[10px] font-medium">Local News</span>
-          </button>
-        </div>
-      </nav>
-
-      {/* Local News coming soon popup */}
-      {showNewsPopup && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 lg:hidden">
-          <div className="mx-6 w-full max-w-xs rounded-2xl bg-white p-6 text-center shadow-xl">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#E3F1EF]">
-              <Tv className="h-6 w-6 text-[#0C5C57]" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900">Local News</h3>
-            <p className="mt-2 text-sm text-gray-500">Local news around you coming soon here!</p>
-            <button
-              type="button"
-              onClick={() => setShowNewsPopup(false)}
-              className="mt-5 w-full rounded-xl bg-[#0C5C57] py-2.5 text-sm font-semibold text-white transition hover:bg-[#0a4f4b]"
-            >
-              Got it
-            </button>
+        {/* Local */}
+        <Link
+          href="/local"
+          className={cn(
+            "flex flex-col items-center justify-center gap-0.5 pb-2 pt-2",
+            activeNav === "local" ? TEXT_ACTIVE : TEXT_MUTED
+          )}
+        >
+          <div className="relative">
+            <MapPin className={ICON_BASE} />
           </div>
-        </div>
-      )}
-    </>
+          <span className="text-[10px] font-medium">Local</span>
+        </Link>
+      </div>
+    </nav>
   );
 }

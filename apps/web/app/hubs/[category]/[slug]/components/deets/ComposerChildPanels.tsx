@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, MapPin, Plus, Trash2 } from "lucide-react";
+import { DollarSign, Loader2, MapPin, Plus, Trash2 } from "lucide-react";
 
 const BTN_PRIMARY =
   "rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90";
@@ -567,6 +567,293 @@ export function CheckinChildContent({
           className={`${BTN_PRIMARY} disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           Check In
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Alert ────────────────────────────────────────────────────── */
+
+const ALERT_LEVELS = [
+  { value: "info", label: "Info", color: "bg-blue-100 text-blue-700" },
+  { value: "warning", label: "Warning", color: "bg-amber-100 text-amber-700" },
+  { value: "urgent", label: "Urgent", color: "bg-rose-100 text-rose-700" },
+] as const;
+
+export function AlertChildContent({
+  onAttach,
+  onCancel,
+}: {
+  onAttach: (title: string, body: string, level: string) => void;
+  onCancel: () => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [level, setLevel] = useState<"info" | "warning" | "urgent">("warning");
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-[var(--ud-text-secondary)]">
+        Publish an alert to notify hub members about hazards, closures, or safety updates.
+      </p>
+
+      {/* Severity selector */}
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Severity</label>
+        <div className="flex gap-2">
+          {ALERT_LEVELS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setLevel(opt.value)}
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                level === opt.value
+                  ? opt.color
+                  : "bg-[var(--ud-bg-subtle)] text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-input)]"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Alert Title</label>
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Road Closure on Main St" className={INPUT} />
+      </div>
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Details</label>
+        <textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder="Describe the situation and any actions members should take..."
+          rows={3}
+          className={`${INPUT} resize-none`}
+        />
+      </div>
+      <div className="flex justify-end gap-3 pt-2">
+        <button type="button" onClick={onCancel} className={BTN_SECONDARY}>Cancel</button>
+        <button
+          type="button"
+          disabled={!title.trim()}
+          onClick={() => onAttach(title.trim(), body.trim(), level)}
+          className={`${BTN_PRIMARY} disabled:opacity-50 disabled:cursor-not-allowed`}
+        >
+          Publish Alert
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Survey ───────────────────────────────────────────────────── */
+
+type SurveyQuestion = {
+  question: string;
+  options: string[];
+};
+
+export function SurveyChildContent({
+  onAttach,
+  onCancel,
+}: {
+  onAttach: (title: string, questions: SurveyQuestion[]) => void;
+  onCancel: () => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [questions, setQuestions] = useState<SurveyQuestion[]>([
+    { question: "", options: ["", ""] },
+  ]);
+
+  const updateQuestion = (qIndex: number, value: string) => {
+    setQuestions((prev) =>
+      prev.map((q, i) => (i === qIndex ? { ...q, question: value } : q))
+    );
+  };
+
+  const updateOption = (qIndex: number, oIndex: number, value: string) => {
+    setQuestions((prev) =>
+      prev.map((q, i) =>
+        i === qIndex
+          ? { ...q, options: q.options.map((o, j) => (j === oIndex ? value : o)) }
+          : q
+      )
+    );
+  };
+
+  const addOption = (qIndex: number) => {
+    setQuestions((prev) =>
+      prev.map((q, i) =>
+        i === qIndex && q.options.length < 6 ? { ...q, options: [...q.options, ""] } : q
+      )
+    );
+  };
+
+  const removeOption = (qIndex: number, oIndex: number) => {
+    setQuestions((prev) =>
+      prev.map((q, i) =>
+        i === qIndex && q.options.length > 2
+          ? { ...q, options: q.options.filter((_, j) => j !== oIndex) }
+          : q
+      )
+    );
+  };
+
+  const addQuestion = () => {
+    if (questions.length < 10) {
+      setQuestions([...questions, { question: "", options: ["", ""] }]);
+    }
+  };
+
+  const removeQuestion = (qIndex: number) => {
+    if (questions.length > 1) {
+      setQuestions(questions.filter((_, i) => i !== qIndex));
+    }
+  };
+
+  const validQuestions = questions.filter(
+    (q) => q.question.trim() && q.options.filter((o) => o.trim()).length >= 2
+  );
+  const canSubmit = title.trim() && validQuestions.length >= 1;
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-[var(--ud-text-secondary)]">
+        Create a multi-question survey for your hub members.
+      </p>
+
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Survey Title</label>
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Community Feedback Survey" className={INPUT} />
+      </div>
+
+      <div className="max-h-[320px] space-y-5 overflow-y-auto pr-1">
+        {questions.map((q, qIndex) => (
+          <div key={qIndex} className="rounded-xl border border-[var(--ud-border-subtle)] p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-xs font-semibold text-[var(--ud-text-muted)]">Question {qIndex + 1}</span>
+              {questions.length > 1 ? (
+                <button type="button" onClick={() => removeQuestion(qIndex)} className="rounded-full p-1 text-[var(--ud-text-muted)] transition hover:bg-rose-50 hover:text-rose-500">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              ) : null}
+            </div>
+
+            <input
+              value={q.question}
+              onChange={(e) => updateQuestion(qIndex, e.target.value)}
+              placeholder="Ask a question..."
+              className={`${INPUT} mb-3`}
+            />
+
+            <div className="space-y-2">
+              {q.options.map((opt, oIndex) => (
+                <div key={oIndex} className="flex items-center gap-2">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[var(--ud-border)] text-[10px] font-semibold text-[var(--ud-text-muted)]">{oIndex + 1}</span>
+                  <input
+                    value={opt}
+                    onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
+                    placeholder="Option"
+                    className={`${INPUT} flex-1 py-2 text-sm`}
+                  />
+                  {q.options.length > 2 ? (
+                    <button type="button" onClick={() => removeOption(qIndex, oIndex)} className="shrink-0 rounded-full p-1 text-[var(--ud-text-muted)] transition hover:bg-rose-50 hover:text-rose-500">
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  ) : null}
+                </div>
+              ))}
+              {q.options.length < 6 ? (
+                <button type="button" onClick={() => addOption(qIndex)} className="inline-flex items-center gap-1 pl-7 text-xs font-medium text-[var(--ud-brand-primary)] transition hover:opacity-80">
+                  <Plus className="h-3.5 w-3.5" />
+                  Add option
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {questions.length < 10 ? (
+        <button type="button" onClick={addQuestion} className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--ud-brand-primary)] transition hover:opacity-80">
+          <Plus className="h-4 w-4" />
+          Add question
+        </button>
+      ) : null}
+
+      <div className="flex justify-center pt-2">
+        <button type="button" onClick={onCancel} className={`${BTN_SECONDARY} mr-3`}>Cancel</button>
+        <button
+          type="button"
+          disabled={!canSubmit}
+          onClick={() => onAttach(title.trim(), validQuestions)}
+          className={`${BTN_PRIMARY} disabled:opacity-50 disabled:cursor-not-allowed`}
+        >
+          Attach Survey
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Payment ─────────────────────────────────────────────────── */
+
+export function PaymentChildContent({
+  onAttach,
+  onCancel,
+}: {
+  onAttach: (title: string, amount: string, note: string) => void;
+  onCancel: () => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-[var(--ud-text-secondary)]">
+        Request a payment or collect dues from hub members.
+      </p>
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">What is this for?</label>
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Monthly Dues, Event Fee" className={INPUT} />
+      </div>
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Amount ($)</label>
+        <div className="relative">
+          <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ud-text-muted)]" />
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0.00"
+            className={`${INPUT} pl-9`}
+          />
+        </div>
+      </div>
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Note (optional)</label>
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Add any additional details about this payment..."
+          rows={2}
+          className={`${INPUT} resize-none`}
+        />
+      </div>
+      <div className="flex justify-end gap-3 pt-2">
+        <button type="button" onClick={onCancel} className={BTN_SECONDARY}>Cancel</button>
+        <button
+          type="button"
+          disabled={!title.trim() || !amount}
+          onClick={() => onAttach(title.trim(), amount, note.trim())}
+          className={`${BTN_PRIMARY} disabled:opacity-50 disabled:cursor-not-allowed`}
+        >
+          Add Payment Request
         </button>
       </div>
     </div>

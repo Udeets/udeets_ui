@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { Loader2, MessageCircle, Send, Share2, SmilePlus, X } from "lucide-react";
+import { CheckCircle, Loader2, MessageCircle, Send, Share2, SmilePlus, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -62,7 +62,7 @@ const TEXT_DARK = "text-[var(--ud-text-primary)]";
 const TEXT_MUTED = "text-[var(--ud-text-secondary)]";
 const PRIMARY_BUTTON =
   "inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-5 py-3 text-sm font-semibold text-white transition-colors duration-150 hover:opacity-90";
-const FEED_FILTERS: FeedFilter[] = ["All", "Posts", "Notices", "Deals", "Announcements", "Polls", "Photos", "Videos"];
+const FEED_FILTERS: FeedFilter[] = ["All", "Posts", "Notices", "Announcements", "Polls", "Photos", "Videos"];
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -230,11 +230,17 @@ function HubLauncher({
   onSelectView,
   hubs,
   requestedCount,
+  joinedDot = false,
+  acceptedHubIds,
+  onAcceptedClick,
 }: {
   selectedView: HubView;
   onSelectView: (view: HubView) => void;
   hubs: DashboardHub[];
   requestedCount: number;
+  joinedDot?: boolean;
+  acceptedHubIds?: Set<string>;
+  onAcceptedClick?: (hub: DashboardHub) => void;
 }) {
   const emptyMessages: Record<HubView, { title: string; description: string; ctaLabel: string; ctaHref: string }> = {
     "my-hubs": {
@@ -287,6 +293,9 @@ function HubLauncher({
                   {requestedCount}
                 </span>
               ) : null}
+              {tab.key === "joined" && joinedDot ? (
+                <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-[#FF3B30] ring-2 ring-white" />
+              ) : null}
             </button>
           ))}
         </div>
@@ -295,14 +304,19 @@ function HubLauncher({
       {hubs.length ? (
         <div className="mt-5 grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
           {selectedView === "my-hubs" ? <CreateHubTile /> : null}
-          {hubs.map((hub) => (
-            <DashboardHubCard
-              key={hub.id}
-              hub={hub}
-              hasUnread={false}
-              isPending={selectedView === "requested"}
-            />
-          ))}
+          {hubs.map((hub) => {
+            const isAccepted = selectedView === "requested" && (acceptedHubIds?.has(hub.id) ?? false);
+            return (
+              <DashboardHubCard
+                key={hub.id}
+                hub={hub}
+                hasUnread={false}
+                isPending={selectedView === "requested" && !isAccepted}
+                isAccepted={isAccepted}
+                onAcceptedClick={onAcceptedClick}
+              />
+            );
+          })}
         </div>
       ) : (
         <>
@@ -840,6 +854,22 @@ function DashboardPageContent() {
   const [hubsLoadError, setHubsLoadError] = useState<string | null>(null);
   const [myDeetsItems, setMyDeetsItems] = useState<FeedItem[]>([]);
 
+  // ── Join-request acceptance celebration ──
+  const [newlyAcceptedHub, setNewlyAcceptedHub] = useState<{ id: string; name: string; href: string } | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [joinedDot, setJoinedDot] = useState(false);
+  const celebratedIdsRef = useRef<Set<string>>(new Set());
+  // Track hub IDs whose requests were recently accepted (shown with dot in Requested tab)
+  const [acceptedHubIds, setAcceptedHubIds] = useState<Set<string>>(new Set());
+
+  // ── Handle ?tab=joined URL param (from bell notification link) ──
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "joined") {
+      setSelectedHubView("joined");
+    }
+  }, [searchParams]);
+
   // ── Interaction state (likes, comments, share) ──
   const [likedDeets, setLikedDeets] = useState<Set<string>>(new Set());
   const [likingDeets, setLikingDeets] = useState<Set<string>>(new Set());
@@ -987,8 +1017,27 @@ function DashboardPageContent() {
           listMyMemberships(),
         ]);
         if (!cancelled) {
-          setHubs(dbHubs.map(toDashboardHub));
+          const dashHubs = dbHubs.map(toDashboardHub);
+          setHubs(dashHubs);
           setMemberships(myMemberships);
+
+          // ── Track recently accepted memberships (show in Requested tab with dot) ──
+          const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+          const recentlyAcceptedIds = new Set<string>();
+          for (const m of myMemberships) {
+            if (
+              m.status === "active" &&
+              m.role !== "creator" &&
+              m.joinedAt &&
+              new Date(m.joinedAt).getTime() > fiveMinutesAgo &&
+              !celebratedIdsRef.current.has(m.hubId)
+            ) {
+              recentlyAcceptedIds.add(m.hubId);
+            }
+          }
+          if (recentlyAcceptedIds.size > 0) {
+            setAcceptedHubIds(recentlyAcceptedIds);
+          }
         }
       } catch (error) {
         if (!cancelled) {
@@ -1009,6 +1058,55 @@ function DashboardPageContent() {
       cancelled = true;
     };
   }, [authStatus]);
+
+  // ── Real-time: detect when a pending request is accepted ──
+  useEffect(() => {
+    if (authStatus !== "authenticated" || !currentUserId) return;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let channel: any = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let supabaseRef: any = null;
+
+    (async () => {
+      const { createClient: createSupa } = await import("@/lib/supabase/client");
+      supabaseRef = createSupa();
+
+      channel = supabaseRef
+        .channel(`dashboard-membership-${currentUserId}`)
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "hub_members", filter: `user_id=eq.${currentUserId}` },
+          async (payload: { new: { hub_id: string; status: string; user_id: string }; old: { status?: string } }) => {
+            const row = payload.new;
+            if (row.status !== "active") return;
+            // A membership was just approved — refetch to update lists
+            try {
+              const [dbHubs, myMemberships] = await Promise.all([
+                listHubs(),
+                listMyMemberships(),
+              ]);
+              setHubs(dbHubs.map(toDashboardHub));
+              setMemberships(myMemberships);
+
+              // Mark hub as accepted — user will see dot on Requested tab
+              if (!celebratedIdsRef.current.has(row.hub_id)) {
+                setAcceptedHubIds((prev) => new Set(prev).add(row.hub_id));
+              }
+            } catch (err) {
+              console.error("[membership-acceptance]", err);
+            }
+          },
+        )
+        .subscribe();
+    })();
+
+    return () => {
+      if (channel && supabaseRef) {
+        void supabaseRef.removeChannel(channel);
+      }
+    };
+  }, [authStatus, currentUserId]);
 
   const membershipByHubId = useMemo(() => {
     const map = new Map<string, MyMembership>();
@@ -1035,18 +1133,35 @@ function DashboardPageContent() {
   const requestedHubs = useMemo(
     () => hubs.filter((hub) => {
       const m = membershipByHubId.get(hub.id);
-      return m?.status === "pending";
+      // Show pending requests AND recently accepted hubs that haven't been celebrated
+      return m?.status === "pending" || acceptedHubIds.has(hub.id);
     }),
-    [hubs, membershipByHubId],
+    [hubs, membershipByHubId, acceptedHubIds],
   );
+
+  // Handler: when user clicks an accepted hub card in the Requested section
+  const handleAcceptedHubClick = async (hub: DashboardHub) => {
+    celebratedIdsRef.current.add(hub.id);
+    setNewlyAcceptedHub({ id: hub.id, name: hub.name, href: hub.href });
+    // Fire confetti
+    setTimeout(async () => {
+      try {
+        const confetti = (await import("canvas-confetti")).default;
+        const confettiColors = ["#0C5C57", "#A9D1CA", "#E3F1EF", "#ffffff", "#1a8a82", "#FFD700", "#FFC107"];
+        confetti({ particleCount: 80, spread: 70, origin: { x: 0.5, y: 0.6 }, colors: confettiColors });
+        setTimeout(() => confetti({ particleCount: 60, spread: 90, origin: { x: 0.3, y: 0.5 }, colors: confettiColors }), 150);
+        setTimeout(() => confetti({ particleCount: 60, spread: 90, origin: { x: 0.7, y: 0.5 }, colors: confettiColors }), 300);
+        setTimeout(() => confetti({ particleCount: 40, spread: 120, origin: { x: 0.5, y: 0.4 }, colors: confettiColors }), 500);
+      } catch { /* confetti import failed, skip */ }
+      setShowCelebration(true);
+    }, 100);
+  };
 
   const visibleHubs = selectedHubView === "my-hubs"
     ? myHubs
     : selectedHubView === "joined"
       ? joinedHubs
       : requestedHubs;
-  const relevantHubIds = useMemo(() => new Set(visibleHubs.map((hub) => hub.id)), [visibleHubs]);
-
   /* All hubs the user is a member of — used for the posts feed.
      Uses membership hub IDs (same source as alerts page) so posts and
      notifications stay in sync. */
@@ -1174,8 +1289,7 @@ function DashboardPageContent() {
   const filteredDeetsItems = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
     const dedupedItems = myDeetsItems.filter((item, index, array) => array.findIndex((candidate) => candidate.id === item.id) === index);
-    const scopedItems =
-      relevantHubIds.size > 0 ? dedupedItems.filter((item) => relevantHubIds.has(item.hubId)) : dedupedItems;
+    const scopedItems = dedupedItems;
 
     return scopedItems.filter((item) => {
       const matchesFilter = selectedFeedFilter === "All" || item.type === selectedFeedFilter;
@@ -1185,7 +1299,7 @@ function DashboardPageContent() {
 
       return matchesFilter && matchesQuery;
     });
-  }, [myDeetsItems, relevantHubIds, searchQuery, selectedFeedFilter]);
+  }, [myDeetsItems, searchQuery, selectedFeedFilter]);
 
 
   if (authStatus === "checking" && searchParams.get("demo_preview") !== "1") {
@@ -1253,9 +1367,15 @@ function DashboardPageContent() {
           <div className="mt-6 space-y-6">
             <HubLauncher
               selectedView={selectedHubView}
-              onSelectView={setSelectedHubView}
+              onSelectView={(view) => {
+                setSelectedHubView(view);
+                if (view === "joined") setJoinedDot(false);
+              }}
               hubs={visibleHubs}
               requestedCount={requestedHubs.length}
+              joinedDot={joinedDot}
+              acceptedHubIds={acceptedHubIds}
+              onAcceptedClick={handleAcceptedHubClick}
             />
 
             <section className={cn(CARD, "p-4 sm:p-5")}>
@@ -1496,6 +1616,48 @@ function DashboardPageContent() {
       {reactorsDeetId && (
         <ReactorsPopup deetId={reactorsDeetId} onClose={() => setReactorsDeetId(null)} />
       )}
+
+      {/* Celebration modal — shown when a join request is accepted */}
+      {showCelebration && newlyAcceptedHub ? (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="relative mx-4 w-full max-w-sm animate-[scaleIn_300ms_ease-out] rounded-3xl bg-white p-8 text-center shadow-2xl">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#E3F1EF]">
+              <CheckCircle className="h-8 w-8 text-[#0C5C57]" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900">Congratulations!</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              <span className="font-semibold text-[#0C5C57]">{newlyAcceptedHub.name}</span> accepted your join request
+            </p>
+            <div className="mt-6 flex flex-col gap-3">
+              <Link
+                href={newlyAcceptedHub.href}
+                onClick={() => {
+                  // Remove from accepted set so it moves to joined
+                  setAcceptedHubIds((prev) => { const next = new Set(prev); next.delete(newlyAcceptedHub.id); return next; });
+                  setShowCelebration(false);
+                  setNewlyAcceptedHub(null);
+                }}
+                className="rounded-full bg-[#0C5C57] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#0a4e4a]"
+              >
+                View Hub
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  // Remove from accepted set so it moves to joined
+                  setAcceptedHubIds((prev) => { const next = new Set(prev); next.delete(newlyAcceptedHub.id); return next; });
+                  setShowCelebration(false);
+                  setNewlyAcceptedHub(null);
+                  setSelectedHubView("joined");
+                }}
+                className="text-sm font-medium text-gray-500 transition hover:text-gray-700"
+              >
+                Stay on Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

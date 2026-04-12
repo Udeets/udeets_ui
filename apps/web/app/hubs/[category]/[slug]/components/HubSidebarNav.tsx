@@ -31,6 +31,7 @@ export function HubSidebarNav({
   isCreatorAdmin,
   canAccessFullContent = true,
   templateConfig,
+  pendingCount = 0,
   onNavigate,
 }: {
   activeSection: HubTab;
@@ -38,6 +39,7 @@ export function HubSidebarNav({
   isCreatorAdmin: boolean;
   canAccessFullContent?: boolean;
   templateConfig?: HubTemplateConfig;
+  pendingCount?: number;
   onNavigate: (next: PendingNavigation) => void;
 }) {
   // Build nav items from template config, or use defaults
@@ -87,6 +89,11 @@ export function HubSidebarNav({
           >
             <Icon className="h-4 w-4 shrink-0" />
             {label}
+            {tab === "Members" && isCreatorAdmin && pendingCount > 0 ? (
+              <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                {pendingCount > 99 ? "99+" : pendingCount}
+              </span>
+            ) : null}
           </button>
         );
       })}

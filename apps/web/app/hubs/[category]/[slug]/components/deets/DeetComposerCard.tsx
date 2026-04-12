@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, Calendar, MapPin, Megaphone, Smile, BarChart3, CircleDollarSign } from "lucide-react";
+import { AlertTriangle, Camera, Calendar, ClipboardList, CreditCard, MapPin, Megaphone, Paperclip, Smile, BarChart3 } from "lucide-react";
 import { cn } from "../hubUtils";
 import type { ComposerChildFlow } from "./deetTypes";
 
@@ -26,9 +26,12 @@ export function DeetComposerCard({
     { key: "emoji", icon: Smile, label: "Emoji" },
     { key: "announcement", icon: Megaphone, label: "Announcement" },
     { key: "poll", icon: BarChart3, label: "Poll" },
+    { key: "photo", icon: Paperclip, label: "Attach File" },
     { key: "event", icon: Calendar, label: "Event" },
     { key: "checkin", icon: MapPin, label: "Check-in" },
-    { key: "money", icon: CircleDollarSign, label: "Money" },
+    { key: "alert", icon: AlertTriangle, label: "Alert" },
+    { key: "survey", icon: ClipboardList, label: "Survey" },
+    { key: "payment", icon: CreditCard, label: "Payment" },
   ];
 
   return (

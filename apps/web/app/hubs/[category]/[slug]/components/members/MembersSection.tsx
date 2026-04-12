@@ -28,6 +28,10 @@ type MembersPeopleSectionProps = {
   processingUserIds?: Set<string>;
   onApproveRequest?: (userId: string) => void;
   onRejectRequest?: (userId: string) => void;
+  currentUserId?: string;
+  onLeaveHub?: () => void;
+  onMuteNotifications?: () => void;
+  onReportHub?: () => void;
 };
 
 export function MembersSection({
@@ -55,6 +59,10 @@ export function MembersSection({
   processingUserIds,
   onApproveRequest,
   onRejectRequest,
+  currentUserId,
+  onLeaveHub,
+  onMuteNotifications,
+  onReportHub,
 }: MembersPeopleSectionProps) {
   if (activePeopleView === "admins") {
     return canAccessAdmins ? (
@@ -88,6 +96,10 @@ export function MembersSection({
       processingUserIds={processingUserIds}
       onApproveRequest={onApproveRequest}
       onRejectRequest={onRejectRequest}
+      currentUserId={currentUserId}
+      onLeaveHub={onLeaveHub}
+      onMuteNotifications={onMuteNotifications}
+      onReportHub={onReportHub}
     />
   );
 }

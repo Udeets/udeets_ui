@@ -1,5 +1,5 @@
 export type DeetFontSize = "small" | "medium" | "large";
-export type ComposerChildFlow = "photo" | "emoji" | "settings" | "quit_confirm" | "event" | "checkin" | "announcement" | "notice" | "poll" | "money";
+export type ComposerChildFlow = "photo" | "emoji" | "settings" | "quit_confirm" | "event" | "checkin" | "announcement" | "notice" | "poll" | "money" | "alert" | "survey" | "payment";
 
 export type PollSettings = {
   allowAnyoneToAdd?: boolean;
@@ -21,6 +21,7 @@ export type AttachedDeetItem = {
   files?: File[];
   options?: string[];
   pollSettings?: PollSettings;
+  eventData?: { date: string; time: string; location: string };
 };
 
 export type DeetFormattingState = {

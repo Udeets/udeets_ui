@@ -46,8 +46,10 @@ type Hub = {
   name: string;
   categorySlug: string;
   categoryLabel: string;
+  categoryEmoji: string;
   locationLabel: string;
   distanceMi: number;
+  memberCount: number;
   membersLabel: string;
   visibility: "Public" | "Private";
   description: string;
@@ -81,18 +83,22 @@ function locationLabelFor(hub: SupabaseHub) {
   return [hub.city, hub.state, hub.country].filter(Boolean).join(", ") || "";
 }
 
-function toDiscoverHub(hub: SupabaseHub): Hub {
+function toDiscoverHub(hub: SupabaseHub, memberCount?: number): Hub {
   const imageSrc = hub.dp_image_url || hub.cover_image_url || undefined;
   const vis = (hub.visibility ?? "public").toString().toLowerCase();
+  const count = memberCount ?? 0;
+  const catDef = categoryDefFor(hub.category);
 
   return {
     id: hub.id,
     name: hub.name,
     categorySlug: hub.category,
     categoryLabel: categoryLabelFor(hub.category),
+    categoryEmoji: catDef?.emoji ?? "🏘️",
     locationLabel: locationLabelFor(hub),
     distanceMi: 0,
-    membersLabel: "New hub",
+    memberCount: count,
+    membersLabel: count === 0 ? "New hub" : `${count} Member${count !== 1 ? "s" : ""}`,
     visibility: vis === "private" ? "Private" : "Public",
     description: hub.description || "A new uDeets hub is getting set up.",
     href: `/hubs/${hub.category}/${hub.slug}`,
@@ -153,8 +159,28 @@ function HubListItem({ hub }: { hub: Hub }) {
         <p className="mt-1 line-clamp-2 text-[13px] leading-snug text-gray-500">
           {hub.description}
         </p>
-        <div className="mt-2 flex items-center gap-1.5 text-[12px] text-gray-400">
-          <span>{hub.membersLabel}</span>
+        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-gray-400">
+          {/* Visibility badge */}
+          <span className="inline-flex items-center gap-1">
+            {hub.visibility === "Private" ? (
+              <svg className="h-3 w-3 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+            ) : (
+              <svg className="h-3 w-3 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M2 12h20" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10" /></svg>
+            )}
+            <span>{hub.visibility}</span>
+          </span>
+          <span>·</span>
+          {/* Category */}
+          <span className="inline-flex items-center gap-1">
+            <span className="text-[11px]">{hub.categoryEmoji}</span>
+            <span>{hub.categoryLabel}</span>
+          </span>
+          <span>·</span>
+          {/* Member count */}
+          <span className="inline-flex items-center gap-1">
+            <svg className="h-3 w-3 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+            <span>{hub.membersLabel}</span>
+          </span>
           {hub.locationLabel ? (
             <>
               <span>·</span>
@@ -240,7 +266,9 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<DisplayCategory>("All");
-  const [supabaseHubs, setSupabaseHubs] = useState<Hub[]>(() => (initialHubs ?? []).map(toDiscoverHub));
+  const [supabaseHubs, setSupabaseHubs] = useState<Hub[]>(() =>
+    (initialHubs ?? []).map((h: any) => toDiscoverHub(h, h._memberCount ?? undefined))
+  );
   const [supabaseLoadState, setSupabaseLoadState] = useState<SupabaseLoadState>(initialHubs && initialHubs.length > 0 ? "success" : "idle");
   const [supabaseLoadError, setSupabaseLoadError] = useState<string | null>(null);
 
@@ -296,7 +324,20 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
               .neq("created_by", session.user.id)
               .order("created_at", { ascending: false });
             if (!cancelled && data && !error) {
-              setSupabaseHubs(data.map(toDiscoverHub));
+              // Fetch active member counts for all discovered hubs
+              const hubIds = data.map((h) => h.id);
+              const countMap = new Map<string, number>();
+              if (hubIds.length > 0) {
+                const { data: memberRows } = await supabase
+                  .from("hub_members")
+                  .select("hub_id")
+                  .in("hub_id", hubIds)
+                  .eq("status", "active");
+                for (const row of memberRows ?? []) {
+                  countMap.set(row.hub_id, (countMap.get(row.hub_id) ?? 0) + 1);
+                }
+              }
+              setSupabaseHubs(data.map((h) => toDiscoverHub(h, countMap.get(h.id))));
               setSupabaseLoadState("success");
             }
           } catch {

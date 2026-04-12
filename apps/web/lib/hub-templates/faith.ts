@@ -7,9 +7,9 @@ export const faithConfig: HubTemplateConfig = {
   terminology: {
     hub: "Place of Worship",
     deets: "Posts",
-    members: "Congregation",
+    members: "Members",
     admin: "Leader",
-    about: "About Us",
+    about: "About",
   },
   tabs: ["About", "Posts", "Attachments", "Events", "Members"],
   postTypes: [

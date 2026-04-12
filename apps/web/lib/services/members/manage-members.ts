@@ -101,3 +101,38 @@ export async function fetchProfilesForUsers(
 
   return result;
 }
+
+/**
+ * Leave a hub — removes active membership for the user.
+ * Attempts to delete the row; if RLS prevents deletion, falls back to updating status to 'left'.
+ */
+export async function leaveHub(hubId: string, userId: string): Promise<void> {
+  const supabase = createClient();
+
+  // Attempt delete first
+  const { error: deleteError } = await supabase
+    .from("hub_members")
+    .delete()
+    .eq("hub_id", hubId)
+    .eq("user_id", userId)
+    .eq("status", "active");
+
+  // If delete succeeded, we're done
+  if (!deleteError) {
+    return;
+  }
+
+  // If delete failed (likely due to RLS), fall back to updating status to 'left'
+  const { error: updateError } = await supabase
+    .from("hub_members")
+    .update({ status: "left" })
+    .eq("hub_id", hubId)
+    .eq("user_id", userId)
+    .eq("status", "active");
+
+  if (updateError) {
+    throw new Error(
+      `Failed to leave hub: delete failed with "${deleteError.message}" and fallback update failed with "${updateError.message}"`
+    );
+  }
+}

@@ -7,9 +7,9 @@ export const ptaConfig: HubTemplateConfig = {
   terminology: {
     hub: "School Group",
     deets: "Posts",
-    members: "Parents & Staff",
+    members: "Members",
     admin: "Board Member",
-    about: "About Us",
+    about: "About",
   },
   tabs: ["About", "Posts", "Attachments", "Events", "Members"],
   postTypes: [

@@ -7,9 +7,9 @@ export const eventsConfig: HubTemplateConfig = {
   terminology: {
     hub: "Event",
     deets: "Posts",
-    members: "Attendees",
+    members: "Members",
     admin: "Organizer",
-    about: "Event Details",
+    about: "About",
   },
   tabs: ["About", "Posts", "Attachments", "Events", "Members"],
   postTypes: [

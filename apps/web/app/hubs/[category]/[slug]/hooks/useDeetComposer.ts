@@ -4,6 +4,7 @@ import type { ChangeEvent, FormEvent } from "react";
 import { startTransition, useEffect, useRef, useState } from "react";
 import { createDeet } from "@/lib/services/deets/create-deet";
 import type { DeetRecord } from "@/lib/services/deets/deet-types";
+import { createEvent } from "@/lib/services/events/create-event";
 import { uploadDeetMedia } from "@/lib/services/deets/upload-deet-media";
 import type { AttachedDeetItem, ComposerChildFlow, DeetFormattingState, DeetSettingsState } from "../components/deets/deetTypes";
 
@@ -44,6 +45,7 @@ type UseDeetComposerArgs = {
   isCreatorAdmin: boolean;
   authorName: string;
   authorAvatarSrc?: string;
+  userId: string | null;
   onDeetCreated: (deet: DeetRecord) => void;
 };
 
@@ -54,6 +56,7 @@ export function useDeetComposer({
   isCreatorAdmin,
   authorName,
   authorAvatarSrc,
+  userId,
   onDeetCreated,
 }: UseDeetComposerArgs) {
   const [composerOpen, setComposerOpen] = useState(false);
@@ -295,8 +298,31 @@ export function useDeetComposer({
           storagePaths: item.type === "photo" ? uploadedPhotoPaths : undefined,
           ...("options" in item && item.options ? { options: item.options } : {}),
           ...("pollSettings" in item && item.pollSettings ? { pollSettings: item.pollSettings } : {}),
+          ...("eventData" in item && item.eventData ? { eventData: item.eventData } : {}),
         })),
       });
+
+      // Bridge: also create an entry in the events table so it appears
+      // in the hub Events tab and the global Events page.
+      const eventAttachment = finalAttachments.find((item) => item.type === "event" && item.eventData);
+      if (eventAttachment?.eventData && userId) {
+        try {
+          await createEvent(
+            {
+              hubId,
+              title: eventAttachment.title,
+              description: sanitizedBody || undefined,
+              eventDate: eventAttachment.eventData.date,
+              startTime: eventAttachment.eventData.time || undefined,
+              location: eventAttachment.eventData.location || undefined,
+            },
+            userId,
+          );
+        } catch (eventErr) {
+          // Event deet was already created successfully — don't fail the whole post
+          console.error("[deet-submit] event bridge failed:", eventErr);
+        }
+      }
 
       resetDeetComposer();
       startTransition(() => {

@@ -34,10 +34,12 @@ function CollapsibleCard({
       className="rounded-xl border border-[var(--ud-border)]"
       style={{ backgroundColor: accentTheme?.wash }}
     >
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setIsOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-2 px-4 py-3"
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsOpen((v) => !v); } }}
+        className="flex w-full cursor-pointer items-center justify-between gap-2 px-4 py-3"
       >
         <p className="text-sm font-medium text-[var(--ud-text-muted)]">{title}</p>
         <div className="flex items-center gap-1.5">
@@ -49,7 +51,7 @@ function CollapsibleCard({
             )}
           />
         </div>
-      </button>
+      </div>
       {isOpen ? <div className="px-4 pb-4">{children}</div> : null}
     </div>
   );
@@ -95,6 +97,7 @@ export function AboutSection({
   onOpenViewer,
   customSections,
   onOpenSectionEditor,
+  onLeaveHub,
   accentTheme,
 }: {
   CategoryIcon: LucideIcon;
@@ -110,6 +113,7 @@ export function AboutSection({
   isCreatorAdmin: boolean;
   userRole: string | null;
   onMembershipAction: () => void;
+  onLeaveHub?: () => void;
   onInviteMembers: () => void;
   onOpenConnectEditor: () => void;
   onOpenSettings: () => void;
@@ -199,6 +203,19 @@ export function AboutSection({
                   </svg>
                   Requested
                 </span>
+              ) : (userRole === "member" || userRole === "admin") && onLeaveHub ? (
+                <button
+                  type="button"
+                  onClick={onLeaveHub}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-4 py-1.5 text-sm font-semibold text-red-600 transition-colors duration-150 hover:bg-red-100"
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
+                  </svg>
+                  Leave
+                </button>
               ) : !userRole ? (
                 <button
                   type="button"

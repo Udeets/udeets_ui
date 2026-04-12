@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Loader2, UserPlus, UsersRound, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { initials, cn } from "../hubUtils";
 import { SectionShell } from "../SectionShell";
 
@@ -28,6 +28,104 @@ function formatJoinDate(dateStr?: string | null): string {
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return "";
   return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+}
+
+/* ── Role label helper ── */
+function formatRole(role: string): string {
+  if (!role) return "Member";
+  // Capitalize first letter of each word
+  return role
+    .split(/[\s_-]+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
+/* ── Settings dropdown menu ── */
+function MemberSettingsMenu({
+  isOpen,
+  onClose,
+  onLeaveHub,
+  onMuteNotifications,
+  onReportHub,
+  anchorRef,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onLeaveHub?: () => void;
+  onMuteNotifications?: () => void;
+  onReportHub?: () => void;
+  anchorRef: React.RefObject<HTMLButtonElement | null>;
+}) {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node) &&
+        anchorRef.current &&
+        !anchorRef.current.contains(e.target as Node)
+      ) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [isOpen, onClose, anchorRef]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      ref={menuRef}
+      className="absolute right-0 top-full z-50 mt-1 w-48 rounded-xl border border-[var(--ud-border)] bg-white py-1 shadow-lg"
+    >
+      {onMuteNotifications ? (
+        <button
+          type="button"
+          onClick={() => { onMuteNotifications(); onClose(); }}
+          className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-[var(--ud-text-primary)] transition hover:bg-[var(--ud-bg-subtle)]"
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4 text-[var(--ud-text-muted)]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <line x1="1" y1="1" x2="23" y2="23" />
+          </svg>
+          Mute Notifications
+        </button>
+      ) : null}
+      {onReportHub ? (
+        <button
+          type="button"
+          onClick={() => { onReportHub(); onClose(); }}
+          className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-[var(--ud-text-primary)] transition hover:bg-[var(--ud-bg-subtle)]"
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4 text-[var(--ud-text-muted)]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+            <line x1="4" y1="22" x2="4" y2="15" />
+          </svg>
+          Report Hub
+        </button>
+      ) : null}
+      {onLeaveHub ? (
+        <>
+          <div className="my-1 border-t border-[var(--ud-border)]" />
+          <button
+            type="button"
+            onClick={() => { onLeaveHub(); onClose(); }}
+            className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-red-600 transition hover:bg-red-50"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Leave Hub
+          </button>
+        </>
+      ) : null}
+    </div>
+  );
 }
 
 /* ── Pending request card ── */
@@ -141,7 +239,7 @@ function MemberProfilePopup({
                   : "bg-[var(--ud-bg-subtle)] text-[var(--ud-text-muted)]"
             )}
           >
-            {member.role}
+            {formatRole(member.role)}
           </span>
 
           {/* Info rows */}
@@ -174,6 +272,90 @@ function MemberProfilePopup({
   );
 }
 
+/* ── Single member row ── */
+function MemberRow({
+  member,
+  isCurrentUser,
+  isCreatorAdmin,
+  onClickProfile,
+  onLeaveHub,
+  onMuteNotifications,
+  onReportHub,
+}: {
+  member: MemberItem;
+  isCurrentUser: boolean;
+  isCreatorAdmin: boolean;
+  onClickProfile: () => void;
+  onLeaveHub?: () => void;
+  onMuteNotifications?: () => void;
+  onReportHub?: () => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const settingsBtnRef = useRef<HTMLButtonElement>(null);
+
+  // Show settings icon for: the current user (if member, not creator), or creator/admin viewing other members
+  const showSettings = isCurrentUser && !["creator", "Creator"].includes(member.role);
+
+  return (
+    <div className="flex w-full items-center gap-3 py-3 first:pt-0 last:pb-0">
+      {/* Clickable profile area */}
+      <button
+        type="button"
+        onClick={onClickProfile}
+        className="flex min-w-0 flex-1 items-center gap-3 text-left transition-colors hover:bg-[var(--ud-bg-subtle)] rounded-lg px-2 -mx-2 py-1 -my-1"
+      >
+        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
+          {member.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={member.avatarUrl} alt={member.fullName} className="h-full w-full object-cover" />
+          ) : (
+            <span className="grid h-full w-full place-items-center text-xs font-bold text-[var(--ud-brand-primary)]">
+              {initials(member.fullName)}
+            </span>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-[var(--ud-text-primary)]">
+            {member.fullName}
+            {isCurrentUser ? <span className="ml-1 text-xs font-normal text-[var(--ud-text-muted)]">(You)</span> : null}
+          </p>
+        </div>
+      </button>
+
+      {/* Right side: Role label + settings icon */}
+      <div className="relative flex shrink-0 items-center gap-2">
+        <span className="text-xs font-medium text-[var(--ud-text-muted)]">
+          {formatRole(member.role)}
+        </span>
+        {showSettings ? (
+          <>
+            <button
+              ref={settingsBtnRef}
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
+              title="Settings"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
+            <MemberSettingsMenu
+              isOpen={menuOpen}
+              onClose={() => setMenuOpen(false)}
+              onLeaveHub={onLeaveHub}
+              onMuteNotifications={onMuteNotifications}
+              onReportHub={onReportHub}
+              anchorRef={settingsBtnRef}
+            />
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 /* ── Main Members Section ── */
 export function MembersSection({
   membersPanelMode,
@@ -184,6 +366,10 @@ export function MembersSection({
   processingUserIds,
   onApproveRequest,
   onRejectRequest,
+  currentUserId,
+  onLeaveHub,
+  onMuteNotifications,
+  onReportHub,
 }: {
   membersPanelMode: "list" | "invite";
   memberItems: MemberItem[];
@@ -193,9 +379,30 @@ export function MembersSection({
   processingUserIds?: Set<string>;
   onApproveRequest?: (userId: string) => void;
   onRejectRequest?: (userId: string) => void;
+  currentUserId?: string;
+  onLeaveHub?: () => void;
+  onMuteNotifications?: () => void;
+  onReportHub?: () => void;
 }) {
   const hasPending = isCreatorAdmin && pendingRequests && pendingRequests.length > 0;
   const [selectedMember, setSelectedMember] = useState<MemberItem | null>(null);
+
+  // Sort: creator first, then admins, then members. Current user within their role group.
+  const sortedMembers = [...memberItems].sort((a, b) => {
+    const roleOrder = (role: string) => {
+      const r = role.toLowerCase();
+      if (r === "creator") return 0;
+      if (r === "super admin" || r === "superadmin") return 1;
+      if (r === "admin") return 2;
+      return 3;
+    };
+    const diff = roleOrder(a.role) - roleOrder(b.role);
+    if (diff !== 0) return diff;
+    // Within same role, current user first
+    if (a.userId === currentUserId) return -1;
+    if (b.userId === currentUserId) return 1;
+    return 0;
+  });
 
   return (
     <>
@@ -244,7 +451,7 @@ export function MembersSection({
         ) : null}
 
         {/* Active Members List */}
-        {memberItems.length === 0 ? (
+        {sortedMembers.length === 0 ? (
           <div className="flex flex-col items-center py-12 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--ud-bg-subtle)]">
               <UsersRound className="h-5 w-5 text-[var(--ud-text-muted)]" />
@@ -258,28 +465,17 @@ export function MembersSection({
           </div>
         ) : (
           <div className="divide-y divide-[var(--ud-border)]">
-            {memberItems.map((member) => (
-              <button
+            {sortedMembers.map((member) => (
+              <MemberRow
                 key={member.userId}
-                type="button"
-                onClick={() => setSelectedMember(member)}
-                className="flex w-full items-center gap-3 py-3 text-left transition-colors hover:bg-[var(--ud-bg-subtle)] first:pt-0 last:pb-0 rounded-lg px-2 -mx-2"
-              >
-                <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
-                  {member.avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={member.avatarUrl} alt={member.fullName} className="h-full w-full object-cover" />
-                  ) : (
-                    <span className="grid h-full w-full place-items-center text-xs font-bold text-[var(--ud-brand-primary)]">
-                      {initials(member.fullName)}
-                    </span>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-[var(--ud-text-primary)]">{member.fullName}</p>
-                  <p className="text-xs text-[var(--ud-text-muted)]">{member.role}</p>
-                </div>
-              </button>
+                member={member}
+                isCurrentUser={member.userId === currentUserId}
+                isCreatorAdmin={isCreatorAdmin ?? false}
+                onClickProfile={() => setSelectedMember(member)}
+                onLeaveHub={member.userId === currentUserId && !["creator", "Creator"].includes(member.role) ? onLeaveHub : undefined}
+                onMuteNotifications={member.userId === currentUserId && !["creator", "Creator"].includes(member.role) ? onMuteNotifications : undefined}
+                onReportHub={member.userId === currentUserId && !["creator", "Creator"].includes(member.role) ? onReportHub : undefined}
+              />
             ))}
           </div>
         )}

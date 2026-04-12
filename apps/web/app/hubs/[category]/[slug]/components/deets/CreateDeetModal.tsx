@@ -3,7 +3,7 @@
 
 import type { FormEvent } from "react";
 import { useEffect, useRef } from "react";
-import { BarChart3, Calendar, Images, MapPin, Megaphone, Paperclip, Settings, Smile, X } from "lucide-react";
+import { AlertTriangle, BarChart3, Calendar, ClipboardList, CreditCard, Images, MapPin, Megaphone, Paperclip, Settings, Smile, X } from "lucide-react";
 import { BUTTON_PRIMARY, cn } from "../hubUtils";
 import type { AttachedDeetItem, ComposerChildFlow, DeetFormattingState } from "./deetTypes";
 
@@ -183,6 +183,15 @@ export function CreateDeetModal({
             </button>
             <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("checkin")} className={ACTION_BTN} title="Check-in">
               <MapPin className={ACTION_ICON_CLS} />
+            </button>
+            <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("alert")} className={ACTION_BTN} title="Alert">
+              <AlertTriangle className={ACTION_ICON_CLS} />
+            </button>
+            <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("survey")} className={ACTION_BTN} title="Survey">
+              <ClipboardList className={ACTION_ICON_CLS} />
+            </button>
+            <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("payment")} className={ACTION_BTN} title="Payment Request">
+              <CreditCard className={ACTION_ICON_CLS} />
             </button>
           </div>
 

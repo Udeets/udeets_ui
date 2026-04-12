@@ -38,7 +38,7 @@ import { SettingsSection } from "./components/sections/SettingsSection";
 import { CreateDeetModal } from "./components/deets/CreateDeetModal";
 import { DeetChildModal } from "./components/deets/DeetChildModal";
 import { DeetSettingsModal } from "./components/deets/DeetSettingsModal";
-import { AnnouncementChildContent, NoticeChildContent, PollChildContent, EventChildContent, CheckinChildContent } from "./components/deets/ComposerChildPanels";
+import { AnnouncementChildContent, NoticeChildContent, PollChildContent, EventChildContent, CheckinChildContent, AlertChildContent, SurveyChildContent, PaymentChildContent } from "./components/deets/ComposerChildPanels";
 import type { HubTab } from "./components/hubTypes";
 import { useHubConnectFlow } from "./hooks/useHubConnectFlow";
 import { useDeetComposer } from "./hooks/useDeetComposer";
@@ -431,6 +431,7 @@ export default function HubClient({
   const [memberItems, setMemberItems] = useState<Array<{ userId: string; role: string; fullName: string; avatarUrl: string | null; email: string | null; joinedAt: string | null }>>([]);
   const [pendingRequests, setPendingRequests] = useState<Array<{ userId: string; fullName: string; avatarUrl: string | null; email: string | null; requestedAt?: string | null }>>([]);
   const [processingUserIds, setProcessingUserIds] = useState<Set<string>>(new Set());
+  const [joinRequestToast, setJoinRequestToast] = useState<{ name: string; avatarUrl: string | null } | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -517,6 +518,63 @@ export default function HubClient({
     return () => { ignore = true; };
   }, [hub.id, isCreatorAdmin]);
 
+  // Real-time: listen for new join requests so the creator gets a toast notification
+  useEffect(() => {
+    if (!isCreatorAdmin) return;
+
+    let sub: { unsubscribe: () => void } | null = null;
+
+    (async () => {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+
+      sub = supabase
+        .channel(`hub-join-requests-${hub.id}`)
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "hub_members", filter: `hub_id=eq.${hub.id}` },
+          async (payload) => {
+            const row = payload.new as { user_id: string; status: string; hub_id: string };
+            if (row.status !== "pending") return;
+
+            // Fetch profile info for the toast
+            try {
+              const { fetchProfilesForUsers } = await import("@/lib/services/members/manage-members");
+              const profileMap = await fetchProfilesForUsers([row.user_id]);
+              const profile = profileMap.get(row.user_id);
+              const fullName = profile?.fullName ?? "Someone";
+              const avatarUrl = profile?.avatarUrl ?? null;
+
+              // Show toast
+              setJoinRequestToast({ name: fullName, avatarUrl });
+
+              // Add to pending list
+              setPendingRequests((prev) => {
+                if (prev.some((r) => r.userId === row.user_id)) return prev;
+                return [...prev, {
+                  userId: row.user_id,
+                  fullName,
+                  avatarUrl,
+                  email: profile?.email ?? null,
+                  requestedAt: new Date().toISOString(),
+                }];
+              });
+
+              // Auto-dismiss toast after 6 seconds
+              setTimeout(() => setJoinRequestToast(null), 6000);
+            } catch (err) {
+              console.error("[join-request-subscription]", err);
+            }
+          },
+        )
+        .subscribe();
+    })();
+
+    return () => {
+      sub?.unsubscribe();
+    };
+  }, [hub.id, isCreatorAdmin]);
+
   const handleApproveRequest = async (userId: string) => {
     setProcessingUserIds((prev) => new Set(prev).add(userId));
     try {
@@ -528,6 +586,8 @@ export default function HubClient({
       if (approved) {
         setMemberItems((prev) => [...prev, { userId: approved.userId, role: "Member", fullName: approved.fullName, avatarUrl: approved.avatarUrl, email: approved.email, joinedAt: new Date().toISOString() }]);
       }
+      // Notify header to refresh notifications (clears bell dot)
+      window.dispatchEvent(new Event("hub-members-changed"));
     } catch (error) {
       console.error("[approve]", error);
     } finally {
@@ -541,12 +601,39 @@ export default function HubClient({
       const { rejectMemberRequest } = await import("@/lib/services/members/manage-members");
       await rejectMemberRequest(hub.id, userId);
       setPendingRequests((prev) => prev.filter((r) => r.userId !== userId));
+      // Notify header to refresh notifications (clears bell dot)
+      window.dispatchEvent(new Event("hub-members-changed"));
     } catch (error) {
       console.error("[reject]", error);
     } finally {
       setProcessingUserIds((prev) => { const next = new Set(prev); next.delete(userId); return next; });
     }
   };
+
+  // ── Leave hub ──
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+
+  const handleLeaveHub = async () => {
+    if (!user?.id) return;
+    setIsLeaving(true);
+    try {
+      const { leaveHub } = await import("@/lib/services/members/manage-members");
+      await leaveHub(hub.id, user.id);
+      setIsMember(false);
+      setIsJoined(false);
+      setShowLeaveConfirm(false);
+      window.dispatchEvent(new Event("hub-members-changed"));
+      // Redirect to discover page after leaving
+      const { default: routerModule } = await import("next/navigation");
+      window.location.href = "/discover";
+    } catch (error) {
+      console.error("[leave-hub]", error);
+    } finally {
+      setIsLeaving(false);
+    }
+  };
+
   const memberRoleItems: Array<{ name: string; role: string }> = [];
   const {
     activeSection,
@@ -651,6 +738,7 @@ export default function HubClient({
     isCreatorAdmin,
     authorName: deetAuthorName,
     authorAvatarSrc: creatorAvatarSrc,
+    userId: user?.id ?? null,
     onDeetCreated: prependCreatedDeet,
   });
 
@@ -864,6 +952,10 @@ export default function HubClient({
           processingUserIds={processingUserIds}
           onApproveRequest={handleApproveRequest}
           onRejectRequest={handleRejectRequest}
+          currentUserId={user?.id}
+          onLeaveHub={isJoined && !isHubCreator ? () => setShowLeaveConfirm(true) : undefined}
+          onMuteNotifications={() => { /* TODO: implement mute */ }}
+          onReportHub={() => { /* TODO: implement report */ }}
         />
       );
     }
@@ -881,7 +973,7 @@ export default function HubClient({
           hubLocationLabel={hub.locationLabel}
           connectLinks={connectLinks}
           isCreatorAdmin={isCreatorAdmin}
-          userRole={isCreatorAdmin ? "creator" : isJoined ? "member" : isPending ? "pending" : null}
+          userRole={isHubCreator ? "creator" : isCreatorAdmin ? "admin" : isJoined ? "member" : isPending ? "pending" : null}
           onMembershipAction={handleMembershipAction}
           onInviteMembers={() => setIsInviteModalOpen(true)}
           onOpenSettings={openSettingsPanel}
@@ -910,6 +1002,7 @@ export default function HubClient({
           onOpenViewer={openViewer}
           customSections={customSections}
           onOpenSectionEditor={() => setIsSectionEditorOpen(true)}
+          onLeaveHub={isJoined && !isHubCreator ? () => setShowLeaveConfirm(true) : undefined}
           accentTheme={accentTheme}
         />
       );
@@ -1083,6 +1176,7 @@ export default function HubClient({
               isCreatorAdmin={isCreatorAdmin}
               canAccessFullContent={canAccessFullContent}
               templateConfig={hubTemplateConfig}
+              pendingCount={pendingRequests.length}
               onNavigate={requestNavigation}
             />
           </aside>
@@ -1096,6 +1190,42 @@ export default function HubClient({
 
       {!isDemoPreview ? <UdeetsFooter /> : null}
       {/* Bottom nav only shows on /dashboard, not inside hub pages */}
+
+      {/* Join Request Toast — shown to creator when someone requests to join */}
+      {joinRequestToast ? (
+        <div className="fixed right-4 top-20 z-[250] animate-[slideDown_300ms_ease-out] rounded-2xl border border-amber-200 bg-white px-5 py-4 shadow-xl sm:right-8">
+          <div className="flex items-center gap-3">
+            {joinRequestToast.avatarUrl ? (
+              <img src={joinRequestToast.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
+            ) : (
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-700">
+                {joinRequestToast.name.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div>
+              <p className="text-sm font-semibold text-gray-900">{joinRequestToast.name}</p>
+              <p className="text-xs text-gray-500">wants to join your hub</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setJoinRequestToast(null);
+                requestNavigation({ tab: "Members", panel: "members" });
+              }}
+              className="ml-4 rounded-full bg-[var(--ud-brand-primary)] px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
+            >
+              Review
+            </button>
+            <button
+              type="button"
+              onClick={() => setJoinRequestToast(null)}
+              className="ml-1 rounded-full p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12" /></svg>
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {/* Join Hub Confirmation Modal */}
       {showJoinConfirm ? (
@@ -1141,6 +1271,42 @@ export default function HubClient({
                 onClick={() => setShowJoinConfirm(false)}
               >
                 {isPending ? "Got it" : "Stay on About"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Leave Hub Confirmation Modal */}
+      {showLeaveConfirm ? (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+              <svg viewBox="0 0 24 24" className="h-7 w-7 text-red-500" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-gray-900">Leave {hubName}?</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Are you sure you want to leave this hub? You&apos;ll lose access to all content and will need to rejoin.
+            </p>
+            <div className="mt-6 flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={handleLeaveHub}
+                disabled={isLeaving}
+                className="w-full rounded-full bg-red-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-red-600 disabled:opacity-50"
+              >
+                {isLeaving ? "Leaving..." : "Leave Hub"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowLeaveConfirm(false)}
+                className="text-sm font-medium text-gray-500 transition hover:text-gray-700"
+              >
+                Cancel
               </button>
             </div>
           </div>
@@ -1460,7 +1626,7 @@ export default function HubClient({
                 <DeetChildModal title="Add Event" onClose={() => setActiveComposerChild(null)}>
                   <EventChildContent
                     onAttach={(title, date, time, location) => {
-                      attachDeetItem({ type: "event", title, detail: `${date}${time ? ` at ${time}` : ""}${location ? ` · ${location}` : ""}` });
+                      attachDeetItem({ type: "event", title, detail: `${date}${time ? ` at ${time}` : ""}${location ? ` · ${location}` : ""}`, eventData: { date, time, location } });
                       setDeetSettings((prev) => ({ ...prev, postType: "news" as import("./components/deets/deetTypes").DeetPostType }));
                       setActiveComposerChild(null);
                     }}
@@ -1475,6 +1641,51 @@ export default function HubClient({
                   <CheckinChildContent
                     onAttach={(placeName, address) => {
                       attachDeetItem({ type: "checkin", title: `📍 ${placeName}`, detail: address || undefined });
+                      setActiveComposerChild(null);
+                    }}
+                    onCancel={() => setActiveComposerChild(null)}
+                  />
+                </DeetChildModal>
+              ) : null}
+
+              {/* ── Alert modal ── */}
+              {activeComposerChild === "alert" ? (
+                <DeetChildModal title="Alert" onClose={() => setActiveComposerChild(null)}>
+                  <AlertChildContent
+                    onAttach={(title, body, level) => {
+                      attachDeetItem({ type: "alert", title, detail: `[${level.toUpperCase()}] ${body}` });
+                      setDeetSettings((prev) => ({ ...prev, postType: "hazard" as import("./components/deets/deetTypes").DeetPostType }));
+                      setActiveComposerChild(null);
+                    }}
+                    onCancel={() => setActiveComposerChild(null)}
+                  />
+                </DeetChildModal>
+              ) : null}
+
+              {/* ── Survey modal ── */}
+              {activeComposerChild === "survey" ? (
+                <DeetChildModal title="Survey" onClose={() => setActiveComposerChild(null)}>
+                  <SurveyChildContent
+                    onAttach={(title, questions) => {
+                      attachDeetItem({
+                        type: "survey",
+                        title,
+                        detail: `${questions.length} question${questions.length > 1 ? "s" : ""}`,
+                        options: questions.map((q) => `${q.question}: ${q.options.filter((o) => o.trim()).join(", ")}`),
+                      });
+                      setActiveComposerChild(null);
+                    }}
+                    onCancel={() => setActiveComposerChild(null)}
+                  />
+                </DeetChildModal>
+              ) : null}
+
+              {/* ── Payment modal ── */}
+              {activeComposerChild === "payment" ? (
+                <DeetChildModal title="Payment Request" onClose={() => setActiveComposerChild(null)}>
+                  <PaymentChildContent
+                    onAttach={(title, amount, paymentNote) => {
+                      attachDeetItem({ type: "payment", title, detail: `$${amount}${paymentNote ? ` — ${paymentNote}` : ""}` });
                       setActiveComposerChild(null);
                     }}
                     onCancel={() => setActiveComposerChild(null)}

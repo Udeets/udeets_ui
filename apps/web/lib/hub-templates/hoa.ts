@@ -7,9 +7,9 @@ export const hoaConfig: HubTemplateConfig = {
   terminology: {
     hub: "Community",
     deets: "Posts",
-    members: "Residents",
+    members: "Members",
     admin: "Board Member",
-    about: "Community Info",
+    about: "About",
   },
   tabs: ["About", "Posts", "Attachments", "Events", "Members"],
   postTypes: [

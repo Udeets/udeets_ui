@@ -9,7 +9,7 @@ export const sportsConfig: HubTemplateConfig = {
     deets: "Posts",
     members: "Members",
     admin: "Coach / Admin",
-    about: "About Us",
+    about: "About",
   },
   tabs: ["About", "Posts", "Attachments", "Events", "Members"],
   postTypes: [

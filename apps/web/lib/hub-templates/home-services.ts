@@ -7,9 +7,9 @@ export const homeServicesConfig: HubTemplateConfig = {
   terminology: {
     hub: "Service Provider",
     deets: "Posts",
-    members: "Clients",
+    members: "Members",
     admin: "Owner",
-    about: "About Us",
+    about: "About",
   },
   tabs: ["About", "Posts", "Attachments", "Events", "Members"],
   postTypes: [

@@ -7,9 +7,9 @@ export const foodDiningConfig: HubTemplateConfig = {
   terminology: {
     hub: "Restaurant / Kitchen / Food Truck",
     deets: "Posts",
-    members: "Followers",
+    members: "Members",
     admin: "Owner / Manager",
-    about: "Our Story",
+    about: "About",
   },
   tabs: ["About", "Posts", "Attachments", "Events", "Members"],
   postTypes: [

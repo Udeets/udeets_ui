@@ -7,9 +7,9 @@ export const retailConfig: HubTemplateConfig = {
   terminology: {
     hub: "Store",
     deets: "Posts",
-    members: "Customers",
+    members: "Members",
     admin: "Owner / Manager",
-    about: "About Us",
+    about: "About",
   },
   tabs: ["About", "Posts", "Attachments", "Events", "Members"],
   postTypes: [
