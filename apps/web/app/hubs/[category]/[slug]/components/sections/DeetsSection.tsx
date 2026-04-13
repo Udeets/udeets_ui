@@ -10,8 +10,6 @@ import {
   CircleDollarSign,
   Eye,
   Loader2,
-  List,
-  LayoutGrid,
   MapPin,
   Megaphone,
   MessageSquare,
@@ -29,7 +27,7 @@ import { DeetComposerCard } from "../deets/DeetComposerCard";
 import { ImageWithFallback, cn, initials } from "../hubUtils";
 import { SectionShell } from "../SectionShell";
 import type { ComposerChildFlow } from "../deets/deetTypes";
-import type { DeetComment } from "@/lib/services/deets/deet-interactions";
+import type { DeetComment, DeetViewer } from "@/lib/services/deets/deet-interactions";
 import { deleteDeet } from "@/lib/services/deets/delete-deet";
 
 function sanitizeHtmlContent(html: string): string {
@@ -634,6 +632,12 @@ export function DeetsSection({
   commentError,
   onToggleComments,
   onSubmitComment,
+  onEditComment,
+  onDeleteComment,
+  viewersDeetId,
+  viewersByDeetId,
+  viewersLoading,
+  onToggleViewers,
 }: {
   normalizedPostSearch: string;
   postSearchQuery: string;
@@ -678,11 +682,17 @@ export function DeetsSection({
   commentError?: string | null;
   onToggleComments?: (deetId: string) => void;
   onSubmitComment?: (deetId: string, body: string) => Promise<{ success: boolean }> | void;
+  onEditComment?: (commentId: string, deetId: string, newBody: string) => Promise<{ success: boolean }> | void;
+  onDeleteComment?: (commentId: string, deetId: string) => Promise<{ success: boolean }> | void;
+  viewersDeetId?: string | null;
+  viewersByDeetId?: Record<string, DeetViewer[]>;
+  viewersLoading?: boolean;
+  onToggleViewers?: (deetId: string) => void;
 }) {
   const [sortOption, setSortOption] = useState<SortOption>("Newest");
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [activeFilterPill, setActiveFilterPill] = useState<string>("All");
-  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+
   const [openMenuDeetId, setOpenMenuDeetId] = useState<string | null>(null);
   const [isNoticeExpanded, setIsNoticeExpanded] = useState(false);
   const [copiedDeetId, setCopiedDeetId] = useState<string | null>(null);
@@ -806,28 +816,6 @@ export function DeetsSection({
         </div>
       }
     >
-      {filteredFeedItems.length === 0 && !showDemoPostedText && !showDemoPoll ? (
-        <div className="w-full space-y-3">
-          {composerCard}
-          <div className="grid min-h-[280px] w-full place-items-center rounded-xl border border-dashed border-[var(--ud-border)] bg-[var(--ud-bg-subtle)] p-6 text-center">
-            <div className="w-full">
-              <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-[var(--ud-brand-light)] text-[var(--ud-brand-primary)]">
-                <Megaphone className="h-6 w-6 stroke-[1.5]" />
-              </div>
-              <h3 className="mt-5 text-xl font-semibold tracking-tight text-[var(--ud-text-primary)]">
-                {normalizedPostSearch ? "No matching deets" : "This deets stream is ready"}
-              </h3>
-              <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-[var(--ud-text-muted)]">
-                {normalizedPostSearch
-                  ? "Try another keyword or filter."
-                  : isCreatorAdmin
-                    ? "Kick things off with a welcome note, event reminder, or a first shared photo."
-                    : "Check back soon for updates and conversations."}
-              </p>
-            </div>
-          </div>
-        </div>
-      ) : (
         <div className="w-full space-y-3">
           {composerCard}
 
@@ -906,30 +894,6 @@ export function DeetsSection({
                   ))}
                 </div>
               )}
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setViewMode("list")}
-                className={cn(
-                  "inline-flex h-8 w-8 items-center justify-center rounded-lg transition",
-                  viewMode === "list" ? "text-[var(--ud-text-primary)]" : "text-[var(--ud-text-muted)] hover:text-[var(--ud-text-secondary)]"
-                )}
-                aria-label="List view"
-              >
-                <List className="h-[18px] w-[18px] stroke-[1.5]" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("grid")}
-                className={cn(
-                  "inline-flex h-8 w-8 items-center justify-center rounded-lg transition",
-                  viewMode === "grid" ? "text-[var(--ud-text-primary)]" : "text-[var(--ud-text-muted)] hover:text-[var(--ud-text-secondary)]"
-                )}
-                aria-label="Grid view"
-              >
-                <LayoutGrid className="h-[18px] w-[18px] stroke-[1.5]" />
-              </button>
             </div>
           </div>
 
@@ -1011,6 +975,47 @@ export function DeetsSection({
 
           {/* ── Feed items ── */}
           <section className="w-full space-y-3">
+            {filteredFeedItems.length === 0 && !showDemoPostedText && !showDemoPoll && (
+              <div className="grid min-h-[220px] w-full place-items-center rounded-xl border border-dashed border-[var(--ud-border)] bg-[var(--ud-bg-subtle)] p-6 text-center">
+                <div className="w-full">
+                  <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[var(--ud-brand-light)] text-[var(--ud-brand-primary)]">
+                    {feedFilter === "Events" ? <Calendar className="h-5 w-5 stroke-[1.5]" />
+                      : feedFilter === "Photos" ? <Eye className="h-5 w-5 stroke-[1.5]" />
+                      : feedFilter === "Polls" ? <BarChart3 className="h-5 w-5 stroke-[1.5]" />
+                      : feedFilter === "Announcements" ? <Megaphone className="h-5 w-5 stroke-[1.5]" />
+                      : <Megaphone className="h-5 w-5 stroke-[1.5]" />}
+                  </div>
+                  <h3 className="mt-4 text-base font-semibold tracking-tight text-[var(--ud-text-primary)]">
+                    {normalizedPostSearch
+                      ? "No matching deets"
+                      : feedFilter === "Events"
+                        ? "No events created yet"
+                        : feedFilter === "Photos"
+                          ? "No photos updated yet"
+                          : feedFilter === "Polls"
+                            ? "No polls created yet"
+                            : feedFilter === "Announcements"
+                              ? "No announcements yet"
+                              : "This deets stream is ready"}
+                  </h3>
+                  <p className="mx-auto mt-1.5 max-w-xs text-sm leading-relaxed text-[var(--ud-text-muted)]">
+                    {normalizedPostSearch
+                      ? "Try another keyword or filter."
+                      : feedFilter === "Events"
+                        ? isCreatorAdmin ? "Create your first event to get things started." : "Check back soon for upcoming events."
+                        : feedFilter === "Photos"
+                          ? isCreatorAdmin ? "Share your first photo with the community." : "Check back soon for shared photos."
+                          : feedFilter === "Polls"
+                            ? isCreatorAdmin ? "Create a poll to gather community feedback." : "Check back soon for new polls."
+                            : feedFilter === "Announcements"
+                              ? isCreatorAdmin ? "Post an announcement to keep everyone in the loop." : "Check back soon for announcements."
+                              : isCreatorAdmin
+                                ? "Kick things off with a welcome note, event reminder, or a first shared photo."
+                                : "Check back soon for updates and conversations."}
+                  </p>
+                </div>
+              </div>
+            )}
             {filteredFeedItems.map((item) => (
               <article
                 id={item.id}
@@ -1163,12 +1168,65 @@ export function DeetsSection({
                   </button>
                 ) : null}
 
-                {/* ── Views count (Displayed this below content, above action bar) ── */}
-                <div className="flex justify-end px-4 pt-2">
-                  <div className="inline-flex items-center gap-1 text-xs text-[var(--ud-text-muted)]">
+                {/* ── Views count (clickable to show who viewed) ── */}
+                <div className="relative flex justify-end px-4 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => onToggleViewers?.(item.id)}
+                    className="inline-flex items-center gap-1 text-xs text-[var(--ud-text-muted)] transition hover:text-[var(--ud-text-secondary)]"
+                    title="See who viewed"
+                  >
                     <Eye className="h-3.5 w-3.5 stroke-[1.5]" />
                     <span>{(viewCountOverrides?.[item.id] != null ? item.views + viewCountOverrides[item.id] : item.views)}</span>
-                  </div>
+                  </button>
+
+                  {/* Viewers dropdown */}
+                  {viewersDeetId === item.id && (
+                    <div className="absolute right-4 top-8 z-30 w-64 rounded-xl border border-[var(--ud-border)] bg-[var(--ud-bg-card)] shadow-xl">
+                      <div className="flex items-center justify-between border-b border-[var(--ud-border-subtle)] px-3 py-2">
+                        <span className="text-xs font-semibold text-[var(--ud-text-primary)]">Viewed by</span>
+                        <button
+                          type="button"
+                          onClick={() => onToggleViewers?.(item.id)}
+                          className="text-xs text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]"
+                        >
+                          Close
+                        </button>
+                      </div>
+                      <div className="max-h-[200px] overflow-y-auto">
+                        {viewersLoading ? (
+                          <div className="flex items-center justify-center py-4">
+                            <Loader2 className="h-4 w-4 animate-spin text-[var(--ud-text-muted)]" />
+                          </div>
+                        ) : (viewersByDeetId?.[item.id] ?? []).length > 0 ? (
+                          <div className="divide-y divide-[var(--ud-border-subtle)]">
+                            {(viewersByDeetId?.[item.id] ?? []).map((viewer) => (
+                              <div key={viewer.userId} className="flex items-center gap-2.5 px-3 py-2">
+                                <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
+                                  <ImageWithFallback
+                                    src={viewer.avatar || ""}
+                                    sources={viewer.avatar ? [viewer.avatar] : []}
+                                    alt={viewer.name}
+                                    className="h-full w-full object-cover"
+                                    fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-[9px] font-bold text-[var(--ud-brand-primary)]"
+                                    fallback={initials(viewer.name)}
+                                  />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <span className="block truncate text-xs font-medium text-[var(--ud-text-primary)]">{viewer.name}</span>
+                                  <span className="text-[10px] text-[var(--ud-text-muted)]">
+                                    {viewer.viewedAt ? new Date(viewer.viewedAt).toLocaleDateString() : ""}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="px-3 py-4 text-center text-xs text-[var(--ud-text-muted)]">No views yet</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* ── Action bar: React + Comment + Share ── */}
@@ -1224,7 +1282,10 @@ export function DeetsSection({
                     isLoading={commentLoadingDeetIds?.has(item.id) ?? false}
                     isSubmitting={commentSubmittingDeetId === item.id}
                     error={commentError}
+                    currentUserId={currentUserId}
                     onSubmitComment={onSubmitComment}
+                    onEditComment={onEditComment}
+                    onDeleteComment={onDeleteComment}
                     userAvatarSrc={userAvatarSrc}
                     userName={userName}
                   />
@@ -1233,7 +1294,6 @@ export function DeetsSection({
             ))}
           </section>
         </div>
-      )}
 
       {/* ── Delete confirmation modal ── */}
       {confirmDeleteDeetId && (
@@ -1292,7 +1352,10 @@ function DeetCommentsSection({
   isLoading,
   isSubmitting,
   error,
+  currentUserId,
   onSubmitComment,
+  onEditComment,
+  onDeleteComment,
   userAvatarSrc,
   userName,
 }: {
@@ -1301,25 +1364,83 @@ function DeetCommentsSection({
   isLoading: boolean;
   isSubmitting: boolean;
   error?: string | null;
+  currentUserId?: string;
   onSubmitComment?: (deetId: string, body: string) => Promise<{ success: boolean }> | void;
+  onEditComment?: (commentId: string, deetId: string, newBody: string) => Promise<{ success: boolean }> | void;
+  onDeleteComment?: (commentId: string, deetId: string) => Promise<{ success: boolean }> | void;
   userAvatarSrc?: string;
   userName?: string;
 }) {
   const [commentText, setCommentText] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+  const [menuOpenCommentId, setMenuOpenCommentId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!menuOpenCommentId) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpenCommentId(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpenCommentId]);
+
+  // Focus edit input when editing starts
+  useEffect(() => {
+    if (editingCommentId) editInputRef.current?.focus();
+  }, [editingCommentId]);
 
   const handleSubmit = async () => {
     const trimmed = commentText.trim();
     if (!trimmed || isSubmitting) return;
     setLocalError(null);
-    // Optimistically keep the text until we know it succeeded
     const result = await onSubmitComment?.(deetId, trimmed);
     if (result && result.success) {
       setCommentText("");
     } else if (result && !result.success) {
       setLocalError("Couldn't post. Tap send to retry.");
     }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingCommentId) return;
+    const trimmed = editText.trim();
+    if (!trimmed) return;
+    const result = await onEditComment?.(editingCommentId, deetId, trimmed);
+    if (result && result.success) {
+      setEditingCommentId(null);
+      setEditText("");
+    } else if (result && !result.success) {
+      setLocalError("Couldn't save edit. Try again.");
+    }
+  };
+
+  const handleDelete = async (commentId: string) => {
+    const result = await onDeleteComment?.(commentId, deetId);
+    if (result && result.success) {
+      setConfirmDeleteId(null);
+    } else if (result && !result.success) {
+      setLocalError("Couldn't delete. Try again.");
+    }
+  };
+
+  const startEdit = (comment: DeetComment) => {
+    setEditingCommentId(comment.id);
+    setEditText(comment.body);
+    setMenuOpenCommentId(null);
+  };
+
+  const startDelete = (commentId: string) => {
+    setConfirmDeleteId(commentId);
+    setMenuOpenCommentId(null);
   };
 
   const displayError = localError || error;
@@ -1333,27 +1454,114 @@ function DeetCommentsSection({
         </div>
       ) : comments.length > 0 ? (
         <div className="space-y-0 divide-y divide-[var(--ud-border-subtle)]">
-          {comments.map((comment) => (
-            <div key={comment.id} className="flex items-start gap-2.5 px-4 py-3">
-              <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
-                <ImageWithFallback
-                  src={comment.authorAvatar || ""}
-                  sources={comment.authorAvatar ? [comment.authorAvatar] : []}
-                  alt={comment.authorName ?? "User"}
-                  className="h-full w-full object-cover"
-                  fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-[10px] font-bold text-[var(--ud-brand-primary)]"
-                  fallback={initials(comment.authorName ?? "User")}
-                />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-sm font-semibold text-[var(--ud-text-primary)]">{comment.authorName ?? "User"}</span>
-                  <span className="text-[11px] text-[var(--ud-text-muted)]">{comment.createdAt ? new Date(comment.createdAt).toLocaleDateString() : ""}</span>
+          {comments.map((comment) => {
+            const isOwn = currentUserId && comment.userId === currentUserId;
+            const isEditing = editingCommentId === comment.id;
+            const isConfirmingDelete = confirmDeleteId === comment.id;
+
+            return (
+              <div key={comment.id} className="group relative flex items-start gap-2.5 px-4 py-3">
+                <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
+                  <ImageWithFallback
+                    src={comment.authorAvatar || ""}
+                    sources={comment.authorAvatar ? [comment.authorAvatar] : []}
+                    alt={comment.authorName ?? "User"}
+                    className="h-full w-full object-cover"
+                    fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-[10px] font-bold text-[var(--ud-brand-primary)]"
+                    fallback={initials(comment.authorName ?? "User")}
+                  />
                 </div>
-                <p className="mt-0.5 text-sm leading-relaxed text-[var(--ud-text-secondary)]">{comment.body}</p>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-sm font-semibold text-[var(--ud-text-primary)]">{comment.authorName ?? "User"}</span>
+                    <span className="text-[11px] text-[var(--ud-text-muted)]">{comment.createdAt ? new Date(comment.createdAt).toLocaleDateString() : ""}</span>
+                  </div>
+
+                  {isEditing ? (
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <input
+                        ref={editInputRef}
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") { e.preventDefault(); handleSaveEdit(); }
+                          if (e.key === "Escape") { setEditingCommentId(null); setEditText(""); }
+                        }}
+                        className="h-8 flex-1 rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-2.5 text-sm text-[var(--ud-text-primary)] outline-none focus:border-[var(--ud-brand-primary)]"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSaveEdit}
+                        disabled={!editText.trim()}
+                        className="rounded-lg bg-[var(--ud-brand-primary)] px-2.5 py-1 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setEditingCommentId(null); setEditText(""); }}
+                        className="rounded-lg px-2 py-1 text-xs text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : isConfirmingDelete ? (
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="text-xs text-red-500">Delete this comment?</span>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(comment.id)}
+                        className="rounded-lg bg-red-500 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-600"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="rounded-lg px-2 py-1 text-xs text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="mt-0.5 text-sm leading-relaxed text-[var(--ud-text-secondary)]">{comment.body}</p>
+                  )}
+                </div>
+
+                {/* Three-dot menu for own comments */}
+                {isOwn && !isEditing && !isConfirmingDelete && (
+                  <div className="relative" ref={menuOpenCommentId === comment.id ? menuRef : undefined}>
+                    <button
+                      type="button"
+                      onClick={() => setMenuOpenCommentId((prev) => (prev === comment.id ? null : comment.id))}
+                      className="invisible rounded-full p-1 text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-secondary)] group-hover:visible"
+                      title="More options"
+                    >
+                      <MoreVertical className="h-3.5 w-3.5" />
+                    </button>
+                    {menuOpenCommentId === comment.id && (
+                      <div className="absolute right-0 top-7 z-20 min-w-[120px] rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] py-1 shadow-lg">
+                        <button
+                          type="button"
+                          onClick={() => startEdit(comment)}
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-[var(--ud-text-primary)] hover:bg-[var(--ud-bg-subtle)]"
+                        >
+                          <Pencil className="h-3.5 w-3.5" /> Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => startDelete(comment.id)}
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-red-500 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" /> Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <p className="px-4 py-3 text-center text-xs text-[var(--ud-text-muted)]">No comments yet</p>

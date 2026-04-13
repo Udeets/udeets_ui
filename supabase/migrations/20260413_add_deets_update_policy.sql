@@ -12,3 +12,15 @@ for update
 to authenticated
 using (auth.uid() is not null)
 with check (auth.uid() is not null);
+
+-- ============================================================
+-- Allow users to edit their own comments
+-- ============================================================
+
+drop policy if exists "Users can update own comments" on public.deet_comments;
+create policy "Users can update own comments"
+on public.deet_comments
+for update
+to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);

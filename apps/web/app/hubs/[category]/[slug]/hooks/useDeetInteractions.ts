@@ -1,7 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toggleDeetLike, getDeetLikeStatus, addDeetComment, listDeetComments, incrementDeetView, type DeetComment } from "@/lib/services/deets/deet-interactions";
+import {
+  toggleDeetLike,
+  getDeetLikeStatus,
+  addDeetComment,
+  listDeetComments,
+  editDeetComment,
+  deleteDeetComment,
+  syncDeetCommentCounts,
+  incrementDeetView,
+  listDeetViewers,
+  type DeetComment,
+  type DeetViewer,
+} from "@/lib/services/deets/deet-interactions";
 import type { HubContent } from "@/lib/hub-content";
 
 /** Wraps a promise with a timeout so it never hangs indefinitely. */
@@ -33,8 +45,36 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
   const loadedCommentDeetIds = useRef<Set<string>>(new Set());
   const loadingCommentDeetIds = useRef<Set<string>>(new Set());
   const submittingRef = useRef(false);
+  const commentCountsSynced = useRef(false);
 
-  // Fetch like status when feed items change
+  // ── Sync comment counts on first load ─────────────────────────────
+  // The denormalized comment_count on deets may be stale (especially
+  // for deets created before the UPDATE RLS policy was added). This
+  // heals the counts by reading the actual deet_comments rows.
+  useEffect(() => {
+    if (commentCountsSynced.current) return;
+    const deetIds = feedItems.map((item) => item.id).filter(Boolean);
+    if (!deetIds.length) return;
+    commentCountsSynced.current = true;
+
+    void syncDeetCommentCounts(deetIds)
+      .then((counts) => {
+        // Build overrides: difference between actual count and what feed item shows
+        const overrides: Record<string, number> = {};
+        for (const item of feedItems) {
+          const actual = counts[item.id];
+          if (actual != null && actual !== item.comments) {
+            overrides[item.id] = actual - item.comments;
+          }
+        }
+        if (Object.keys(overrides).length > 0) {
+          setCommentCountOverrides((prev) => ({ ...prev, ...overrides }));
+        }
+      })
+      .catch(() => { /* non-critical */ });
+  }, [feedItems]);
+
+  // ── Fetch like status when feed items change ──────────────────────
   useEffect(() => {
     const deetIds = feedItems.map((item) => item.id).filter(Boolean);
     if (!deetIds.length) return;
@@ -97,7 +137,6 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
   // ── Comments: Toggle panel + load ──────────────────────────────────
 
   const handleToggleComments = useCallback(async (deetId: string) => {
-    // Clear any previous error
     setCommentError(null);
 
     // Toggle panel open/close
@@ -118,7 +157,6 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
       setCommentsByDeetId((prev) => ({ ...prev, [deetId]: comments }));
     } catch (error) {
       console.error("Failed to load comments:", error);
-      // Set empty array so UI shows "No comments yet" instead of spinner
       setCommentsByDeetId((prev) => ({ ...prev, [deetId]: prev[deetId] ?? [] }));
       setCommentError("Couldn't load comments. Try again.");
     } finally {
@@ -134,7 +172,6 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
   // ── Comments: Submit ───────────────────────────────────────────────
 
   const handleSubmitComment = useCallback(async (deetId: string, body: string): Promise<{ success: boolean }> => {
-    // Guard against double-submit using ref (synchronous, no stale closure)
     if (submittingRef.current) return { success: false };
     submittingRef.current = true;
     setCommentSubmittingDeetId(deetId);
@@ -146,7 +183,6 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
         ...prev,
         [deetId]: [...(prev[deetId] ?? []), newComment],
       }));
-      // Update comment count so the badge refreshes immediately
       setCommentCountOverrides((prev) => ({
         ...prev,
         [deetId]: (prev[deetId] ?? 0) + 1,
@@ -159,6 +195,55 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
     } finally {
       submittingRef.current = false;
       setCommentSubmittingDeetId(null);
+    }
+  }, []);
+
+  // ── Comments: Edit ─────────────────────────────────────────────────
+
+  const handleEditComment = useCallback(async (commentId: string, deetId: string, newBody: string): Promise<{ success: boolean }> => {
+    setCommentError(null);
+    try {
+      await withTimeout(editDeetComment(commentId, newBody), 10_000, "Edit comment");
+      // Update local state
+      setCommentsByDeetId((prev) => {
+        const existing = prev[deetId] ?? [];
+        return {
+          ...prev,
+          [deetId]: existing.map((c) => (c.id === commentId ? { ...c, body: newBody.trim() } : c)),
+        };
+      });
+      return { success: true };
+    } catch (error) {
+      console.error("Failed to edit comment:", error);
+      setCommentError("Couldn't edit comment. Please try again.");
+      return { success: false };
+    }
+  }, []);
+
+  // ── Comments: Delete ───────────────────────────────────────────────
+
+  const handleDeleteComment = useCallback(async (commentId: string, deetId: string): Promise<{ success: boolean }> => {
+    setCommentError(null);
+    try {
+      await withTimeout(deleteDeetComment(commentId, deetId), 10_000, "Delete comment");
+      // Remove from local state
+      setCommentsByDeetId((prev) => {
+        const existing = prev[deetId] ?? [];
+        return {
+          ...prev,
+          [deetId]: existing.filter((c) => c.id !== commentId),
+        };
+      });
+      // Decrement count
+      setCommentCountOverrides((prev) => ({
+        ...prev,
+        [deetId]: (prev[deetId] ?? 0) - 1,
+      }));
+      return { success: true };
+    } catch (error) {
+      console.error("Failed to delete comment:", error);
+      setCommentError("Couldn't delete comment. Please try again.");
+      return { success: false };
     }
   }, []);
 
@@ -187,6 +272,33 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
     }
   }, [feedItems, handleIncrementView]);
 
+  // ── Viewers list ───────────────────────────────────────────────────
+
+  const [viewersDeetId, setViewersDeetId] = useState<string | null>(null);
+  const [viewersByDeetId, setViewersByDeetId] = useState<Record<string, DeetViewer[]>>({});
+  const [viewersLoading, setViewersLoading] = useState(false);
+
+  const handleToggleViewers = useCallback(async (deetId: string) => {
+    if (viewersDeetId === deetId) {
+      setViewersDeetId(null);
+      return;
+    }
+    setViewersDeetId(deetId);
+
+    // Load if not cached
+    if (viewersByDeetId[deetId]) return;
+
+    setViewersLoading(true);
+    try {
+      const viewers = await withTimeout(listDeetViewers(deetId), 10_000, "Load viewers");
+      setViewersByDeetId((prev) => ({ ...prev, [deetId]: viewers }));
+    } catch {
+      setViewersByDeetId((prev) => ({ ...prev, [deetId]: [] }));
+    } finally {
+      setViewersLoading(false);
+    }
+  }, [viewersDeetId, viewersByDeetId]);
+
   return {
     likedDeetIds,
     likingDeetIds,
@@ -202,5 +314,11 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
     commentError,
     handleToggleComments,
     handleSubmitComment,
+    handleEditComment,
+    handleDeleteComment,
+    viewersDeetId,
+    viewersByDeetId,
+    viewersLoading,
+    handleToggleViewers,
   };
 }

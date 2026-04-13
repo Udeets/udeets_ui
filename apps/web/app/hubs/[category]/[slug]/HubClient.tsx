@@ -421,6 +421,12 @@ export default function HubClient({
     commentError,
     handleToggleComments,
     handleSubmitComment,
+    handleEditComment,
+    handleDeleteComment,
+    viewersDeetId,
+    viewersByDeetId,
+    viewersLoading,
+    handleToggleViewers,
   } = useDeetInteractions(allFeedItems);
   const feedItemCount = allFeedItems.length;
   const totalEngagement = allFeedItems.reduce((sum, item) => sum + item.likes + item.comments, 0);
@@ -1091,6 +1097,12 @@ export default function HubClient({
         commentError={commentError}
         onToggleComments={handleToggleComments}
         onSubmitComment={handleSubmitComment}
+        onEditComment={handleEditComment}
+        onDeleteComment={handleDeleteComment}
+        viewersDeetId={viewersDeetId}
+        viewersByDeetId={viewersByDeetId}
+        viewersLoading={viewersLoading}
+        onToggleViewers={handleToggleViewers}
       />
     );
   };
