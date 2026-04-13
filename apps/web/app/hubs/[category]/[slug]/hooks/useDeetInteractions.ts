@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   toggleDeetLike,
   getDeetLikeStatus,
+  getDeetReactorPreviews,
+  listDeetReactors,
   addDeetComment,
   listDeetComments,
   editDeetComment,
@@ -13,6 +15,7 @@ import {
   listDeetViewers,
   type DeetComment,
   type DeetViewer,
+  type DeetReactor,
 } from "@/lib/services/deets/deet-interactions";
 import type { HubContent } from "@/lib/hub-content";
 
@@ -32,6 +35,13 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
   const [likeCountOverrides, setLikeCountOverrides] = useState<Record<string, number>>({});
   const viewedDeetIds = useRef<Set<string>>(new Set());
   const [viewCountOverrides, setViewCountOverrides] = useState<Record<string, number>>({});
+
+  // Reactors preview (avatars + emoji for the row below content)
+  const [reactorsByDeetId, setReactorsByDeetId] = useState<Record<string, DeetReactor[]>>({});
+  // Reactions modal
+  const [reactionsModalDeetId, setReactionsModalDeetId] = useState<string | null>(null);
+  const [reactionsModalData, setReactionsModalData] = useState<DeetReactor[]>([]);
+  const [reactionsModalLoading, setReactionsModalLoading] = useState(false);
 
   // Comment state
   const [expandedCommentDeetId, setExpandedCommentDeetId] = useState<string | null>(null);
@@ -83,7 +93,10 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
 
     async function fetchLikeStatus() {
       try {
-        const statusMap = await getDeetLikeStatus(deetIds);
+        const [statusMap, reactorPreviews] = await Promise.all([
+          getDeetLikeStatus(deetIds),
+          getDeetReactorPreviews(deetIds),
+        ]);
         if (!cancelled) {
           const liked = new Set<string>();
           const counts: Record<string, number> = {};
@@ -93,6 +106,7 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
           }
           setLikedDeetIds(liked);
           setLikeCountOverrides(counts);
+          setReactorsByDeetId(reactorPreviews);
         }
       } catch {
         // Silently fail — buttons will just start at 0
@@ -103,7 +117,7 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
     return () => { cancelled = true; };
   }, [feedItems]);
 
-  const handleToggleLike = useCallback(async (deetId: string) => {
+  const handleToggleLike = useCallback(async (deetId: string, reactionType = "like") => {
     let alreadyLiking = false;
     setLikingDeetIds((prev) => {
       if (prev.has(deetId)) {
@@ -115,7 +129,7 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
     if (alreadyLiking) return;
 
     try {
-      const result = await toggleDeetLike(deetId);
+      const result = await toggleDeetLike(deetId, reactionType);
       setLikedDeetIds((prev) => {
         const next = new Set(prev);
         if (result.liked) next.add(deetId);
@@ -123,6 +137,10 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
         return next;
       });
       setLikeCountOverrides((prev) => ({ ...prev, [deetId]: result.likeCount }));
+      // Refresh reactor previews for this deet
+      void getDeetReactorPreviews([deetId]).then((previews) => {
+        setReactorsByDeetId((prev) => ({ ...prev, ...previews }));
+      }).catch(() => {});
     } catch {
       // Silently fail
     } finally {
@@ -171,18 +189,54 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
 
   // ── Comments: Submit ───────────────────────────────────────────────
 
-  const handleSubmitComment = useCallback(async (deetId: string, body: string): Promise<{ success: boolean }> => {
+  // ── Reactions modal ─────────────────────────────────────────────────
+
+  const handleOpenReactionsModal = useCallback(async (deetId: string) => {
+    setReactionsModalDeetId(deetId);
+    setReactionsModalLoading(true);
+    try {
+      const reactors = await withTimeout(listDeetReactors(deetId), 10_000, "Load reactors");
+      setReactionsModalData(reactors);
+    } catch {
+      setReactionsModalData([]);
+    } finally {
+      setReactionsModalLoading(false);
+    }
+  }, []);
+
+  const handleCloseReactionsModal = useCallback(() => {
+    setReactionsModalDeetId(null);
+    setReactionsModalData([]);
+  }, []);
+
+  // ── Comments: Submit (supports parentId for replies) ──────────────
+
+  const handleSubmitComment = useCallback(async (deetId: string, body: string, parentId?: string): Promise<{ success: boolean }> => {
     if (submittingRef.current) return { success: false };
     submittingRef.current = true;
     setCommentSubmittingDeetId(deetId);
     setCommentError(null);
 
     try {
-      const newComment = await withTimeout(addDeetComment(deetId, body), 10_000, "Submit comment");
-      setCommentsByDeetId((prev) => ({
-        ...prev,
-        [deetId]: [...(prev[deetId] ?? []), newComment],
-      }));
+      const newComment = await withTimeout(addDeetComment(deetId, body, parentId), 10_000, "Submit comment");
+      if (parentId) {
+        // Add reply under its parent
+        setCommentsByDeetId((prev) => {
+          const existing = prev[deetId] ?? [];
+          return {
+            ...prev,
+            [deetId]: existing.map((c) =>
+              c.id === parentId ? { ...c, replies: [...(c.replies ?? []), newComment] } : c
+            ),
+          };
+        });
+      } else {
+        // Top-level comment
+        setCommentsByDeetId((prev) => ({
+          ...prev,
+          [deetId]: [...(prev[deetId] ?? []), { ...newComment, replies: [] }],
+        }));
+      }
       setCommentCountOverrides((prev) => ({
         ...prev,
         [deetId]: (prev[deetId] ?? 0) + 1,
@@ -253,11 +307,13 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
     if (viewedDeetIds.current.has(deetId)) return;
     viewedDeetIds.current.add(deetId);
     try {
-      await incrementDeetView(deetId);
-      setViewCountOverrides((prev) => ({
-        ...prev,
-        [deetId]: (prev[deetId] ?? 0) + 1,
-      }));
+      const isNew = await incrementDeetView(deetId);
+      if (isNew) {
+        setViewCountOverrides((prev) => ({
+          ...prev,
+          [deetId]: (prev[deetId] ?? 0) + 1,
+        }));
+      }
     } catch {
       // Silently fail — view tracking is non-critical
     }
@@ -306,6 +362,14 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
     viewCountOverrides,
     handleToggleLike,
     handleIncrementView,
+    // Reactors
+    reactorsByDeetId,
+    reactionsModalDeetId,
+    reactionsModalData,
+    reactionsModalLoading,
+    handleOpenReactionsModal,
+    handleCloseReactionsModal,
+    // Comments
     expandedCommentDeetId,
     commentsByDeetId,
     commentLoadingDeetIds,
@@ -316,6 +380,7 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
     handleSubmitComment,
     handleEditComment,
     handleDeleteComment,
+    // Viewers
     viewersDeetId,
     viewersByDeetId,
     viewersLoading,

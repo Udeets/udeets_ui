@@ -26,3 +26,10 @@ create policy "Users can record deet views"
   on public.deet_views for insert
   to authenticated
   with check (auth.uid() = user_id);
+
+-- Users can update their own view record (timestamp refresh)
+create policy "Users can update own deet views"
+  on public.deet_views for update
+  to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);

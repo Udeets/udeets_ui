@@ -413,6 +413,12 @@ export default function HubClient({
     viewCountOverrides,
     handleToggleLike,
     handleIncrementView,
+    reactorsByDeetId,
+    reactionsModalDeetId,
+    reactionsModalData,
+    reactionsModalLoading,
+    handleOpenReactionsModal,
+    handleCloseReactionsModal,
     expandedCommentDeetId,
     commentsByDeetId,
     commentLoadingDeetIds,
@@ -1089,6 +1095,12 @@ export default function HubClient({
         likeCountOverrides={likeCountOverrides}
         viewCountOverrides={viewCountOverrides}
         onToggleLike={handleToggleLike}
+        reactorsByDeetId={reactorsByDeetId}
+        reactionsModalDeetId={reactionsModalDeetId}
+        reactionsModalData={reactionsModalData}
+        reactionsModalLoading={reactionsModalLoading}
+        onOpenReactionsModal={handleOpenReactionsModal}
+        onCloseReactionsModal={handleCloseReactionsModal}
         expandedCommentDeetId={expandedCommentDeetId}
         commentsByDeetId={commentsByDeetId}
         commentLoadingDeetIds={commentLoadingDeetIds}

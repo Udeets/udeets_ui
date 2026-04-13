@@ -7,19 +7,25 @@ import {
   Briefcase,
   Calendar,
   ChevronDown,
+  ChevronRight,
   CircleDollarSign,
   Eye,
+  Image as ImageIcon,
   Loader2,
   MapPin,
   Megaphone,
   MessageSquare,
   MoreVertical,
+  Paperclip,
   Pencil,
+  Reply,
   Search,
   Send,
   Share2,
+  Smile,
   SmilePlus,
   Trash2,
+  X,
 } from "lucide-react";
 import type { HubFeedItemAttachment } from "@/lib/hub-content";
 import { useEffect, useRef, useState } from "react";
@@ -27,7 +33,7 @@ import { DeetComposerCard } from "../deets/DeetComposerCard";
 import { ImageWithFallback, cn, initials } from "../hubUtils";
 import { SectionShell } from "../SectionShell";
 import type { ComposerChildFlow } from "../deets/deetTypes";
-import type { DeetComment, DeetViewer } from "@/lib/services/deets/deet-interactions";
+import type { DeetComment, DeetViewer, DeetReactor } from "@/lib/services/deets/deet-interactions";
 import { deleteDeet } from "@/lib/services/deets/delete-deet";
 
 function sanitizeHtmlContent(html: string): string {
@@ -474,14 +480,12 @@ function EmojiReactButton({
   deetId,
   isLiked,
   isLiking,
-  likeCount,
   onToggleLike,
 }: {
   deetId: string;
   isLiked: boolean;
   isLiking: boolean;
-  likeCount: number;
-  onToggleLike?: (deetId: string) => void;
+  onToggleLike?: (deetId: string, reactionType?: string) => void;
 }) {
   const [showPicker, setShowPicker] = useState(false);
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
@@ -506,8 +510,8 @@ function EmojiReactButton({
 
   const handleReactClick = () => {
     if (isLiked) {
-      // If already reacted, un-react
-      onToggleLike?.(deetId);
+      // If already reacted, un-react (pass current emoji so toggleDeetLike detects same reaction)
+      onToggleLike?.(deetId, selectedEmoji || "like");
       setSelectedEmoji(null);
     } else {
       // Show emoji picker
@@ -518,9 +522,7 @@ function EmojiReactButton({
   const handleEmojiSelect = (emoji: string) => {
     setSelectedEmoji(emoji);
     setShowPicker(false);
-    if (!isLiked) {
-      onToggleLike?.(deetId);
-    }
+    onToggleLike?.(deetId, emoji);
   };
 
   const displayEmoji = isLiked ? (selectedEmoji || "👍") : null;
@@ -566,9 +568,6 @@ function EmojiReactButton({
           <SmilePlus className={POST_ICON} />
         )}
         <span>{isLiked ? "Reacted" : "React"}</span>
-        {likeCount > 0 && (
-          <span className="text-xs">({likeCount})</span>
-        )}
       </button>
     </div>
   );
@@ -587,6 +586,135 @@ const FILTER_PILLS: Array<{ key: string; label: string }> = [
   { key: "Polls", label: "Poll" },
   { key: "Photos", label: "Photo" },
 ];
+
+/* ── Reactions Modal ── */
+const EMOJI_LABEL_MAP: Record<string, string> = {
+  "like": "👍", "👍": "👍", "❤️": "❤️", "😂": "😂", "😮": "😮", "😢": "😢", "🙏": "🙏",
+};
+
+function ReactionsModal({
+  reactors,
+  isLoading,
+  onClose,
+}: {
+  reactors: DeetReactor[];
+  isLoading: boolean;
+  onClose: () => void;
+}) {
+  const [activeTab, setActiveTab] = useState<string>("all");
+
+  // Group by reaction type
+  const grouped = new Map<string, DeetReactor[]>();
+  for (const r of reactors) {
+    const key = r.reactionType || "like";
+    const existing = grouped.get(key) ?? [];
+    existing.push(r);
+    grouped.set(key, existing);
+  }
+
+  const filteredReactors = activeTab === "all" ? reactors : (grouped.get(activeTab) ?? []);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="mx-4 w-full max-w-sm rounded-2xl border border-[var(--ud-border)] bg-[var(--ud-bg-card)] shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[var(--ud-border-subtle)] px-5 py-3.5">
+          <h3 className="text-base font-semibold text-[var(--ud-text-primary)]">
+            {reactors.length} reaction{reactors.length !== 1 ? "s" : ""}
+          </h3>
+          <button type="button" onClick={onClose} className="text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]">
+            <X className="h-4.5 w-4.5" />
+          </button>
+        </div>
+
+        {/* Tabs: Total | per emoji */}
+        <div className="flex items-center gap-1 border-b border-[var(--ud-border-subtle)] px-4 py-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab("all")}
+            className={cn(
+              "rounded-full px-3 py-1 text-xs font-medium transition",
+              activeTab === "all"
+                ? "bg-[var(--ud-brand-primary)]/10 text-[var(--ud-brand-primary)]"
+                : "text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)]"
+            )}
+          >
+            Total {reactors.length}
+          </button>
+          {[...grouped.entries()].map(([emoji, list]) => (
+            <button
+              key={emoji}
+              type="button"
+              onClick={() => setActiveTab(emoji)}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition",
+                activeTab === emoji
+                  ? "bg-[var(--ud-brand-primary)]/10 text-[var(--ud-brand-primary)]"
+                  : "text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)]"
+              )}
+            >
+              <span>{EMOJI_LABEL_MAP[emoji] ?? emoji}</span>
+              <span>{list.length}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Reactors list */}
+        <div className="max-h-[300px] overflow-y-auto">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-[var(--ud-text-muted)]" />
+            </div>
+          ) : filteredReactors.length > 0 ? (
+            <div className="py-1">
+              {filteredReactors.map((reactor) => (
+                <div key={reactor.userId} className="flex items-center gap-3 px-5 py-2.5">
+                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
+                    <ImageWithFallback
+                      src={reactor.avatar || ""}
+                      sources={reactor.avatar ? [reactor.avatar] : []}
+                      alt={reactor.name}
+                      className="h-full w-full object-cover"
+                      fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-xs font-bold text-[var(--ud-brand-primary)]"
+                      fallback={initials(reactor.name)}
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-[var(--ud-text-primary)]">{reactor.name}</span>
+                      {reactor.role && reactor.role !== "member" && (
+                        <span className="rounded-full bg-[var(--ud-brand-primary)]/10 px-2 py-0.5 text-[10px] font-semibold text-[var(--ud-brand-primary)]">
+                          {reactor.role === "creator" ? "Creator" : "Admin"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-lg">{EMOJI_LABEL_MAP[reactor.reactionType] ?? reactor.reactionType}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="px-5 py-8 text-center text-sm text-[var(--ud-text-muted)]">No reactions yet</p>
+          )}
+        </div>
+
+        {/* OK button */}
+        <div className="border-t border-[var(--ud-border-subtle)] px-5 py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-xl bg-[var(--ud-bg-subtle)] py-2.5 text-sm font-medium text-[var(--ud-text-primary)] transition hover:bg-[var(--ud-border-subtle)]"
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function DeetsSection({
   normalizedPostSearch,
@@ -624,6 +752,12 @@ export function DeetsSection({
   likeCountOverrides,
   viewCountOverrides,
   onToggleLike,
+  reactorsByDeetId,
+  reactionsModalDeetId,
+  reactionsModalData,
+  reactionsModalLoading,
+  onOpenReactionsModal,
+  onCloseReactionsModal,
   expandedCommentDeetId,
   commentsByDeetId,
   commentLoadingDeetIds,
@@ -673,7 +807,13 @@ export function DeetsSection({
   likingDeetIds?: Set<string>;
   likeCountOverrides?: Record<string, number>;
   viewCountOverrides?: Record<string, number>;
-  onToggleLike?: (deetId: string) => void;
+  onToggleLike?: (deetId: string, reactionType?: string) => void;
+  reactorsByDeetId?: Record<string, DeetReactor[]>;
+  reactionsModalDeetId?: string | null;
+  reactionsModalData?: DeetReactor[];
+  reactionsModalLoading?: boolean;
+  onOpenReactionsModal?: (deetId: string) => void;
+  onCloseReactionsModal?: () => void;
   expandedCommentDeetId?: string | null;
   commentsByDeetId?: Record<string, DeetComment[]>;
   commentLoadingDeetIds?: Set<string>;
@@ -681,7 +821,7 @@ export function DeetsSection({
   commentCountOverrides?: Record<string, number>;
   commentError?: string | null;
   onToggleComments?: (deetId: string) => void;
-  onSubmitComment?: (deetId: string, body: string) => Promise<{ success: boolean }> | void;
+  onSubmitComment?: (deetId: string, body: string, parentId?: string) => Promise<{ success: boolean }> | void;
   onEditComment?: (commentId: string, deetId: string, newBody: string) => Promise<{ success: boolean }> | void;
   onDeleteComment?: (commentId: string, deetId: string) => Promise<{ success: boolean }> | void;
   viewersDeetId?: string | null;
@@ -1017,11 +1157,13 @@ export function DeetsSection({
               </div>
             )}
             {filteredFeedItems.map((item) => (
+              <div key={item.id} className="relative">
+                {/* Viewers dropdown removed from here — now rendered inline near the eye icon */}
+
               <article
                 id={item.id}
-                key={item.id}
                 className={cn(
-                  "w-full overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-sm transition",
+                  "w-full overflow-visible rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-sm transition",
                   highlightedItemId === item.id && "ring-2 ring-[var(--ud-brand-primary)] ring-offset-2"
                 )}
               >
@@ -1154,7 +1296,7 @@ export function DeetsSection({
                       )
                     }
                   >
-                    <div className="aspect-video max-h-[320px] w-full">
+                    <div className="aspect-video max-h-[320px] w-full overflow-hidden">
                       <ImageWithFallback
                         src={item.image}
                         sources={item.images?.length ? item.images : [item.image]}
@@ -1168,61 +1310,83 @@ export function DeetsSection({
                   </button>
                 ) : null}
 
-                {/* ── Views count (clickable to show who viewed) ── */}
-                <div className="relative flex justify-end px-4 pt-2">
+                {/* ── Stats row: reactions · comments (left) | views (right) ── */}
+                <div className="relative flex items-center justify-between px-4 pt-2 pb-1">
+                  <div className="flex items-center gap-3 text-xs text-[var(--ud-text-muted)]">
+                    {(likeCountOverrides?.[item.id] ?? item.likes) > 0 && (
+                      <span className="inline-flex items-center gap-1">
+                        <SmilePlus className="h-3.5 w-3.5 stroke-[1.5]" />
+                        {likeCountOverrides?.[item.id] ?? item.likes}
+                      </span>
+                    )}
+                    {(item.comments + (commentCountOverrides?.[item.id] ?? 0)) > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => onToggleComments?.(item.id)}
+                        className="inline-flex items-center gap-1 hover:text-[var(--ud-text-secondary)] transition"
+                      >
+                        <MessageSquare className="h-3.5 w-3.5 stroke-[1.5]" />
+                        {item.comments + (commentCountOverrides?.[item.id] ?? 0)}
+                      </button>
+                    )}
+                  </div>
+
                   <button
                     type="button"
                     onClick={() => onToggleViewers?.(item.id)}
-                    className="inline-flex items-center gap-1 text-xs text-[var(--ud-text-muted)] transition hover:text-[var(--ud-text-secondary)]"
+                    className={cn(
+                      "inline-flex items-center gap-1 text-xs transition",
+                      viewersDeetId === item.id
+                        ? "text-[var(--ud-brand-primary)] font-medium"
+                        : "text-[var(--ud-text-muted)] hover:text-[var(--ud-text-secondary)]"
+                    )}
                     title="See who viewed"
                   >
                     <Eye className="h-3.5 w-3.5 stroke-[1.5]" />
                     <span>{(viewCountOverrides?.[item.id] != null ? item.views + viewCountOverrides[item.id] : item.views)}</span>
                   </button>
 
-                  {/* Viewers dropdown */}
+                  {/* ── Viewers popover ── */}
                   {viewersDeetId === item.id && (
-                    <div className="absolute right-4 top-8 z-30 w-64 rounded-xl border border-[var(--ud-border)] bg-[var(--ud-bg-card)] shadow-xl">
+                    <div className="absolute bottom-full right-4 z-50 mb-1 w-56 rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] shadow-lg">
                       <div className="flex items-center justify-between border-b border-[var(--ud-border-subtle)] px-3 py-2">
-                        <span className="text-xs font-semibold text-[var(--ud-text-primary)]">Viewed by</span>
+                        <span className="text-[11px] font-semibold text-[var(--ud-text-primary)]">Viewed by</span>
                         <button
                           type="button"
                           onClick={() => onToggleViewers?.(item.id)}
-                          className="text-xs text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]"
+                          className="text-[10px] text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]"
                         >
-                          Close
+                          ✕
                         </button>
                       </div>
                       <div className="max-h-[200px] overflow-y-auto">
                         {viewersLoading ? (
-                          <div className="flex items-center justify-center py-4">
-                            <Loader2 className="h-4 w-4 animate-spin text-[var(--ud-text-muted)]" />
+                          <div className="flex items-center justify-center py-3">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--ud-text-muted)]" />
                           </div>
                         ) : (viewersByDeetId?.[item.id] ?? []).length > 0 ? (
-                          <div className="divide-y divide-[var(--ud-border-subtle)]">
+                          <div className="py-1">
                             {(viewersByDeetId?.[item.id] ?? []).map((viewer) => (
-                              <div key={viewer.userId} className="flex items-center gap-2.5 px-3 py-2">
-                                <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
+                              <div key={viewer.userId} className="flex items-center gap-2 px-3 py-1.5">
+                                <div className="relative h-6 w-6 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
                                   <ImageWithFallback
                                     src={viewer.avatar || ""}
                                     sources={viewer.avatar ? [viewer.avatar] : []}
                                     alt={viewer.name}
                                     className="h-full w-full object-cover"
-                                    fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-[9px] font-bold text-[var(--ud-brand-primary)]"
+                                    fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-[7px] font-bold text-[var(--ud-brand-primary)]"
                                     fallback={initials(viewer.name)}
                                   />
                                 </div>
-                                <div className="min-w-0 flex-1">
-                                  <span className="block truncate text-xs font-medium text-[var(--ud-text-primary)]">{viewer.name}</span>
-                                  <span className="text-[10px] text-[var(--ud-text-muted)]">
-                                    {viewer.viewedAt ? new Date(viewer.viewedAt).toLocaleDateString() : ""}
-                                  </span>
-                                </div>
+                                <span className="min-w-0 flex-1 truncate text-xs text-[var(--ud-text-primary)]">{viewer.name}</span>
+                                <span className="shrink-0 text-[9px] text-[var(--ud-text-muted)]">
+                                  {viewer.viewedAt ? new Date(viewer.viewedAt).toLocaleDateString() : ""}
+                                </span>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <p className="px-3 py-4 text-center text-xs text-[var(--ud-text-muted)]">No views yet</p>
+                          <p className="px-3 py-3 text-center text-[11px] text-[var(--ud-text-muted)]">No views yet</p>
                         )}
                       </div>
                     </div>
@@ -1230,13 +1394,12 @@ export function DeetsSection({
                 </div>
 
                 {/* ── Action bar: React + Comment + Share ── */}
-                <div className="flex items-center border-t border-[var(--ud-border-subtle)] mt-1">
+                <div className="flex items-center border-t border-[var(--ud-border-subtle)]">
                   {/* React button with emoji picker */}
                   <EmojiReactButton
                     deetId={item.id}
                     isLiked={likedDeetIds?.has(item.id) ?? false}
                     isLiking={likingDeetIds?.has(item.id) ?? false}
-                    likeCount={likeCountOverrides?.[item.id] ?? item.likes}
                     onToggleLike={onToggleLike}
                   />
 
@@ -1253,12 +1416,9 @@ export function DeetsSection({
                   >
                     <MessageSquare className={POST_ICON} />
                     <span>Comment</span>
-                    {(item.comments + (commentCountOverrides?.[item.id] ?? 0)) > 0 && (
-                      <span className="text-xs">({item.comments + (commentCountOverrides?.[item.id] ?? 0)})</span>
-                    )}
                   </button>
 
-                  {/* Share button — native share on mobile, clipboard copy on desktop */}
+                  {/* Share button */}
                   <button
                     type="button"
                     onClick={() => handleShareDeet(item.id)}
@@ -1273,6 +1433,42 @@ export function DeetsSection({
                     <span>{copiedDeetId === item.id ? "Copied!" : "Share"}</span>
                   </button>
                 </div>
+
+                {/* ── Reactions preview row (avatars + emoji + > arrow) ── */}
+                {(reactorsByDeetId?.[item.id]?.length ?? 0) > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenReactionsModal?.(item.id)}
+                    className="flex w-full items-center justify-between border-t border-[var(--ud-border-subtle)] px-4 py-2 hover:bg-[var(--ud-bg-subtle)] transition"
+                  >
+                    <div className="flex items-center">
+                      {/* Overlapping avatars with emoji badges */}
+                      <div className="flex items-center -space-x-2">
+                        {(reactorsByDeetId?.[item.id] ?? []).slice(0, 5).map((reactor, idx) => (
+                          <div key={reactor.userId} className="relative" style={{ zIndex: 5 - idx }}>
+                            <div className="h-8 w-8 overflow-hidden rounded-full border-2 border-[var(--ud-bg-card)] bg-[var(--ud-brand-light)]">
+                              <ImageWithFallback
+                                src={reactor.avatar || ""}
+                                sources={reactor.avatar ? [reactor.avatar] : []}
+                                alt={reactor.name}
+                                className="h-full w-full object-cover"
+                                fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-[9px] font-bold text-[var(--ud-brand-primary)]"
+                                fallback={initials(reactor.name)}
+                              />
+                            </div>
+                            {/* Emoji badge */}
+                            {reactor.reactionType && reactor.reactionType !== "like" && (
+                              <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] leading-none shadow-sm">
+                                {reactor.reactionType}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-[var(--ud-text-muted)]" />
+                  </button>
+                )}
 
                 {/* ── Comments section ── */}
                 {expandedCommentDeetId === item.id && (
@@ -1290,7 +1486,9 @@ export function DeetsSection({
                     userName={userName}
                   />
                 )}
+
               </article>
+              </div>
             ))}
           </section>
         </div>
@@ -1341,11 +1539,171 @@ export function DeetsSection({
         <Pencil className="h-6 w-6 text-white" />
       </button>
     )}
+
+    {/* ── Reactions modal (blurred BG overlay) ── */}
+    {reactionsModalDeetId && (
+      <ReactionsModal
+        reactors={reactionsModalData ?? []}
+        isLoading={reactionsModalLoading ?? false}
+        onClose={() => onCloseReactionsModal?.()}
+      />
+    )}
     </>
   );
 }
 
 /* ── Comments panel (inline) ── */
+
+/** Relative time helper */
+function commentTimeAgo(dateStr: string): string {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} minute${mins > 1 ? "s" : ""} ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} hour${hrs > 1 ? "s" : ""} ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days} day${days > 1 ? "s" : ""} ago`;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+/** Single comment row — used for both top-level and replies */
+function CommentRow({
+  comment,
+  deetId,
+  isOwn,
+  isNested,
+  editingCommentId,
+  editText,
+  confirmDeleteId,
+  menuOpenCommentId,
+  onSetEditText,
+  onStartEdit,
+  onSaveEdit,
+  onStartDelete,
+  onConfirmDelete,
+  onCancelDelete,
+  onCancelEdit,
+  onToggleMenu,
+  onReply,
+  menuRef,
+  editInputRef,
+}: {
+  comment: DeetComment;
+  deetId: string;
+  isOwn: boolean;
+  isNested: boolean;
+  editingCommentId: string | null;
+  editText: string;
+  confirmDeleteId: string | null;
+  menuOpenCommentId: string | null;
+  onSetEditText: (v: string) => void;
+  onStartEdit: (c: DeetComment) => void;
+  onSaveEdit: () => void;
+  onStartDelete: (id: string) => void;
+  onConfirmDelete: (id: string) => void;
+  onCancelDelete: () => void;
+  onCancelEdit: () => void;
+  onToggleMenu: (id: string) => void;
+  onReply?: (commentId: string, authorName: string) => void;
+  menuRef: React.RefObject<HTMLDivElement | null>;
+  editInputRef: React.RefObject<HTMLInputElement | null>;
+}) {
+  const isEditing = editingCommentId === comment.id;
+  const isConfirmingDelete = confirmDeleteId === comment.id;
+  const avatarSize = isNested ? "h-7 w-7" : "h-8 w-8";
+
+  return (
+    <div className="group relative flex items-start gap-2.5 py-2.5">
+      <div className={cn("relative shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]", avatarSize)}>
+        <ImageWithFallback
+          src={comment.authorAvatar || ""}
+          sources={comment.authorAvatar ? [comment.authorAvatar] : []}
+          alt={comment.authorName ?? "User"}
+          className="h-full w-full object-cover"
+          fallbackClassName={cn("grid h-full w-full place-items-center bg-[var(--ud-brand-light)] font-bold text-[var(--ud-brand-primary)]", isNested ? "text-[8px]" : "text-[10px]")}
+          fallback={initials(comment.authorName ?? "User")}
+        />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className={cn("font-semibold text-[var(--ud-text-primary)]", isNested ? "text-xs" : "text-sm")}>{comment.authorName ?? "User"}</span>
+          {/* Three-dot menu for own comments */}
+          {isOwn && !isEditing && !isConfirmingDelete && (
+            <div className="relative ml-auto" ref={menuOpenCommentId === comment.id ? menuRef : undefined}>
+              <button
+                type="button"
+                onClick={() => onToggleMenu(comment.id)}
+                className="invisible rounded-full p-0.5 text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-secondary)] group-hover:visible"
+                title="More options"
+              >
+                <MoreVertical className="h-3.5 w-3.5" />
+              </button>
+              {menuOpenCommentId === comment.id && (
+                <div className="absolute right-0 top-6 z-20 min-w-[120px] rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] py-1 shadow-lg">
+                  <button type="button" onClick={() => onStartEdit(comment)} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-[var(--ud-text-primary)] hover:bg-[var(--ud-bg-subtle)]">
+                    <Pencil className="h-3.5 w-3.5" /> Edit
+                  </button>
+                  <button type="button" onClick={() => onStartDelete(comment.id)} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-red-500 hover:bg-red-50">
+                    <Trash2 className="h-3.5 w-3.5" /> Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {isEditing ? (
+          <div className="mt-1 flex items-center gap-1.5">
+            <input
+              ref={editInputRef}
+              value={editText}
+              onChange={(e) => onSetEditText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); onSaveEdit(); }
+                if (e.key === "Escape") onCancelEdit();
+              }}
+              className="h-7 flex-1 rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-2.5 text-xs text-[var(--ud-text-primary)] outline-none focus:border-[var(--ud-brand-primary)]"
+            />
+            <button type="button" onClick={onSaveEdit} disabled={!editText.trim()} className="rounded-lg bg-[var(--ud-brand-primary)] px-2 py-1 text-[11px] font-medium text-white hover:opacity-90 disabled:opacity-50">Save</button>
+            <button type="button" onClick={onCancelEdit} className="rounded-lg px-2 py-1 text-[11px] text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]">Cancel</button>
+          </div>
+        ) : isConfirmingDelete ? (
+          <div className="mt-1 flex items-center gap-2">
+            <span className="text-[11px] text-red-500">Delete?</span>
+            <button type="button" onClick={() => onConfirmDelete(comment.id)} className="rounded-lg bg-red-500 px-2 py-0.5 text-[11px] font-medium text-white hover:bg-red-600">Yes</button>
+            <button type="button" onClick={onCancelDelete} className="rounded-lg px-2 py-0.5 text-[11px] text-[var(--ud-text-muted)]">No</button>
+          </div>
+        ) : (
+          <p className={cn("mt-0.5 leading-relaxed text-[var(--ud-text-secondary)]", isNested ? "text-xs" : "text-sm")}>{comment.body}</p>
+        )}
+
+        {/* Actions row: timestamp · React · Reply */}
+        {!isEditing && !isConfirmingDelete && (
+          <div className="mt-1 flex items-center gap-2 text-[11px] text-[var(--ud-text-muted)]">
+            <span>{comment.createdAt ? commentTimeAgo(comment.createdAt) : ""}</span>
+            <span>·</span>
+            <button type="button" className="font-medium hover:text-[var(--ud-text-secondary)] transition">
+              <Smile className="mr-0.5 inline h-3 w-3 stroke-[1.5]" /> React
+            </button>
+            {/* Reply only on top-level comments */}
+            {!isNested && onReply && (
+              <>
+                <span>·</span>
+                <button type="button" onClick={() => onReply(comment.id, comment.authorName ?? "User")} className="font-medium hover:text-[var(--ud-text-secondary)] transition">
+                  Reply
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function DeetCommentsSection({
   deetId,
   comments,
@@ -1365,7 +1723,7 @@ function DeetCommentsSection({
   isSubmitting: boolean;
   error?: string | null;
   currentUserId?: string;
-  onSubmitComment?: (deetId: string, body: string) => Promise<{ success: boolean }> | void;
+  onSubmitComment?: (deetId: string, body: string, parentId?: string) => Promise<{ success: boolean }> | void;
   onEditComment?: (commentId: string, deetId: string, newBody: string) => Promise<{ success: boolean }> | void;
   onDeleteComment?: (commentId: string, deetId: string) => Promise<{ success: boolean }> | void;
   userAvatarSrc?: string;
@@ -1377,6 +1735,9 @@ function DeetCommentsSection({
   const [editText, setEditText] = useState("");
   const [menuOpenCommentId, setMenuOpenCommentId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [replyToId, setReplyToId] = useState<string | null>(null);
+  const [replyToName, setReplyToName] = useState<string>("");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -1385,26 +1746,23 @@ function DeetCommentsSection({
   useEffect(() => {
     if (!menuOpenCommentId) return;
     const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpenCommentId(null);
-      }
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpenCommentId(null);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [menuOpenCommentId]);
 
-  // Focus edit input when editing starts
-  useEffect(() => {
-    if (editingCommentId) editInputRef.current?.focus();
-  }, [editingCommentId]);
+  useEffect(() => { if (editingCommentId) editInputRef.current?.focus(); }, [editingCommentId]);
 
   const handleSubmit = async () => {
     const trimmed = commentText.trim();
     if (!trimmed || isSubmitting) return;
     setLocalError(null);
-    const result = await onSubmitComment?.(deetId, trimmed);
+    const result = await onSubmitComment?.(deetId, trimmed, replyToId ?? undefined);
     if (result && result.success) {
       setCommentText("");
+      setReplyToId(null);
+      setReplyToName("");
     } else if (result && !result.success) {
       setLocalError("Couldn't post. Tap send to retry.");
     }
@@ -1415,153 +1773,89 @@ function DeetCommentsSection({
     const trimmed = editText.trim();
     if (!trimmed) return;
     const result = await onEditComment?.(editingCommentId, deetId, trimmed);
-    if (result && result.success) {
-      setEditingCommentId(null);
-      setEditText("");
-    } else if (result && !result.success) {
-      setLocalError("Couldn't save edit. Try again.");
-    }
+    if (result && result.success) { setEditingCommentId(null); setEditText(""); }
+    else if (result && !result.success) setLocalError("Couldn't save edit. Try again.");
   };
 
   const handleDelete = async (commentId: string) => {
     const result = await onDeleteComment?.(commentId, deetId);
-    if (result && result.success) {
-      setConfirmDeleteId(null);
-    } else if (result && !result.success) {
-      setLocalError("Couldn't delete. Try again.");
-    }
+    if (result && result.success) setConfirmDeleteId(null);
+    else if (result && !result.success) setLocalError("Couldn't delete. Try again.");
   };
 
-  const startEdit = (comment: DeetComment) => {
-    setEditingCommentId(comment.id);
-    setEditText(comment.body);
-    setMenuOpenCommentId(null);
+  const startReply = (commentId: string, authorName: string) => {
+    setReplyToId(commentId);
+    setReplyToName(authorName);
+    inputRef.current?.focus();
   };
 
-  const startDelete = (commentId: string) => {
-    setConfirmDeleteId(commentId);
-    setMenuOpenCommentId(null);
-  };
+  const cancelReply = () => { setReplyToId(null); setReplyToName(""); };
+
+  const startEdit = (comment: DeetComment) => { setEditingCommentId(comment.id); setEditText(comment.body); setMenuOpenCommentId(null); };
+  const startDelete = (commentId: string) => { setConfirmDeleteId(commentId); setMenuOpenCommentId(null); };
+  const cancelEdit = () => { setEditingCommentId(null); setEditText(""); };
 
   const displayError = localError || error;
 
+  const commonRowProps = {
+    deetId,
+    editingCommentId,
+    editText,
+    confirmDeleteId,
+    menuOpenCommentId,
+    onSetEditText: setEditText,
+    onStartEdit: startEdit,
+    onSaveEdit: handleSaveEdit,
+    onStartDelete: startDelete,
+    onConfirmDelete: handleDelete,
+    onCancelDelete: () => setConfirmDeleteId(null),
+    onCancelEdit: cancelEdit,
+    onToggleMenu: (id: string) => setMenuOpenCommentId((prev) => (prev === id ? null : id)),
+    menuRef,
+    editInputRef,
+  };
+
+  const addEmoji = (emoji: string) => {
+    setCommentText((prev) => prev + emoji);
+    setShowEmojiPicker(false);
+    inputRef.current?.focus();
+  };
+
   return (
     <div className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)]/50">
-      {/* Existing comments */}
+      {/* Comments list */}
       {isLoading ? (
         <div className="flex items-center justify-center py-4">
           <Loader2 className="h-4 w-4 animate-spin text-[var(--ud-text-muted)]" />
         </div>
       ) : comments.length > 0 ? (
-        <div className="space-y-0 divide-y divide-[var(--ud-border-subtle)]">
-          {comments.map((comment) => {
-            const isOwn = currentUserId && comment.userId === currentUserId;
-            const isEditing = editingCommentId === comment.id;
-            const isConfirmingDelete = confirmDeleteId === comment.id;
-
-            return (
-              <div key={comment.id} className="group relative flex items-start gap-2.5 px-4 py-3">
-                <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
-                  <ImageWithFallback
-                    src={comment.authorAvatar || ""}
-                    sources={comment.authorAvatar ? [comment.authorAvatar] : []}
-                    alt={comment.authorName ?? "User"}
-                    className="h-full w-full object-cover"
-                    fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-[10px] font-bold text-[var(--ud-brand-primary)]"
-                    fallback={initials(comment.authorName ?? "User")}
-                  />
+        <div className="px-4">
+          {comments.map((comment) => (
+            <div key={comment.id}>
+              {/* Top-level comment */}
+              <CommentRow
+                comment={comment}
+                isOwn={!!(currentUserId && comment.userId === currentUserId)}
+                isNested={false}
+                onReply={startReply}
+                {...commonRowProps}
+              />
+              {/* Nested replies (one level) */}
+              {comment.replies && comment.replies.length > 0 && (
+                <div className="ml-10 border-l-2 border-[var(--ud-border-subtle)] pl-3">
+                  {comment.replies.map((reply) => (
+                    <CommentRow
+                      key={reply.id}
+                      comment={reply}
+                      isOwn={!!(currentUserId && reply.userId === currentUserId)}
+                      isNested={true}
+                      {...commonRowProps}
+                    />
+                  ))}
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-sm font-semibold text-[var(--ud-text-primary)]">{comment.authorName ?? "User"}</span>
-                    <span className="text-[11px] text-[var(--ud-text-muted)]">{comment.createdAt ? new Date(comment.createdAt).toLocaleDateString() : ""}</span>
-                  </div>
-
-                  {isEditing ? (
-                    <div className="mt-1 flex items-center gap-1.5">
-                      <input
-                        ref={editInputRef}
-                        value={editText}
-                        onChange={(e) => setEditText(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") { e.preventDefault(); handleSaveEdit(); }
-                          if (e.key === "Escape") { setEditingCommentId(null); setEditText(""); }
-                        }}
-                        className="h-8 flex-1 rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-2.5 text-sm text-[var(--ud-text-primary)] outline-none focus:border-[var(--ud-brand-primary)]"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleSaveEdit}
-                        disabled={!editText.trim()}
-                        className="rounded-lg bg-[var(--ud-brand-primary)] px-2.5 py-1 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
-                      >
-                        Save
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setEditingCommentId(null); setEditText(""); }}
-                        className="rounded-lg px-2 py-1 text-xs text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : isConfirmingDelete ? (
-                    <div className="mt-1 flex items-center gap-2">
-                      <span className="text-xs text-red-500">Delete this comment?</span>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(comment.id)}
-                        className="rounded-lg bg-red-500 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-600"
-                      >
-                        Delete
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setConfirmDeleteId(null)}
-                        className="rounded-lg px-2 py-1 text-xs text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <p className="mt-0.5 text-sm leading-relaxed text-[var(--ud-text-secondary)]">{comment.body}</p>
-                  )}
-                </div>
-
-                {/* Three-dot menu for own comments */}
-                {isOwn && !isEditing && !isConfirmingDelete && (
-                  <div className="relative" ref={menuOpenCommentId === comment.id ? menuRef : undefined}>
-                    <button
-                      type="button"
-                      onClick={() => setMenuOpenCommentId((prev) => (prev === comment.id ? null : comment.id))}
-                      className="invisible rounded-full p-1 text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-secondary)] group-hover:visible"
-                      title="More options"
-                    >
-                      <MoreVertical className="h-3.5 w-3.5" />
-                    </button>
-                    {menuOpenCommentId === comment.id && (
-                      <div className="absolute right-0 top-7 z-20 min-w-[120px] rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] py-1 shadow-lg">
-                        <button
-                          type="button"
-                          onClick={() => startEdit(comment)}
-                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-[var(--ud-text-primary)] hover:bg-[var(--ud-bg-subtle)]"
-                        >
-                          <Pencil className="h-3.5 w-3.5" /> Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => startDelete(comment.id)}
-                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-red-500 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" /> Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+              )}
+            </div>
+          ))}
         </div>
       ) : (
         <p className="px-4 py-3 text-center text-xs text-[var(--ud-text-muted)]">No comments yet</p>
@@ -1572,45 +1866,89 @@ function DeetCommentsSection({
         <p className="px-4 py-2 text-center text-xs font-medium text-red-500">{displayError}</p>
       )}
 
-      {/* Comment input */}
-      <div className="flex items-center gap-2 border-t border-[var(--ud-border-subtle)] px-4 py-2.5">
-        <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
-          <ImageWithFallback
-            src={userAvatarSrc || ""}
-            sources={userAvatarSrc ? [userAvatarSrc] : []}
-            alt={userName || "You"}
-            className="h-full w-full object-cover"
-            fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-[10px] font-bold text-[var(--ud-brand-primary)]"
-            fallback={initials(userName || "You")}
-          />
+      {/* Reply-to indicator */}
+      {replyToId && (
+        <div className="flex items-center gap-2 border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] px-4 py-1.5">
+          <Reply className="h-3.5 w-3.5 text-[var(--ud-text-muted)]" />
+          <span className="text-xs text-[var(--ud-text-muted)]">Replying to <strong className="text-[var(--ud-text-secondary)]">{replyToName}</strong></span>
+          <button type="button" onClick={cancelReply} className="ml-auto text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]">
+            <X className="h-3.5 w-3.5" />
+          </button>
         </div>
-        <input
-          ref={inputRef}
-          value={commentText}
-          onChange={(e) => setCommentText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSubmit();
-            }
-          }}
-          placeholder="Write a comment..."
-          className="h-9 flex-1 rounded-full border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-3.5 text-sm text-[var(--ud-text-primary)] outline-none placeholder:text-[var(--ud-text-muted)] focus:border-[var(--ud-brand-primary)]"
-        />
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={isSubmitting || !commentText.trim()}
-          title="Send comment"
-          className={cn(
-            "inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors",
-            commentText.trim()
-              ? "bg-[var(--ud-brand-primary)] text-white hover:opacity-90"
-              : "bg-[var(--ud-bg-subtle)] text-[var(--ud-text-muted)]"
-          )}
-        >
-          {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-        </button>
+      )}
+
+      {/* Comment input with emoji, photo, attachment */}
+      <div className="relative border-t border-[var(--ud-border-subtle)] px-4 py-2.5">
+        <div className="flex items-center gap-2">
+          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
+            <ImageWithFallback
+              src={userAvatarSrc || ""}
+              sources={userAvatarSrc ? [userAvatarSrc] : []}
+              alt={userName || "You"}
+              className="h-full w-full object-cover"
+              fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-[10px] font-bold text-[var(--ud-brand-primary)]"
+              fallback={initials(userName || "You")}
+            />
+          </div>
+          <div className="relative flex flex-1 items-center gap-1 rounded-full border border-[var(--ud-border)] bg-[var(--ud-bg-card)] pl-3.5 pr-1">
+            <input
+              ref={inputRef}
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); }
+                if (e.key === "Escape" && replyToId) cancelReply();
+              }}
+              placeholder={replyToId ? `Reply to ${replyToName}...` : "Write a comment..."}
+              className="h-9 flex-1 bg-transparent text-sm text-[var(--ud-text-primary)] outline-none placeholder:text-[var(--ud-text-muted)]"
+            />
+            {/* Inline action icons */}
+            <button type="button" title="Add photo" className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-secondary)] transition">
+              <ImageIcon className="h-4 w-4 stroke-[1.5]" />
+            </button>
+            <button type="button" title="Attach file" className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-secondary)] transition">
+              <Paperclip className="h-4 w-4 stroke-[1.5]" />
+            </button>
+            <button
+              type="button"
+              title="Add emoji"
+              onClick={() => setShowEmojiPicker((v) => !v)}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-secondary)] transition"
+            >
+              <Smile className="h-4 w-4 stroke-[1.5]" />
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSubmitting || !commentText.trim()}
+            title="Send comment"
+            className={cn(
+              "inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors",
+              commentText.trim()
+                ? "bg-[var(--ud-brand-primary)] text-white hover:opacity-90"
+                : "bg-[var(--ud-bg-subtle)] text-[var(--ud-text-muted)]"
+            )}
+          >
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          </button>
+        </div>
+
+        {/* Quick emoji picker for comment */}
+        {showEmojiPicker && (
+          <div className="absolute bottom-full left-12 z-30 mb-1 flex items-center gap-1 rounded-full border border-[var(--ud-border)] bg-white px-2 py-1.5 shadow-lg">
+            {["👍", "❤️", "😂", "😮", "😢", "🙏", "🔥", "👏"].map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => addEmoji(emoji)}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-lg transition-transform hover:scale-125 active:scale-95"
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

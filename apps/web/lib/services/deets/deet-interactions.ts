@@ -15,7 +15,7 @@ function updateDenormalizedCount(table: "deets", id: string, column: string, val
 
 // ── Likes ──────────────────────────────────────────────────────────
 
-export async function toggleDeetLike(deetId: string): Promise<{ liked: boolean; likeCount: number }> {
+export async function toggleDeetLike(deetId: string, reactionType = "like"): Promise<{ liked: boolean; likeCount: number }> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("You must be signed in to like a deet.");
@@ -23,17 +23,22 @@ export async function toggleDeetLike(deetId: string): Promise<{ liked: boolean; 
   // Check if already liked
   const { data: existing } = await supabase
     .from("deet_likes")
-    .select("id")
+    .select("id, reaction_type")
     .eq("deet_id", deetId)
     .eq("user_id", user.id)
     .maybeSingle();
 
   if (existing) {
-    // Unlike
-    await supabase.from("deet_likes").delete().eq("id", existing.id);
+    if (existing.reaction_type === reactionType) {
+      // Same reaction — toggle off (unlike)
+      await supabase.from("deet_likes").delete().eq("id", existing.id);
+    } else {
+      // Different reaction — update the emoji type
+      await supabase.from("deet_likes").update({ reaction_type: reactionType }).eq("id", existing.id);
+    }
   } else {
-    // Like
-    await supabase.from("deet_likes").insert({ deet_id: deetId, user_id: user.id });
+    // New reaction
+    await supabase.from("deet_likes").insert({ deet_id: deetId, user_id: user.id, reaction_type: reactionType });
   }
 
   // Fetch updated count
@@ -47,7 +52,12 @@ export async function toggleDeetLike(deetId: string): Promise<{ liked: boolean; 
   // Update denormalized count (non-blocking — must not break the like toggle)
   updateDenormalizedCount("deets", deetId, "like_count", likeCount);
 
-  return { liked: !existing, likeCount };
+  // Determine new liked state
+  const nowLiked = existing
+    ? existing.reaction_type !== reactionType // changed emoji = still liked; same emoji = unliked
+    : true; // new reaction = liked
+
+  return { liked: nowLiked, likeCount };
 }
 
 export async function getDeetLikeStatus(deetIds: string[]): Promise<Map<string, { liked: boolean; count: number }>> {
@@ -56,14 +66,25 @@ export async function getDeetLikeStatus(deetIds: string[]): Promise<Map<string, 
   const result = new Map<string, { liked: boolean; count: number }>();
   if (!deetIds.length) return result;
 
-  // Get counts for all deets
-  const { data: deets } = await supabase
-    .from("deets")
-    .select("id, like_count")
-    .in("id", deetIds);
+  // Initialize all deets with 0
+  for (const id of deetIds) {
+    result.set(id, { liked: false, count: 0 });
+  }
 
-  for (const d of deets ?? []) {
-    result.set(d.id, { liked: false, count: d.like_count ?? 0 });
+  // Count actual likes from deet_likes table (not stale denormalized count)
+  const { data: allLikes } = await supabase
+    .from("deet_likes")
+    .select("deet_id")
+    .in("deet_id", deetIds);
+
+  for (const like of allLikes ?? []) {
+    const entry = result.get(like.deet_id);
+    if (entry) entry.count += 1;
+  }
+
+  // Heal denormalized counts in background
+  for (const [id, entry] of result) {
+    updateDenormalizedCount("deets", id, "like_count", entry.count);
   }
 
   // Get user's likes
@@ -93,9 +114,11 @@ export interface DeetComment {
   createdAt: string;
   authorName?: string;
   authorAvatar?: string;
+  parentId?: string | null;
+  replies?: DeetComment[];
 }
 
-export async function addDeetComment(deetId: string, body: string): Promise<DeetComment> {
+export async function addDeetComment(deetId: string, body: string, parentId?: string): Promise<DeetComment> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("You must be signed in to comment.");
@@ -104,10 +127,13 @@ export async function addDeetComment(deetId: string, body: string): Promise<Deet
   if (!trimmed) throw new Error("Comment cannot be empty.");
 
   // PRIMARY OPERATION: insert the comment
+  const insertPayload: Record<string, unknown> = { deet_id: deetId, user_id: user.id, body: trimmed };
+  if (parentId) insertPayload.parent_id = parentId;
+
   const { data, error } = await supabase
     .from("deet_comments")
-    .insert({ deet_id: deetId, user_id: user.id, body: trimmed })
-    .select("id, deet_id, user_id, body, created_at")
+    .insert(insertPayload)
+    .select("id, deet_id, user_id, body, created_at, parent_id")
     .single();
 
   if (error) throw new Error(`Failed to add comment: ${error.message}`);
@@ -151,6 +177,7 @@ export async function addDeetComment(deetId: string, body: string): Promise<Deet
     userId: data.user_id,
     body: data.body,
     createdAt: data.created_at,
+    parentId: data.parent_id ?? null,
     authorName: resolvedName,
     authorAvatar: resolvedAvatar,
   };
@@ -161,10 +188,10 @@ export async function listDeetComments(deetId: string): Promise<DeetComment[]> {
 
   const { data, error } = await supabase
     .from("deet_comments")
-    .select("id, deet_id, user_id, body, created_at")
+    .select("id, deet_id, user_id, body, created_at, parent_id")
     .eq("deet_id", deetId)
     .order("created_at", { ascending: true })
-    .limit(50);
+    .limit(100);
 
   if (error) throw new Error(`Failed to load comments: ${error.message}`);
 
@@ -186,7 +213,7 @@ export async function listDeetComments(deetId: string): Promise<DeetComment[]> {
     profileMap.set(p.id, { full_name: p.full_name, avatar_url: p.avatar_url, email: p.email });
   }
 
-  return data.map((row) => {
+  const allComments = data.map((row) => {
     const profile = profileMap.get(row.user_id);
     const isCurrentUser = currentUser && row.user_id === currentUser.id;
     const authName = isCurrentUser
@@ -201,10 +228,32 @@ export async function listDeetComments(deetId: string): Promise<DeetComment[]> {
       userId: row.user_id,
       body: row.body,
       createdAt: row.created_at,
+      parentId: row.parent_id ?? null,
       authorName: profile?.full_name || authName || profile?.email?.split("@")[0] || authEmail?.split("@")[0] || undefined,
       authorAvatar: profile?.avatar_url || authAvatar || undefined,
     };
   });
+
+  // Organize into threads: top-level comments with nested replies
+  const topLevel: DeetComment[] = [];
+  const replyMap = new Map<string, DeetComment[]>();
+
+  for (const c of allComments) {
+    if (c.parentId) {
+      const existing = replyMap.get(c.parentId) ?? [];
+      existing.push(c);
+      replyMap.set(c.parentId, existing);
+    } else {
+      topLevel.push(c);
+    }
+  }
+
+  // Attach replies to their parent
+  for (const c of topLevel) {
+    c.replies = replyMap.get(c.id) ?? [];
+  }
+
+  return topLevel;
 }
 
 export async function editDeetComment(commentId: string, newBody: string): Promise<void> {
@@ -277,6 +326,8 @@ export interface DeetReactor {
   userId: string;
   name: string;
   avatar?: string;
+  reactionType: string;
+  role?: "creator" | "admin" | "member";
 }
 
 export async function listDeetReactors(deetId: string): Promise<DeetReactor[]> {
@@ -284,14 +335,14 @@ export async function listDeetReactors(deetId: string): Promise<DeetReactor[]> {
 
   const { data: likes, error } = await supabase
     .from("deet_likes")
-    .select("user_id")
+    .select("user_id, reaction_type")
     .eq("deet_id", deetId)
     .order("created_at", { ascending: false })
     .limit(50);
 
   if (error || !likes?.length) return [];
 
-  const userIds = likes.map((l) => l.user_id);
+  const userIds = [...new Set(likes.map((l) => l.user_id))];
   const { data: profiles } = await supabase
     .from("profiles")
     .select("id, full_name, avatar_url, email")
@@ -302,14 +353,55 @@ export async function listDeetReactors(deetId: string): Promise<DeetReactor[]> {
     profileMap.set(p.id, { full_name: p.full_name, avatar_url: p.avatar_url, email: p.email });
   }
 
-  return userIds.map((uid) => {
-    const p = profileMap.get(uid);
+  return likes.map((l) => {
+    const p = profileMap.get(l.user_id);
     return {
-      userId: uid,
+      userId: l.user_id,
       name: p?.full_name || p?.email?.split("@")[0] || "Member",
       avatar: p?.avatar_url || undefined,
+      reactionType: l.reaction_type ?? "like",
     };
   });
+}
+
+/** Get reactors summary for multiple deets (for the preview row). Returns up to 3 avatars per deet. */
+export async function getDeetReactorPreviews(deetIds: string[]): Promise<Record<string, DeetReactor[]>> {
+  const supabase = createClient();
+  const result: Record<string, DeetReactor[]> = {};
+  if (!deetIds.length) return result;
+
+  const { data: likes } = await supabase
+    .from("deet_likes")
+    .select("deet_id, user_id, reaction_type")
+    .in("deet_id", deetIds)
+    .order("created_at", { ascending: false });
+
+  if (!likes?.length) return result;
+
+  // Collect unique user IDs
+  const userIds = [...new Set(likes.map((l) => l.user_id))];
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, avatar_url, email")
+    .in("id", userIds);
+
+  const profileMap = new Map<string, { full_name: string | null; avatar_url: string | null; email: string | null }>();
+  for (const p of profiles ?? []) {
+    profileMap.set(p.id, { full_name: p.full_name, avatar_url: p.avatar_url, email: p.email });
+  }
+
+  for (const l of likes) {
+    if (!result[l.deet_id]) result[l.deet_id] = [];
+    const p = profileMap.get(l.user_id);
+    result[l.deet_id].push({
+      userId: l.user_id,
+      name: p?.full_name || p?.email?.split("@")[0] || "Member",
+      avatar: p?.avatar_url || undefined,
+      reactionType: l.reaction_type ?? "like",
+    });
+  }
+
+  return result;
 }
 
 // ── Views ──────────────────────────────────────────────────────────
@@ -321,20 +413,35 @@ export interface DeetViewer {
   viewedAt: string;
 }
 
-export async function incrementDeetView(deetId: string): Promise<void> {
+/** Returns true if this was a NEW view (first time this user viewed this deet). */
+export async function incrementDeetView(deetId: string): Promise<boolean> {
   const supabase = createClient();
 
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) return false;
 
-    // Upsert into deet_views (one row per user per deet)
+    // Check if this user already viewed this deet
+    const { data: existing } = await supabase
+      .from("deet_views")
+      .select("id")
+      .eq("deet_id", deetId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (existing) {
+      // Already viewed — just update timestamp, don't count again
+      void supabase
+        .from("deet_views")
+        .update({ viewed_at: new Date().toISOString() })
+        .eq("id", existing.id);
+      return false;
+    }
+
+    // New view — insert
     await supabase
       .from("deet_views")
-      .upsert(
-        { deet_id: deetId, user_id: user.id, viewed_at: new Date().toISOString() },
-        { onConflict: "deet_id,user_id" }
-      );
+      .insert({ deet_id: deetId, user_id: user.id, viewed_at: new Date().toISOString() });
 
     // Update denormalized count from actual rows (non-blocking)
     void Promise.resolve(
@@ -347,8 +454,11 @@ export async function incrementDeetView(deetId: string): Promise<void> {
         updateDenormalizedCount("deets", deetId, "view_count", count ?? 0);
       })
       .catch(() => { /* swallow */ });
+
+    return true;
   } catch {
     // View tracking is non-critical — swallow
+    return false;
   }
 }
 
