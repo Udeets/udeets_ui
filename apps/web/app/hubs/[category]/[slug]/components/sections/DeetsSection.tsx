@@ -469,7 +469,7 @@ function PollContent({ deetId, attachments }: { deetId: string; attachments?: Hu
 /* ── Icon sizing ── */
 const POST_ICON = "h-[18px] w-[18px] stroke-[1.5]";
 
-/* ── Emoji reactions (Band-style) ── */
+/* ── Emoji reactions (inline) ── */
 const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
 function EmojiReactButton({
@@ -581,7 +581,7 @@ type SortOption = "Newest" | "Oldest";
 
 type FeedFilterOption = "Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos";
 
-/* ── Filter pill options (matches Band) ── */
+/* ── Filter pill options (pill filters) ── */
 const FILTER_PILLS: Array<{ key: string; label: string }> = [
   { key: "All", label: "All posts" },
   { key: "Announcements", label: "Announcement" },
@@ -624,11 +624,14 @@ export function DeetsSection({
   likedDeetIds,
   likingDeetIds,
   likeCountOverrides,
+  viewCountOverrides,
   onToggleLike,
   expandedCommentDeetId,
   commentsByDeetId,
   commentLoadingDeetIds,
   commentSubmittingDeetId,
+  commentCountOverrides,
+  commentError,
   onToggleComments,
   onSubmitComment,
 }: {
@@ -665,13 +668,16 @@ export function DeetsSection({
   likedDeetIds?: Set<string>;
   likingDeetIds?: Set<string>;
   likeCountOverrides?: Record<string, number>;
+  viewCountOverrides?: Record<string, number>;
   onToggleLike?: (deetId: string) => void;
   expandedCommentDeetId?: string | null;
   commentsByDeetId?: Record<string, DeetComment[]>;
   commentLoadingDeetIds?: Set<string>;
   commentSubmittingDeetId?: string | null;
+  commentCountOverrides?: Record<string, number>;
+  commentError?: string | null;
   onToggleComments?: (deetId: string) => void;
-  onSubmitComment?: (deetId: string, body: string) => void;
+  onSubmitComment?: (deetId: string, body: string) => Promise<{ success: boolean }> | void;
 }) {
   const [sortOption, setSortOption] = useState<SortOption>("Newest");
   const [isSortOpen, setIsSortOpen] = useState(false);
@@ -755,7 +761,7 @@ export function DeetsSection({
     </div>
   );
 
-  /* ── Notice items (Band shows them in a separate strip above feed) ── */
+  /* ── Notice items (Displayed them in a separate strip above feed) ── */
   const noticeItems = filteredFeedItems.filter((item) => {
     if (item.kind !== "notice") return false;
     // Exclude items that resolve to "announcement" display type
@@ -870,7 +876,7 @@ export function DeetsSection({
             </div>
           )}
 
-          {/* ── Sort row + view toggles (Band style) ── */}
+          {/* ── Sort row + view toggles (styled) ── */}
           <div className="flex items-center justify-between py-1">
             <div className="relative">
               <button
@@ -927,7 +933,7 @@ export function DeetsSection({
             </div>
           </div>
 
-          {/* ── Filter pills (Band style) ── */}
+          {/* ── Filter pills (styled) ── */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" as never }}>
             {FILTER_PILLS.map(({ key, label }) => (
               <button
@@ -1037,7 +1043,7 @@ export function DeetsSection({
                     </div>
                     <span className="text-xs text-[var(--ud-text-muted)]">{item.time}</span>
                   </div>
-                  {/* Three-dot menu (Band style) */}
+                  {/* Three-dot menu (styled) */}
                   <div className="relative">
                     <button
                       type="button"
@@ -1157,11 +1163,11 @@ export function DeetsSection({
                   </button>
                 ) : null}
 
-                {/* ── Views count (Band shows this below content, above action bar) ── */}
+                {/* ── Views count (Displayed this below content, above action bar) ── */}
                 <div className="flex justify-end px-4 pt-2">
                   <div className="inline-flex items-center gap-1 text-xs text-[var(--ud-text-muted)]">
                     <Eye className="h-3.5 w-3.5 stroke-[1.5]" />
-                    <span>{item.views}</span>
+                    <span>{(viewCountOverrides?.[item.id] != null ? item.views + viewCountOverrides[item.id] : item.views)}</span>
                   </div>
                 </div>
 
@@ -1189,8 +1195,8 @@ export function DeetsSection({
                   >
                     <MessageSquare className={POST_ICON} />
                     <span>Comment</span>
-                    {item.comments > 0 && (
-                      <span className="text-xs">({item.comments})</span>
+                    {(item.comments + (commentCountOverrides?.[item.id] ?? 0)) > 0 && (
+                      <span className="text-xs">({item.comments + (commentCountOverrides?.[item.id] ?? 0)})</span>
                     )}
                   </button>
 
@@ -1217,6 +1223,7 @@ export function DeetsSection({
                     comments={commentsByDeetId?.[item.id] ?? []}
                     isLoading={commentLoadingDeetIds?.has(item.id) ?? false}
                     isSubmitting={commentSubmittingDeetId === item.id}
+                    error={commentError}
                     onSubmitComment={onSubmitComment}
                     userAvatarSrc={userAvatarSrc}
                     userName={userName}
@@ -1262,7 +1269,7 @@ export function DeetsSection({
       )}
     </SectionShell>
 
-    {/* ── Mobile FAB — opens composer (Band-style) ── */}
+    {/* ── Mobile FAB — opens composer (inline) ── */}
     {isCreatorAdmin && (
       <button
         type="button"
@@ -1278,12 +1285,13 @@ export function DeetsSection({
   );
 }
 
-/* ── Comments panel (Band-style inline) ── */
+/* ── Comments panel (inline) ── */
 function DeetCommentsSection({
   deetId,
   comments,
   isLoading,
   isSubmitting,
+  error,
   onSubmitComment,
   userAvatarSrc,
   userName,
@@ -1292,19 +1300,29 @@ function DeetCommentsSection({
   comments: DeetComment[];
   isLoading: boolean;
   isSubmitting: boolean;
-  onSubmitComment?: (deetId: string, body: string) => void;
+  error?: string | null;
+  onSubmitComment?: (deetId: string, body: string) => Promise<{ success: boolean }> | void;
   userAvatarSrc?: string;
   userName?: string;
 }) {
   const [commentText, setCommentText] = useState("");
+  const [localError, setLocalError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const trimmed = commentText.trim();
     if (!trimmed || isSubmitting) return;
-    onSubmitComment?.(deetId, trimmed);
-    setCommentText("");
+    setLocalError(null);
+    // Optimistically keep the text until we know it succeeded
+    const result = await onSubmitComment?.(deetId, trimmed);
+    if (result && result.success) {
+      setCommentText("");
+    } else if (result && !result.success) {
+      setLocalError("Couldn't post. Tap send to retry.");
+    }
   };
+
+  const displayError = localError || error;
 
   return (
     <div className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)]/50">
@@ -1339,6 +1357,11 @@ function DeetCommentsSection({
         </div>
       ) : (
         <p className="px-4 py-3 text-center text-xs text-[var(--ud-text-muted)]">No comments yet</p>
+      )}
+
+      {/* Error banner */}
+      {displayError && (
+        <p className="px-4 py-2 text-center text-xs font-medium text-red-500">{displayError}</p>
       )}
 
       {/* Comment input */}

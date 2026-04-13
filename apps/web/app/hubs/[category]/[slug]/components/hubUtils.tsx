@@ -146,7 +146,7 @@ export function FeedItemIcon({ kind }: { kind: HubFeedItemKind }) {
   return <Files className={ICON} />;
 }
 
-/** Band-style badge colors and labels for each post kind */
+/** Badge colors and labels for each post kind */
 export function feedKindMeta(kind: HubFeedItemKind): { label: string; badgeClass: string } {
   switch (kind) {
     case "announcement":

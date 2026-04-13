@@ -1,12 +1,25 @@
 "use client";
 
-import { AlertTriangle, Briefcase, Camera, Calendar, ClipboardList, CreditCard, MapPin, Megaphone, Paperclip, Smile } from "lucide-react";
 import { cn } from "../hubUtils";
 import type { ComposerChildFlow } from "./deetTypes";
+import {
+  ComposerPhotoIcon,
+  ComposerEmojiIcon,
+  ComposerAnnouncementIcon,
+  ComposerPollIcon,
+  ComposerJobsIcon,
+  ComposerAttachIcon,
+  ComposerCalendarIcon,
+  ComposerLocationIcon,
+  ComposerAlertIcon,
+  ComposerSurveyIcon,
+  ComposerPaymentIcon,
+} from "./ComposerIcons";
 
 const ACTION_BTN =
   "inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-[var(--ud-bg-subtle)] text-[var(--ud-text-muted)] hover:text-[var(--ud-brand-primary)]";
-const ACTION_ICON_CLS = "h-5 w-5 stroke-[1.5]";
+
+type ComposerIcon = typeof ComposerPhotoIcon;
 
 export function DeetComposerCard({
   isDemoPreview,
@@ -18,20 +31,21 @@ export function DeetComposerCard({
   onOpenComposer: (child?: ComposerChildFlow | null) => void;
 }) {
   const actionButtons: Array<{
-    key: Exclude<ComposerChildFlow, "quit_confirm" | "settings">;
-    icon: typeof Camera;
+    key: Exclude<ComposerChildFlow, "quit_confirm" | "settings" | "notice" | "money">;
+    icon: ComposerIcon;
     label: string;
   }> = [
-    { key: "photo", icon: Camera, label: "Photo" },
-    { key: "emoji", icon: Smile, label: "Emoji" },
-    { key: "announcement", icon: Megaphone, label: "Announcement" },
-    { key: "jobs", icon: Briefcase, label: "Jobs" },
-    { key: "photo", icon: Paperclip, label: "Attach File" },
-    { key: "event", icon: Calendar, label: "Event" },
-    { key: "checkin", icon: MapPin, label: "Check-in" },
-    { key: "alert", icon: AlertTriangle, label: "Alert" },
-    { key: "survey", icon: ClipboardList, label: "Survey" },
-    { key: "payment", icon: CreditCard, label: "Payment" },
+    { key: "photo", icon: ComposerPhotoIcon, label: "Photo" },
+    { key: "emoji", icon: ComposerEmojiIcon, label: "Emoji" },
+    { key: "announcement", icon: ComposerAnnouncementIcon, label: "Announcement" },
+    { key: "poll", icon: ComposerPollIcon, label: "Poll" },
+    { key: "jobs", icon: ComposerJobsIcon, label: "Jobs" },
+    { key: "photo", icon: ComposerAttachIcon, label: "Attach File" },
+    { key: "event", icon: ComposerCalendarIcon, label: "Event" },
+    { key: "checkin", icon: ComposerLocationIcon, label: "Check-in" },
+    { key: "alert", icon: ComposerAlertIcon, label: "Alert" },
+    { key: "survey", icon: ComposerSurveyIcon, label: "Survey" },
+    { key: "payment", icon: ComposerPaymentIcon, label: "Payment" },
   ];
 
   return (
@@ -57,7 +71,7 @@ export function DeetComposerCard({
         </button>
       </div>
 
-      {/* Quick-action icon row — thin outline icons, left-aligned */}
+      {/* Quick-action icon row — Phosphor rounded icons */}
       <div className="flex items-center justify-start border-t border-[var(--ud-border-subtle)] px-1 py-1.5 overflow-x-auto">
         {actionButtons.map(({ key, icon: Icon, label }, idx) => (
           <button
@@ -75,7 +89,7 @@ export function DeetComposerCard({
               !isCreatorAdmin && "cursor-not-allowed opacity-40"
             )}
           >
-            <Icon className={ACTION_ICON_CLS} />
+            <Icon className="h-[22px] w-[22px]" />
           </button>
         ))}
       </div>

@@ -186,7 +186,7 @@ function PendingRequestCard({
   );
 }
 
-/* ── Band-style member profile popup ── */
+/* ── Member profile popup ── */
 function MemberProfilePopup({
   member,
   onClose,

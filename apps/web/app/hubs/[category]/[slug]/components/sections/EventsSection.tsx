@@ -288,7 +288,7 @@ export function EventsSection({
         </button>
       </div>
 
-      {/* ═══ Calendar View toggle button (Band-style) ═══ */}
+      {/* ═══ Calendar View toggle button (clean) ═══ */}
       <div className="px-4 pb-4">
         <button
           type="button"
@@ -344,7 +344,7 @@ export function EventsSection({
             ))}
           </div>
 
-          {/* Calendar grid — clean, no borders (Band-style) */}
+          {/* Calendar grid — clean, no borders (clean) */}
           {grid.map((row, ri) => (
             <div key={ri} style={GRID7}>
               {row.map((cell) => {
@@ -389,7 +389,7 @@ export function EventsSection({
         </div>
       )}
 
-      {/* ═══ EVENT LIST — grouped by month (Band-style) ═══ */}
+      {/* ═══ EVENT LIST — grouped by month (clean) ═══ */}
       <div className="px-4">
         {eventsByMonth.length === 0 ? (
           <div className="flex flex-col items-center py-12 text-center">

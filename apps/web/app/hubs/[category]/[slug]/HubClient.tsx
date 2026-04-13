@@ -417,6 +417,8 @@ export default function HubClient({
     commentsByDeetId,
     commentLoadingDeetIds,
     commentSubmittingDeetId,
+    commentCountOverrides,
+    commentError,
     handleToggleComments,
     handleSubmitComment,
   } = useDeetInteractions(allFeedItems);
@@ -1079,11 +1081,14 @@ export default function HubClient({
         likedDeetIds={likedDeetIds}
         likingDeetIds={likingDeetIds}
         likeCountOverrides={likeCountOverrides}
+        viewCountOverrides={viewCountOverrides}
         onToggleLike={handleToggleLike}
         expandedCommentDeetId={expandedCommentDeetId}
         commentsByDeetId={commentsByDeetId}
         commentLoadingDeetIds={commentLoadingDeetIds}
         commentSubmittingDeetId={commentSubmittingDeetId}
+        commentCountOverrides={commentCountOverrides}
+        commentError={commentError}
         onToggleComments={handleToggleComments}
         onSubmitComment={handleSubmitComment}
       />
@@ -1139,7 +1144,7 @@ export default function HubClient({
         {mediaSuccess ? <p className="px-4 pt-3 text-sm font-medium text-[var(--ud-brand-primary)]">{mediaSuccess}</p> : null}
         {mediaError ? <p className="px-4 pt-3 text-sm font-medium text-[var(--ud-danger)]">{mediaError}</p> : null}
 
-        {/* Mobile horizontal tab bar — Band-style: About, Posts, Events, Attachments */}
+        {/* Mobile horizontal tab bar: About, Posts, Events, Attachments */}
         <div className="flex border-b border-[var(--ud-border)] bg-[var(--ud-bg-card)] lg:hidden">
           {(["About", "Posts", "Events", "Attachments"] as const)
             .filter((tab) => canAccessFullContent || tab === "About")
@@ -1785,15 +1790,15 @@ export default function HubClient({
             <div className="mt-3 flex items-center gap-4 text-sm text-[var(--ud-text-muted)] lg:mt-4">
               <span className="inline-flex items-center gap-1">
                 <Eye className="h-3.5 w-3.5" />
-                0 views
+                {(() => { const fi = viewer.focusId ? allFeedItems.find(f => f.id === viewer.focusId) : null; return fi ? fi.views + (viewCountOverrides[fi.id] ?? 0) : 0; })()} views
               </span>
               <span className="inline-flex items-center gap-1">
                 <Heart className="h-3.5 w-3.5" />
-                0 likes
+                {(() => { const fi = viewer.focusId ? allFeedItems.find(f => f.id === viewer.focusId) : null; return fi ? (likeCountOverrides[fi.id] ?? fi.likes) : 0; })()} likes
               </span>
               <span className="inline-flex items-center gap-1">
                 <MessageSquare className="h-3.5 w-3.5" />
-                0 comments
+                {(() => { const fi = viewer.focusId ? allFeedItems.find(f => f.id === viewer.focusId) : null; return fi ? fi.comments : 0; })()} comments
               </span>
             </div>
 

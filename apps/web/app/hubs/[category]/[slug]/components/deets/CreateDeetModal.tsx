@@ -3,9 +3,22 @@
 
 import type { FormEvent } from "react";
 import { useEffect, useRef } from "react";
-import { AlertTriangle, Briefcase, Calendar, ClipboardList, CreditCard, Images, MapPin, Megaphone, Paperclip, Settings, Smile, X } from "lucide-react";
+import { Settings, X } from "lucide-react";
 import { BUTTON_PRIMARY, cn } from "../hubUtils";
 import type { AttachedDeetItem, ComposerChildFlow, DeetFormattingState } from "./deetTypes";
+import {
+  ComposerPhotoIcon,
+  ComposerEmojiIcon,
+  ComposerAnnouncementIcon,
+  ComposerPollIcon,
+  ComposerJobsIcon,
+  ComposerAttachIcon,
+  ComposerCalendarIcon,
+  ComposerLocationIcon,
+  ComposerAlertIcon,
+  ComposerSurveyIcon,
+  ComposerPaymentIcon,
+} from "./ComposerIcons";
 
 const ACTION_BTN = "inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]";
 const ACTION_ICON_CLS = "h-5 w-5 stroke-[1.5]";
@@ -161,37 +174,40 @@ export function CreateDeetModal({
             ) : null}
           </div>
 
-          {/* Action buttons row */}
+          {/* Action buttons row — Phosphor rounded icons */}
           <div className="mt-4 flex flex-wrap items-center gap-1 text-[var(--ud-text-muted)]">
             <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("photo")} className={ACTION_BTN} title="Photo/Video">
-              <Images className={ACTION_ICON_CLS} />
+              <ComposerPhotoIcon className="h-[22px] w-[22px]" />
             </button>
             <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("emoji")} className={ACTION_BTN} title="Sticker/Emoji">
-              <Smile className={ACTION_ICON_CLS} />
+              <ComposerEmojiIcon className="h-[22px] w-[22px]" />
             </button>
             <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("announcement")} className={ACTION_BTN} title="Announcement">
-              <Megaphone className={ACTION_ICON_CLS} />
+              <ComposerAnnouncementIcon className="h-[22px] w-[22px]" />
+            </button>
+            <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("poll")} className={ACTION_BTN} title="Poll">
+              <ComposerPollIcon className="h-[22px] w-[22px]" />
             </button>
             <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("jobs")} className={ACTION_BTN} title="Jobs">
-              <Briefcase className={ACTION_ICON_CLS} />
+              <ComposerJobsIcon className="h-[22px] w-[22px]" />
             </button>
             <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("photo")} className={ACTION_BTN} title="Attach File">
-              <Paperclip className={ACTION_ICON_CLS} />
+              <ComposerAttachIcon className="h-[22px] w-[22px]" />
             </button>
             <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("event")} className={ACTION_BTN} title="Event">
-              <Calendar className={ACTION_ICON_CLS} />
+              <ComposerCalendarIcon className="h-[22px] w-[22px]" />
             </button>
             <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("checkin")} className={ACTION_BTN} title="Check-in">
-              <MapPin className={ACTION_ICON_CLS} />
+              <ComposerLocationIcon className="h-[22px] w-[22px]" />
             </button>
             <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("alert")} className={ACTION_BTN} title="Alert">
-              <AlertTriangle className={ACTION_ICON_CLS} />
+              <ComposerAlertIcon className="h-[22px] w-[22px]" />
             </button>
             <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("survey")} className={ACTION_BTN} title="Survey">
-              <ClipboardList className={ACTION_ICON_CLS} />
+              <ComposerSurveyIcon className="h-[22px] w-[22px]" />
             </button>
             <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("payment")} className={ACTION_BTN} title="Payment Request">
-              <CreditCard className={ACTION_ICON_CLS} />
+              <ComposerPaymentIcon className="h-[22px] w-[22px]" />
             </button>
           </div>
 

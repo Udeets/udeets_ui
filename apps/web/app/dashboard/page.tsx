@@ -647,7 +647,7 @@ function DashboardDeetRichContent({ item }: { item: FeedItem }) {
   );
 }
 
-/* ── Emoji reactions (Band-style) ── */
+/* ── Emoji reactions ── */
 const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
 function DashboardEmojiReactButton({

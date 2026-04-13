@@ -19,7 +19,7 @@ function cn(...classes: Array<string | false | null | undefined>) {
 }
 
 /**
- * Band-style hub tile: large rounded-square DP image + hub name below.
+ * Hub tile: large rounded-square DP image + hub name below.
  * No cover photo on the dashboard — just the DP as the main visual.
  */
 export function DashboardHubCard({
@@ -99,7 +99,7 @@ export function DashboardHubCard({
 
   return (
     <Link href={hub.href} className="flex flex-col items-center gap-1.5">
-      {/* Rounded-square DP — Band-style squircle with 3D depth */}
+      {/* Rounded-square DP — squircle with 3D depth */}
       <div
         className={cn(
           "relative aspect-square w-full overflow-hidden rounded-[22%]",
@@ -146,7 +146,7 @@ export function DashboardHubCard({
         ) : null}
       </div>
 
-      {/* Hub name below the icon — Band style */}
+      {/* Hub name below the icon */}
       <span
         title={hub.name}
         className="w-full truncate text-center text-[12px] font-medium leading-tight text-[var(--ud-text-primary)]"

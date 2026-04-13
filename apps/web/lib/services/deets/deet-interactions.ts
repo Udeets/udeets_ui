@@ -1,5 +1,18 @@
 import { createClient } from "@/lib/supabase/client";
 
+/**
+ * Fire-and-forget helper for denormalized count updates.
+ * These are nice-to-have but must NEVER break the primary operation.
+ */
+function updateDenormalizedCount(table: "deets", id: string, column: string, value: number) {
+  try {
+    const supabase = createClient();
+    void supabase.from(table).update({ [column]: value }).eq("id", id);
+  } catch {
+    // Intentionally swallowed — count will self-heal on next full read
+  }
+}
+
 // ── Likes ──────────────────────────────────────────────────────────
 
 export async function toggleDeetLike(deetId: string): Promise<{ liked: boolean; likeCount: number }> {
@@ -31,8 +44,8 @@ export async function toggleDeetLike(deetId: string): Promise<{ liked: boolean; 
 
   const likeCount = count ?? 0;
 
-  // Update denormalized count
-  await supabase.from("deets").update({ like_count: likeCount }).eq("id", deetId);
+  // Update denormalized count (non-blocking — must not break the like toggle)
+  updateDenormalizedCount("deets", deetId, "like_count", likeCount);
 
   return { liked: !existing, likeCount };
 }
@@ -90,6 +103,7 @@ export async function addDeetComment(deetId: string, body: string): Promise<Deet
   const trimmed = body.trim();
   if (!trimmed) throw new Error("Comment cannot be empty.");
 
+  // PRIMARY OPERATION: insert the comment
   const { data, error } = await supabase
     .from("deet_comments")
     .insert({ deet_id: deetId, user_id: user.id, body: trimmed })
@@ -98,26 +112,38 @@ export async function addDeetComment(deetId: string, body: string): Promise<Deet
 
   if (error) throw new Error(`Failed to add comment: ${error.message}`);
 
-  // Update denormalized count
-  const { count } = await supabase
-    .from("deet_comments")
-    .select("*", { count: "exact", head: true })
-    .eq("deet_id", deetId);
+  // SECONDARY: Update denormalized count (non-blocking)
+  void Promise.resolve(
+    supabase
+      .from("deet_comments")
+      .select("*", { count: "exact", head: true })
+      .eq("deet_id", deetId)
+  )
+    .then(({ count }) => {
+      updateDenormalizedCount("deets", deetId, "comment_count", count ?? 0);
+    })
+    .catch(() => { /* swallow — count will self-heal */ });
 
-  await supabase.from("deets").update({ comment_count: count ?? 0 }).eq("id", deetId);
+  // SECONDARY: Fetch profile for display (non-critical, wrapped in try/catch)
+  let resolvedName: string | undefined;
+  let resolvedAvatar: string | undefined;
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name, avatar_url, email")
+      .eq("id", user.id)
+      .single();
 
-  // Fetch the commenter's profile
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, avatar_url, email")
-    .eq("id", user.id)
-    .single();
-
-  // Also ensure the profile has the user's name/email if missing (self-heal)
-  const meta = user.user_metadata ?? {};
-  const authName = (meta.full_name as string) || (meta.name as string) || null;
-  const resolvedName = profile?.full_name || authName || profile?.email?.split("@")[0] || user.email?.split("@")[0] || undefined;
-  const resolvedAvatar = profile?.avatar_url || (meta.avatar_url as string) || undefined;
+    const meta = user.user_metadata ?? {};
+    const authName = (meta.full_name as string) || (meta.name as string) || null;
+    resolvedName = profile?.full_name || authName || profile?.email?.split("@")[0] || user.email?.split("@")[0] || undefined;
+    resolvedAvatar = profile?.avatar_url || (meta.avatar_url as string) || undefined;
+  } catch {
+    // Fall back to auth metadata
+    const meta = user.user_metadata ?? {};
+    resolvedName = (meta.full_name as string) || (meta.name as string) || user.email?.split("@")[0] || undefined;
+    resolvedAvatar = (meta.avatar_url as string) || undefined;
+  }
 
   return {
     id: data.id,
@@ -162,7 +188,6 @@ export async function listDeetComments(deetId: string): Promise<DeetComment[]> {
 
   return data.map((row) => {
     const profile = profileMap.get(row.user_id);
-    // For the current user's own comments, also try auth metadata as fallback
     const isCurrentUser = currentUser && row.user_id === currentUser.id;
     const authName = isCurrentUser
       ? (currentMeta.full_name as string) || (currentMeta.name as string) || null
@@ -228,18 +253,22 @@ export async function listDeetReactors(deetId: string): Promise<DeetReactor[]> {
 export async function incrementDeetView(deetId: string): Promise<void> {
   const supabase = createClient();
 
-  // Simple increment — no user tracking needed for views
-  const { data } = await supabase
-    .from("deets")
-    .select("view_count")
-    .eq("id", deetId)
-    .single();
+  // Read current count, then increment (non-critical, wrapped)
+  try {
+    const { data } = await supabase
+      .from("deets")
+      .select("view_count")
+      .eq("id", deetId)
+      .single();
 
-  const currentCount = data?.view_count ?? 0;
-  await supabase
-    .from("deets")
-    .update({ view_count: currentCount + 1 })
-    .eq("id", deetId);
+    const currentCount = data?.view_count ?? 0;
+    await supabase
+      .from("deets")
+      .update({ view_count: currentCount + 1 })
+      .eq("id", deetId);
+  } catch {
+    // View tracking is non-critical — swallow
+  }
 }
 
 export async function getDeetCounts(deetIds: string[]): Promise<Map<string, { likeCount: number; commentCount: number; viewCount: number }>> {
