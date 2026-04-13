@@ -126,9 +126,17 @@ export interface DeetComment {
   authorAvatar?: string;
   parentId?: string | null;
   replies?: DeetComment[];
+  imageUrl?: string | null;
+  attachmentUrl?: string | null;
+  attachmentName?: string | null;
 }
 
-export async function addDeetComment(deetId: string, body: string, parentId?: string): Promise<DeetComment> {
+export async function addDeetComment(
+  deetId: string,
+  body: string,
+  parentId?: string,
+  attachments?: { imageUrl?: string; attachmentUrl?: string; attachmentName?: string },
+): Promise<DeetComment> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("You must be signed in to comment.");
@@ -139,13 +147,17 @@ export async function addDeetComment(deetId: string, body: string, parentId?: st
   // PRIMARY OPERATION: insert the comment
   const insertPayload: Record<string, unknown> = { deet_id: deetId, user_id: user.id, body: trimmed };
   if (parentId) insertPayload.parent_id = parentId;
+  if (attachments?.imageUrl) insertPayload.image_url = attachments.imageUrl;
+  if (attachments?.attachmentUrl) insertPayload.attachment_url = attachments.attachmentUrl;
+  if (attachments?.attachmentName) insertPayload.attachment_name = attachments.attachmentName;
 
-  // Try with parent_id; fall back without if column doesn't exist yet
-  type CommentRow = { id: string; deet_id: string; user_id: string; body: string; created_at: string; parent_id?: string | null };
+  // Try with all columns; fall back progressively if columns don't exist yet
+  type CommentRow = { id: string; deet_id: string; user_id: string; body: string; created_at: string; parent_id?: string | null; image_url?: string | null; attachment_url?: string | null; attachment_name?: string | null };
   let data: CommentRow | null = null;
 
-  const res1 = await supabase.from("deet_comments").insert(insertPayload).select("id, deet_id, user_id, body, created_at, parent_id").single();
-  if (res1.error && res1.error.message.includes("parent_id")) {
+  const res1 = await supabase.from("deet_comments").insert(insertPayload).select("id, deet_id, user_id, body, created_at, parent_id, image_url, attachment_url, attachment_name").single();
+  if (res1.error && (res1.error.message.includes("parent_id") || res1.error.message.includes("image_url") || res1.error.message.includes("attachment_url") || res1.error.message.includes("attachment_name"))) {
+    // Fall back to basic columns only
     const basicPayload = { deet_id: deetId, user_id: user.id, body: trimmed };
     const res2 = await supabase.from("deet_comments").insert(basicPayload).select("id, deet_id, user_id, body, created_at").single();
     if (res2.error) throw new Error(`Failed to add comment: ${res2.error.message}`);
@@ -200,25 +212,30 @@ export async function addDeetComment(deetId: string, body: string, parentId?: st
     parentId: data.parent_id ?? null,
     authorName: resolvedName,
     authorAvatar: resolvedAvatar,
+    imageUrl: data.image_url ?? null,
+    attachmentUrl: data.attachment_url ?? null,
+    attachmentName: data.attachment_name ?? null,
   };
 }
 
 export async function listDeetComments(deetId: string): Promise<DeetComment[]> {
   const supabase = createClient();
 
-  // Try with parent_id first; fall back to without if column doesn't exist yet
-  type CommentRow = { id: string; deet_id: string; user_id: string; body: string; created_at: string; parent_id?: string | null };
+  // Try with all columns; fall back progressively if columns don't exist yet
+  type CommentRow = { id: string; deet_id: string; user_id: string; body: string; created_at: string; parent_id?: string | null; image_url?: string | null; attachment_url?: string | null; attachment_name?: string | null };
   let data: CommentRow[] = [];
   let queryError: { message: string } | null = null;
 
+  const fullSelect = "id, deet_id, user_id, body, created_at, parent_id, image_url, attachment_url, attachment_name";
   const res1 = await supabase
     .from("deet_comments")
-    .select("id, deet_id, user_id, body, created_at, parent_id")
+    .select(fullSelect)
     .eq("deet_id", deetId)
     .order("created_at", { ascending: true })
     .limit(100);
 
-  if (res1.error && res1.error.message.includes("parent_id")) {
+  if (res1.error && (res1.error.message.includes("parent_id") || res1.error.message.includes("image_url") || res1.error.message.includes("attachment_url") || res1.error.message.includes("attachment_name"))) {
+    // Fall back to basic columns
     const res2 = await supabase
       .from("deet_comments")
       .select("id, deet_id, user_id, body, created_at")
@@ -270,6 +287,9 @@ export async function listDeetComments(deetId: string): Promise<DeetComment[]> {
       parentId: row.parent_id ?? null,
       authorName: profile?.full_name || authName || profile?.email?.split("@")[0] || authEmail?.split("@")[0] || undefined,
       authorAvatar: profile?.avatar_url || authAvatar || undefined,
+      imageUrl: row.image_url ?? null,
+      attachmentUrl: row.attachment_url ?? null,
+      attachmentName: row.attachment_name ?? null,
     };
   });
 
@@ -540,6 +560,29 @@ export async function listDeetViewers(deetId: string): Promise<DeetViewer[]> {
       viewedAt: v.viewed_at,
     };
   });
+}
+
+/** Sync denormalized view_count with actual deet_views rows. */
+export async function syncDeetViewCounts(deetIds: string[]): Promise<Record<string, number>> {
+  const supabase = createClient();
+  const result: Record<string, number> = {};
+  if (!deetIds.length) return result;
+
+  for (const deetId of deetIds) {
+    try {
+      const { count } = await supabase
+        .from("deet_views")
+        .select("*", { count: "exact", head: true })
+        .eq("deet_id", deetId);
+      const actual = count ?? 0;
+      result[deetId] = actual;
+      updateDenormalizedCount("deets", deetId, "view_count", actual);
+    } catch {
+      // deet_views table might not exist yet — skip
+    }
+  }
+
+  return result;
 }
 
 export async function getDeetCounts(deetIds: string[]): Promise<Map<string, { likeCount: number; commentCount: number; viewCount: number }>> {

@@ -11,6 +11,7 @@ import {
   editDeetComment,
   deleteDeetComment,
   syncDeetCommentCounts,
+  syncDeetViewCounts,
   incrementDeetView,
   listDeetViewers,
   type DeetComment,
@@ -56,6 +57,32 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
   const loadingCommentDeetIds = useRef<Set<string>>(new Set());
   const submittingRef = useRef(false);
   const commentCountsSynced = useRef(false);
+  const viewCountsSynced = useRef(false);
+
+  // ── Sync view counts on first load ────────────────────────────────
+  // The denormalized view_count on deets may be stale. Heal by reading
+  // actual deet_views rows and computing overrides.
+  useEffect(() => {
+    if (viewCountsSynced.current) return;
+    const deetIds = feedItems.map((item) => item.id).filter(Boolean);
+    if (!deetIds.length) return;
+    viewCountsSynced.current = true;
+
+    void syncDeetViewCounts(deetIds)
+      .then((counts) => {
+        const overrides: Record<string, number> = {};
+        for (const item of feedItems) {
+          const actual = counts[item.id];
+          if (actual != null && actual !== item.views) {
+            overrides[item.id] = actual - item.views;
+          }
+        }
+        if (Object.keys(overrides).length > 0) {
+          setViewCountOverrides((prev) => ({ ...prev, ...overrides }));
+        }
+      })
+      .catch(() => { /* non-critical */ });
+  }, [feedItems]);
 
   // ── Sync comment counts on first load ─────────────────────────────
   // The denormalized comment_count on deets may be stale (especially
@@ -211,14 +238,19 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
 
   // ── Comments: Submit (supports parentId for replies) ──────────────
 
-  const handleSubmitComment = useCallback(async (deetId: string, body: string, parentId?: string): Promise<{ success: boolean }> => {
+  const handleSubmitComment = useCallback(async (
+    deetId: string,
+    body: string,
+    parentId?: string,
+    attachments?: { imageUrl?: string; attachmentUrl?: string; attachmentName?: string },
+  ): Promise<{ success: boolean }> => {
     if (submittingRef.current) return { success: false };
     submittingRef.current = true;
     setCommentSubmittingDeetId(deetId);
     setCommentError(null);
 
     try {
-      const newComment = await withTimeout(addDeetComment(deetId, body, parentId), 10_000, "Submit comment");
+      const newComment = await withTimeout(addDeetComment(deetId, body, parentId, attachments), 10_000, "Submit comment");
       if (parentId) {
         // Add reply under its parent
         setCommentsByDeetId((prev) => {

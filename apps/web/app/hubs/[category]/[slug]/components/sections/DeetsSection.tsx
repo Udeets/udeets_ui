@@ -520,20 +520,21 @@ function EmojiReactButton({
   }, [showPicker]);
 
   const handleReactClick = () => {
-    if (isLiked) {
-      // If already reacted, un-react (pass current emoji so toggleDeetLike detects same reaction)
-      onToggleLike?.(deetId, selectedEmoji || "like");
-      setSelectedEmoji(null);
-    } else {
-      // Show emoji picker
-      setShowPicker((v) => !v);
-    }
+    // Always show the emoji picker (whether reacted or not)
+    setShowPicker((v) => !v);
   };
 
   const handleEmojiSelect = (emoji: string) => {
-    setSelectedEmoji(emoji);
     setShowPicker(false);
-    onToggleLike?.(deetId, emoji);
+    if (isLiked && selectedEmoji === emoji) {
+      // Same emoji picked again — un-react
+      onToggleLike?.(deetId, emoji);
+      setSelectedEmoji(null);
+    } else {
+      // New reaction or changed emoji
+      setSelectedEmoji(emoji);
+      onToggleLike?.(deetId, emoji);
+    }
   };
 
   const displayEmoji = isLiked ? (selectedEmoji || "👍") : null;
@@ -832,7 +833,7 @@ export function DeetsSection({
   commentCountOverrides?: Record<string, number>;
   commentError?: string | null;
   onToggleComments?: (deetId: string) => void;
-  onSubmitComment?: (deetId: string, body: string, parentId?: string) => Promise<{ success: boolean }> | void;
+  onSubmitComment?: (deetId: string, body: string, parentId?: string, attachments?: { imageUrl?: string; attachmentUrl?: string; attachmentName?: string }) => Promise<{ success: boolean }> | void;
   onEditComment?: (commentId: string, deetId: string, newBody: string) => Promise<{ success: boolean }> | void;
   onDeleteComment?: (commentId: string, deetId: string) => Promise<{ success: boolean }> | void;
   viewersDeetId?: string | null;
@@ -1478,7 +1479,7 @@ export function DeetsSection({
                               </div>
                               {/* Emoji badge */}
                               {reactor.reactionType && reactor.reactionType !== "like" && (
-                                <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] leading-none shadow-sm">
+                                <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs leading-none shadow-sm">
                                   {reactor.reactionType}
                                 </span>
                               )}
@@ -1631,25 +1632,25 @@ function CommentRow({
 }) {
   const isEditing = editingCommentId === comment.id;
   const isConfirmingDelete = confirmDeleteId === comment.id;
-  const avatarSize = isNested ? "h-6 w-6" : "h-8 w-8";
+  const avatarSize = isNested ? "h-7 w-7" : "h-9 w-9";
   const [showReactPicker, setShowReactPicker] = useState(false);
   const [reactedEmoji, setReactedEmoji] = useState<string | null>(null);
 
   return (
-    <div className={cn("group relative flex items-start py-2.5", isNested ? "gap-2" : "gap-2.5")}>
+    <div className="group relative flex items-start gap-2.5 py-3">
       <div className={cn("relative shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]", avatarSize)}>
         <ImageWithFallback
           src={comment.authorAvatar || ""}
           sources={comment.authorAvatar ? [comment.authorAvatar] : []}
           alt={comment.authorName ?? "User"}
           className="h-full w-full object-cover"
-          fallbackClassName={cn("grid h-full w-full place-items-center bg-[var(--ud-brand-light)] font-bold text-[var(--ud-brand-primary)]", isNested ? "text-[7px]" : "text-[10px]")}
+          fallbackClassName={cn("grid h-full w-full place-items-center bg-[var(--ud-brand-light)] font-bold text-[var(--ud-brand-primary)]", isNested ? "text-[8px]" : "text-[10px]")}
           fallback={initials(comment.authorName ?? "User")}
         />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className={cn("font-semibold text-[var(--ud-text-primary)]", isNested ? "text-[11px]" : "text-sm")}>{comment.authorName ?? "User"}</span>
+          <span className="text-sm font-semibold text-[var(--ud-text-primary)]">{comment.authorName ?? "User"}</span>
           {/* Three-dot menu for own comments */}
           {isOwn && !isEditing && !isConfirmingDelete && (
             <div className="relative ml-auto" ref={menuOpenCommentId === comment.id ? menuRef : undefined}>
@@ -1697,7 +1698,27 @@ function CommentRow({
             <button type="button" onClick={onCancelDelete} className="rounded-lg px-2 py-0.5 text-[11px] text-[var(--ud-text-muted)]">No</button>
           </div>
         ) : (
-          <p className={cn("mt-0.5 leading-relaxed text-[var(--ud-text-secondary)]", isNested ? "text-[11px]" : "text-sm")}>{comment.body}</p>
+          <>
+            <p className="mt-0.5 text-sm leading-relaxed text-[var(--ud-text-secondary)]">{comment.body}</p>
+            {/* Comment image */}
+            {comment.imageUrl && (
+              <div className="mt-1.5 overflow-hidden rounded-lg border border-[var(--ud-border-subtle)]">
+                <img src={comment.imageUrl} alt="Comment image" className="max-h-48 w-auto object-cover" loading="lazy" />
+              </div>
+            )}
+            {/* Comment file attachment */}
+            {comment.attachmentUrl && (
+              <a
+                href={comment.attachmentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] px-2.5 py-1.5 text-xs text-[var(--ud-brand-primary)] hover:bg-[var(--ud-bg-card)] transition"
+              >
+                <Paperclip className="h-3.5 w-3.5 stroke-[1.5]" />
+                <span className="max-w-[180px] truncate">{comment.attachmentName || "Attachment"}</span>
+              </a>
+            )}
+          </>
         )}
 
         {/* Actions row: timestamp · React · Reply */}
@@ -1769,7 +1790,7 @@ function DeetCommentsSection({
   isSubmitting: boolean;
   error?: string | null;
   currentUserId?: string;
-  onSubmitComment?: (deetId: string, body: string, parentId?: string) => Promise<{ success: boolean }> | void;
+  onSubmitComment?: (deetId: string, body: string, parentId?: string, attachments?: { imageUrl?: string; attachmentUrl?: string; attachmentName?: string }) => Promise<{ success: boolean }> | void;
   onEditComment?: (commentId: string, deetId: string, newBody: string) => Promise<{ success: boolean }> | void;
   onDeleteComment?: (commentId: string, deetId: string) => Promise<{ success: boolean }> | void;
   userAvatarSrc?: string;
@@ -1784,9 +1805,17 @@ function DeetCommentsSection({
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const [replyToName, setReplyToName] = useState<string>("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  // Attachment state
+  const [pendingImage, setPendingImage] = useState<{ file: File; preview: string } | null>(null);
+  const [pendingFile, setPendingFile] = useState<{ file: File; name: string } | null>(null);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Close menu on outside click
   useEffect(() => {
@@ -1802,13 +1831,39 @@ function DeetCommentsSection({
 
   const handleSubmit = async () => {
     const trimmed = commentText.trim();
-    if (!trimmed || isSubmitting) return;
+    if ((!trimmed && !pendingImage && !pendingFile) || isSubmitting || uploadingMedia) return;
     setLocalError(null);
-    const result = await onSubmitComment?.(deetId, trimmed, replyToId ?? undefined);
+
+    // Upload pending media first
+    let attachments: { imageUrl?: string; attachmentUrl?: string; attachmentName?: string } | undefined;
+    if (pendingImage || pendingFile) {
+      setUploadingMedia(true);
+      try {
+        const { uploadCommentImage, uploadCommentFile } = await import("@/lib/services/deets/upload-comment-media");
+        if (pendingImage) {
+          const uploaded = await uploadCommentImage(pendingImage.file);
+          attachments = { ...attachments, imageUrl: uploaded.url };
+        }
+        if (pendingFile) {
+          const uploaded = await uploadCommentFile(pendingFile.file);
+          attachments = { ...attachments, attachmentUrl: uploaded.url, attachmentName: uploaded.name };
+        }
+      } catch (err) {
+        setLocalError(err instanceof Error ? err.message : "Failed to upload. Try again.");
+        setUploadingMedia(false);
+        return;
+      }
+      setUploadingMedia(false);
+    }
+
+    const bodyText = trimmed || (pendingImage ? "📷" : pendingFile ? "📎" : "");
+    const result = await onSubmitComment?.(deetId, bodyText, replyToId ?? undefined, attachments);
     if (result && result.success) {
       setCommentText("");
       setReplyToId(null);
       setReplyToName("");
+      setPendingImage(null);
+      setPendingFile(null);
     } else if (result && !result.success) {
       setLocalError("Couldn't post. Tap send to retry.");
     }
@@ -1867,6 +1922,26 @@ function DeetCommentsSection({
     inputRef.current?.focus();
   };
 
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setLocalError("Please select an image file."); return; }
+    if (file.size > 5 * 1024 * 1024) { setLocalError("Image must be 5 MB or smaller."); return; }
+    const preview = URL.createObjectURL(file);
+    setPendingImage({ file, preview });
+    setPendingFile(null); // Only one attachment at a time
+    e.target.value = "";
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { setLocalError("File must be 10 MB or smaller."); return; }
+    setPendingFile({ file, name: file.name });
+    setPendingImage(null); // Only one attachment at a time
+    e.target.value = "";
+  };
+
   return (
     <div className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)]/50">
       {/* Comments list */}
@@ -1875,7 +1950,7 @@ function DeetCommentsSection({
           <Loader2 className="h-4 w-4 animate-spin text-[var(--ud-text-muted)]" />
         </div>
       ) : comments.length > 0 ? (
-        <div className="px-4">
+        <div className="px-4 divide-y divide-[var(--ud-border-subtle)]">
           {comments.map((comment) => (
             <div key={comment.id}>
               {/* Top-level comment */}
@@ -1888,7 +1963,7 @@ function DeetCommentsSection({
               />
               {/* Nested replies (one level) */}
               {comment.replies && comment.replies.length > 0 && (
-                <div className="ml-11 border-l-2 border-[var(--ud-border)] pl-4">
+                <div className="ml-12 border-l border-[var(--ud-border-subtle)] pl-4 divide-y divide-[var(--ud-border-subtle)]">
                   {comment.replies.map((reply) => (
                     <CommentRow
                       key={reply.id}
@@ -1925,6 +2000,41 @@ function DeetCommentsSection({
 
       {/* Comment input with emoji, photo, attachment */}
       <div className="relative border-t border-[var(--ud-border-subtle)] px-4 py-2.5">
+        {/* Hidden file inputs */}
+        <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoSelect} />
+        <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
+
+        {/* Attachment preview strip */}
+        {(pendingImage || pendingFile) && (
+          <div className="mb-2 flex items-center gap-2">
+            {pendingImage && (
+              <div className="relative inline-flex overflow-hidden rounded-lg border border-[var(--ud-border-subtle)]">
+                <img src={pendingImage.preview} alt="Preview" className="h-16 w-auto object-cover" />
+                <button
+                  type="button"
+                  onClick={() => { URL.revokeObjectURL(pendingImage.preview); setPendingImage(null); }}
+                  className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+            {pendingFile && (
+              <div className="relative inline-flex items-center gap-1.5 rounded-lg border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] px-2.5 py-2 text-xs text-[var(--ud-text-secondary)]">
+                <Paperclip className="h-3.5 w-3.5 stroke-[1.5]" />
+                <span className="max-w-[150px] truncate">{pendingFile.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setPendingFile(null)}
+                  className="ml-1 text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center gap-2">
           <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
             <ImageWithFallback
@@ -1948,11 +2058,11 @@ function DeetCommentsSection({
               placeholder={replyToId ? `Reply to ${replyToName}...` : "Write a comment..."}
               className="h-9 flex-1 bg-transparent text-sm text-[var(--ud-text-primary)] outline-none placeholder:text-[var(--ud-text-muted)]"
             />
-            {/* Inline action icons */}
-            <button type="button" title="Add photo" className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-secondary)] transition">
+            {/* Inline action icons — wired to file inputs */}
+            <button type="button" title="Add photo" onClick={() => photoInputRef.current?.click()} className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-secondary)] transition">
               <ImageIcon className="h-4 w-4 stroke-[1.5]" />
             </button>
-            <button type="button" title="Attach file" className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-secondary)] transition">
+            <button type="button" title="Attach file" onClick={() => fileInputRef.current?.click()} className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-secondary)] transition">
               <Paperclip className="h-4 w-4 stroke-[1.5]" />
             </button>
             <button
@@ -1967,16 +2077,16 @@ function DeetCommentsSection({
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting || !commentText.trim()}
+            disabled={(isSubmitting || uploadingMedia) || (!commentText.trim() && !pendingImage && !pendingFile)}
             title="Send comment"
             className={cn(
               "inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors",
-              commentText.trim()
+              (commentText.trim() || pendingImage || pendingFile)
                 ? "bg-[var(--ud-brand-primary)] text-white hover:opacity-90"
                 : "bg-[var(--ud-bg-subtle)] text-[var(--ud-text-muted)]"
             )}
           >
-            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {(isSubmitting || uploadingMedia) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </button>
         </div>
 
