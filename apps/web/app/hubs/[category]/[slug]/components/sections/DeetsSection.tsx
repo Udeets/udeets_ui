@@ -476,6 +476,17 @@ const POST_ICON = "h-[18px] w-[18px] stroke-[1.5]";
 /* ── Emoji reactions (inline) ── */
 const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
+/** Map emoji to human-readable label for the React button */
+const EMOJI_TEXT_MAP: Record<string, string> = {
+  "👍": "Liked",
+  "❤️": "Loved",
+  "😂": "Haha",
+  "😮": "Surprised",
+  "😢": "Sad",
+  "🙏": "Grateful",
+  "like": "Liked",
+};
+
 function EmojiReactButton({
   deetId,
   isLiked,
@@ -567,7 +578,7 @@ function EmojiReactButton({
         ) : (
           <SmilePlus className={POST_ICON} />
         )}
-        <span>{isLiked ? "Reacted" : "React"}</span>
+        <span>{isLiked ? (EMOJI_TEXT_MAP[selectedEmoji ?? "like"] ?? "Reacted") : "React"}</span>
       </button>
     </div>
   );
@@ -853,22 +864,14 @@ export function DeetsSection({
     }
   };
 
+  const [shareCountOverrides, setShareCountOverrides] = useState<Record<string, number>>({});
+
   const handleShareDeet = async (deetId: string) => {
     const shareUrl = `${window.location.origin}/hubs/${hubCategory}/${hubSlug}?focus=${deetId}`;
-    // Use native share on mobile when available
-    if (typeof navigator !== "undefined" && navigator.share) {
-      try {
-        await navigator.share({ title: hubName, url: shareUrl });
-        return;
-      } catch {
-        // User cancelled or share failed — fall through to clipboard
-      }
-    }
-    // Clipboard fallback
+    // Always copy to clipboard — no native share sheet
     try {
       await navigator.clipboard.writeText(shareUrl);
     } catch {
-      // Fallback for older browsers / insecure contexts
       const textarea = document.createElement("textarea");
       textarea.value = shareUrl;
       textarea.style.position = "fixed";
@@ -879,6 +882,7 @@ export function DeetsSection({
       document.body.removeChild(textarea);
     }
     setCopiedDeetId(deetId);
+    setShareCountOverrides((prev) => ({ ...prev, [deetId]: (prev[deetId] ?? 0) + 1 }));
     if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
     copiedTimeoutRef.current = setTimeout(() => setCopiedDeetId(null), 2000);
   };
@@ -1310,7 +1314,7 @@ export function DeetsSection({
                   </button>
                 ) : null}
 
-                {/* ── Stats row: reactions · comments (left) | views (right) ── */}
+                {/* ── Stats row: reactions · comments · shares (left) + chevron | views (right) ── */}
                 <div className="relative flex items-center justify-between px-4 pt-2 pb-1">
                   <div className="flex items-center gap-3 text-xs text-[var(--ud-text-muted)]">
                     {(likeCountOverrides?.[item.id] ?? item.likes) > 0 && (
@@ -1320,13 +1324,26 @@ export function DeetsSection({
                       </span>
                     )}
                     {(item.comments + (commentCountOverrides?.[item.id] ?? 0)) > 0 && (
+                      <span className="inline-flex items-center gap-1">
+                        <MessageSquare className="h-3.5 w-3.5 stroke-[1.5]" />
+                        {item.comments + (commentCountOverrides?.[item.id] ?? 0)}
+                      </span>
+                    )}
+                    {(shareCountOverrides[item.id] ?? 0) > 0 && (
+                      <span className="inline-flex items-center gap-1">
+                        <Share2 className="h-3.5 w-3.5 stroke-[1.5]" />
+                        {shareCountOverrides[item.id]}
+                      </span>
+                    )}
+                    {/* Dropdown chevron to toggle comments (like Band) */}
+                    {(item.comments + (commentCountOverrides?.[item.id] ?? 0)) > 0 && (
                       <button
                         type="button"
                         onClick={() => onToggleComments?.(item.id)}
-                        className="inline-flex items-center gap-1 hover:text-[var(--ud-text-secondary)] transition"
+                        className="inline-flex items-center justify-center rounded-full hover:bg-[var(--ud-bg-subtle)] transition"
+                        title="Toggle comments"
                       >
-                        <MessageSquare className="h-3.5 w-3.5 stroke-[1.5]" />
-                        {item.comments + (commentCountOverrides?.[item.id] ?? 0)}
+                        <ChevronDown className={cn("h-4 w-4 transition-transform", expandedCommentDeetId === item.id && "rotate-180")} />
                       </button>
                     )}
                   </div>
@@ -1434,44 +1451,44 @@ export function DeetsSection({
                   </button>
                 </div>
 
-                {/* ── Reactions preview row (avatars + emoji + > arrow) ── */}
-                {(reactorsByDeetId?.[item.id]?.length ?? 0) > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => onOpenReactionsModal?.(item.id)}
-                    className="flex w-full items-center justify-between border-t border-[var(--ud-border-subtle)] px-4 py-2 hover:bg-[var(--ud-bg-subtle)] transition"
-                  >
-                    <div className="flex items-center">
-                      {/* Overlapping avatars with emoji badges */}
-                      <div className="flex items-center -space-x-2">
-                        {(reactorsByDeetId?.[item.id] ?? []).slice(0, 5).map((reactor, idx) => (
-                          <div key={reactor.userId} className="relative" style={{ zIndex: 5 - idx }}>
-                            <div className="h-8 w-8 overflow-hidden rounded-full border-2 border-[var(--ud-bg-card)] bg-[var(--ud-brand-light)]">
-                              <ImageWithFallback
-                                src={reactor.avatar || ""}
-                                sources={reactor.avatar ? [reactor.avatar] : []}
-                                alt={reactor.name}
-                                className="h-full w-full object-cover"
-                                fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-[9px] font-bold text-[var(--ud-brand-primary)]"
-                                fallback={initials(reactor.name)}
-                              />
-                            </div>
-                            {/* Emoji badge */}
-                            {reactor.reactionType && reactor.reactionType !== "like" && (
-                              <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] leading-none shadow-sm">
-                                {reactor.reactionType}
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-[var(--ud-text-muted)]" />
-                  </button>
-                )}
-
-                {/* ── Comments section ── */}
+                {/* ── Comments section (with reactor preview inside) ── */}
                 {expandedCommentDeetId === item.id && (
+                  <>
+                  {/* ── Reactions preview row (avatars + emoji + > arrow) — only when expanded ── */}
+                  {(reactorsByDeetId?.[item.id]?.length ?? 0) > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenReactionsModal?.(item.id)}
+                      className="flex w-full items-center justify-between border-t border-[var(--ud-border-subtle)] px-4 py-2 hover:bg-[var(--ud-bg-subtle)] transition"
+                    >
+                      <div className="flex items-center">
+                        {/* Overlapping avatars with emoji badges */}
+                        <div className="flex items-center -space-x-2">
+                          {(reactorsByDeetId?.[item.id] ?? []).slice(0, 5).map((reactor, idx) => (
+                            <div key={reactor.userId} className="relative" style={{ zIndex: 5 - idx }}>
+                              <div className="h-8 w-8 overflow-hidden rounded-full border-2 border-[var(--ud-bg-card)] bg-[var(--ud-brand-light)]">
+                                <ImageWithFallback
+                                  src={reactor.avatar || ""}
+                                  sources={reactor.avatar ? [reactor.avatar] : []}
+                                  alt={reactor.name}
+                                  className="h-full w-full object-cover"
+                                  fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-[9px] font-bold text-[var(--ud-brand-primary)]"
+                                  fallback={initials(reactor.name)}
+                                />
+                              </div>
+                              {/* Emoji badge */}
+                              {reactor.reactionType && reactor.reactionType !== "like" && (
+                                <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] leading-none shadow-sm">
+                                  {reactor.reactionType}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-[var(--ud-text-muted)]" />
+                    </button>
+                  )}
                   <DeetCommentsSection
                     deetId={item.id}
                     comments={commentsByDeetId?.[item.id] ?? []}
@@ -1485,6 +1502,7 @@ export function DeetsSection({
                     userAvatarSrc={userAvatarSrc}
                     userName={userName}
                   />
+                  </>
                 )}
 
               </article>
@@ -1613,23 +1631,25 @@ function CommentRow({
 }) {
   const isEditing = editingCommentId === comment.id;
   const isConfirmingDelete = confirmDeleteId === comment.id;
-  const avatarSize = isNested ? "h-7 w-7" : "h-8 w-8";
+  const avatarSize = isNested ? "h-6 w-6" : "h-8 w-8";
+  const [showReactPicker, setShowReactPicker] = useState(false);
+  const [reactedEmoji, setReactedEmoji] = useState<string | null>(null);
 
   return (
-    <div className="group relative flex items-start gap-2.5 py-2.5">
+    <div className={cn("group relative flex items-start py-2.5", isNested ? "gap-2" : "gap-2.5")}>
       <div className={cn("relative shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]", avatarSize)}>
         <ImageWithFallback
           src={comment.authorAvatar || ""}
           sources={comment.authorAvatar ? [comment.authorAvatar] : []}
           alt={comment.authorName ?? "User"}
           className="h-full w-full object-cover"
-          fallbackClassName={cn("grid h-full w-full place-items-center bg-[var(--ud-brand-light)] font-bold text-[var(--ud-brand-primary)]", isNested ? "text-[8px]" : "text-[10px]")}
+          fallbackClassName={cn("grid h-full w-full place-items-center bg-[var(--ud-brand-light)] font-bold text-[var(--ud-brand-primary)]", isNested ? "text-[7px]" : "text-[10px]")}
           fallback={initials(comment.authorName ?? "User")}
         />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className={cn("font-semibold text-[var(--ud-text-primary)]", isNested ? "text-xs" : "text-sm")}>{comment.authorName ?? "User"}</span>
+          <span className={cn("font-semibold text-[var(--ud-text-primary)]", isNested ? "text-[11px]" : "text-sm")}>{comment.authorName ?? "User"}</span>
           {/* Three-dot menu for own comments */}
           {isOwn && !isEditing && !isConfirmingDelete && (
             <div className="relative ml-auto" ref={menuOpenCommentId === comment.id ? menuRef : undefined}>
@@ -1677,17 +1697,43 @@ function CommentRow({
             <button type="button" onClick={onCancelDelete} className="rounded-lg px-2 py-0.5 text-[11px] text-[var(--ud-text-muted)]">No</button>
           </div>
         ) : (
-          <p className={cn("mt-0.5 leading-relaxed text-[var(--ud-text-secondary)]", isNested ? "text-xs" : "text-sm")}>{comment.body}</p>
+          <p className={cn("mt-0.5 leading-relaxed text-[var(--ud-text-secondary)]", isNested ? "text-[11px]" : "text-sm")}>{comment.body}</p>
         )}
 
         {/* Actions row: timestamp · React · Reply */}
         {!isEditing && !isConfirmingDelete && (
-          <div className="mt-1 flex items-center gap-2 text-[11px] text-[var(--ud-text-muted)]">
+          <div className="relative mt-1 flex items-center gap-2 text-[11px] text-[var(--ud-text-muted)]">
             <span>{comment.createdAt ? commentTimeAgo(comment.createdAt) : ""}</span>
             <span>·</span>
-            <button type="button" className="font-medium hover:text-[var(--ud-text-secondary)] transition">
-              <Smile className="mr-0.5 inline h-3 w-3 stroke-[1.5]" /> React
+            <button
+              type="button"
+              onClick={() => {
+                if (reactedEmoji) {
+                  setReactedEmoji(null);
+                } else {
+                  setShowReactPicker((v) => !v);
+                }
+              }}
+              className={cn("font-medium transition", reactedEmoji ? "text-[var(--ud-brand-primary)]" : "hover:text-[var(--ud-text-secondary)]")}
+            >
+              {reactedEmoji ? <span className="mr-0.5 text-sm">{reactedEmoji}</span> : <Smile className="mr-0.5 inline h-3 w-3 stroke-[1.5]" />}
+              {reactedEmoji ? (EMOJI_TEXT_MAP[reactedEmoji] ?? "Reacted") : "React"}
             </button>
+            {/* Inline emoji picker for comment react */}
+            {showReactPicker && (
+              <div className="absolute bottom-full left-8 z-30 mb-1 flex items-center gap-0.5 rounded-full border border-[var(--ud-border)] bg-white px-1.5 py-1 shadow-lg">
+                {["👍", "❤️", "😂", "😮", "😢", "🙏"].map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => { setReactedEmoji(emoji); setShowReactPicker(false); }}
+                    className="flex h-6 w-6 items-center justify-center rounded-full text-sm transition-transform hover:scale-125 active:scale-95"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
             {/* Reply only on top-level comments */}
             {!isNested && onReply && (
               <>
@@ -1842,7 +1888,7 @@ function DeetCommentsSection({
               />
               {/* Nested replies (one level) */}
               {comment.replies && comment.replies.length > 0 && (
-                <div className="ml-10 border-l-2 border-[var(--ud-border-subtle)] pl-3">
+                <div className="ml-11 border-l-2 border-[var(--ud-border)] pl-4">
                   {comment.replies.map((reply) => (
                     <CommentRow
                       key={reply.id}

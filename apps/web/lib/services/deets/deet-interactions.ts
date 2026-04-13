@@ -20,25 +20,35 @@ export async function toggleDeetLike(deetId: string, reactionType = "like"): Pro
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("You must be signed in to like a deet.");
 
-  // Check if already liked
-  const { data: existing } = await supabase
-    .from("deet_likes")
-    .select("id, reaction_type")
-    .eq("deet_id", deetId)
-    .eq("user_id", user.id)
-    .maybeSingle();
+  // Check if already liked — try with reaction_type, fall back without
+  let existing: { id: string; reaction_type?: string } | null = null;
+  let hasReactionColumn = true;
+
+  const res = await supabase.from("deet_likes").select("id, reaction_type").eq("deet_id", deetId).eq("user_id", user.id).maybeSingle();
+  if (res.error && res.error.message.includes("reaction_type")) {
+    hasReactionColumn = false;
+    const res2 = await supabase.from("deet_likes").select("id").eq("deet_id", deetId).eq("user_id", user.id).maybeSingle();
+    existing = res2.data ? { id: res2.data.id } : null;
+  } else {
+    existing = res.data;
+  }
 
   if (existing) {
-    if (existing.reaction_type === reactionType) {
+    if (hasReactionColumn && existing.reaction_type === reactionType) {
       // Same reaction — toggle off (unlike)
       await supabase.from("deet_likes").delete().eq("id", existing.id);
-    } else {
+    } else if (hasReactionColumn && existing.reaction_type !== reactionType) {
       // Different reaction — update the emoji type
       await supabase.from("deet_likes").update({ reaction_type: reactionType }).eq("id", existing.id);
+    } else {
+      // No reaction_type column — just toggle off
+      await supabase.from("deet_likes").delete().eq("id", existing.id);
     }
   } else {
     // New reaction
-    await supabase.from("deet_likes").insert({ deet_id: deetId, user_id: user.id, reaction_type: reactionType });
+    const insertPayload: Record<string, unknown> = { deet_id: deetId, user_id: user.id };
+    if (hasReactionColumn) insertPayload.reaction_type = reactionType;
+    await supabase.from("deet_likes").insert(insertPayload);
   }
 
   // Fetch updated count
@@ -54,7 +64,7 @@ export async function toggleDeetLike(deetId: string, reactionType = "like"): Pro
 
   // Determine new liked state
   const nowLiked = existing
-    ? existing.reaction_type !== reactionType // changed emoji = still liked; same emoji = unliked
+    ? (hasReactionColumn ? existing.reaction_type !== reactionType : false) // changed emoji = still liked; same or no column = unliked
     : true; // new reaction = liked
 
   return { liked: nowLiked, likeCount };
@@ -130,13 +140,23 @@ export async function addDeetComment(deetId: string, body: string, parentId?: st
   const insertPayload: Record<string, unknown> = { deet_id: deetId, user_id: user.id, body: trimmed };
   if (parentId) insertPayload.parent_id = parentId;
 
-  const { data, error } = await supabase
-    .from("deet_comments")
-    .insert(insertPayload)
-    .select("id, deet_id, user_id, body, created_at, parent_id")
-    .single();
+  // Try with parent_id; fall back without if column doesn't exist yet
+  type CommentRow = { id: string; deet_id: string; user_id: string; body: string; created_at: string; parent_id?: string | null };
+  let data: CommentRow | null = null;
 
-  if (error) throw new Error(`Failed to add comment: ${error.message}`);
+  const res1 = await supabase.from("deet_comments").insert(insertPayload).select("id, deet_id, user_id, body, created_at, parent_id").single();
+  if (res1.error && res1.error.message.includes("parent_id")) {
+    const basicPayload = { deet_id: deetId, user_id: user.id, body: trimmed };
+    const res2 = await supabase.from("deet_comments").insert(basicPayload).select("id, deet_id, user_id, body, created_at").single();
+    if (res2.error) throw new Error(`Failed to add comment: ${res2.error.message}`);
+    data = res2.data as unknown as CommentRow;
+  } else if (res1.error) {
+    throw new Error(`Failed to add comment: ${res1.error.message}`);
+  } else {
+    data = res1.data as unknown as CommentRow;
+  }
+
+  if (!data) throw new Error("Failed to add comment: no data returned");
 
   // SECONDARY: Update denormalized count (non-blocking)
   void Promise.resolve(
@@ -186,14 +206,33 @@ export async function addDeetComment(deetId: string, body: string, parentId?: st
 export async function listDeetComments(deetId: string): Promise<DeetComment[]> {
   const supabase = createClient();
 
-  const { data, error } = await supabase
+  // Try with parent_id first; fall back to without if column doesn't exist yet
+  type CommentRow = { id: string; deet_id: string; user_id: string; body: string; created_at: string; parent_id?: string | null };
+  let data: CommentRow[] = [];
+  let queryError: { message: string } | null = null;
+
+  const res1 = await supabase
     .from("deet_comments")
     .select("id, deet_id, user_id, body, created_at, parent_id")
     .eq("deet_id", deetId)
     .order("created_at", { ascending: true })
     .limit(100);
 
-  if (error) throw new Error(`Failed to load comments: ${error.message}`);
+  if (res1.error && res1.error.message.includes("parent_id")) {
+    const res2 = await supabase
+      .from("deet_comments")
+      .select("id, deet_id, user_id, body, created_at")
+      .eq("deet_id", deetId)
+      .order("created_at", { ascending: true })
+      .limit(100);
+    data = (res2.data as unknown as CommentRow[]) ?? [];
+    queryError = res2.error;
+  } else {
+    data = (res1.data as unknown as CommentRow[]) ?? [];
+    queryError = res1.error;
+  }
+
+  if (queryError) throw new Error(`Failed to load comments: ${queryError.message}`);
 
   if (!data || data.length === 0) return [];
 
@@ -333,14 +372,17 @@ export interface DeetReactor {
 export async function listDeetReactors(deetId: string): Promise<DeetReactor[]> {
   const supabase = createClient();
 
-  const { data: likes, error } = await supabase
-    .from("deet_likes")
-    .select("user_id, reaction_type")
-    .eq("deet_id", deetId)
-    .order("created_at", { ascending: false })
-    .limit(50);
+  // Try with reaction_type; fall back without
+  let likes: Array<{ user_id: string; reaction_type?: string }> = [];
+  const res1 = await supabase.from("deet_likes").select("user_id, reaction_type").eq("deet_id", deetId).order("created_at", { ascending: false }).limit(50);
+  if (res1.error && res1.error.message.includes("reaction_type")) {
+    const res2 = await supabase.from("deet_likes").select("user_id").eq("deet_id", deetId).order("created_at", { ascending: false }).limit(50);
+    likes = (res2.data ?? []).map((l) => ({ user_id: l.user_id }));
+  } else {
+    likes = (res1.data ?? []) as typeof likes;
+  }
 
-  if (error || !likes?.length) return [];
+  if (!likes.length) return [];
 
   const userIds = [...new Set(likes.map((l) => l.user_id))];
   const { data: profiles } = await supabase
@@ -364,19 +406,23 @@ export async function listDeetReactors(deetId: string): Promise<DeetReactor[]> {
   });
 }
 
-/** Get reactors summary for multiple deets (for the preview row). Returns up to 3 avatars per deet. */
+/** Get reactors summary for multiple deets (for the preview row). */
 export async function getDeetReactorPreviews(deetIds: string[]): Promise<Record<string, DeetReactor[]>> {
   const supabase = createClient();
   const result: Record<string, DeetReactor[]> = {};
   if (!deetIds.length) return result;
 
-  const { data: likes } = await supabase
-    .from("deet_likes")
-    .select("deet_id, user_id, reaction_type")
-    .in("deet_id", deetIds)
-    .order("created_at", { ascending: false });
+  // Try with reaction_type; fall back without
+  let likes: Array<{ deet_id: string; user_id: string; reaction_type?: string }> = [];
+  const res1 = await supabase.from("deet_likes").select("deet_id, user_id, reaction_type").in("deet_id", deetIds).order("created_at", { ascending: false });
+  if (res1.error && res1.error.message.includes("reaction_type")) {
+    const res2 = await supabase.from("deet_likes").select("deet_id, user_id").in("deet_id", deetIds).order("created_at", { ascending: false });
+    likes = (res2.data ?? []).map((l) => ({ deet_id: l.deet_id, user_id: l.user_id }));
+  } else {
+    likes = (res1.data ?? []) as typeof likes;
+  }
 
-  if (!likes?.length) return result;
+  if (!likes.length) return result;
 
   // Collect unique user IDs
   const userIds = [...new Set(likes.map((l) => l.user_id))];
