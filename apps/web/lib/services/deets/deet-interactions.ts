@@ -585,6 +585,130 @@ export async function syncDeetViewCounts(deetIds: string[]): Promise<Record<stri
   return result;
 }
 
+// ── Shares ──────────────────────────────────────────────────────────
+
+/**
+ * Record a share for a deet. Each share event is tracked individually
+ * (same user can share multiple times). Returns the updated share count.
+ */
+export async function recordDeetShare(deetId: string): Promise<number> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return 0;
+
+  try {
+    // Insert share record
+    await supabase.from("deet_shares").insert({ deet_id: deetId, user_id: user.id });
+
+    // Count total shares for this deet and update denormalized count
+    const { count } = await supabase
+      .from("deet_shares")
+      .select("*", { count: "exact", head: true })
+      .eq("deet_id", deetId);
+
+    const total = count ?? 1;
+    updateDenormalizedCount("deets", deetId, "share_count", total);
+    return total;
+  } catch {
+    // deet_shares table might not exist — fall back gracefully
+    return 0;
+  }
+}
+
+/** Sync denormalized share_count with actual deet_shares rows. */
+export async function syncDeetShareCounts(deetIds: string[]): Promise<Record<string, number>> {
+  const supabase = createClient();
+  const result: Record<string, number> = {};
+  if (!deetIds.length) return result;
+
+  for (const deetId of deetIds) {
+    try {
+      const { count } = await supabase
+        .from("deet_shares")
+        .select("*", { count: "exact", head: true })
+        .eq("deet_id", deetId);
+      const actual = count ?? 0;
+      result[deetId] = actual;
+      updateDenormalizedCount("deets", deetId, "share_count", actual);
+    } catch {
+      // deet_shares table might not exist yet — skip
+    }
+  }
+
+  return result;
+}
+
+// ── Comment Reactions ──────────────────────────────────────────────
+
+/**
+ * Toggle a reaction on a comment. If the user already reacted with the same
+ * emoji it removes the reaction; if a different emoji it updates in place;
+ * if no reaction exists it inserts one. Returns the new emoji (null = removed).
+ */
+export async function toggleCommentReaction(
+  commentId: string,
+  reactionType: string,
+): Promise<{ emoji: string | null }> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("You must be signed in to react.");
+
+  // Check for existing reaction
+  const { data: existing, error: selErr } = await supabase
+    .from("comment_reactions")
+    .select("id, reaction_type")
+    .eq("comment_id", commentId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (selErr && selErr.message.includes("comment_reactions")) {
+    // Table may not exist yet — silently fail
+    return { emoji: reactionType };
+  }
+
+  if (existing) {
+    if (existing.reaction_type === reactionType) {
+      // Same emoji — toggle off
+      await supabase.from("comment_reactions").delete().eq("id", existing.id);
+      return { emoji: null };
+    }
+    // Different emoji — update
+    await supabase.from("comment_reactions").update({ reaction_type: reactionType }).eq("id", existing.id);
+    return { emoji: reactionType };
+  }
+
+  // No existing reaction — insert
+  await supabase.from("comment_reactions").insert({ comment_id: commentId, user_id: user.id, reaction_type: reactionType });
+  return { emoji: reactionType };
+}
+
+/**
+ * Fetch the current user's reactions for a batch of comment IDs.
+ * Returns a map of commentId → emoji string (only for comments the user reacted to).
+ */
+export async function getCommentReactions(commentIds: string[]): Promise<Record<string, string>> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || !commentIds.length) return {};
+
+  try {
+    const { data } = await supabase
+      .from("comment_reactions")
+      .select("comment_id, reaction_type")
+      .eq("user_id", user.id)
+      .in("comment_id", commentIds);
+
+    const result: Record<string, string> = {};
+    for (const row of data ?? []) {
+      result[row.comment_id] = row.reaction_type;
+    }
+    return result;
+  } catch {
+    // Table may not exist yet
+    return {};
+  }
+}
+
 export async function getDeetCounts(deetIds: string[]): Promise<Map<string, { likeCount: number; commentCount: number; viewCount: number }>> {
   const supabase = createClient();
   const result = new Map<string, { likeCount: number; commentCount: number; viewCount: number }>();

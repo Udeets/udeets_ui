@@ -67,6 +67,7 @@ export function mapDeetToHubFeedItem(item: Partial<DeetRecord>, hubCreatorId?: s
     likes: item.like_count ?? 0,
     comments: item.comment_count ?? 0,
     views: item.view_count ?? 0,
+    shares: item.share_count ?? 0,
     deetAttachments: deetAttachments.length > 0 ? deetAttachments : undefined,
   };
 }

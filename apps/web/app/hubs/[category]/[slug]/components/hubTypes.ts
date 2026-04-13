@@ -4,6 +4,16 @@ import type { HubRecord } from "@/lib/hubs";
 export type HubTab = "About" | "Posts" | "Attachments" | "Members" | "Menu" | "Events" | "Reviews" | "Schedule" | "Notices" | "Requests" | "Documents" | "Polls" | "Settings";
 export type HubPanel = "posts" | "challenges" | "settings" | "members" | "invite";
 
+export type ViewerCommentContext = {
+  commentId: string;
+  authorName: string;
+  authorAvatar?: string;
+  body: string;
+  createdAt: string;
+  reactedEmoji?: string | null;
+  replies?: Array<{ id: string; authorName: string; authorAvatar?: string; body: string; createdAt: string }>;
+};
+
 export type ViewerState = {
   open: boolean;
   images: string[];
@@ -11,6 +21,7 @@ export type ViewerState = {
   title: string;
   body: string;
   focusId?: string;
+  commentContext?: ViewerCommentContext;
 };
 
 export type PendingNavigation = {

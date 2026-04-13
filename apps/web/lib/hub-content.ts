@@ -39,6 +39,7 @@ export type HubFeedItem = {
   likes: number;
   comments: number;
   views: number;
+  shares: number;
   deetAttachments?: HubFeedItemAttachment[];
 };
 

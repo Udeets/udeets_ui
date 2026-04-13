@@ -15,7 +15,8 @@ export const DEET_COLUMNS = `
   updated_at,
   like_count,
   comment_count,
-  view_count
+  view_count,
+  share_count
 `;
 
 function asImageString(value: unknown) {

@@ -111,6 +111,7 @@ export interface DeetRecord {
   like_count?: number;
   comment_count?: number;
   view_count?: number;
+  share_count?: number;
 }
 
 export interface CreateDeetInput {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ViewerState } from "../components/hubTypes";
+import type { ViewerState, ViewerCommentContext } from "../components/hubTypes";
 
 export function useHubViewerState() {
   const [viewer, setViewer] = useState<ViewerState>({
@@ -11,6 +11,7 @@ export function useHubViewerState() {
     title: "",
     body: "",
     focusId: undefined,
+    commentContext: undefined,
   });
 
   const openViewer = (
@@ -19,9 +20,10 @@ export function useHubViewerState() {
     title: string,
     body: string,
     focusId?: string,
+    commentContext?: ViewerCommentContext,
   ) => {
     if (!images.length) return;
-    setViewer({ open: true, images, index, title, body, focusId });
+    setViewer({ open: true, images, index, title, body, focusId, commentContext });
   };
 
   const closeViewer = () => {

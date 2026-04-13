@@ -1088,7 +1088,7 @@ export default function HubClient({
         userName={creatorDisplayName}
         currentUserId={user?.id}
         onOpenComposer={openDeetComposer}
-        onOpenViewer={openViewer}
+        onOpenViewer={(images, index, title, body, focusId, commentContext) => openViewer(images, index, title, body, focusId, commentContext)}
         onDeleteDeet={removeDeet}
         likedDeetIds={likedDeetIds}
         likingDeetIds={likingDeetIds}
@@ -1807,81 +1807,161 @@ export default function HubClient({
 
           {/* Engagement panel — bottom sheet on mobile, sidebar on desktop */}
           <div className="shrink-0 rounded-t-2xl bg-[var(--ud-bg-card)] p-4 lg:flex lg:w-[360px] lg:flex-col lg:rounded-none lg:border-l lg:border-white/20 lg:p-5">
-            <h3 className="text-base font-semibold tracking-tight text-[var(--ud-text-primary)]">{viewer.title || "Photo"}</h3>
-            <p className="mt-1 text-sm text-[var(--ud-text-secondary)] lg:mt-2">{viewer.body || "Shared from this hub."}</p>
+            {viewer.commentContext ? (
+              /* ── Comment image sidebar ── */
+              <>
+                {/* Comment author */}
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
+                    {viewer.commentContext.authorAvatar ? (
+                      <img src={viewer.commentContext.authorAvatar} alt={viewer.commentContext.authorName} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-xs font-bold text-[var(--ud-brand-primary)]">
+                        {viewer.commentContext.authorName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--ud-text-primary)]">{viewer.commentContext.authorName}</p>
+                    <p className="text-xs text-[var(--ud-text-muted)]">{formatViewerCommentTime(viewer.commentContext.createdAt)}</p>
+                  </div>
+                </div>
 
-            {/* Engagement metrics */}
-            <div className="mt-3 flex items-center gap-4 text-sm text-[var(--ud-text-muted)] lg:mt-4">
-              <span className="inline-flex items-center gap-1">
-                <Eye className="h-3.5 w-3.5" />
-                {(() => { const fi = viewer.focusId ? allFeedItems.find(f => f.id === viewer.focusId) : null; return fi ? fi.views + (viewCountOverrides[fi.id] ?? 0) : 0; })()} views
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Heart className="h-3.5 w-3.5" />
-                {(() => { const fi = viewer.focusId ? allFeedItems.find(f => f.id === viewer.focusId) : null; return fi ? (likeCountOverrides[fi.id] ?? fi.likes) : 0; })()} likes
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <MessageSquare className="h-3.5 w-3.5" />
-                {(() => { const fi = viewer.focusId ? allFeedItems.find(f => f.id === viewer.focusId) : null; return fi ? fi.comments : 0; })()} comments
-              </span>
-            </div>
+                {/* Comment body */}
+                {viewer.commentContext.body && viewer.commentContext.body !== "📷" && (
+                  <p className="mt-3 text-sm leading-relaxed text-[var(--ud-text-secondary)]">{viewer.commentContext.body}</p>
+                )}
 
-            {/* Action buttons */}
-            <div className="mt-3 flex items-center gap-3 border-t border-[var(--ud-border)] pt-3 text-sm text-[var(--ud-text-secondary)] lg:mt-4 lg:pt-4">
-              <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[var(--ud-brand-primary)]">
-                <Heart className={ICON} />
-                Like
-              </button>
-              <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[var(--ud-brand-primary)]">
-                <MessageSquare className={ICON} />
-                Comment
-              </button>
-              <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[var(--ud-brand-primary)]">
-                <Share2 className={ICON} />
-                Share
-              </button>
-            </div>
+                {/* Action buttons */}
+                <div className="mt-3 flex items-center gap-3 border-t border-[var(--ud-border)] pt-3 text-sm text-[var(--ud-text-secondary)] lg:mt-4 lg:pt-4">
+                  {viewer.commentContext.reactedEmoji ? (
+                    <span className="inline-flex items-center gap-1.5 font-medium text-[var(--ud-brand-primary)]">
+                      <span className="text-base">{viewer.commentContext.reactedEmoji}</span>
+                      {({ "👍": "Liked", "❤️": "Loved", "😂": "Haha", "😮": "Surprised", "😢": "Sad", "🙏": "Thanks" })[viewer.commentContext.reactedEmoji] ?? "Reacted"}
+                    </span>
+                  ) : (
+                    <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[var(--ud-brand-primary)]">
+                      <Heart className={ICON} />
+                      React
+                    </button>
+                  )}
+                  <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[var(--ud-brand-primary)]">
+                    <MessageSquare className={ICON} />
+                    Reply
+                  </button>
+                </div>
 
-            {/* Comments area — hidden on mobile for compact view */}
-            {viewer.focusId && commentsByDeetId[viewer.focusId] ? (
-              <div className="mt-3 hidden max-h-[200px] overflow-y-auto rounded-xl bg-[var(--ud-bg-subtle)] p-3 text-sm text-[var(--ud-text-muted)] lg:mt-4 lg:block space-y-2">
-                <p className="font-medium text-[var(--ud-text-secondary)]">Comments</p>
-                {commentsByDeetId[viewer.focusId].length === 0 ? (
-                  <p className="mt-2 italic text-[var(--ud-text-muted)]">No comments yet. Be the first to comment.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {commentsByDeetId[viewer.focusId].map((comment) => (
-                      <div key={comment.id} className="text-xs">
-                        <div className="flex items-center gap-1">
-                          <span className="font-medium text-[var(--ud-text-primary)]">{comment.authorName || "Anonymous"}</span>
-                          <span className="text-[var(--ud-text-muted)]">{formatViewerCommentTime(comment.createdAt)}</span>
+                {/* Replies to this comment */}
+                {viewer.commentContext.replies && viewer.commentContext.replies.length > 0 ? (
+                  <div className="mt-3 hidden max-h-[300px] flex-1 overflow-y-auto rounded-xl bg-[var(--ud-bg-subtle)] p-3 text-sm lg:mt-4 lg:block space-y-3">
+                    <p className="text-xs font-medium text-[var(--ud-text-muted)]">{viewer.commentContext.replies.length} {viewer.commentContext.replies.length === 1 ? "reply" : "replies"}</p>
+                    {viewer.commentContext.replies.map((reply) => (
+                      <div key={reply.id} className="flex items-start gap-2">
+                        <div className="h-7 w-7 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
+                          {reply.authorAvatar ? (
+                            <img src={reply.authorAvatar} alt={reply.authorName} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-[8px] font-bold text-[var(--ud-brand-primary)]">
+                              {reply.authorName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                            </div>
+                          )}
                         </div>
-                        <p className="text-[var(--ud-text-secondary)] mt-0.5">{comment.body}</p>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-medium text-[var(--ud-text-primary)]">{reply.authorName}</span>
+                            <span className="text-[10px] text-[var(--ud-text-muted)]">{formatViewerCommentTime(reply.createdAt)}</span>
+                          </div>
+                          <p className="mt-0.5 text-xs text-[var(--ud-text-secondary)]">{reply.body}</p>
+                        </div>
                       </div>
                     ))}
                   </div>
+                ) : (
+                  <div className="mt-3 hidden rounded-xl bg-[var(--ud-bg-subtle)] p-3 text-sm lg:mt-4 lg:block">
+                    <p className="text-xs italic text-[var(--ud-text-muted)]">No replies yet</p>
+                  </div>
                 )}
-              </div>
+              </>
             ) : (
-              <div className="mt-3 hidden max-h-[200px] overflow-y-auto rounded-xl bg-[var(--ud-bg-subtle)] p-3 text-sm text-[var(--ud-text-muted)] lg:mt-4 lg:block">
-                <p className="font-medium text-[var(--ud-text-secondary)]">Comments</p>
-                <p className="mt-2 italic text-[var(--ud-text-muted)]">No comments yet. Be the first to comment.</p>
-              </div>
-            )}
+              /* ── Post image sidebar (original) ── */
+              <>
+                <h3 className="text-base font-semibold tracking-tight text-[var(--ud-text-primary)]">{viewer.title || "Photo"}</h3>
+                <p className="mt-1 text-sm text-[var(--ud-text-secondary)] lg:mt-2">{viewer.body || "Shared from this hub."}</p>
 
-            {/* Show the post button */}
-            {viewer.focusId ? (
-              <button
-                type="button"
-                className={cn(BUTTON_PRIMARY, "mt-3 w-full lg:mt-auto")}
-                onClick={() => {
-                  closeViewer();
-                  navigateToFocus(viewer.focusId!, "Posts");
-                }}
-              >
-                Show the post
-              </button>
-            ) : null}
+                {/* Engagement metrics */}
+                <div className="mt-3 flex items-center gap-4 text-sm text-[var(--ud-text-muted)] lg:mt-4">
+                  <span className="inline-flex items-center gap-1">
+                    <Eye className="h-3.5 w-3.5" />
+                    {(() => { const fi = viewer.focusId ? allFeedItems.find(f => f.id === viewer.focusId) : null; return fi ? fi.views + (viewCountOverrides[fi.id] ?? 0) : 0; })()} views
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Heart className="h-3.5 w-3.5" />
+                    {(() => { const fi = viewer.focusId ? allFeedItems.find(f => f.id === viewer.focusId) : null; return fi ? (likeCountOverrides[fi.id] ?? fi.likes) : 0; })()} likes
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    {(() => { const fi = viewer.focusId ? allFeedItems.find(f => f.id === viewer.focusId) : null; return fi ? fi.comments : 0; })()} comments
+                  </span>
+                </div>
+
+                {/* Action buttons */}
+                <div className="mt-3 flex items-center gap-3 border-t border-[var(--ud-border)] pt-3 text-sm text-[var(--ud-text-secondary)] lg:mt-4 lg:pt-4">
+                  <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[var(--ud-brand-primary)]">
+                    <Heart className={ICON} />
+                    Like
+                  </button>
+                  <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[var(--ud-brand-primary)]">
+                    <MessageSquare className={ICON} />
+                    Comment
+                  </button>
+                  <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[var(--ud-brand-primary)]">
+                    <Share2 className={ICON} />
+                    Share
+                  </button>
+                </div>
+
+                {/* Comments area — hidden on mobile for compact view */}
+                {viewer.focusId && commentsByDeetId[viewer.focusId] ? (
+                  <div className="mt-3 hidden max-h-[200px] overflow-y-auto rounded-xl bg-[var(--ud-bg-subtle)] p-3 text-sm text-[var(--ud-text-muted)] lg:mt-4 lg:block space-y-2">
+                    <p className="font-medium text-[var(--ud-text-secondary)]">Comments</p>
+                    {commentsByDeetId[viewer.focusId].length === 0 ? (
+                      <p className="mt-2 italic text-[var(--ud-text-muted)]">No comments yet. Be the first to comment.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {commentsByDeetId[viewer.focusId].map((comment) => (
+                          <div key={comment.id} className="text-xs">
+                            <div className="flex items-center gap-1">
+                              <span className="font-medium text-[var(--ud-text-primary)]">{comment.authorName || "Anonymous"}</span>
+                              <span className="text-[var(--ud-text-muted)]">{formatViewerCommentTime(comment.createdAt)}</span>
+                            </div>
+                            <p className="text-[var(--ud-text-secondary)] mt-0.5">{comment.body}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-3 hidden max-h-[200px] overflow-y-auto rounded-xl bg-[var(--ud-bg-subtle)] p-3 text-sm text-[var(--ud-text-muted)] lg:mt-4 lg:block">
+                    <p className="font-medium text-[var(--ud-text-secondary)]">Comments</p>
+                    <p className="mt-2 italic text-[var(--ud-text-muted)]">No comments yet. Be the first to comment.</p>
+                  </div>
+                )}
+
+                {/* Show the post button */}
+                {viewer.focusId ? (
+                  <button
+                    type="button"
+                    className={cn(BUTTON_PRIMARY, "mt-3 w-full lg:mt-auto")}
+                    onClick={() => {
+                      closeViewer();
+                      navigateToFocus(viewer.focusId!, "Posts");
+                    }}
+                  >
+                    Show the post
+                  </button>
+                ) : null}
+              </>
+            )}
           </div>
         </div>
       ) : null}

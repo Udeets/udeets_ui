@@ -28,7 +28,7 @@ import {
   X,
 } from "lucide-react";
 import type { HubFeedItemAttachment } from "@/lib/hub-content";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DeetComposerCard } from "../deets/DeetComposerCard";
 import { ImageWithFallback, cn, initials } from "../hubUtils";
 import { SectionShell } from "../SectionShell";
@@ -813,7 +813,7 @@ export function DeetsSection({
   userName?: string;
   currentUserId?: string;
   onOpenComposer: (child?: ComposerChildFlow | null) => void;
-  onOpenViewer: (images: string[], index: number, title: string, body: string, focusId?: string) => void;
+  onOpenViewer: (images: string[], index: number, title: string, body: string, focusId?: string, commentContext?: { commentId: string; authorName: string; authorAvatar?: string; body: string; createdAt: string; reactedEmoji?: string | null; replies?: Array<{ id: string; authorName: string; authorAvatar?: string; body: string; createdAt: string }> }) => void;
   onDeleteDeet?: (deetId: string) => void;
   likedDeetIds?: Set<string>;
   likingDeetIds?: Set<string>;
@@ -883,7 +883,19 @@ export function DeetsSection({
       document.body.removeChild(textarea);
     }
     setCopiedDeetId(deetId);
+    // Optimistic local update
     setShareCountOverrides((prev) => ({ ...prev, [deetId]: (prev[deetId] ?? 0) + 1 }));
+    // Persist to database (non-blocking)
+    import("@/lib/services/deets/deet-interactions").then(({ recordDeetShare }) => {
+      recordDeetShare(deetId).then((serverTotal) => {
+        if (serverTotal > 0) {
+          // Find the item's base share count and compute the correct override
+          const item = filteredFeedItems.find((fi) => fi.id === deetId);
+          const base = item?.shares ?? 0;
+          setShareCountOverrides((prev) => ({ ...prev, [deetId]: serverTotal - base }));
+        }
+      }).catch(() => { /* swallow — optimistic count stays */ });
+    }).catch(() => { /* swallow */ });
     if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
     copiedTimeoutRef.current = setTimeout(() => setCopiedDeetId(null), 2000);
   };
@@ -1330,10 +1342,10 @@ export function DeetsSection({
                         {item.comments + (commentCountOverrides?.[item.id] ?? 0)}
                       </span>
                     )}
-                    {(shareCountOverrides[item.id] ?? 0) > 0 && (
+                    {(item.shares + (shareCountOverrides[item.id] ?? 0)) > 0 && (
                       <span className="inline-flex items-center gap-1">
                         <Share2 className="h-3.5 w-3.5 stroke-[1.5]" />
-                        {shareCountOverrides[item.id]}
+                        {item.shares + (shareCountOverrides[item.id] ?? 0)}
                       </span>
                     )}
                     {/* Dropdown chevron to toggle comments (like Band) */}
@@ -1500,6 +1512,29 @@ export function DeetsSection({
                     onSubmitComment={onSubmitComment}
                     onEditComment={onEditComment}
                     onDeleteComment={onDeleteComment}
+                    onOpenViewer={(images, index, comment) => {
+                      if (comment) {
+                        // Comment image — pass comment context so sidebar shows this comment's data
+                        const clientReaction = (comment as DeetComment & { _clientReaction?: string | null })._clientReaction ?? null;
+                        onOpenViewer(images, index, "", "", undefined, {
+                          commentId: comment.id,
+                          authorName: comment.authorName ?? "User",
+                          authorAvatar: comment.authorAvatar,
+                          body: comment.body,
+                          createdAt: comment.createdAt,
+                          reactedEmoji: clientReaction,
+                          replies: comment.replies?.map(r => ({
+                            id: r.id,
+                            authorName: r.authorName ?? "User",
+                            authorAvatar: r.authorAvatar,
+                            body: r.body,
+                            createdAt: r.createdAt,
+                          })),
+                        });
+                      } else {
+                        onOpenViewer(images, index, "", "");
+                      }
+                    }}
                     userAvatarSrc={userAvatarSrc}
                     userName={userName}
                   />
@@ -1598,6 +1633,8 @@ function CommentRow({
   editText,
   confirmDeleteId,
   menuOpenCommentId,
+  reactedEmoji,
+  onSetReactedEmoji,
   onSetEditText,
   onStartEdit,
   onSaveEdit,
@@ -1607,6 +1644,7 @@ function CommentRow({
   onCancelEdit,
   onToggleMenu,
   onReply,
+  onOpenViewer,
   menuRef,
   editInputRef,
 }: {
@@ -1618,6 +1656,8 @@ function CommentRow({
   editText: string;
   confirmDeleteId: string | null;
   menuOpenCommentId: string | null;
+  reactedEmoji: string | null;
+  onSetReactedEmoji: (commentId: string, emoji: string | null) => void;
   onSetEditText: (v: string) => void;
   onStartEdit: (c: DeetComment) => void;
   onSaveEdit: () => void;
@@ -1627,6 +1667,7 @@ function CommentRow({
   onCancelEdit: () => void;
   onToggleMenu: (id: string) => void;
   onReply?: (commentId: string, authorName: string) => void;
+  onOpenViewer?: (images: string[], index: number, comment?: DeetComment) => void;
   menuRef: React.RefObject<HTMLDivElement | null>;
   editInputRef: React.RefObject<HTMLInputElement | null>;
 }) {
@@ -1634,7 +1675,6 @@ function CommentRow({
   const isConfirmingDelete = confirmDeleteId === comment.id;
   const avatarSize = isNested ? "h-7 w-7" : "h-9 w-9";
   const [showReactPicker, setShowReactPicker] = useState(false);
-  const [reactedEmoji, setReactedEmoji] = useState<string | null>(null);
 
   return (
     <div className="group relative flex items-start gap-2.5 py-3">
@@ -1700,11 +1740,16 @@ function CommentRow({
         ) : (
           <>
             <p className="mt-0.5 text-sm leading-relaxed text-[var(--ud-text-secondary)]">{comment.body}</p>
-            {/* Comment image */}
+            {/* Comment image — thumbnail ~2"×3" (constrained via inline style for reliability) */}
             {comment.imageUrl && (
-              <div className="mt-1.5 overflow-hidden rounded-lg border border-[var(--ud-border-subtle)]">
-                <img src={comment.imageUrl} alt="Comment image" className="max-h-48 w-auto object-cover" loading="lazy" />
-              </div>
+              <button
+                type="button"
+                onClick={() => onOpenViewer?.([comment.imageUrl!], 0, comment)}
+                className="mt-1.5 block overflow-hidden rounded-lg border border-[var(--ud-border-subtle)] transition hover:opacity-90"
+                style={{ width: 180, height: 120 }}
+              >
+                <img src={comment.imageUrl} alt="Comment image" style={{ width: 180, height: 120, objectFit: "cover" }} loading="lazy" />
+              </button>
             )}
             {/* Comment file attachment */}
             {comment.attachmentUrl && (
@@ -1728,13 +1773,7 @@ function CommentRow({
             <span>·</span>
             <button
               type="button"
-              onClick={() => {
-                if (reactedEmoji) {
-                  setReactedEmoji(null);
-                } else {
-                  setShowReactPicker((v) => !v);
-                }
-              }}
+              onClick={() => setShowReactPicker((v) => !v)}
               className={cn("font-medium transition", reactedEmoji ? "text-[var(--ud-brand-primary)]" : "hover:text-[var(--ud-text-secondary)]")}
             >
               {reactedEmoji ? <span className="mr-0.5 text-sm">{reactedEmoji}</span> : <Smile className="mr-0.5 inline h-3 w-3 stroke-[1.5]" />}
@@ -1747,12 +1786,30 @@ function CommentRow({
                   <button
                     key={emoji}
                     type="button"
-                    onClick={() => { setReactedEmoji(emoji); setShowReactPicker(false); }}
-                    className="flex h-6 w-6 items-center justify-center rounded-full text-sm transition-transform hover:scale-125 active:scale-95"
+                    onClick={() => {
+                      // Tap same emoji = un-react; tap different = change reaction
+                      onSetReactedEmoji(comment.id, reactedEmoji === emoji ? null : emoji);
+                      setShowReactPicker(false);
+                    }}
+                    className={cn(
+                      "flex h-6 w-6 items-center justify-center rounded-full text-sm transition-transform hover:scale-125 active:scale-95",
+                      reactedEmoji === emoji && "bg-[var(--ud-brand-light)] ring-1 ring-[var(--ud-brand-primary)]",
+                    )}
                   >
                     {emoji}
                   </button>
                 ))}
+                {/* Explicit un-react button when already reacted */}
+                {reactedEmoji && (
+                  <button
+                    type="button"
+                    onClick={() => { onSetReactedEmoji(comment.id, null); setShowReactPicker(false); }}
+                    className="ml-0.5 flex h-6 w-6 items-center justify-center rounded-full text-xs text-[var(--ud-text-muted)] transition-transform hover:scale-110 hover:bg-red-50 hover:text-red-500 active:scale-95"
+                    title="Remove reaction"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
               </div>
             )}
             {/* Reply only on top-level comments */}
@@ -1781,6 +1838,7 @@ function DeetCommentsSection({
   onSubmitComment,
   onEditComment,
   onDeleteComment,
+  onOpenViewer,
   userAvatarSrc,
   userName,
 }: {
@@ -1793,6 +1851,7 @@ function DeetCommentsSection({
   onSubmitComment?: (deetId: string, body: string, parentId?: string, attachments?: { imageUrl?: string; attachmentUrl?: string; attachmentName?: string }) => Promise<{ success: boolean }> | void;
   onEditComment?: (commentId: string, deetId: string, newBody: string) => Promise<{ success: boolean }> | void;
   onDeleteComment?: (commentId: string, deetId: string) => Promise<{ success: boolean }> | void;
+  onOpenViewer?: (images: string[], index: number, comment?: DeetComment) => void;
   userAvatarSrc?: string;
   userName?: string;
 }) {
@@ -1805,6 +1864,53 @@ function DeetCommentsSection({
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const [replyToName, setReplyToName] = useState<string>("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  // Comment-level reactions — persisted to DB via comment_reactions table
+  const [commentReactions, setCommentReactions] = useState<Record<string, string | null>>({});
+
+  // Load existing reactions from DB whenever comments change
+  useEffect(() => {
+    const allIds = comments.flatMap((c) => [c.id, ...(c.replies ?? []).map((r) => r.id)]);
+    if (!allIds.length || !currentUserId) return;
+    let cancelled = false;
+    import("@/lib/services/deets/deet-interactions").then(({ getCommentReactions }) => {
+      getCommentReactions(allIds).then((map) => {
+        if (cancelled) return;
+        setCommentReactions((prev) => {
+          const next = { ...prev };
+          for (const id of allIds) {
+            // Only overwrite if we haven't set a local optimistic value OR
+            // if the key doesn't exist in prev (first load)
+            if (!(id in prev)) {
+              next[id] = map[id] ?? null;
+            }
+          }
+          return next;
+        });
+      }).catch(() => {});
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [comments.length, currentUserId]);
+
+  const handleSetCommentReaction = useCallback((commentId: string, emoji: string | null) => {
+    // Capture the previous emoji BEFORE updating state (needed for un-react DB call)
+    const prevEmoji = commentReactions[commentId] ?? null;
+
+    // Optimistic local update
+    setCommentReactions((prev) => ({ ...prev, [commentId]: emoji }));
+
+    // Persist to DB (non-blocking)
+    const emojiToSend = emoji ?? prevEmoji; // for un-react, send the old emoji to toggle it off
+    if (emojiToSend) {
+      import("@/lib/services/deets/deet-interactions").then(({ toggleCommentReaction }) => {
+        toggleCommentReaction(commentId, emojiToSend).then((result) => {
+          // Reconcile with server state
+          setCommentReactions((prev) => ({ ...prev, [commentId]: result.emoji }));
+        }).catch(() => {});
+      }).catch(() => {});
+    }
+  }, [commentReactions]);
 
   // Attachment state
   const [pendingImage, setPendingImage] = useState<{ file: File; preview: string } | null>(null);
@@ -1904,6 +2010,7 @@ function DeetCommentsSection({
     editText,
     confirmDeleteId,
     menuOpenCommentId,
+    onSetReactedEmoji: handleSetCommentReaction,
     onSetEditText: setEditText,
     onStartEdit: startEdit,
     onSaveEdit: handleSaveEdit,
@@ -1912,6 +2019,17 @@ function DeetCommentsSection({
     onCancelDelete: () => setConfirmDeleteId(null),
     onCancelEdit: cancelEdit,
     onToggleMenu: (id: string) => setMenuOpenCommentId((prev) => (prev === id ? null : id)),
+    onOpenViewer: onOpenViewer
+      ? (images: string[], index: number, comment?: DeetComment) => {
+          if (comment) {
+            // Enrich the comment with the current reaction before passing up
+            const enrichedComment = Object.assign({}, comment, { _clientReaction: commentReactions[comment.id] ?? null });
+            onOpenViewer(images, index, enrichedComment);
+          } else {
+            onOpenViewer(images, index);
+          }
+        }
+      : undefined,
     menuRef,
     editInputRef,
   };
@@ -1950,26 +2068,30 @@ function DeetCommentsSection({
           <Loader2 className="h-4 w-4 animate-spin text-[var(--ud-text-muted)]" />
         </div>
       ) : comments.length > 0 ? (
-        <div className="px-4 divide-y divide-[var(--ud-border-subtle)]">
-          {comments.map((comment) => (
+        <div className="px-4">
+          {comments.map((comment, idx) => (
             <div key={comment.id}>
+              {/* Separator line between top-level comments */}
+              {idx > 0 && <div className="border-t border-[var(--ud-border-subtle)]" />}
               {/* Top-level comment */}
               <CommentRow
                 comment={comment}
                 isOwn={!!(currentUserId && comment.userId === currentUserId)}
                 isNested={false}
+                reactedEmoji={commentReactions[comment.id] ?? null}
                 onReply={startReply}
                 {...commonRowProps}
               />
-              {/* Nested replies (one level) */}
+              {/* Nested replies (one level) — indented to align with parent text start */}
               {comment.replies && comment.replies.length > 0 && (
-                <div className="ml-12 border-l border-[var(--ud-border-subtle)] pl-4 divide-y divide-[var(--ud-border-subtle)]">
+                <div className="ml-[46px]">
                   {comment.replies.map((reply) => (
                     <CommentRow
                       key={reply.id}
                       comment={reply}
                       isOwn={!!(currentUserId && reply.userId === currentUserId)}
                       isNested={true}
+                      reactedEmoji={commentReactions[reply.id] ?? null}
                       {...commonRowProps}
                     />
                   ))}
