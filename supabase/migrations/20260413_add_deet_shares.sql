@@ -2,12 +2,13 @@
 alter table public.deets
   add column if not exists share_count integer not null default 0;
 
--- Create deet_shares table to track individual shares
+-- Create deet_shares table to track individual shares (one per user per deet)
 create table if not exists public.deet_shares (
   id uuid primary key default gen_random_uuid(),
   deet_id uuid not null references public.deets(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
-  shared_at timestamptz not null default now()
+  shared_at timestamptz not null default now(),
+  unique (deet_id, user_id)
 );
 
 -- Index for counting shares per deet

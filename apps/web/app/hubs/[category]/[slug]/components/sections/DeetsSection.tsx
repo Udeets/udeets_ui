@@ -866,6 +866,8 @@ export function DeetsSection({
   };
 
   const [shareCountOverrides, setShareCountOverrides] = useState<Record<string, number>>({});
+  // Track deets the current user has already shared this session (prevents double-counting)
+  const [sharedDeetIds, setSharedDeetIds] = useState<Set<string>>(new Set());
 
   const handleShareDeet = async (deetId: string) => {
     const shareUrl = `${window.location.origin}/hubs/${hubCategory}/${hubSlug}?focus=${deetId}`;
@@ -883,16 +885,21 @@ export function DeetsSection({
       document.body.removeChild(textarea);
     }
     setCopiedDeetId(deetId);
-    // Optimistic local update
-    setShareCountOverrides((prev) => ({ ...prev, [deetId]: (prev[deetId] ?? 0) + 1 }));
-    // Persist to database (non-blocking)
+
+    // Only bump the count optimistically if user hasn't already shared this deet
+    const alreadySharedLocally = sharedDeetIds.has(deetId);
+    if (!alreadySharedLocally) {
+      setShareCountOverrides((prev) => ({ ...prev, [deetId]: (prev[deetId] ?? 0) + 1 }));
+      setSharedDeetIds((prev) => new Set(prev).add(deetId));
+    }
+
+    // Persist to database (non-blocking, idempotent)
     import("@/lib/services/deets/deet-interactions").then(({ recordDeetShare }) => {
-      recordDeetShare(deetId).then((serverTotal) => {
-        if (serverTotal > 0) {
-          // Find the item's base share count and compute the correct override
+      recordDeetShare(deetId).then(({ total }) => {
+        if (total > 0) {
           const item = filteredFeedItems.find((fi) => fi.id === deetId);
           const base = item?.shares ?? 0;
-          setShareCountOverrides((prev) => ({ ...prev, [deetId]: serverTotal - base }));
+          setShareCountOverrides((prev) => ({ ...prev, [deetId]: total - base }));
         }
       }).catch(() => { /* swallow — optimistic count stays */ });
     }).catch(() => { /* swallow */ });

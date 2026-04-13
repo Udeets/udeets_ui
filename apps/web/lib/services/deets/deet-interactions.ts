@@ -588,19 +588,30 @@ export async function syncDeetViewCounts(deetIds: string[]): Promise<Record<stri
 // ── Shares ──────────────────────────────────────────────────────────
 
 /**
- * Record a share for a deet. Each share event is tracked individually
- * (same user can share multiple times). Returns the updated share count.
+ * Record a share for a deet. One share per user per deet (idempotent).
+ * Returns { alreadyShared, total } — alreadyShared=true means the user
+ * already shared this deet before (no new row was inserted).
  */
-export async function recordDeetShare(deetId: string): Promise<number> {
+export async function recordDeetShare(deetId: string): Promise<{ alreadyShared: boolean; total: number }> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return 0;
+  if (!user) return { alreadyShared: false, total: 0 };
 
   try {
-    // Insert share record
-    await supabase.from("deet_shares").insert({ deet_id: deetId, user_id: user.id });
+    // Upsert — if the user already shared, this is a no-op (ON CONFLICT DO NOTHING)
+    const { error: insertErr } = await supabase
+      .from("deet_shares")
+      .upsert({ deet_id: deetId, user_id: user.id }, { onConflict: "deet_id,user_id", ignoreDuplicates: true });
 
-    // Count total shares for this deet and update denormalized count
+    // Check if this user had already shared (row existed before upsert)
+    const { data: userRow } = await supabase
+      .from("deet_shares")
+      .select("shared_at")
+      .eq("deet_id", deetId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    // Count total unique shares for this deet
     const { count } = await supabase
       .from("deet_shares")
       .select("*", { count: "exact", head: true })
@@ -608,10 +619,13 @@ export async function recordDeetShare(deetId: string): Promise<number> {
 
     const total = count ?? 1;
     updateDenormalizedCount("deets", deetId, "share_count", total);
-    return total;
+
+    // If the insert had an error (duplicate), the user already shared
+    const alreadyShared = !!insertErr;
+    return { alreadyShared, total };
   } catch {
     // deet_shares table might not exist — fall back gracefully
-    return 0;
+    return { alreadyShared: false, total: 0 };
   }
 }
 
