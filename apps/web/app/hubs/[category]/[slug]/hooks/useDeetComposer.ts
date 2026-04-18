@@ -8,6 +8,17 @@ import { createEvent } from "@/lib/services/events/create-event";
 import { uploadDeetMedia } from "@/lib/services/deets/upload-deet-media";
 import type { AttachedDeetItem, ComposerChildFlow, DeetFormattingState, DeetSettingsState } from "../components/deets/deetTypes";
 
+export type ComposerVariant = "post" | "announcement";
+
+function escapePlainTextForHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 const INITIAL_DEET_FORMATTING: DeetFormattingState = {
   fontSize: "small",
   bold: false,
@@ -69,15 +80,24 @@ export function useDeetComposer({
   const [deetFormatting, setDeetFormatting] = useState<DeetFormattingState>(INITIAL_DEET_FORMATTING);
   const [isFontSizeMenuOpen, setIsFontSizeMenuOpen] = useState(false);
   const [deetSettings, setDeetSettings] = useState<DeetSettingsState>(INITIAL_DEET_SETTINGS);
+  const [composerVariant, setComposerVariant] = useState<ComposerVariant>("post");
+  const [announcementTitle, setAnnouncementTitle] = useState("");
+  const [announcementBody, setAnnouncementBody] = useState("");
   const deetPhotoInputRef = useRef<HTMLInputElement | null>(null);
 
   const isComposerDirty =
-    modalDraftText.trim().length > 0 ||
-    attachedDeetItems.length > 0 ||
-    selectedPhotoPreviews.length > 0 ||
-    deetSettings.noticeEnabled ||
-    !deetSettings.commentsEnabled ||
-    deetSettings.postType !== "post";
+    composerVariant === "announcement"
+      ? announcementTitle.trim().length > 0 ||
+        announcementBody.trim().length > 0 ||
+        selectedPhotoPreviews.length > 0 ||
+        attachedDeetItems.length > 0 ||
+        modalDraftText.trim().length > 0
+      : modalDraftText.trim().length > 0 ||
+        attachedDeetItems.length > 0 ||
+        selectedPhotoPreviews.length > 0 ||
+        deetSettings.noticeEnabled ||
+        !deetSettings.commentsEnabled ||
+        deetSettings.postType !== "post";
 
   useEffect(() => {
     if (!composerOpen) return;
@@ -89,6 +109,8 @@ export function useDeetComposer({
     setSelectedPhotoPreviews([]);
     setSelectedPhotoFiles([]);
     setDeetSettings(INITIAL_DEET_SETTINGS);
+    setAnnouncementTitle("");
+    setAnnouncementBody("");
   }, [composerOpen, demoComposerText]);
 
   useEffect(() => {
@@ -115,6 +137,9 @@ export function useDeetComposer({
   const resetDeetComposer = () => {
     setComposerOpen(false);
     setActiveComposerChild(null);
+    setComposerVariant("post");
+    setAnnouncementTitle("");
+    setAnnouncementBody("");
     setAttachedDeetItems([]);
     setSelectedPhotoPreviews([]);
     setSelectedPhotoFiles([]);
@@ -127,7 +152,18 @@ export function useDeetComposer({
   const openDeetComposer = (child: ComposerChildFlow | null = null) => {
     if (!isCreatorAdmin) return;
     setComposerOpen(true);
-    setActiveComposerChild(child);
+    if (child === "announcement") {
+      setComposerVariant("announcement");
+      setActiveComposerChild(null);
+    } else {
+      setComposerVariant("post");
+      setActiveComposerChild(child);
+    }
+  };
+
+  const enterAnnouncementMode = () => {
+    setComposerVariant("announcement");
+    setActiveComposerChild(null);
   };
 
   const closeDeetComposer = () => {
@@ -138,6 +174,9 @@ export function useDeetComposer({
     }
     setComposerOpen(false);
     setActiveComposerChild(null);
+    setComposerVariant("post");
+    setAnnouncementTitle("");
+    setAnnouncementBody("");
   };
 
   const discardDeetComposer = () => {
@@ -198,8 +237,13 @@ export function useDeetComposer({
     if (isSubmittingDeet) return;
 
     const trimmedText = modalDraftText.trim();
-    const hasContent = Boolean(trimmedText || attachedDeetItems.length || selectedPhotoPreviews.length);
-    if (!hasContent) return;
+    if (composerVariant === "announcement") {
+      const annTitle = announcementTitle.trim();
+      if (!annTitle) return;
+    } else {
+      const hasContent = Boolean(trimmedText || attachedDeetItems.length || selectedPhotoPreviews.length);
+      if (!hasContent) return;
+    }
 
     setIsSubmittingDeet(true);
 
@@ -215,7 +259,20 @@ export function useDeetComposer({
               files: selectedPhotoFiles,
             }
           : null;
-      const finalAttachments = [...attachedDeetItems, ...(syntheticPhotoAttachment ? [syntheticPhotoAttachment] : [])];
+
+      const announcementAttachment =
+        composerVariant === "announcement"
+          ? {
+              type: "announcement" as const,
+              title: announcementTitle.trim(),
+              detail: announcementBody.trim() || undefined,
+            }
+          : null;
+
+      const finalAttachments =
+        composerVariant === "announcement" && announcementAttachment
+          ? [announcementAttachment, ...attachedDeetItems, ...(syntheticPhotoAttachment ? [syntheticPhotoAttachment] : [])]
+          : [...attachedDeetItems, ...(syntheticPhotoAttachment ? [syntheticPhotoAttachment] : [])];
       const photoFiles = finalAttachments.flatMap((item) => (item.type === "photo" ? item.files ?? [] : []));
       const uploadedPhotoAssets = photoFiles.length
         ? await Promise.all(
@@ -251,13 +308,21 @@ export function useDeetComposer({
         alert: "Alert",
         jobs: "Job",
       };
-      const resolvedKind = (deetSettings.noticeEnabled ? "Notices" : postTypeToKind[deetSettings.postType] || "Posts") as import("@/lib/services/deets/deet-types").DeetKind;
-      const fallbackTitle = deetSettings.noticeEnabled ? "Notice" : postTypeToTitle[deetSettings.postType] || "Deet";
+      const resolvedKind = (
+        composerVariant === "announcement"
+          ? "Notices"
+          : deetSettings.noticeEnabled
+            ? "Notices"
+            : postTypeToKind[deetSettings.postType] || "Posts"
+      ) as import("@/lib/services/deets/deet-types").DeetKind;
+      const fallbackTitle =
+        composerVariant === "announcement" ? "Announcement" : deetSettings.noticeEnabled ? "Notice" : postTypeToTitle[deetSettings.postType] || "Deet";
 
       // Derive a meaningful title from the content instead of using a generic type name
-      const contentForTitle = trimmedText
-        || finalAttachments.find((a) => a.title)?.title
-        || "";
+      const contentForTitle =
+        composerVariant === "announcement"
+          ? announcementTitle.trim()
+          : trimmedText || finalAttachments.find((a) => a.title)?.title || "";
       const resolvedTitle = contentForTitle
         ? contentForTitle.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 100)
         : fallbackTitle;
@@ -265,8 +330,11 @@ export function useDeetComposer({
       // Build body from attached items if the main editor is empty.
       // Skip the attachment title if it was already used as the post title
       // to avoid title/body duplication.
-      let rawBody = trimmedText;
-      if (!rawBody && finalAttachments.length > 0) {
+      let rawBody = composerVariant === "announcement" ? "" : trimmedText;
+      if (composerVariant === "announcement") {
+        const detail = announcementBody.trim();
+        rawBody = detail ? escapePlainTextForHtml(detail).replace(/\n/g, "<br/>") : "";
+      } else if (!rawBody && finalAttachments.length > 0) {
         const titleUsedFromAttachment = !trimmedText && finalAttachments.find((a) => a.title)?.title;
         const parts: string[] = [];
         for (const att of finalAttachments) {
@@ -296,7 +364,12 @@ export function useDeetComposer({
           type: item.type,
           title: item.title,
           detail: item.detail,
-          previews: item.type === "photo" ? uploadedPhotoUrls : item.previews,
+          previews:
+            item.type === "photo"
+              ? uploadedPhotoUrls
+              : "previews" in item
+                ? item.previews
+                : undefined,
           storagePaths: item.type === "photo" ? uploadedPhotoPaths : undefined,
           ...("options" in item && item.options ? { options: item.options } : {}),
           ...("pollSettings" in item && item.pollSettings ? { pollSettings: item.pollSettings } : {}),
@@ -342,6 +415,12 @@ export function useDeetComposer({
 
   return {
     composerOpen,
+    composerVariant,
+    announcementTitle,
+    announcementBody,
+    setAnnouncementTitle,
+    setAnnouncementBody,
+    enterAnnouncementMode,
     activeComposerChild,
     attachedDeetItems,
     selectedPhotoPreviews,

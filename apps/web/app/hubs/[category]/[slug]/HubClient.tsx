@@ -38,7 +38,7 @@ import { SettingsSection } from "./components/sections/SettingsSection";
 import { CreateDeetModal } from "./components/deets/CreateDeetModal";
 import { DeetChildModal } from "./components/deets/DeetChildModal";
 import { DeetSettingsModal } from "./components/deets/DeetSettingsModal";
-import { AnnouncementChildContent, NoticeChildContent, PollChildContent, EventChildContent, CheckinChildContent, AlertChildContent, SurveyChildContent, PaymentChildContent, JobsChildContent } from "./components/deets/ComposerChildPanels";
+import { NoticeChildContent, PollChildContent, EventChildContent, CheckinChildContent, AlertChildContent, SurveyChildContent, PaymentChildContent, JobsChildContent } from "./components/deets/ComposerChildPanels";
 import type { HubTab } from "./components/hubTypes";
 import { useHubConnectFlow } from "./hooks/useHubConnectFlow";
 import { useDeetComposer } from "./hooks/useDeetComposer";
@@ -723,6 +723,12 @@ export default function HubClient({
 
   const {
     composerOpen,
+    composerVariant,
+    announcementTitle,
+    announcementBody,
+    setAnnouncementTitle,
+    setAnnouncementBody,
+    enterAnnouncementMode,
     activeComposerChild,
     attachedDeetItems,
     selectedPhotoPreviews,
@@ -1451,6 +1457,14 @@ export default function HubClient({
       {composerOpen && typeof document !== "undefined"
         ? createPortal(
             <CreateDeetModal
+              composerVariant={composerVariant}
+              announcementTitle={announcementTitle}
+              announcementBody={announcementBody}
+              onAnnouncementTitleChange={setAnnouncementTitle}
+              onAnnouncementBodyChange={setAnnouncementBody}
+              enterAnnouncementMode={enterAnnouncementMode}
+              photoInputRef={deetPhotoInputRef}
+              onPhotoFilesChange={handleDeetPhotoFiles}
               draftText={modalDraftText}
               onDraftTextChange={setModalDraftText}
               formatting={deetFormatting}
@@ -1488,7 +1502,6 @@ export default function HubClient({
               {activeComposerChild === "photo" ? (
                 <DeetChildModal title="Upload Photos" onClose={() => setActiveComposerChild(null)}>
                   <div>
-                    <input ref={deetPhotoInputRef} type="file" accept="image/*" multiple onChange={handleDeetPhotoFiles} className="hidden" />
                     <button
                       type="button"
                       onClick={() => deetPhotoInputRef.current?.click()}
@@ -1600,20 +1613,6 @@ export default function HubClient({
                       </div>
                     </div>
                   </div>
-                </DeetChildModal>
-              ) : null}
-
-              {/* ── Announcement modal ── */}
-              {activeComposerChild === "announcement" ? (
-                <DeetChildModal title="Announcement" onClose={() => setActiveComposerChild(null)}>
-                  <AnnouncementChildContent
-                    onAttach={(title, body) => {
-                      attachDeetItem({ type: "announcement", title, detail: body });
-                      setDeetSettings((prev) => ({ ...prev, postType: "notice" as import("./components/deets/deetTypes").DeetPostType }));
-                      setActiveComposerChild(null);
-                    }}
-                    onCancel={() => setActiveComposerChild(null)}
-                  />
                 </DeetChildModal>
               ) : null}
 

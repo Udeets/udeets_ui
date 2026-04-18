@@ -1,5 +1,6 @@
 "use client";
 
+import type { Ref } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { DollarSign, Loader2, MapPin, Plus, Trash2 } from "lucide-react";
 
@@ -11,6 +12,54 @@ const INPUT =
   "w-full rounded-xl border border-[var(--ud-border)] bg-[var(--ud-bg-input)] px-4 py-2.5 text-sm text-[var(--ud-text-primary)] outline-none transition focus:border-[var(--ud-border-focus)] focus:ring-2 focus:ring-[var(--ud-brand-light)]";
 
 /* ── Announcement ─────────────────────────────────────────────── */
+
+export function AnnouncementFormFields({
+  title,
+  body,
+  onTitleChange,
+  onBodyChange,
+  titleInputRef,
+  showIntro = true,
+  detailsRows = 3,
+}: {
+  title: string;
+  body: string;
+  onTitleChange: (value: string) => void;
+  onBodyChange: (value: string) => void;
+  titleInputRef?: Ref<HTMLInputElement>;
+  showIntro?: boolean;
+  detailsRows?: number;
+}) {
+  return (
+    <div className="space-y-4">
+      {showIntro ? (
+        <p className="text-sm text-[var(--ud-text-secondary)]">
+          Create an announcement that will be pinned and highlighted for all hub members.
+        </p>
+      ) : null}
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Title</label>
+        <input
+          ref={titleInputRef}
+          value={title}
+          onChange={(e) => onTitleChange(e.target.value)}
+          placeholder="e.g. Important Update"
+          className={INPUT}
+        />
+      </div>
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Details</label>
+        <textarea
+          value={body}
+          onChange={(e) => onBodyChange(e.target.value)}
+          placeholder="What do members need to know?"
+          rows={detailsRows}
+          className={`${INPUT} resize-none`}
+        />
+      </div>
+    </div>
+  );
+}
 
 export function AnnouncementChildContent({
   onAttach,
@@ -24,23 +73,7 @@ export function AnnouncementChildContent({
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-[var(--ud-text-secondary)]">
-        Create an announcement that will be pinned and highlighted for all hub members.
-      </p>
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Title</label>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Important Update" className={INPUT} />
-      </div>
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Details</label>
-        <textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder="What do members need to know?"
-          rows={3}
-          className={`${INPUT} resize-none`}
-        />
-      </div>
+      <AnnouncementFormFields title={title} body={body} onTitleChange={setTitle} onBodyChange={setBody} />
       <div className="flex justify-end gap-3 pt-2">
         <button type="button" onClick={onCancel} className={BTN_SECONDARY}>Cancel</button>
         <button
