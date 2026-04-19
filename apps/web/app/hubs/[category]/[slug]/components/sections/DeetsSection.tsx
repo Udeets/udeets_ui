@@ -780,6 +780,7 @@ export function DeetsSection({
   onSubmitComment,
   onEditComment,
   onDeleteComment,
+  onEditDeet,
   viewersDeetId,
   viewersByDeetId,
   viewersLoading,
@@ -836,6 +837,7 @@ export function DeetsSection({
   onSubmitComment?: (deetId: string, body: string, parentId?: string, attachments?: { imageUrl?: string; attachmentUrl?: string; attachmentName?: string }) => Promise<{ success: boolean }> | void;
   onEditComment?: (commentId: string, deetId: string, newBody: string) => Promise<{ success: boolean }> | void;
   onDeleteComment?: (commentId: string, deetId: string) => Promise<{ success: boolean }> | void;
+  onEditDeet?: (item: HubContent["feed"][number]) => void;
   viewersDeetId?: string | null;
   viewersByDeetId?: Record<string, DeetViewer[]>;
   viewersLoading?: boolean;
@@ -1243,8 +1245,11 @@ export function DeetsSection({
                               type="button"
                               onClick={() => {
                                 setOpenMenuDeetId(null);
-                                onOpenComposer(null);
-                                // TODO: open composer in edit mode with this deet's data
+                                if (onEditDeet) {
+                                  onEditDeet(item);
+                                } else {
+                                  onOpenComposer(null);
+                                }
                               }}
                               className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)]"
                             >
@@ -1283,12 +1288,27 @@ export function DeetsSection({
                   const deetType = resolveDeetType(item.kind, item.deetAttachments);
                   const hasRichSection = deetType && item.deetAttachments?.some((a) => a.type === deetType);
 
+                  // Only suppress the body text when it exactly matches what the
+                  // rich section is about to display (e.g. an announcement where
+                  // body = attachment.detail). If the user typed their own body
+                  // alongside a poll / event / etc., keep it visible.
+                  const richAttachment = hasRichSection
+                    ? item.deetAttachments?.find((a) => a.type === deetType)
+                    : null;
+                  const bodyPlain = (item.body ?? "").replace(/<[^>]*>/g, "").trim();
+                  const richDetailPlain = (richAttachment?.detail ?? "").trim();
+                  const richTitlePlain = (richAttachment?.title ?? "").trim();
+                  const bodyIsJustRichEcho = Boolean(
+                    bodyPlain &&
+                    (bodyPlain === richDetailPlain || bodyPlain === richTitlePlain || bodyPlain === `${richTitlePlain} ${richDetailPlain}`.trim())
+                  );
+                  const shouldRenderBody = Boolean(item.body) && !bodyIsJustRichEcho;
+
                   return (
                     <>
                       {deetType ? <DeetTypeBadge type={deetType} /> : null}
 
-                      {/* Body content — skip if rich section will render the same info */}
-                      {item.body && !hasRichSection ? (
+                      {shouldRenderBody ? (
                         <div
                           className="px-4 pt-3 text-[15px] leading-relaxed text-[var(--ud-text-primary)]"
                           dangerouslySetInnerHTML={{ __html: sanitizeHtmlContent(item.body) }}
@@ -1440,20 +1460,30 @@ export function DeetsSection({
                     onToggleLike={onToggleLike}
                   />
 
-                  {/* Comment button */}
-                  <button
-                    type="button"
-                    onClick={() => onToggleComments?.(item.id)}
-                    className={cn(
-                      "flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]",
-                      expandedCommentDeetId === item.id
-                        ? "text-[var(--ud-brand-primary)] font-medium"
-                        : "text-[var(--ud-text-muted)]"
-                    )}
-                  >
-                    <MessageSquare className={POST_ICON} />
-                    <span>Comment</span>
-                  </button>
+                  {/* Comment button — hidden when author disabled comments on this deet */}
+                  {item.allowComments === false ? (
+                    <div
+                      className="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm text-[var(--ud-text-muted)] opacity-60"
+                      title="The author has turned off comments on this post"
+                    >
+                      <MessageSquare className={POST_ICON} />
+                      <span>Comments off</span>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onToggleComments?.(item.id)}
+                      className={cn(
+                        "flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]",
+                        expandedCommentDeetId === item.id
+                          ? "text-[var(--ud-brand-primary)] font-medium"
+                          : "text-[var(--ud-text-muted)]"
+                      )}
+                    >
+                      <MessageSquare className={POST_ICON} />
+                      <span>Comment</span>
+                    </button>
+                  )}
 
                   {/* Share button */}
                   <button

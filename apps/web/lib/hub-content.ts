@@ -41,6 +41,7 @@ export type HubFeedItem = {
   views: number;
   shares: number;
   deetAttachments?: HubFeedItemAttachment[];
+  allowComments?: boolean;
 };
 
 export type HubEventItem = {

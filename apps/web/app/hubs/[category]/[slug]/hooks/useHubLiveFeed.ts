@@ -56,6 +56,25 @@ export function useHubLiveFeed(hubId: string, hubCreatorId?: string) {
     });
   }, [hubCreatorId]);
 
+  const replaceDeet = useCallback((updatedDeet: DeetRecord) => {
+    startTransition(() => {
+      setLiveFeedItems((current) => {
+        const mapped = mapDeetToHubFeedItem(updatedDeet, hubCreatorId);
+        // Update in place if it already exists so the user's scroll position holds;
+        // fall back to prepending so users always see their latest work.
+        let replaced = false;
+        const next = current.map((item) => {
+          if (item.id === updatedDeet.id) {
+            replaced = true;
+            return mapped;
+          }
+          return item;
+        });
+        return replaced ? next : [mapped, ...next];
+      });
+    });
+  }, [hubCreatorId]);
+
   const removeDeet = useCallback((deetId: string) => {
     startTransition(() => {
       setLiveFeedItems((current) => current.filter((item) => item.id !== deetId));
@@ -65,6 +84,7 @@ export function useHubLiveFeed(hubId: string, hubCreatorId?: string) {
   return {
     liveFeedItems,
     prependCreatedDeet,
+    replaceDeet,
     removeDeet,
   };
 }

@@ -109,7 +109,9 @@ export default function HubClient({
   const demoLiked = searchParams.get("demo_liked") === "1";
 
   const initialHubName = demoHubName || hub.name;
-  const hubDescription = demoHubDescription || hub.description;
+  // Track description as local state so UI reflects saves without needing a route refresh.
+  const [hubDescriptionState, setHubDescriptionState] = useState<string>(hub.description || "");
+  const hubDescription = demoHubDescription || hubDescriptionState;
   const [isAdminsEditorOpen, setIsAdminsEditorOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isDeleteHubModalOpen, setIsDeleteHubModalOpen] = useState(false);
@@ -311,7 +313,7 @@ export default function HubClient({
     loadAttachmentPhotos();
   }, [hub.id]);
 
-  const { liveFeedItems, prependCreatedDeet, removeDeet } = useHubLiveFeed(hub.id, hub.createdBy);
+  const { liveFeedItems, prependCreatedDeet, replaceDeet, removeDeet } = useHubLiveFeed(hub.id, hub.createdBy);
   const {
     savedHubName,
     savedHubCategory,
@@ -751,6 +753,7 @@ export default function HubClient({
     deetFormatting,
     isFontSizeMenuOpen,
     deetSettings,
+    editingDeetId,
     deetPhotoInputRef,
     deetFileInputRef,
     setActiveComposerChild,
@@ -759,6 +762,7 @@ export default function HubClient({
     setIsFontSizeMenuOpen,
     setDeetSettings,
     openDeetComposer,
+    startEditingDeet,
     closeDeetComposer,
     discardDeetComposer,
     attachDeetItem,
@@ -776,6 +780,7 @@ export default function HubClient({
     authorAvatarSrc: creatorAvatarSrc,
     userId: user?.id ?? null,
     onDeetCreated: prependCreatedDeet,
+    onDeetUpdated: replaceDeet,
   });
 
   const shouldOpenComments = searchParams.get("comments") === "1";
@@ -1034,6 +1039,7 @@ export default function HubClient({
           onSaveDescription={async (desc: string) => {
             const { updateHub } = await import("@/lib/services/hubs/update-hub");
             await updateHub(hub.id, { description: desc });
+            setHubDescriptionState(desc);
           }}
           onOpenViewer={openViewer}
           customSections={customSections}
@@ -1133,6 +1139,7 @@ export default function HubClient({
         onSubmitComment={handleSubmitComment}
         onEditComment={handleEditComment}
         onDeleteComment={handleDeleteComment}
+        onEditDeet={startEditingDeet}
         viewersDeetId={viewersDeetId}
         viewersByDeetId={viewersByDeetId}
         viewersLoading={viewersLoading}

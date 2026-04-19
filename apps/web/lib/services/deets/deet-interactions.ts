@@ -155,14 +155,43 @@ export async function addDeetComment(
   type CommentRow = { id: string; deet_id: string; user_id: string; body: string; created_at: string; parent_id?: string | null; image_url?: string | null; attachment_url?: string | null; attachment_name?: string | null };
   let data: CommentRow | null = null;
 
-  const res1 = await supabase.from("deet_comments").insert(insertPayload).select("id, deet_id, user_id, body, created_at, parent_id, image_url, attachment_url, attachment_name").single();
-  if (res1.error && (res1.error.message.includes("parent_id") || res1.error.message.includes("image_url") || res1.error.message.includes("attachment_url") || res1.error.message.includes("attachment_name"))) {
+  const isColumnMissing = (msg: string) =>
+    msg.includes("parent_id") || msg.includes("image_url") || msg.includes("attachment_url") || msg.includes("attachment_name");
+  const isRlsFailure = (msg: string) => msg.toLowerCase().includes("row-level security") || msg.toLowerCase().includes("row level security");
+
+  const insertOnce = async (payload: Record<string, unknown>) =>
+    supabase
+      .from("deet_comments")
+      .insert(payload)
+      .select("id, deet_id, user_id, body, created_at, parent_id, image_url, attachment_url, attachment_name")
+      .single();
+
+  let res1 = await insertOnce(insertPayload);
+
+  // If the auth session was stale, the Postgres side sees auth.uid() = null and the
+  // RLS check (auth.uid() = user_id) fails even though we think we're signed in.
+  // Refresh the token once and retry before giving up.
+  if (res1.error && isRlsFailure(res1.error.message)) {
+    console.warn("[addDeetComment] RLS denied; refreshing session and retrying once");
+    await supabase.auth.refreshSession().catch(() => { /* best-effort */ });
+    res1 = await insertOnce(insertPayload);
+  }
+
+  if (res1.error && isColumnMissing(res1.error.message)) {
     // Fall back to basic columns only
     const basicPayload = { deet_id: deetId, user_id: user.id, body: trimmed };
     const res2 = await supabase.from("deet_comments").insert(basicPayload).select("id, deet_id, user_id, body, created_at").single();
-    if (res2.error) throw new Error(`Failed to add comment: ${res2.error.message}`);
+    if (res2.error) {
+      if (isRlsFailure(res2.error.message)) {
+        throw new Error("Your session expired. Please sign in again to comment.");
+      }
+      throw new Error(`Failed to add comment: ${res2.error.message}`);
+    }
     data = res2.data as unknown as CommentRow;
   } else if (res1.error) {
+    if (isRlsFailure(res1.error.message)) {
+      throw new Error("Your session expired. Please sign in again to comment.");
+    }
     throw new Error(`Failed to add comment: ${res1.error.message}`);
   } else {
     data = res1.data as unknown as CommentRow;

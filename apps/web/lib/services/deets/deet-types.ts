@@ -112,6 +112,7 @@ export interface DeetRecord {
   comment_count?: number;
   view_count?: number;
   share_count?: number;
+  allow_comments?: boolean;
 }
 
 export interface CreateDeetInput {
@@ -123,4 +124,5 @@ export interface CreateDeetInput {
   previewImageUrl?: string;
   previewImageUrls?: string[];
   attachments?: DeetAttachment[];
+  allowComments?: boolean;
 }

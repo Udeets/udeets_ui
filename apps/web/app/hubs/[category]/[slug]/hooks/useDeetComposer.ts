@@ -3,7 +3,9 @@
 import type { ChangeEvent, FormEvent } from "react";
 import { startTransition, useEffect, useRef, useState } from "react";
 import { createDeet } from "@/lib/services/deets/create-deet";
+import { updateDeet } from "@/lib/services/deets/update-deet";
 import type { DeetRecord } from "@/lib/services/deets/deet-types";
+import type { HubFeedItem } from "@/lib/hub-content";
 import { createEvent } from "@/lib/services/events/create-event";
 import { uploadDeetMedia } from "@/lib/services/deets/upload-deet-media";
 import type { AttachedDeetItem, ComposerChildFlow, DeetFormattingState, DeetSettingsState } from "../components/deets/deetTypes";
@@ -53,6 +55,7 @@ type UseDeetComposerArgs = {
   authorAvatarSrc?: string;
   userId: string | null;
   onDeetCreated: (deet: DeetRecord) => void;
+  onDeetUpdated?: (deet: DeetRecord) => void;
 };
 
 export function useDeetComposer({
@@ -64,9 +67,11 @@ export function useDeetComposer({
   authorAvatarSrc,
   userId,
   onDeetCreated,
+  onDeetUpdated,
 }: UseDeetComposerArgs) {
   const [composerOpen, setComposerOpen] = useState(false);
   const [activeComposerChild, setActiveComposerChild] = useState<ComposerChildFlow | null>(null);
+  const [editingDeetId, setEditingDeetId] = useState<string | null>(null);
   const [attachedDeetItems, setAttachedDeetItems] = useState<AttachedDeetItem[]>([]);
   const [selectedPhotoPreviews, setSelectedPhotoPreviews] = useState<string[]>([]);
   const [selectedPhotoFiles, setSelectedPhotoFiles] = useState<File[]>([]);
@@ -90,6 +95,9 @@ export function useDeetComposer({
 
   useEffect(() => {
     if (!composerOpen) return;
+    // When opened for an edit, we leave state alone — the startEditingDeet
+    // caller has already populated it. Only reset when opening for a new deet.
+    if (editingDeetId) return;
 
     setModalDraftText(demoComposerText);
     setDeetFormatting(INITIAL_DEET_FORMATTING);
@@ -99,7 +107,7 @@ export function useDeetComposer({
     setSelectedPhotoFiles([]);
     setSelectedDocFiles([]);
     setDeetSettings(INITIAL_DEET_SETTINGS);
-  }, [composerOpen, demoComposerText]);
+  }, [composerOpen, demoComposerText, editingDeetId]);
 
   useEffect(() => {
     if (!composerOpen) return;
@@ -125,6 +133,7 @@ export function useDeetComposer({
   const resetDeetComposer = () => {
     setComposerOpen(false);
     setActiveComposerChild(null);
+    setEditingDeetId(null);
     setAttachedDeetItems([]);
     setSelectedPhotoPreviews([]);
     setSelectedPhotoFiles([]);
@@ -133,6 +142,67 @@ export function useDeetComposer({
     setIsFontSizeMenuOpen(false);
     setDeetFormatting(INITIAL_DEET_FORMATTING);
     setDeetSettings(INITIAL_DEET_SETTINGS);
+  };
+
+  /**
+   * Opens the composer pre-populated with an existing deet's content so the user
+   * can edit and re-save it. Supports body text, announcement/notice attachments,
+   * poll options (read-only placeholder), and previously-uploaded images.
+   */
+  const startEditingDeet = (item: HubFeedItem) => {
+    if (!isCreatorAdmin) return;
+    setEditingDeetId(item.id);
+    setModalDraftText(item.body || "");
+    setSelectedPhotoPreviews([]);
+    setSelectedPhotoFiles([]);
+    setSelectedDocFiles([]);
+    setDeetFormatting(INITIAL_DEET_FORMATTING);
+    setIsFontSizeMenuOpen(false);
+
+    // Rehydrate attached items from the mapped feed item. This covers
+    // announcement, notice, poll, event, and photo attachments enough for
+    // the composer to display chips and re-submit the deet with the same data.
+    const rehydrated: AttachedDeetItem[] = (item.deetAttachments ?? []).map((att, index) => ({
+      id: `edit-${item.id}-${index}`,
+      type: att.type,
+      title: att.title ?? "",
+      detail: att.detail,
+      previews: att.previews,
+      options: att.options,
+    }));
+
+    // If the deet has images but no explicit photo attachment, surface them
+    // as a synthetic photo chip so the user sees the current image(s).
+    const existingImages = (item.images && item.images.length > 0) ? item.images : item.image ? [item.image] : [];
+    const alreadyHasPhoto = rehydrated.some((r) => r.type === "photo");
+    if (!alreadyHasPhoto && existingImages.length > 0) {
+      rehydrated.push({
+        id: `edit-${item.id}-photo`,
+        type: "photo",
+        title: existingImages.length === 1 ? "1 photo attached" : `${existingImages.length} photos attached`,
+        detail: "Existing image(s).",
+        previews: existingImages,
+      });
+    }
+    setAttachedDeetItems(rehydrated);
+
+    // Restore the post-type so the correct chip lights up. HubFeedItemKind
+    // doesn't map 1:1 to DeetPostType so we do a best-effort mapping.
+    const mappedPostType = ((): DeetSettingsState["postType"] => {
+      if (item.kind === "notice" || item.kind === "announcement") return "notice";
+      if (item.kind === "alert" || item.kind === "hazard") return "alert";
+      if (item.kind === "jobs") return "jobs";
+      if (item.kind === "news") return "news";
+      if (item.kind === "deal") return "deal";
+      return "post";
+    })();
+    setDeetSettings({
+      noticeEnabled: item.kind === "notice" || item.kind === "announcement",
+      commentsEnabled: item.allowComments !== false,
+      postType: mappedPostType,
+    });
+    setComposerOpen(true);
+    setActiveComposerChild(null);
   };
 
   const openDeetComposer = (child: ComposerChildFlow | null = null) => {
@@ -331,27 +401,56 @@ export function useDeetComposer({
 
       const attachmentsWithFiles = [...finalAttachments, ...docFileAttachments];
 
-      const createdDeet = await createDeet({
-        hubId,
-        authorName,
-        title: resolvedTitle,
-        body: sanitizedBody,
-        kind: resolvedKind,
-        previewImageUrl: primaryImage,
-        previewImageUrls: uploadedPhotoUrls,
-        attachments: attachmentsWithFiles.map((item) => ({
-          type: item.type,
-          title: item.title,
-          detail: item.detail,
-          previews: item.type === "photo" ? uploadedPhotoUrls : item.previews,
-          storagePaths: item.type === "photo" ? uploadedPhotoPaths : undefined,
-          ...("options" in item && item.options ? { options: item.options } : {}),
-          ...("pollSettings" in item && item.pollSettings ? { pollSettings: item.pollSettings } : {}),
-          ...("eventData" in item && item.eventData ? { eventData: item.eventData } : {}),
-          ...("jobData" in item && item.jobData ? { jobData: item.jobData } : {}),
-          ...("meta" in item && item.meta ? { meta: item.meta } : {}),
-        })),
-      });
+      // Preserve existing image URLs when editing a deet and no new photos were selected.
+      const existingPhotoAttachment = editingDeetId
+        ? attachmentsWithFiles.find((item) => item.type === "photo" && (!item.files || item.files.length === 0) && item.previews?.length)
+        : null;
+      const existingImageUrls = existingPhotoAttachment?.previews ?? [];
+      const effectivePhotoUrls = uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : existingImageUrls;
+      const effectivePrimaryImage = primaryImage || existingImageUrls[0];
+
+      const attachmentsPayload = attachmentsWithFiles.map((item) => ({
+        type: item.type,
+        title: item.title,
+        detail: item.detail,
+        previews: item.type === "photo"
+          ? (uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : (item.previews ?? []))
+          : item.previews,
+        storagePaths: item.type === "photo" ? uploadedPhotoPaths : undefined,
+        ...("options" in item && item.options ? { options: item.options } : {}),
+        ...("pollSettings" in item && item.pollSettings ? { pollSettings: item.pollSettings } : {}),
+        ...("eventData" in item && item.eventData ? { eventData: item.eventData } : {}),
+        ...("jobData" in item && item.jobData ? { jobData: item.jobData } : {}),
+        ...("meta" in item && item.meta ? { meta: item.meta } : {}),
+      }));
+
+      let savedDeet: DeetRecord;
+      if (editingDeetId) {
+        savedDeet = await updateDeet({
+          id: editingDeetId,
+          title: resolvedTitle,
+          body: sanitizedBody,
+          kind: resolvedKind,
+          previewImageUrl: effectivePrimaryImage,
+          previewImageUrls: effectivePhotoUrls,
+          allowComments: deetSettings.commentsEnabled,
+          attachments: attachmentsPayload,
+        });
+      } else {
+        savedDeet = await createDeet({
+          hubId,
+          authorName,
+          title: resolvedTitle,
+          body: sanitizedBody,
+          kind: resolvedKind,
+          previewImageUrl: primaryImage,
+          previewImageUrls: uploadedPhotoUrls,
+          allowComments: deetSettings.commentsEnabled,
+          attachments: attachmentsPayload,
+        });
+      }
+      // Alias preserved below for the existing event-bridge code.
+      const createdDeet = savedDeet;
 
       // Bridge: also create an entry in the events table so it appears
       // in the hub Events tab and the global Events page.
@@ -375,9 +474,14 @@ export function useDeetComposer({
         }
       }
 
+      const wasEditing = Boolean(editingDeetId);
       resetDeetComposer();
       startTransition(() => {
-        onDeetCreated(createdDeet);
+        if (wasEditing && onDeetUpdated) {
+          onDeetUpdated(createdDeet);
+        } else {
+          onDeetCreated(createdDeet);
+        }
       });
     } catch (err) {
       console.error("[deet-submit]", err);
@@ -390,6 +494,7 @@ export function useDeetComposer({
   return {
     composerOpen,
     activeComposerChild,
+    editingDeetId,
     attachedDeetItems,
     selectedPhotoPreviews,
     selectedPhotoFiles,
@@ -409,6 +514,7 @@ export function useDeetComposer({
     setIsFontSizeMenuOpen,
     setDeetSettings,
     openDeetComposer,
+    startEditingDeet,
     closeDeetComposer,
     discardDeetComposer,
     attachDeetItem,

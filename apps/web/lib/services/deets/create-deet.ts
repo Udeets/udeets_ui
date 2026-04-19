@@ -31,7 +31,7 @@ export async function createDeet(input: CreateDeetInput): Promise<DeetRecord> {
     throw new Error("You must be signed in to create a deet.");
   }
 
-  const payload = {
+  const basePayload: Record<string, unknown> = {
     hub_id: input.hubId,
     author_name: input.authorName.trim(),
     title: input.title.trim(),
@@ -48,7 +48,25 @@ export async function createDeet(input: CreateDeetInput): Promise<DeetRecord> {
     created_by: user.id,
   };
 
-  const { data, error } = await supabase.from("deets").insert(payload).select(DEET_COLUMNS).single();
+  // Only include allow_comments when it was explicitly set. This lets the
+  // DB default (true) win when the column exists, and lets the insert still
+  // succeed when the column hasn't been migrated yet (we retry without it).
+  if (typeof input.allowComments === "boolean") {
+    basePayload.allow_comments = input.allowComments;
+  }
+
+  let { data, error } = await supabase.from("deets").insert(basePayload).select(DEET_COLUMNS).single();
+
+  // Fallback: if the column doesn't exist yet, retry without it and with a
+  // narrower select so we don't error on the unknown column.
+  if (error && error.message.includes("allow_comments")) {
+    const { allow_comments: _unused, ...payloadWithout } = basePayload as Record<string, unknown> & { allow_comments?: boolean };
+    void _unused;
+    const fallbackSelect = DEET_COLUMNS.split(",").map((c) => c.trim()).filter((c) => c !== "allow_comments").join(", ");
+    const retry = await supabase.from("deets").insert(payloadWithout).select(fallbackSelect).single();
+    data = retry.data as typeof data;
+    error = retry.error;
+  }
 
   if (error) {
     throw new Error(`Failed to create deet: ${error.message}`);
