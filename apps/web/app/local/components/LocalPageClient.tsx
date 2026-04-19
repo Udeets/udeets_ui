@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import MockAppShell, { cardClass } from "@/components/mock-app-shell";
 import { listDeets, subscribeToDeets } from "@/lib/services/deets/list-deets";
-import { listMyMemberships } from "@/lib/services/members/list-my-memberships";
 import { listHubs } from "@/lib/services/hubs/list-hubs";
 import type { DeetRecord } from "@/lib/services/deets/deet-types";
 
@@ -240,24 +239,18 @@ export default function LocalPageClient() {
 
     async function loadLocal() {
       try {
-        const memberships = await listMyMemberships();
-        const hubIds = memberships.map((m) => m.hubId);
-
-        if (!hubIds.length) {
-          if (!cancelled) { setItems([]); setIsLoading(false); }
-          return;
-        }
-
+        // Local is a platform-wide feed of deals / news / jobs / alerts
+        // pulled from every hub, whether the viewer is a member or not.
+        // That's the whole point of "local" — surfacing community signals
+        // beyond the user's current subscriptions.
         const hubs = await listHubs();
         const hMap = new Map<string, { name: string; href: string }>();
         for (const hub of hubs) {
           hMap.set(hub.id, { name: hub.name, href: `/hubs/${hub.category}/${hub.slug}` });
         }
 
-        const allDeets = await listDeets({ hubIds, limit: 200 });
-
-        const localKinds = new Set(["Deals", "News", "Jobs", "Alerts"]);
-        const localDeets = allDeets.filter((d) => localKinds.has(d.kind));
+        const localKinds = ["Deals", "News", "Jobs", "Alerts", "Hazards"];
+        const localDeets = await listDeets({ kinds: localKinds, limit: 200 });
 
         if (!cancelled) {
           setItems(
