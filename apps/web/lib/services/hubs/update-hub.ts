@@ -45,7 +45,7 @@ export async function updateHub(hubId: string, input: UpdateHubInput): Promise<H
     throw new Error("You must be signed in to update this hub.");
   }
 
-  const payload: Record<string, string | string[] | null> = {};
+  const payload: Record<string, string | string[] | number | null> = {};
 
   if (input.name !== undefined) {
     payload.name = normalizeText(input.name);
@@ -81,6 +81,12 @@ export async function updateHub(hubId: string, input: UpdateHubInput): Promise<H
 
   if (input.coverImageUrl !== undefined) {
     payload.cover_image_url = normalizeText(input.coverImageUrl);
+  }
+
+  if (input.coverImageOffsetY !== undefined) {
+    // Clamp 0–100 so the DB check-constraint can't reject it.
+    const clamped = Math.min(100, Math.max(0, input.coverImageOffsetY));
+    payload.cover_image_offset_y = clamped;
   }
 
   if (input.dpImageUrl !== undefined) {

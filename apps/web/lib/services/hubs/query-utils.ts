@@ -9,6 +9,7 @@ const HUB_COLUMNS_BASE = `
   state,
   country,
   cover_image_url,
+  cover_image_offset_y,
   dp_image_url,
   gallery_image_urls,
   website_url,

@@ -22,6 +22,7 @@ export type HubRecord = {
   youtubeUrl?: string;
   phoneNumber?: string;
   heroImage?: string;
+  coverImageOffsetY?: number;
   dpImage?: string;
   createdBy?: string;
   galleryImages?: string[];
@@ -97,6 +98,7 @@ export function toHubRecord(hub: DbHubRecord): HubRecord {
     youtubeUrl: hub.youtube_url || "",
     phoneNumber: hub.phone_number || "",
     heroImage,
+    coverImageOffsetY: typeof hub.cover_image_offset_y === "number" ? hub.cover_image_offset_y : 50,
     dpImage,
     createdBy: hub.created_by,
     galleryImages,

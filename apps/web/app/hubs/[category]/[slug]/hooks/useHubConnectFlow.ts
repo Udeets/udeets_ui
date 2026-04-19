@@ -29,6 +29,14 @@ export function useHubConnectFlow(hub: HubRecord) {
     setConnectDraft(nextLinks);
   }, [hub, hub.facebookUrl, hub.instagramUrl, hub.phoneNumber, hub.website, hub.youtubeUrl]);
 
+  // Auto-dismiss the success toast so it behaves like a transient confirmation
+  // instead of persisting next to the Connect section forever.
+  useEffect(() => {
+    if (!connectSuccess) return;
+    const timer = window.setTimeout(() => setConnectSuccess(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [connectSuccess]);
+
   const openConnectEditor = () => {
     setConnectDraft(connectLinks);
     setConnectError(null);
@@ -69,7 +77,7 @@ export function useHubConnectFlow(hub: HubRecord) {
 
       setConnectLinks(nextConnectLinks);
       setConnectDraft(nextConnectLinks);
-      setConnectSuccess("Connect links updated.");
+      setConnectSuccess("Connect updated");
       setIsConnectEditorOpen(false);
     } catch (error) {
       setConnectError(error instanceof Error ? error.message : "Connect links could not be saved.");
