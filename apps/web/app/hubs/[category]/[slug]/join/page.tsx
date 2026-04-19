@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { use, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useAuthSession } from "@/services/auth/useAuthSession";
@@ -9,22 +9,32 @@ import { useAuthSession } from "@/services/auth/useAuthSession";
 type JoinStatus =
   | "checking"
   | "needs_signin"
-  | "requesting"
+  | "working"
   | "requested"
+  | "joined"
   | "already_member"
   | "hub_not_found"
   | "error";
 
 /**
- * Public landing page for the hub-join QR code.
+ * Landing route for QR shares, Local feed clicks, and any other deep link
+ * that might drop a user onto a hub they haven't joined yet.
  *
- * Flow:
- *   1. Visitor scans QR → lands here.
- *   2. If not signed in → show a "Sign in to request to join" prompt with
- *      a /auth link that returns here after login.
- *   3. If signed in → insert a pending row in hub_members (the admin still
- *      has to approve it in Members → Pending requests).
- *   4. Once inserted, auto-redirect to the hub page so the visitor sees it.
+ * Behavior:
+ *   1. Not signed in → render a "Sign in & continue" CTA that preserves the
+ *      full URL (including any ?deet=) so we can return here after auth.
+ *   2. Signed in →
+ *      - Fetch hub visibility + any existing membership row
+ *      - Already active member → bounce straight to the hub (or the deet if
+ *        ?deet=<id> was supplied)
+ *      - Already pending/invited → show the "pending" message
+ *      - Public hub → insert an active membership row and forward to the deet
+ *      - Private hub → insert a pending membership row and show the pending
+ *        message (admin approves in their queue)
+ *
+ * The ?deet= query param makes this work for the Local feed: clicking a
+ * platform-wide news/alert/deals/jobs card sends users through here so
+ * membership gets handled automatically before they see the post.
  */
 export default function HubJoinPage({
   params,
@@ -33,7 +43,13 @@ export default function HubJoinPage({
 }) {
   const { category, slug } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { status: authStatus, user } = useAuthSession();
+
+  const deetId = searchParams.get("deet") || "";
+  const hubDestination = deetId
+    ? `/hubs/${category}/${slug}?tab=Posts&focus=${encodeURIComponent(deetId)}`
+    : `/hubs/${category}/${slug}`;
 
   const [joinStatus, setJoinStatus] = useState<JoinStatus>("checking");
   const [hubName, setHubName] = useState<string>("");
@@ -51,16 +67,14 @@ export default function HubJoinPage({
 
     let cancelled = false;
     (async () => {
-      setJoinStatus("requesting");
+      setJoinStatus("working");
       try {
         const { createClient } = await import("@/lib/supabase/client");
         const supabase = createClient();
 
-        // Look up the hub by category + slug first so we have an ID to attach
-        // the pending membership to.
         const { data: hub, error: hubError } = await supabase
           .from("hubs")
-          .select("id, name")
+          .select("id, name, visibility")
           .eq("category", category)
           .eq("slug", slug)
           .maybeSingle();
@@ -71,7 +85,6 @@ export default function HubJoinPage({
         }
         setHubName(hub.name);
 
-        // If already an active member, skip straight to the hub.
         const { data: existing } = await supabase
           .from("hub_members")
           .select("status")
@@ -79,60 +92,73 @@ export default function HubJoinPage({
           .eq("user_id", user.id)
           .maybeSingle();
 
+        // Already in — jump straight to the hub / deet
         if (existing?.status === "active") {
           setJoinStatus("already_member");
-          window.setTimeout(() => router.replace(`/hubs/${category}/${slug}`), 900);
+          window.setTimeout(() => router.replace(hubDestination), 600);
           return;
         }
 
-        // Already requested? Just land them on the hub with a message.
+        // Already requested — don't create a duplicate pending row
         if (existing?.status === "pending" || existing?.status === "invited") {
           setJoinStatus("requested");
           return;
         }
 
+        // New member — status depends on hub visibility
+        const isPublic = hub.visibility === "public";
+        const desiredStatus = isPublic ? "active" : "pending";
+
         const { error: insertError } = await supabase
           .from("hub_members")
-          .insert({ hub_id: hub.id, user_id: user.id, role: "member", status: "pending" });
+          .insert({ hub_id: hub.id, user_id: user.id, role: "member", status: desiredStatus });
         if (insertError) {
           setErrorMessage(insertError.message);
           setJoinStatus("error");
           return;
         }
-        setJoinStatus("requested");
+
+        if (isPublic) {
+          setJoinStatus("joined");
+          window.setTimeout(() => router.replace(hubDestination), 700);
+        } else {
+          setJoinStatus("requested");
+        }
       } catch (err) {
-        setErrorMessage(err instanceof Error ? err.message : "Could not send request.");
+        setErrorMessage(err instanceof Error ? err.message : "Could not complete that.");
         setJoinStatus("error");
       }
     })();
 
     return () => { cancelled = true; };
-  }, [authStatus, user?.id, category, slug, router]);
+  }, [authStatus, user?.id, category, slug, router, hubDestination]);
 
-  const returnUrl = `/hubs/${category}/${slug}/join`;
+  const returnUrl = deetId
+    ? `/hubs/${category}/${slug}/join?deet=${encodeURIComponent(deetId)}`
+    : `/hubs/${category}/${slug}/join`;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[var(--ud-bg-page)] p-6">
       <div className="w-full max-w-md rounded-2xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] p-8 text-center shadow-sm">
-        {joinStatus === "checking" || joinStatus === "requesting" ? (
+        {joinStatus === "checking" || joinStatus === "working" ? (
           <>
             <Loader2 className="mx-auto h-8 w-8 animate-spin text-[var(--ud-brand-primary)]" />
             <h1 className="mt-4 text-lg font-semibold text-[var(--ud-text-primary)]">
-              {joinStatus === "requesting" ? "Sending your request…" : "Checking your sign-in…"}
+              {joinStatus === "working" ? "Opening hub…" : "Checking your sign-in…"}
             </h1>
           </>
         ) : joinStatus === "needs_signin" ? (
           <>
-            <h1 className="text-xl font-semibold text-[var(--ud-text-primary)]">Sign in to join this hub</h1>
+            <h1 className="text-xl font-semibold text-[var(--ud-text-primary)]">Sign in to continue</h1>
             <p className="mt-2 text-sm text-[var(--ud-text-secondary)]">
-              You need a uDeets account to request joining. It takes less than a minute.
+              You need a uDeets account to view this. It takes less than a minute.
             </p>
             <div className="mt-6 flex flex-col gap-2">
               <Link
                 href={`/auth?redirect_to=${encodeURIComponent(returnUrl)}`}
                 className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
               >
-                Sign in & continue
+                Sign in &amp; continue
               </Link>
               <Link
                 href={`/hubs/${category}/${slug}`}
@@ -142,11 +168,22 @@ export default function HubJoinPage({
               </Link>
             </div>
           </>
+        ) : joinStatus === "joined" || joinStatus === "already_member" ? (
+          <>
+            <h1 className="text-xl font-semibold text-[var(--ud-text-primary)]">
+              {joinStatus === "joined" ? `Welcome to ${hubName}!` : "You're already in"}
+            </h1>
+            <p className="mt-2 text-sm text-[var(--ud-text-secondary)]">
+              Taking you to <span className="font-medium text-[var(--ud-text-primary)]">{hubName}</span>…
+            </p>
+            <Loader2 className="mx-auto mt-4 h-5 w-5 animate-spin text-[var(--ud-brand-primary)]" />
+          </>
         ) : joinStatus === "requested" ? (
           <>
             <h1 className="text-xl font-semibold text-[var(--ud-text-primary)]">Request sent!</h1>
             <p className="mt-2 text-sm text-[var(--ud-text-secondary)]">
-              Your request to join <span className="font-medium text-[var(--ud-text-primary)]">{hubName}</span> is pending admin approval. You&apos;ll be added once they accept.
+              Your request to join <span className="font-medium text-[var(--ud-text-primary)]">{hubName}</span> is pending admin approval.
+              {deetId ? " You'll be able to read the full post once the admin accepts." : " You'll be added once they accept."}
             </p>
             <Link
               href={`/hubs/${category}/${slug}`}
@@ -155,19 +192,11 @@ export default function HubJoinPage({
               View hub
             </Link>
           </>
-        ) : joinStatus === "already_member" ? (
-          <>
-            <h1 className="text-xl font-semibold text-[var(--ud-text-primary)]">You&apos;re already in</h1>
-            <p className="mt-2 text-sm text-[var(--ud-text-secondary)]">
-              Taking you to <span className="font-medium text-[var(--ud-text-primary)]">{hubName}</span>…
-            </p>
-            <Loader2 className="mx-auto mt-4 h-5 w-5 animate-spin text-[var(--ud-brand-primary)]" />
-          </>
         ) : joinStatus === "hub_not_found" ? (
           <>
             <h1 className="text-xl font-semibold text-[var(--ud-text-primary)]">Hub not found</h1>
             <p className="mt-2 text-sm text-[var(--ud-text-secondary)]">
-              This hub doesn&apos;t exist or is no longer available. Check with whoever shared the link.
+              This hub doesn&apos;t exist or is no longer available.
             </p>
             <Link
               href="/discover"
@@ -179,7 +208,7 @@ export default function HubJoinPage({
         ) : (
           <>
             <h1 className="text-xl font-semibold text-[var(--ud-text-primary)]">Something went wrong</h1>
-            <p className="mt-2 text-sm text-[var(--ud-text-secondary)]">{errorMessage || "We couldn't send your request. Please try again."}</p>
+            <p className="mt-2 text-sm text-[var(--ud-text-secondary)]">{errorMessage || "We couldn't open that. Please try again."}</p>
             <Link
               href={`/hubs/${category}/${slug}`}
               className="mt-6 inline-flex items-center justify-center rounded-full border border-[var(--ud-border)] px-5 py-2.5 text-sm font-medium text-[var(--ud-text-primary)] transition hover:bg-[var(--ud-bg-subtle)]"

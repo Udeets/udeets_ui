@@ -1553,6 +1553,7 @@ export default function HubClient({
               authorName={deetAuthorName}
               authorAvatarSrc={creatorAvatarSrc}
               onSetPostType={(postType) => setDeetSettings((prev) => ({ ...prev, postType: postType as import("./components/deets/deetTypes").DeetPostType }))}
+              currentPostType={deetSettings.postType}
               isNotice={deetSettings.noticeEnabled}
               onToggleNotice={() => setDeetSettings((prev) => ({
                 ...prev,

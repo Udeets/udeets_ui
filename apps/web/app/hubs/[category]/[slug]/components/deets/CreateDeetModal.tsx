@@ -40,6 +40,7 @@ export function CreateDeetModal({
   authorName = "You",
   authorAvatarSrc,
   onSetPostType,
+  currentPostType,
   isNotice,
   onToggleNotice,
 }: {
@@ -60,6 +61,8 @@ export function CreateDeetModal({
   authorName?: string;
   authorAvatarSrc?: string;
   onSetPostType?: (postType: string) => void;
+  /** Current post type so the corresponding tag chip can show as active. */
+  currentPostType?: string;
   isNotice?: boolean;
   onToggleNotice?: () => void;
 }) {
@@ -147,6 +150,48 @@ export function CreateDeetModal({
               <input type="color" value={formatting.textColor} onChange={(event) => applyTextColor(event.target.value)} aria-label="Choose text color" className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
             </label>
           </div>
+
+          {/* Local-feed tag chips. Tagging a post as News, Hazard, Deals, or
+              Jobs sends it to the platform-wide Local feed in addition to
+              the hub feed. Clicking a chip toggles it; clicking again reverts
+              to a regular Post. */}
+          {onSetPostType ? (
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--ud-text-muted)]">Tag</span>
+              {(
+                [
+                  { key: "news", label: "#News" },
+                  { key: "hazard", label: "#Hazard" },
+                  { key: "deal", label: "#Deals" },
+                  { key: "jobs", label: "#Jobs" },
+                ] as const
+              ).map((tag) => {
+                const active = currentPostType === tag.key;
+                return (
+                  <button
+                    key={tag.key}
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => onSetPostType(active ? "post" : tag.key)}
+                    className={cn(
+                      "rounded-full border px-3 py-1 text-xs font-semibold transition",
+                      active
+                        ? "border-[var(--ud-brand-primary)] bg-[var(--ud-brand-primary)] text-white"
+                        : "border-[var(--ud-border)] text-[var(--ud-text-secondary)] hover:border-[var(--ud-brand-primary)] hover:text-[var(--ud-brand-primary)]"
+                    )}
+                    title={active ? `Remove ${tag.label}` : `Tag as ${tag.label} — also publishes to the Local feed`}
+                  >
+                    {tag.label}
+                  </button>
+                );
+              })}
+              {currentPostType && ["news", "hazard", "deal", "jobs"].includes(currentPostType) ? (
+                <span className="text-[11px] text-[var(--ud-text-muted)]">
+                  Will show in Local
+                </span>
+              ) : null}
+            </div>
+          ) : null}
 
           {/* Rich text editor */}
           <div className="rounded-xl border border-[var(--ud-border-subtle)] p-4 bg-[var(--ud-bg-card)]">
