@@ -50,6 +50,15 @@ export function mapDeetToHubFeedItem(item: Partial<DeetRecord>, hubCreatorId?: s
             ? ((a as any).options as string[])
             : undefined,
           previews: a.previews || undefined,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          pollSettings: (a as any).pollSettings && typeof (a as any).pollSettings === "object"
+            ? {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                allowMultiSelect: Boolean((a as any).pollSettings.allowMultiSelect),
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                multiSelectLimit: (a as any).pollSettings.multiSelectLimit ?? null,
+              }
+            : undefined,
         }))
     : [];
 

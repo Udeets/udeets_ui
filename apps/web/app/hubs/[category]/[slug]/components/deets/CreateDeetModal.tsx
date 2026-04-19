@@ -106,8 +106,12 @@ export function CreateDeetModal({
 
   return (
     <div className="fixed inset-0 z-[210] flex items-center justify-center bg-[var(--ud-bg-overlay)] p-4">
-      <div className="w-full overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-lg" style={{ maxWidth: "560px" }}>
-        {/* Header */}
+      {/* Shell: cap at viewport height, flex column so the form can scroll while header/footer stay anchored */}
+      <div
+        className="flex w-full flex-col overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-lg"
+        style={{ maxWidth: "560px", maxHeight: "calc(100vh - 2rem)" }}
+      >
+        {/* Header — sticky within the shell */}
         <div className="flex items-center justify-between border-b border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] px-5 py-3.5">
           <button type="button" onClick={onClose} className="rounded-full p-1.5 text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-card)] hover:text-[var(--ud-text-primary)]">
             <X className="h-5 w-5 stroke-[1.8]" />
@@ -118,7 +122,8 @@ export function CreateDeetModal({
           </button>
         </div>
 
-        <form id="deet-form" className="px-5 py-4" onSubmit={onSubmit}>
+        {/* Scrollable body — long posts + attachments stay inside the viewport */}
+        <form id="deet-form" className="flex-1 overflow-y-auto px-5 py-4" onSubmit={onSubmit}>
           {/* Formatting toolbar */}
           <div className="relative z-10 mb-4 flex items-center gap-2">
             <div ref={fontMenuRef} className="relative">

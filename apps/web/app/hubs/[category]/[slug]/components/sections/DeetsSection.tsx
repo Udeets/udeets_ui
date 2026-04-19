@@ -305,11 +305,15 @@ function PollContent({ deetId, attachments }: { deetId: string; attachments?: Hu
   const parsedOptions = options.length > 0
     ? options
     : (matchingAtt?.detail?.split(" · ").filter(Boolean) ?? []);
+  const allowMultiSelect = Boolean(matchingAtt?.pollSettings?.allowMultiSelect);
+  const multiSelectLimit = matchingAtt?.pollSettings?.multiSelectLimit ?? null;
 
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [isVoting, setIsVoting] = useState(false);
   const [totalVotes, setTotalVotes] = useState(0);
   const [voteCounts, setVoteCounts] = useState<number[]>(parsedOptions.map(() => 0));
+
+  const hasVoted = selectedIndices.size > 0;
 
   // Fetch existing votes on mount
   useEffect(() => {
@@ -326,26 +330,20 @@ function PollContent({ deetId, attachments }: { deetId: string; attachments?: Hu
 
         if (cancelled) return;
 
-        // Count votes per option
         const counts = parsedOptions.map(() => 0);
-        let total = 0;
         const deetVotes = allVotes.filter((v) => v.deetId === deetId);
-        // Count unique users (not individual option_index entries for multi-select)
+        // Count unique voters for the "N voted" display.
         const uniqueVoters = new Set(deetVotes.map((v) => v.userId));
-        total = uniqueVoters.size;
         for (const v of deetVotes) {
           if (v.optionIndex >= 0 && v.optionIndex < counts.length) {
             counts[v.optionIndex]++;
           }
         }
         setVoteCounts(counts);
-        setTotalVotes(total);
+        setTotalVotes(uniqueVoters.size);
 
-        // Set user's selection
         const myDeetVotes = myVotes.filter((v) => v.deetId === deetId);
-        if (myDeetVotes.length > 0) {
-          setSelectedIndex(myDeetVotes[0].optionIndex);
-        }
+        setSelectedIndices(new Set(myDeetVotes.map((v) => v.optionIndex)));
       } catch {
         // Table might not exist yet
       }
@@ -356,43 +354,80 @@ function PollContent({ deetId, attachments }: { deetId: string; attachments?: Hu
 
   const handleVote = async (index: number) => {
     if (isVoting) return;
-    setIsVoting(true);
 
-    const prevIndex = selectedIndex;
-    // Optimistic update
-    setSelectedIndex(index);
-    setVoteCounts((prev) => {
-      const next = [...prev];
-      if (prevIndex !== null && prevIndex < next.length) next[prevIndex]--;
-      if (index < next.length) next[index]++;
-      return next;
-    });
-    if (prevIndex === null) setTotalVotes((t) => t + 1);
+    // ── Single-select: replace any existing vote ────────────────────
+    if (!allowMultiSelect) {
+      if (selectedIndices.has(index)) return; // no-op: already voted for this option
+      setIsVoting(true);
+      const prevIndices = new Set(selectedIndices);
+      const prevOnly: number | null = prevIndices.size > 0 ? [...prevIndices][0] : null;
 
-    try {
-      const { castPollVote } = await import("@/lib/services/deets/poll-votes");
-      const success = await castPollVote(deetId, index);
-      if (!success) {
+      // Optimistic: clear prior selection, set new one.
+      setSelectedIndices(new Set([index]));
+      setVoteCounts((prev) => {
+        const next = [...prev];
+        if (prevOnly !== null && prevOnly < next.length) next[prevOnly]--;
+        if (index < next.length) next[index]++;
+        return next;
+      });
+      if (prevOnly === null) setTotalVotes((t) => t + 1);
+
+      try {
+        const { castPollVote } = await import("@/lib/services/deets/poll-votes");
+        const ok = await castPollVote(deetId, index);
+        if (!ok) throw new Error("cast failed");
+      } catch {
         // Revert
-        setSelectedIndex(prevIndex);
+        setSelectedIndices(prevIndices);
         setVoteCounts((prev) => {
           const next = [...prev];
           if (index < next.length) next[index]--;
-          if (prevIndex !== null && prevIndex < next.length) next[prevIndex]++;
+          if (prevOnly !== null && prevOnly < next.length) next[prevOnly]++;
           return next;
         });
-        if (prevIndex === null) setTotalVotes((t) => t - 1);
+        if (prevOnly === null) setTotalVotes((t) => t - 1);
+      } finally {
+        setIsVoting(false);
       }
+      return;
+    }
+
+    // ── Multi-select: toggle this option ────────────────────────────
+    const isCurrentlySelected = selectedIndices.has(index);
+    if (!isCurrentlySelected && multiSelectLimit && selectedIndices.size >= multiSelectLimit) {
+      return; // hit the limit
+    }
+    setIsVoting(true);
+    const prevIndices = new Set(selectedIndices);
+    const prevWasEmpty = prevIndices.size === 0;
+
+    const nextIndices = new Set(selectedIndices);
+    if (isCurrentlySelected) nextIndices.delete(index);
+    else nextIndices.add(index);
+
+    setSelectedIndices(nextIndices);
+    setVoteCounts((prev) => {
+      const next = [...prev];
+      if (index < next.length) next[index] += isCurrentlySelected ? -1 : 1;
+      return next;
+    });
+    if (prevWasEmpty && nextIndices.size > 0) setTotalVotes((t) => t + 1);
+    if (!prevWasEmpty && nextIndices.size === 0) setTotalVotes((t) => Math.max(0, t - 1));
+
+    try {
+      const { togglePollVote } = await import("@/lib/services/deets/poll-votes");
+      const result = await togglePollVote(deetId, index);
+      if (!result) throw new Error("toggle failed");
     } catch {
-      // Revert on error
-      setSelectedIndex(prevIndex);
+      // Revert
+      setSelectedIndices(prevIndices);
       setVoteCounts((prev) => {
         const next = [...prev];
-        if (index < next.length) next[index]--;
-        if (prevIndex !== null && prevIndex < next.length) next[prevIndex]++;
+        if (index < next.length) next[index] += isCurrentlySelected ? 1 : -1;
         return next;
       });
-      if (prevIndex === null) setTotalVotes((t) => t - 1);
+      if (prevWasEmpty && nextIndices.size > 0) setTotalVotes((t) => Math.max(0, t - 1));
+      if (!prevWasEmpty && nextIndices.size === 0) setTotalVotes((t) => t + 1);
     } finally {
       setIsVoting(false);
     }
@@ -411,6 +446,11 @@ function PollContent({ deetId, attachments }: { deetId: string; attachments?: Hu
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold text-emerald-600">Poll Opened</span>
             <span className="text-xs text-[var(--ud-text-muted)]">{totalVotes} voted</span>
+            {allowMultiSelect ? (
+              <span className="text-xs text-[var(--ud-text-muted)]">
+                · Multi-select{multiSelectLimit ? ` (up to ${multiSelectLimit})` : ""}
+              </span>
+            ) : null}
           </div>
           <p className="mt-0.5 text-sm font-semibold text-[var(--ud-text-primary)]">
             {matchingAtt?.title || "Poll"}
@@ -421,25 +461,30 @@ function PollContent({ deetId, attachments }: { deetId: string; attachments?: Hu
       {/* Poll options */}
       <div className="border-t border-[var(--ud-border-subtle)] px-4 py-2">
         {parsedOptions.map((opt, i) => {
-          const isSelected = selectedIndex === i;
+          const isSelected = selectedIndices.has(i);
           const count = voteCounts[i] ?? 0;
           const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+          const limitHit = allowMultiSelect && multiSelectLimit
+            ? !isSelected && selectedIndices.size >= multiSelectLimit
+            : false;
 
           return (
             <button
               key={i}
               type="button"
-              disabled={isVoting}
+              disabled={isVoting || limitHit}
               onClick={() => handleVote(i)}
               className={cn(
                 "relative flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-sm transition",
                 isSelected
                   ? "text-emerald-700"
-                  : "text-[var(--ud-text-primary)] hover:bg-[var(--ud-bg-subtle)]"
+                  : limitHit
+                    ? "text-[var(--ud-text-muted)] opacity-50 cursor-not-allowed"
+                    : "text-[var(--ud-text-primary)] hover:bg-[var(--ud-bg-subtle)]"
               )}
             >
               {/* Progress bar background */}
-              {selectedIndex !== null && totalVotes > 0 && (
+              {hasVoted && totalVotes > 0 && (
                 <div
                   className={cn(
                     "absolute inset-0 rounded-lg transition-all",
@@ -448,18 +493,24 @@ function PollContent({ deetId, attachments }: { deetId: string; attachments?: Hu
                   style={{ width: `${pct}%` }}
                 />
               )}
-              {/* Radio circle */}
+              {/* Selection indicator — radio for single, checkbox for multi */}
               <span className={cn(
-                "relative z-10 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition",
+                "relative z-10 flex h-4 w-4 shrink-0 items-center justify-center border-2 transition",
+                allowMultiSelect ? "rounded" : "rounded-full",
                 isSelected ? "border-emerald-500 bg-emerald-500" : "border-gray-300"
               )}>
                 {isSelected && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                  allowMultiSelect ? (
+                    <svg viewBox="0 0 12 12" className="h-2.5 w-2.5 text-white" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M2 6l3 3 5-6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : (
+                    <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                  )
                 )}
               </span>
               <span className="relative z-10 flex-1 text-left">{opt}</span>
-              {/* Vote count shown after voting */}
-              {selectedIndex !== null && totalVotes > 0 && (
+              {hasVoted && totalVotes > 0 && (
                 <span className="relative z-10 text-xs text-[var(--ud-text-muted)]">{count}</span>
               )}
             </button>
@@ -1326,33 +1377,117 @@ export function DeetsSection({
                 })()}
 
                 {/* ── Image / gallery ── */}
-                {item.image ? (
-                  <button
-                    type="button"
-                    className="mt-3 block w-full bg-[var(--ud-bg-subtle)]"
-                    onClick={() =>
-                      onOpenViewer(
-                        item.images?.length ? item.images : [item.image!],
-                        0,
-                        item.title,
-                        item.body,
-                        item.id
-                      )
-                    }
-                  >
-                    <div className="aspect-video max-h-[320px] w-full overflow-hidden">
-                      <ImageWithFallback
-                        src={item.image}
-                        sources={item.images?.length ? item.images : [item.image]}
-                        alt={item.title}
-                        className="h-full w-full object-cover"
-                        fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)]/20 text-sm text-[var(--ud-text-muted)]"
-                        fallback="Image unavailable"
-                        loading="lazy"
-                      />
+                {(() => {
+                  const galleryImages = item.images?.length ? item.images : item.image ? [item.image] : [];
+                  if (galleryImages.length === 0) return null;
+
+                  const openAt = (index: number) =>
+                    onOpenViewer(galleryImages, index, item.title, item.body, item.id);
+
+                  // Single image — original hero layout (16:9, contain so small images aren't stretched).
+                  if (galleryImages.length === 1) {
+                    return (
+                      <button
+                        type="button"
+                        className="mt-3 block w-full bg-[var(--ud-bg-subtle)]"
+                        onClick={() => openAt(0)}
+                      >
+                        <div className="flex aspect-video max-h-[420px] w-full items-center justify-center overflow-hidden">
+                          <ImageWithFallback
+                            src={galleryImages[0]}
+                            sources={galleryImages}
+                            alt={item.title}
+                            className="max-h-full max-w-full object-contain"
+                            fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)]/20 text-sm text-[var(--ud-text-muted)]"
+                            fallback="Image unavailable"
+                            loading="lazy"
+                          />
+                        </div>
+                      </button>
+                    );
+                  }
+
+                  // Two images — side-by-side, equal halves.
+                  if (galleryImages.length === 2) {
+                    return (
+                      <div className="mt-3 grid grid-cols-2 gap-0.5 bg-[var(--ud-bg-subtle)]">
+                        {galleryImages.map((url, i) => (
+                          <button
+                            key={`${url}-${i}`}
+                            type="button"
+                            onClick={() => openAt(i)}
+                            className="relative block aspect-square overflow-hidden"
+                          >
+                            <ImageWithFallback
+                              src={url}
+                              alt={`${item.title} photo ${i + 1}`}
+                              className="h-full w-full object-cover"
+                              fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)]/20 text-xs text-[var(--ud-text-muted)]"
+                              fallback="Unavailable"
+                              loading="lazy"
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  }
+
+                  // Three or more — large hero on the left, two stacked tiles on the right.
+                  // Any images beyond the first three show a "+N" overlay on the last tile.
+                  const visible = galleryImages.slice(0, 3);
+                  const extra = galleryImages.length - 3;
+                  return (
+                    <div className="mt-3 grid aspect-[4/3] max-h-[460px] grid-cols-2 grid-rows-2 gap-0.5 bg-[var(--ud-bg-subtle)]">
+                      <button
+                        type="button"
+                        onClick={() => openAt(0)}
+                        className="relative row-span-2 overflow-hidden"
+                      >
+                        <ImageWithFallback
+                          src={visible[0]}
+                          alt={`${item.title} photo 1`}
+                          className="h-full w-full object-cover"
+                          fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)]/20 text-xs text-[var(--ud-text-muted)]"
+                          fallback="Unavailable"
+                          loading="lazy"
+                        />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openAt(1)}
+                        className="relative overflow-hidden"
+                      >
+                        <ImageWithFallback
+                          src={visible[1]}
+                          alt={`${item.title} photo 2`}
+                          className="h-full w-full object-cover"
+                          fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)]/20 text-xs text-[var(--ud-text-muted)]"
+                          fallback="Unavailable"
+                          loading="lazy"
+                        />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openAt(2)}
+                        className="relative overflow-hidden"
+                      >
+                        <ImageWithFallback
+                          src={visible[2]}
+                          alt={`${item.title} photo 3`}
+                          className="h-full w-full object-cover"
+                          fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)]/20 text-xs text-[var(--ud-text-muted)]"
+                          fallback="Unavailable"
+                          loading="lazy"
+                        />
+                        {extra > 0 ? (
+                          <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-lg font-semibold text-white">
+                            +{extra}
+                          </span>
+                        ) : null}
+                      </button>
                     </div>
-                  </button>
-                ) : null}
+                  );
+                })()}
 
                 {/* ── Stats row: reactions · comments · shares (left) + chevron | views (right) ── */}
                 <div className="relative flex items-center justify-between px-4 pt-2 pb-1">

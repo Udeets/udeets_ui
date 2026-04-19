@@ -22,6 +22,10 @@ export type HubFeedItemAttachment = {
   meta?: string;
   options?: string[];
   previews?: string[];
+  pollSettings?: {
+    allowMultiSelect?: boolean;
+    multiSelectLimit?: number | null;
+  };
 };
 
 export type HubFeedItem = {

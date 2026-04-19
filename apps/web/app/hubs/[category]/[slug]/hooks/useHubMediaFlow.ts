@@ -57,21 +57,23 @@ export function useHubMediaFlow({
       setCoverImageSrc(normalizePublicSrc(updatedHub.cover_image_url || undefined));
       setGalleryImages((updatedHub.gallery_image_urls ?? []).map(normalizePublicSrc).filter(Boolean));
 
-      // Auto-populate Photos section: insert attachment record for DP/cover uploads
-      if (kind === "dp" || kind === "cover") {
-        try {
-          const { createClient } = await import("@/lib/supabase/client");
-          const supabase = createClient();
-          const fileType = file.type.startsWith("image/") ? "image" : "file";
-          await supabase.from("attachments").insert({
-            hub_id: hub.id,
-            file_url: uploadedUrl,
-            file_type: fileType,
-            source: kind,
-          });
-        } catch (err) {
-          console.error("[auto-photo] attachment insert failed:", err);
-        }
+      // Auto-populate Photos section: insert an attachments row for every
+      // image upload regardless of source (dp/cover/gallery). That way the
+      // hub's Photos grid and the DP/cover picker both see the full library.
+      // Silently tolerates the insert failing so older hubs without the
+      // attachments table keep working in a degraded mode.
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const fileType = file.type.startsWith("image/") ? "image" : "file";
+        await supabase.from("attachments").insert({
+          hub_id: hub.id,
+          file_url: uploadedUrl,
+          file_type: fileType,
+          source: kind,
+        });
+      } catch (err) {
+        console.error("[auto-photo] attachment insert failed:", err);
       }
 
       // Only show success for gallery uploads; DP and cover updates are self-evident

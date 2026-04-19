@@ -404,12 +404,28 @@ export default function HubClient({
     }
   }, [mediaSuccess, isUploadingDp, isUploadingCover, isUploadingGallery]);
 
-  // Merge gallery images with attachment photos, preferring attachments (which include DP/cover uploads)
-  const allPhotos = allAttachmentPhotos.length > 0 ? allAttachmentPhotos : galleryImages;
+  // Merge gallery images with attachment photos and the current DP/cover so
+  // users can see ALL available hub photos in one place (Photos section +
+  // album picker). De-duplicate URLs so the current DP/cover don't double-up
+  // when they also exist in the attachments/gallery lists.
+  const mergedPhotoList = [
+    ...(dpImageSrc ? [dpImageSrc] : []),
+    ...(coverImageSrc ? [coverImageSrc] : []),
+    ...allAttachmentPhotos,
+    ...galleryImages,
+  ];
+  const seenPhotoUrls = new Set<string>();
+  const allPhotos = mergedPhotoList.filter((url) => {
+    if (!url || seenPhotoUrls.has(url)) return false;
+    seenPhotoUrls.add(url);
+    return true;
+  });
   const recentPhotos = allPhotos.slice(0, 6);
   const displayCoverImageSrc = coverImageSrc;
   const adminImages = (hub.adminImages ?? []).map(normalizePublicSrc).filter(Boolean);
-  const albumChoices = allPhotos.filter((image) => image !== dpImageSrc && image !== coverImageSrc);
+  // Album choices = every hub photo; the picker marks the current DP/cover
+  // inline instead of hiding them, so the user can still see and re-select.
+  const albumChoices = allPhotos;
   const categoryMeta = categoryMetaFor(savedHubCategory);
   const CategoryIcon = categoryMeta.icon;
   const hubTemplateConfig = useMemo(() => getHubConfigByCategory(savedHubCategory), [savedHubCategory]);
@@ -1450,18 +1466,39 @@ export default function HubClient({
             ) : (
               <div className="mt-5">
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {albumChoices.map((imageUrl, index) => (
-                    <button key={`${imageUrl}-${index}`} type="button" onClick={() => void handleAlbumImageSelect(imageUrl)} className="aspect-square overflow-hidden rounded-2xl border border-[var(--ud-border)] bg-[var(--ud-bg-subtle)] transition hover:border-[var(--ud-brand-primary)]">
-                      <ImageWithFallback
-                        src={imageUrl}
-                        sources={[imageUrl]}
-                        alt={`Album photo ${index + 1}`}
-                        className="h-full w-full object-cover"
-                        fallbackClassName="grid h-full w-full place-items-center"
-                        fallback={<Plus className="h-7 w-7 stroke-[1.9] text-white/75" />}
-                      />
-                    </button>
-                  ))}
+                  {albumChoices.map((imageUrl, index) => {
+                    const isCurrentDp = imageUrl === dpImageSrc;
+                    const isCurrentCover = imageUrl === coverImageSrc;
+                    const currentLabel = isCurrentDp && isCurrentCover
+                      ? "Current DP & cover"
+                      : isCurrentDp
+                        ? "Current DP"
+                        : isCurrentCover
+                          ? "Current cover"
+                          : null;
+                    return (
+                      <button
+                        key={`${imageUrl}-${index}`}
+                        type="button"
+                        onClick={() => void handleAlbumImageSelect(imageUrl)}
+                        className="relative aspect-square overflow-hidden rounded-2xl border border-[var(--ud-border)] bg-[var(--ud-bg-subtle)] transition hover:border-[var(--ud-brand-primary)]"
+                      >
+                        <ImageWithFallback
+                          src={imageUrl}
+                          sources={[imageUrl]}
+                          alt={`Album photo ${index + 1}`}
+                          className="h-full w-full object-cover"
+                          fallbackClassName="grid h-full w-full place-items-center"
+                          fallback={<Plus className="h-7 w-7 stroke-[1.9] text-white/75" />}
+                        />
+                        {currentLabel ? (
+                          <span className="absolute bottom-1.5 left-1.5 right-1.5 rounded-md bg-black/60 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
+                            {currentLabel}
+                          </span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
                 </div>
                 <div className="mt-4 flex justify-between gap-3">
                   <button type="button" onClick={() => setIsAlbumPickerOpen(false)} className={BUTTON_SECONDARY}>
@@ -1982,7 +2019,29 @@ export default function HubClient({
               /* ── Post image sidebar (original) ── */
               <>
                 <h3 className="text-base font-semibold tracking-tight text-[var(--ud-text-primary)]">{viewer.title || "Photo"}</h3>
-                <p className="mt-1 text-sm text-[var(--ud-text-secondary)] lg:mt-2">{viewer.body || "Shared from this hub."}</p>
+                {viewer.body ? (
+                  <div
+                    className="mt-1 text-sm leading-relaxed text-[var(--ud-text-secondary)] lg:mt-2"
+                    dangerouslySetInnerHTML={{
+                      __html: (() => {
+                        // Strip scripts/event handlers. Body was already sanitized on save
+                        // but we re-clean before injecting for defense in depth.
+                        if (typeof document === "undefined") return "";
+                        const div = document.createElement("div");
+                        div.innerHTML = viewer.body;
+                        div.querySelectorAll("script").forEach((n) => n.remove());
+                        div.querySelectorAll("*").forEach((el) => {
+                          Array.from(el.attributes).forEach((attr) => {
+                            if (attr.name.startsWith("on")) el.removeAttribute(attr.name);
+                          });
+                        });
+                        return div.innerHTML;
+                      })(),
+                    }}
+                  />
+                ) : (
+                  <p className="mt-1 text-sm text-[var(--ud-text-secondary)] lg:mt-2">Shared from this hub.</p>
+                )}
 
                 {/* Engagement metrics */}
                 <div className="mt-3 flex items-center gap-4 text-sm text-[var(--ud-text-muted)] lg:mt-4">
