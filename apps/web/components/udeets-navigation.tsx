@@ -663,7 +663,11 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
               category: hubCategory as import("@/lib/hubs").HubCategorySlug,
               slug: hubSlug,
               focusId: d.id,
-              href: `/hubs/${hubCategory}/${hubSlug}?focus=${d.id}`,
+              // Deep-link into the Posts tab so the feed is rendered and the
+              // ?focus scroll-to-deet logic can actually find the element.
+              // Without tab=Posts the hub would open on the default About tab
+              // where the feed isn't mounted, so the focus would silently miss.
+              href: `/hubs/${hubCategory}/${hubSlug}?tab=Posts&focus=${d.id}`,
             };
           }
         );

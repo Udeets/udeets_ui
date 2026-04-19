@@ -706,6 +706,7 @@ export default function HubClient({
     requestedTab,
     canAccessAdmins,
     isDirty,
+    hasFocusTarget: Boolean(focusTarget),
   });
 
   // Reload pending requests when Members tab is accessed
