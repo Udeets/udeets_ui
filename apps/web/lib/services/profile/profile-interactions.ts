@@ -11,6 +11,14 @@ export type ProfileComment = {
   isOwn: boolean;
 };
 
+export type ProfileLiker = {
+  userId: string;
+  fullName: string;
+  avatarUrl: string | null;
+  likedAt: string;
+  isOwn: boolean; // true when this liker is the viewer themselves
+};
+
 /**
  * Toggle the viewer's like on a profile. Inserts if missing, deletes if present.
  * Returns the new state + updated count so callers can reconcile optimistically.
@@ -79,6 +87,55 @@ export async function toggleProfileLike(profileId: string): Promise<{ liked: boo
     .eq("profile_id", profileId);
 
   return { liked: !existing, count: count ?? 0 };
+}
+
+/**
+ * List everyone who liked a profile, newest first. Two-step fetch: pull the
+ * like rows, then resolve liker profile info (name + avatar) in a follow-up
+ * query. The FK on profile_likes points at auth.users, which Supabase can't
+ * traverse directly under RLS, so we hop through public.profiles instead.
+ */
+export async function listProfileLikers(profileId: string, limit = 100): Promise<ProfileLiker[]> {
+  const supabase = createClient();
+  const { data: { user: viewer } } = await supabase.auth.getUser();
+
+  const { data: rows, error } = await supabase
+    .from("profile_likes")
+    .select("liker_id, created_at")
+    .eq("profile_id", profileId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error || !rows) {
+    console.warn("[listProfileLikers] select failed:", error);
+    return [];
+  }
+
+  const likerIds = Array.from(new Set(rows.map((r) => r.liker_id as string)));
+  const { data: profiles } = likerIds.length
+    ? await supabase.from("profiles").select("id, full_name, avatar_url, email").in("id", likerIds)
+    : { data: [] as Array<{ id: string; full_name: string | null; avatar_url: string | null; email: string | null }> };
+
+  const profileMap = new Map(
+    (profiles ?? []).map((p) => [
+      p.id,
+      {
+        name: p.full_name || p.email?.split("@")[0] || "uDeets user",
+        avatar: p.avatar_url,
+      },
+    ])
+  );
+
+  return rows.map((row) => {
+    const info = profileMap.get(row.liker_id as string);
+    return {
+      userId: row.liker_id as string,
+      fullName: info?.name ?? "uDeets user",
+      avatarUrl: info?.avatar ?? null,
+      likedAt: row.created_at as string,
+      isOwn: viewer?.id === row.liker_id,
+    } satisfies ProfileLiker;
+  });
 }
 
 /**

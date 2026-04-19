@@ -10,12 +10,15 @@ import {
   addProfileComment,
   deleteProfileComment,
   listProfileComments,
+  listProfileLikers,
   reportUser,
   toggleProfileLike,
   type ProfileComment,
+  type ProfileLiker,
 } from "@/lib/services/profile/profile-interactions";
 
 type ModalView = "card" | "photo";
+type PhotoPaneTab = "comments" | "likes";
 type ReportDialogState = { open: boolean; submitting: boolean; reason: string; success: boolean };
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -79,6 +82,11 @@ export function UserProfileModal({
   const [isPostingComment, setIsPostingComment] = useState(false);
   const [isTogglingLike, setIsTogglingLike] = useState(false);
 
+  // Likers list (lazy-loaded when the Likes tab in the photo pane is opened).
+  const [paneTab, setPaneTab] = useState<PhotoPaneTab>("comments");
+  const [likers, setLikers] = useState<ProfileLiker[]>([]);
+  const [likersLoaded, setLikersLoaded] = useState(false);
+
   // 3-dot menu + Report dialog state.
   const [menuOpen, setMenuOpen] = useState(false);
   const [report, setReport] = useState<ReportDialogState>({ open: false, submitting: false, reason: "", success: false });
@@ -115,6 +123,21 @@ export function UserProfileModal({
     })();
     return () => { cancelled = true; };
   }, [view, commentsLoaded, userId]);
+
+  // Lazy-load likers the first time the Likes tab is opened. After that,
+  // reloads happen on explicit user action (toggleLike handler invalidates
+  // the cache, see below) so we don't hit the network on every tab toggle.
+  useEffect(() => {
+    if (view !== "photo" || paneTab !== "likes" || likersLoaded) return;
+    let cancelled = false;
+    (async () => {
+      const list = await listProfileLikers(userId);
+      if (cancelled) return;
+      setLikers(list);
+      setLikersLoaded(true);
+    })();
+    return () => { cancelled = true; };
+  }, [view, paneTab, likersLoaded, userId]);
 
   // ── Close on Escape + outside click ───────────────────────────
   useEffect(() => {
@@ -156,13 +179,22 @@ export function UserProfileModal({
     if (result) {
       setLiked(result.liked);
       setLikeCount(result.count);
+      // Invalidate likers cache so the Likes tab re-fetches next time it's
+      // opened. If the user is currently on the Likes tab, refresh inline
+      // so they see the change immediately.
+      setLikersLoaded(false);
+      if (view === "photo" && paneTab === "likes") {
+        const fresh = await listProfileLikers(summary.id);
+        setLikers(fresh);
+        setLikersLoaded(true);
+      }
     } else {
       // revert
       setLiked(prev.liked);
       setLikeCount(prev.count);
     }
     setIsTogglingLike(false);
-  }, [isTogglingLike, liked, likeCount, summary]);
+  }, [isTogglingLike, liked, likeCount, summary, view, paneTab]);
 
   const handlePostComment = async () => {
     if (isPostingComment || !summary || !commentDraft.trim()) return;
@@ -369,71 +401,141 @@ export function UserProfileModal({
                 </div>
               </div>
 
+              {/* Tab switcher between Comments and Likes */}
+              <div className="flex items-center gap-1 border-b border-[var(--ud-border-subtle)] px-3 py-2">
+                {(
+                  [
+                    { key: "comments" as const, label: "Comments", count: comments.length, icon: MessageSquare },
+                    { key: "likes" as const, label: "Likes", count: likeCount, icon: Heart },
+                  ]
+                ).map((tab) => {
+                  const Icon = tab.icon;
+                  const active = paneTab === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setPaneTab(tab.key)}
+                      className={cn(
+                        "inline-flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition",
+                        active
+                          ? "bg-[var(--ud-brand-light)] text-[var(--ud-brand-primary)]"
+                          : "text-[var(--ud-text-secondary)] hover:bg-[var(--ud-bg-subtle)]"
+                      )}
+                    >
+                      <Icon className="h-3.5 w-3.5 stroke-[1.8]" />
+                      {tab.label}
+                      <span className={cn("rounded-full px-1.5 text-[10px] font-semibold", active ? "bg-[var(--ud-bg-card)] text-[var(--ud-brand-primary)]" : "bg-[var(--ud-bg-subtle)] text-[var(--ud-text-muted)]")}>
+                        {tab.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
               <div className="flex-1 overflow-y-auto px-5 py-3">
-                {!commentsLoaded ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-4 w-4 animate-spin text-[var(--ud-brand-primary)]" />
-                  </div>
-                ) : comments.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-[var(--ud-text-muted)]">No comments yet. Be the first.</p>
-                ) : (
-                  <ul className="space-y-3">
-                    {comments.map((c) => (
-                      <li key={c.id} className="flex items-start gap-2.5">
-                        <div className="h-7 w-7 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
-                          {c.authorAvatar ? (
-                            <img src={c.authorAvatar} alt="" className="h-full w-full object-cover" />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-[var(--ud-brand-primary)]">
-                              <Initials name={c.authorName} />
-                            </div>
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="truncate text-xs font-semibold text-[var(--ud-text-primary)]">{c.authorName}</p>
-                            <span className="text-[10px] text-[var(--ud-text-muted)]">{formatRelative(c.createdAt)}</span>
-                            {c.isOwn || summary?.id === c.authorId ? null : null}
+                {paneTab === "comments" ? (
+                  !commentsLoaded ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-4 w-4 animate-spin text-[var(--ud-brand-primary)]" />
+                    </div>
+                  ) : comments.length === 0 ? (
+                    <p className="py-6 text-center text-xs text-[var(--ud-text-muted)]">No comments yet. Be the first.</p>
+                  ) : (
+                    <ul className="space-y-3">
+                      {comments.map((c) => (
+                        <li key={c.id} className="flex items-start gap-2.5">
+                          <div className="h-7 w-7 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
+                            {c.authorAvatar ? (
+                              <img src={c.authorAvatar} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-[var(--ud-brand-primary)]">
+                                <Initials name={c.authorName} />
+                              </div>
+                            )}
                           </div>
-                          <p className="mt-0.5 whitespace-pre-wrap break-words text-xs leading-relaxed text-[var(--ud-text-secondary)]">
-                            {c.body}
-                          </p>
-                        </div>
-                        {(c.isOwn || summary?.id === userId) ? (
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteComment(c.id)}
-                            className="shrink-0 rounded p-1 text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-red-500"
-                            aria-label="Delete comment"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="truncate text-xs font-semibold text-[var(--ud-text-primary)]">{c.authorName}</p>
+                              <span className="text-[10px] text-[var(--ud-text-muted)]">{formatRelative(c.createdAt)}</span>
+                            </div>
+                            <p className="mt-0.5 whitespace-pre-wrap break-words text-xs leading-relaxed text-[var(--ud-text-secondary)]">
+                              {c.body}
+                            </p>
+                          </div>
+                          {(c.isOwn || summary?.id === userId) ? (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteComment(c.id)}
+                              className="shrink-0 rounded p-1 text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-red-500"
+                              aria-label="Delete comment"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  )
+                ) : (
+                  // ── Likes tab: list of everyone who has liked this profile ──
+                  !likersLoaded ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-4 w-4 animate-spin text-[var(--ud-brand-primary)]" />
+                    </div>
+                  ) : likers.length === 0 ? (
+                    <p className="py-6 text-center text-xs text-[var(--ud-text-muted)]">
+                      No likes yet. {isOwnProfile ? "Like your profile to be the first." : null}
+                    </p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {likers.map((l) => (
+                        <li key={l.userId} className="flex items-center gap-2.5 py-1">
+                          <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
+                            {l.avatarUrl ? (
+                              <img src={l.avatarUrl} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-[var(--ud-brand-primary)]">
+                                <Initials name={l.fullName} />
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-semibold text-[var(--ud-text-primary)]">
+                              {l.fullName}{l.isOwn ? <span className="ml-1 font-normal text-[var(--ud-text-muted)]">(You)</span> : null}
+                            </p>
+                            <p className="text-[10px] text-[var(--ud-text-muted)]">Liked {formatRelative(l.likedAt)}</p>
+                          </div>
+                          <Heart className="h-3.5 w-3.5 shrink-0 fill-[var(--ud-brand-primary)] text-[var(--ud-brand-primary)] stroke-[1.8]" />
+                        </li>
+                      ))}
+                    </ul>
+                  )
                 )}
               </div>
 
-              <form
-                onSubmit={(e) => { e.preventDefault(); void handlePostComment(); }}
-                className="flex items-center gap-2 border-t border-[var(--ud-border-subtle)] px-3 py-3"
-              >
-                <input
-                  value={commentDraft}
-                  onChange={(e) => setCommentDraft(e.target.value.slice(0, 500))}
-                  placeholder={`Write a comment for ${displayName}...`}
-                  className="flex-1 rounded-full border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] px-3 py-2 text-sm text-[var(--ud-text-primary)] outline-none focus:border-[var(--ud-brand-primary)]"
-                />
-                <button
-                  type="submit"
-                  disabled={isPostingComment || !commentDraft.trim()}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--ud-brand-primary)] text-white transition hover:opacity-90 disabled:opacity-40"
-                  aria-label="Post comment"
+              {/* Comment input — only shown on the Comments tab */}
+              {paneTab === "comments" ? (
+                <form
+                  onSubmit={(e) => { e.preventDefault(); void handlePostComment(); }}
+                  className="flex items-center gap-2 border-t border-[var(--ud-border-subtle)] px-3 py-3"
                 >
-                  {isPostingComment ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                </button>
-              </form>
+                  <input
+                    value={commentDraft}
+                    onChange={(e) => setCommentDraft(e.target.value.slice(0, 500))}
+                    placeholder={`Write a comment for ${displayName}...`}
+                    className="flex-1 rounded-full border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] px-3 py-2 text-sm text-[var(--ud-text-primary)] outline-none focus:border-[var(--ud-brand-primary)]"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isPostingComment || !commentDraft.trim()}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--ud-brand-primary)] text-white transition hover:opacity-90 disabled:opacity-40"
+                    aria-label="Post comment"
+                  >
+                    {isPostingComment ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  </button>
+                </form>
+              ) : null}
             </aside>
           </>
         )}
