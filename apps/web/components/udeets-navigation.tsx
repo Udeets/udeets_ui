@@ -112,30 +112,52 @@ function NavIconLink({
   );
 }
 
-function NotificationsPanel({ notifications, onUnreadChange }: { notifications: HubNotificationItem[]; onUnreadChange?: (hasUnread: boolean) => void }) {
+function NotificationsPanel({
+  notifications,
+  readIds,
+  onMarkRead,
+  onMarkAllRead,
+  onClearRead,
+}: {
+  notifications: HubNotificationItem[];
+  readIds: Set<string>;
+  onMarkRead: (id: string) => void;
+  onMarkAllRead: () => void;
+  onClearRead: () => void;
+}) {
   const searchParams = useSearchParams();
   const [activeFilter, setActiveFilter] = useState<(typeof FILTERS)[number]>("All");
-  const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const isDemoPreview = searchParams.get("demo_preview") === "1";
   const filteredItems = notifications.filter((item) => activeFilter === "All" || item.type === activeFilter);
+  const readCount = notifications.filter((n) => readIds.has(n.id)).length;
+  const hasUnread = notifications.some((n) => !readIds.has(n.id));
 
   return (
     <div
       data-demo-target={isDemoPreview ? "dashboard-alerts-dropdown" : undefined}
       className="absolute right-0 top-full z-[120] mt-3 w-[calc(100vw-2rem)] max-w-[360px] rounded-3xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] p-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)] sm:right-16"
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h3 className="text-lg font-semibold text-[var(--ud-text-primary)]">Notifications</h3>
-        <button
-          type="button"
-          onClick={() => {
-            setReadIds(new Set(notifications.map((n) => n.id)));
-            onUnreadChange?.(false);
-          }}
-          className="text-sm font-medium text-[#0C5C57] hover:opacity-80"
-        >
-          Mark all as read
-        </button>
+        <div className="flex items-center gap-3 text-sm font-medium">
+          <button
+            type="button"
+            onClick={onMarkAllRead}
+            disabled={!hasUnread}
+            className="text-[#0C5C57] transition hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Mark all as read
+          </button>
+          <button
+            type="button"
+            onClick={onClearRead}
+            disabled={readCount === 0}
+            title={readCount === 0 ? "Nothing to clear yet" : `Clear ${readCount} read notification${readCount === 1 ? "" : "s"}`}
+            className="text-slate-500 transition hover:text-[var(--ud-text-primary)] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Clear read
+          </button>
+        </div>
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
         {FILTERS.map((filter) => (
@@ -179,7 +201,7 @@ function NotificationsPanel({ notifications, onUnreadChange }: { notifications: 
                     "group relative flex items-center gap-3 rounded-2xl px-2 py-2.5 transition hover:bg-[#EEF7F5]",
                     readIds.has(item.id) && "opacity-55",
                   )}
-                  onClick={() => setReadIds((prev) => new Set([...prev, item.id]))}
+                  onClick={() => onMarkRead(item.id)}
                 >
                   <div className={cn("relative h-9 w-9 shrink-0 overflow-hidden", !isLogo && "rounded-full border border-slate-200 bg-[#E3F1EF]")}>
                     <Image
@@ -770,11 +792,12 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
 
         if (!ignore) {
           const allNotifs = [...joinRequestNotifications, ...acceptedNotifications, ...notifications];
-          const newActionableCount = allNotifs.filter((n) => n.id.startsWith("join-") || n.id.startsWith("accepted-")).length;
           setLiveNotifications(allNotifs);
           setLiveEvents(eventItems);
-          // Reset "mark all read" only when new actionable items appear
-          if (newActionableCount > 0) setAllMarkedRead(false);
+          // Read/cleared state is persisted in localStorage now — no need to
+          // reset a local "all marked read" flag when new items arrive. The
+          // bell dot naturally reappears whenever an unseen notification id
+          // shows up (since it isn't in readNotifIds).
         }
       } catch (err) {
         console.error("[header-live-data]", err);
@@ -819,10 +842,71 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
     router.refresh();
   };
 
-  const [allMarkedRead, setAllMarkedRead] = useState(false);
-  // Bell dot only shows for actionable items (join requests / acceptances), not regular posts
-  const actionableCount = liveNotifications.filter((n) => n.id.startsWith("join-") || n.id.startsWith("accepted-")).length;
-  const unreadNotifications = actionableCount > 0 && !allMarkedRead;
+  // Notification read + cleared state persisted to localStorage so it survives
+  // closing the bell, navigating away, and returning later. Without this, every
+  // time the panel remounts, every notification looks fresh again.
+  const [readNotifIds, setReadNotifIds] = useState<Set<string>>(new Set());
+  const [clearedNotifIds, setClearedNotifIds] = useState<Set<string>>(new Set());
+
+  // Hydrate once on mount.
+  useEffect(() => {
+    try {
+      const readRaw = typeof window !== "undefined" ? localStorage.getItem("udeets:notif-read-v1") : null;
+      const clearedRaw = typeof window !== "undefined" ? localStorage.getItem("udeets:notif-cleared-v1") : null;
+      if (readRaw) setReadNotifIds(new Set(JSON.parse(readRaw) as string[]));
+      if (clearedRaw) setClearedNotifIds(new Set(JSON.parse(clearedRaw) as string[]));
+    } catch {
+      /* private mode / disabled storage */
+    }
+  }, []);
+
+  // Persist on change. Cap at 500 entries each to avoid unbounded growth.
+  useEffect(() => {
+    try {
+      if (typeof window === "undefined") return;
+      const trimmed = Array.from(readNotifIds).slice(-500);
+      localStorage.setItem("udeets:notif-read-v1", JSON.stringify(trimmed));
+    } catch { /* ignore */ }
+  }, [readNotifIds]);
+  useEffect(() => {
+    try {
+      if (typeof window === "undefined") return;
+      const trimmed = Array.from(clearedNotifIds).slice(-500);
+      localStorage.setItem("udeets:notif-cleared-v1", JSON.stringify(trimmed));
+    } catch { /* ignore */ }
+  }, [clearedNotifIds]);
+
+  // Visible = not cleared. Unread count drives the bell dot; it now reflects
+  // every kind of notification (new posts, join requests, acceptances) rather
+  // than just "actionable" ones like before.
+  const visibleNotifications = liveNotifications.filter((n) => !clearedNotifIds.has(n.id));
+  const unreadNotifCount = visibleNotifications.filter((n) => !readNotifIds.has(n.id)).length;
+  const unreadNotifications = unreadNotifCount > 0;
+
+  const markNotifRead = (id: string) => {
+    setReadNotifIds((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  };
+  const markAllNotifsRead = () => {
+    setReadNotifIds((prev) => {
+      const next = new Set(prev);
+      for (const n of visibleNotifications) next.add(n.id);
+      return next;
+    });
+  };
+  const clearReadNotifs = () => {
+    setClearedNotifIds((prev) => {
+      const next = new Set(prev);
+      for (const n of visibleNotifications) {
+        if (readNotifIds.has(n.id)) next.add(n.id);
+      }
+      return next;
+    });
+  };
   const isHomeActive = isAuthenticated ? pathname === "/dashboard" : pathname === "/";
   const isDiscoverActive = pathname === "/discover";
   const isAlertsActive = pathname === "/alerts";
@@ -961,7 +1045,15 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
             </Link>
           )}
 
-          {openPanel === "alerts" ? <NotificationsPanel notifications={liveNotifications} onUnreadChange={(hasUnread) => setAllMarkedRead(!hasUnread)} /> : null}
+          {openPanel === "alerts" ? (
+            <NotificationsPanel
+              notifications={visibleNotifications}
+              readIds={readNotifIds}
+              onMarkRead={markNotifRead}
+              onMarkAllRead={markAllNotifsRead}
+              onClearRead={clearReadNotifs}
+            />
+          ) : null}
           {openPanel === "events" ? <EventsPanel events={liveEvents} /> : null}
           {openPanel === "profile" && isAuthenticated ? <ProfilePanel user={user} onLogout={handleLogout} profileData={profileData} /> : null}
         </div>
