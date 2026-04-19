@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Globe, Heart, Megaphone, Shield, Sparkles, Target, Users, Zap } from "lucide-react";
+import { ArrowRight, Globe, Heart, Inbox, Layers, Megaphone, Shield, Sparkles, Target, TrendingDown, Users, Wallet, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { UdeetsBrandLockup, UdeetsLogoIcon } from "@/components/brand-logo";
 
@@ -188,39 +188,52 @@ export default function AboutPage() {
             <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {[
                 {
-                  emoji: "😩",
+                  icon: Inbox,
                   before: "Important updates buried in 200+ unread messages",
                   after: "Every update organized and easy to find",
                 },
                 {
-                  emoji: "🔀",
+                  icon: Layers,
                   before: "Info scattered across WhatsApp, email, Facebook, and notice boards",
                   after: "One hub — everything in one place",
                 },
                 {
-                  emoji: "📉",
+                  icon: TrendingDown,
                   before: "Members miss events, deadlines, and announcements",
                   after: "Members stay informed and engaged",
                 },
                 {
-                  emoji: "💰",
+                  icon: Wallet,
                   before: "Community events rely on out-of-pocket funding",
                   after: "Generate sponsorship revenue for community events",
                 },
-              ].map((item, i) => (
-                <AnimateOnScroll key={item.emoji} delay={i * 150}>
-                  <div className="rounded-2xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-page)] p-6 text-center">
-                    <div className="text-4xl">{item.emoji}</div>
-                    <div className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600/80 line-through decoration-red-300">
-                      {item.before}
+              ].map((item, i) => {
+                const Icon = item.icon;
+                return (
+                  <AnimateOnScroll key={item.before} delay={i * 150} className="h-full">
+                    {/*
+                      Card is a flex-column stretched to the tallest sibling (h-full
+                      on both the AnimateOnScroll wrapper and the card itself). The
+                      before/after pills use flex-1 + items-center so their heights
+                      match across cards regardless of text length, keeping the
+                      icons, arrows, and pills all on the same baseline across the
+                      row.
+                    */}
+                    <div className="flex h-full flex-col rounded-2xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-page)] p-6 text-center shadow-sm transition hover:border-[#A9D1CA] hover:shadow-md">
+                      <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#EAF6F3] to-[#d4ece7] shadow-sm ring-1 ring-[#A9D1CA]/30">
+                        <Icon className="h-6 w-6 stroke-[1.5] text-[var(--ud-brand-primary)]" />
+                      </div>
+                      <div className="mt-5 flex flex-1 items-center justify-center rounded-lg bg-red-50 px-3 py-3 text-sm leading-snug text-red-600/80 line-through decoration-red-300">
+                        {item.before}
+                      </div>
+                      <div className="my-3 text-lg leading-none text-slate-300">↓</div>
+                      <div className="flex flex-1 items-center justify-center rounded-lg bg-[var(--ud-brand-light)] px-3 py-3 text-sm font-medium leading-snug text-[var(--ud-brand-primary)]">
+                        {item.after}
+                      </div>
                     </div>
-                    <div className="my-3 text-lg text-slate-300">↓</div>
-                    <div className="rounded-lg bg-[var(--ud-brand-light)] px-3 py-2 text-sm font-medium text-[var(--ud-brand-primary)]">
-                      {item.after}
-                    </div>
-                  </div>
-                </AnimateOnScroll>
-              ))}
+                  </AnimateOnScroll>
+                );
+              })}
             </div>
           </div>
         </section>
