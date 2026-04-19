@@ -44,7 +44,9 @@ function toMappedHub(hub: SupabaseHub): MappedHub {
     country: hub.country || "",
     href: `/hubs/${hub.category}/${hub.slug}`,
     image: normalizePublicSrc(imageSrc),
-    membersLabel: "New hub",
+    // Member count isn't fetched on this page, so we leave the label empty
+    // rather than hardcoding "New hub" on every result.
+    membersLabel: "",
     locationLabel: [hub.city, hub.state].filter(Boolean).join(", "),
   };
 }
@@ -78,13 +80,9 @@ function HubItem({ hub }: { hub: MappedHub }) {
         <h3 className="truncate text-[15px] font-semibold tracking-tight text-[var(--ud-text-primary)]">{hub.name}</h3>
         <p className="mt-1 line-clamp-2 text-[13px] leading-snug text-gray-500">{hub.description}</p>
         <div className="mt-2 flex items-center gap-1.5 text-[12px] text-gray-400">
-          <span>{hub.membersLabel}</span>
-          {hub.locationLabel ? (
-            <>
-              <span>·</span>
-              <span className="truncate">{hub.locationLabel}</span>
-            </>
-          ) : null}
+          {hub.membersLabel ? <span>{hub.membersLabel}</span> : null}
+          {hub.membersLabel && hub.locationLabel ? <span>·</span> : null}
+          {hub.locationLabel ? <span className="truncate">{hub.locationLabel}</span> : null}
         </div>
       </div>
     </Link>
