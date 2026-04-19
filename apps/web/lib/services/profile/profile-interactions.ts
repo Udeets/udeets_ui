@@ -14,12 +14,24 @@ export type ProfileComment = {
 /**
  * Toggle the viewer's like on a profile. Inserts if missing, deletes if present.
  * Returns the new state + updated count so callers can reconcile optimistically.
+ *
+ * Self-likes are allowed (per the April 19 product call — a user's own like
+ * counts toward their profile total). The original DB-level check constraint
+ * `profile_id <> liker_id` is dropped by migration 20260419_allow_self_profile_like.
+ *
+ * Returns null when no user is signed in or the insert/delete failed. If the
+ * write fails with an RLS error we refresh the session once and retry, same
+ * stale-session recovery we use for deet comments.
  */
+const isRlsFailure = (msg?: string) => {
+  const m = (msg ?? "").toLowerCase();
+  return m.includes("row-level security") || m.includes("row level security");
+};
+
 export async function toggleProfileLike(profileId: string): Promise<{ liked: boolean; count: number } | null> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  if (user.id === profileId) return null; // can't like your own profile
 
   const { data: existing, error: lookupError } = await supabase
     .from("profile_likes")
@@ -34,15 +46,27 @@ export async function toggleProfileLike(profileId: string): Promise<{ liked: boo
   }
 
   if (existing) {
-    const { error } = await supabase.from("profile_likes").delete().eq("id", existing.id);
+    let { error } = await supabase.from("profile_likes").delete().eq("id", existing.id);
+    if (error && isRlsFailure(error.message)) {
+      await supabase.auth.refreshSession().catch(() => { /* best-effort */ });
+      const retry = await supabase.from("profile_likes").delete().eq("id", existing.id);
+      error = retry.error;
+    }
     if (error) {
       console.error("[toggleProfileLike] delete failed:", error);
       return null;
     }
   } else {
-    const { error } = await supabase
+    let { error } = await supabase
       .from("profile_likes")
       .insert({ profile_id: profileId, liker_id: user.id });
+    if (error && isRlsFailure(error.message)) {
+      await supabase.auth.refreshSession().catch(() => { /* best-effort */ });
+      const retry = await supabase
+        .from("profile_likes")
+        .insert({ profile_id: profileId, liker_id: user.id });
+      error = retry.error;
+    }
     if (error) {
       console.error("[toggleProfileLike] insert failed:", error);
       return null;

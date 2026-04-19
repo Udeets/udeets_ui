@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, ArrowLeft, Heart, Loader2, MessageSquare, MoreVertical, Send, Trash2, X } from "lucide-react";
 import { getProfileSummary, type ProfileSummary } from "@/lib/services/profile/get-profile-summary";
+import { useAuthSession } from "@/services/auth/useAuthSession";
 import {
   addProfileComment,
   deleteProfileComment,
@@ -59,6 +60,12 @@ export function UserProfileModal({
   /** Optional context string appended to reports (e.g. a hub slug or deet id). */
   context?: string;
 }) {
+  const { user: viewer } = useAuthSession();
+  // Self-likes are allowed (per April 19 product call), so the Like button
+  // is shown on every profile including your own. We still hide the Report
+  // menu item on your own profile since reporting yourself is nonsensical.
+  const isOwnProfile = Boolean(viewer?.id && viewer.id === userId);
+
   const [summary, setSummary] = useState<ProfileSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState<ModalView>("card");
@@ -203,7 +210,9 @@ export function UserProfileModal({
         ref={cardRef}
         className={cn(
           "relative overflow-hidden rounded-3xl bg-[var(--ud-bg-card)] shadow-2xl",
-          view === "card" ? "w-full max-w-sm" : "flex h-[min(86vh,720px)] w-full max-w-4xl flex-col lg:flex-row"
+          view === "card"
+            ? "w-full max-w-md"
+            : "flex h-[min(90vh,820px)] w-full max-w-5xl flex-col lg:flex-row"
         )}
       >
         {/* ── Top bar (common) ── */}
@@ -225,14 +234,18 @@ export function UserProfileModal({
             </button>
             {menuOpen ? (
               <div className="absolute left-0 top-10 z-20 w-44 overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] text-[var(--ud-text-primary)] shadow-lg">
-                <button
-                  type="button"
-                  onClick={() => { setMenuOpen(false); setReport({ open: true, submitting: false, reason: "", success: false }); }}
-                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm hover:bg-[var(--ud-bg-subtle)]"
-                >
-                  <AlertCircle className="h-4 w-4 text-red-500" />
-                  Report this profile
-                </button>
+                {!isOwnProfile ? (
+                  <button
+                    type="button"
+                    onClick={() => { setMenuOpen(false); setReport({ open: true, submitting: false, reason: "", success: false }); }}
+                    className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm hover:bg-[var(--ud-bg-subtle)]"
+                  >
+                    <AlertCircle className="h-4 w-4 text-red-500" />
+                    Report this profile
+                  </button>
+                ) : (
+                  <p className="px-3 py-2.5 text-xs text-[var(--ud-text-muted)]">No options available for your own profile.</p>
+                )}
               </div>
             ) : null}
           </div>
@@ -256,27 +269,29 @@ export function UserProfileModal({
 
         {/* ── Card view ── */}
         {view === "card" ? (
-          <div className="px-6 pb-6 pt-4">
+          <div className="px-8 pb-8 pt-5">
             <button
               type="button"
               onClick={() => setView("photo")}
               aria-label="View profile photo"
-              className="mx-auto block h-44 w-44 overflow-hidden rounded-2xl bg-gradient-to-br from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] shadow-md transition hover:brightness-105"
+              className="mx-auto block h-56 w-56 overflow-hidden rounded-2xl bg-gradient-to-br from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] shadow-md transition hover:brightness-105"
             >
               {summary?.avatarUrl ? (
                 <img src={summary.avatarUrl} alt={`${displayName}'s profile photo`} className="h-full w-full object-cover" />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-5xl font-semibold text-white/85">
+                <div className="flex h-full w-full items-center justify-center text-6xl font-semibold text-white/85">
                   <Initials name={displayName} />
                 </div>
               )}
             </button>
 
-            <h2 className="mt-4 text-center text-xl font-semibold tracking-tight text-[var(--ud-text-primary)]">
+            <h2 className="mt-5 text-center text-2xl font-semibold tracking-tight text-[var(--ud-text-primary)]">
               {isLoading ? "Loading…" : displayName}
             </h2>
 
-            <div className="mt-4 flex items-center justify-center gap-2">
+            <div className="mt-5 flex items-center justify-center gap-2">
+              {/* Like button is always available — you can like your own
+                  profile too, so the count reflects your own endorsement. */}
               <button
                 type="button"
                 disabled={isTogglingLike || !summary}
