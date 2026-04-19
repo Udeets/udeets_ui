@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
+import { useUserProfileModal } from "@/components/UserProfileModalProvider";
 import { mapDeetToDashboardCard } from "@/lib/mappers/deets/map-deet-to-dashboard-card";
 import { listDeets, subscribeToDeets } from "@/lib/services/deets/list-deets";
 import type { DeetRecord } from "@/lib/services/deets/deet-types";
@@ -842,6 +843,7 @@ function ReactorsPopup({
 function DashboardPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { openProfileModal } = useUserProfileModal();
   const [authStatus, setAuthStatus] = useState<AuthStatus>("checking");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [selectedHubView, setSelectedHubView] = useState<HubView>("my-hubs");
@@ -1216,10 +1218,14 @@ function DashboardPageContent() {
           .map(deetRecordToDashboardItem)
           .map((item) => {
             const hub = hubById.get(item.hubId);
+            // Deep-link every deet card to the specific post on the hub's
+            // Posts tab. Without ?tab=Posts the hub would open on About and
+            // the ?focus scroll-to-deet logic would silently miss.
+            const href = hub?.href ? `${hub.href}?tab=Posts&focus=${item.id}` : undefined;
             return {
               ...item,
               hubName: hub?.name || "Hub",
-              href: hub?.href,
+              href,
             };
           });
 
@@ -1488,17 +1494,36 @@ function DashboardPageContent() {
                           {item.href ? (
                             <Link href={item.href} className="block px-4 pt-4">
                               <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    if (item.authorId) openProfileModal(item.authorId);
+                                  }}
+                                  aria-label={`Open ${item.authorName}'s profile`}
+                                  className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--ud-brand-light)] transition hover:ring-2 hover:ring-[var(--ud-brand-primary)]/40"
+                                >
                                   {item.authorAvatar ? (
                                     // eslint-disable-next-line @next/next/no-img-element
                                     <img src={item.authorAvatar} alt="" className="h-full w-full object-cover" />
                                   ) : (
                                     <span className="text-xs font-bold text-[var(--ud-brand-primary)]">{getInitials(item.authorName)}</span>
                                   )}
-                                </div>
+                                </button>
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-sm font-semibold text-[var(--ud-text-primary)]">{item.authorName}</span>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        if (item.authorId) openProfileModal(item.authorId);
+                                      }}
+                                      className="text-sm font-semibold text-[var(--ud-text-primary)] transition hover:underline"
+                                    >
+                                      {item.authorName}
+                                    </button>
                                     <span className="text-xs text-[var(--ud-text-muted)]">{item.hubName ? `in ${item.hubName}` : ""}</span>
                                   </div>
                                   <span className="text-xs text-[var(--ud-text-muted)]">{item.timeLabel}</span>
@@ -1510,17 +1535,28 @@ function DashboardPageContent() {
                           ) : (
                             <div className="px-4 pt-4">
                               <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
+                                <button
+                                  type="button"
+                                  onClick={() => { if (item.authorId) openProfileModal(item.authorId); }}
+                                  aria-label={`Open ${item.authorName}'s profile`}
+                                  className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--ud-brand-light)] transition hover:ring-2 hover:ring-[var(--ud-brand-primary)]/40"
+                                >
                                   {item.authorAvatar ? (
                                     // eslint-disable-next-line @next/next/no-img-element
                                     <img src={item.authorAvatar} alt="" className="h-full w-full object-cover" />
                                   ) : (
                                     <span className="text-xs font-bold text-[var(--ud-brand-primary)]">{getInitials(item.authorName)}</span>
                                   )}
-                                </div>
+                                </button>
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-sm font-semibold text-[var(--ud-text-primary)]">{item.authorName}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => { if (item.authorId) openProfileModal(item.authorId); }}
+                                      className="text-sm font-semibold text-[var(--ud-text-primary)] transition hover:underline"
+                                    >
+                                      {item.authorName}
+                                    </button>
                                     <span className="text-xs text-[var(--ud-text-muted)]">{item.hubName ? `in ${item.hubName}` : ""}</span>
                                   </div>
                                   <span className="text-xs text-[var(--ud-text-muted)]">{item.timeLabel}</span>

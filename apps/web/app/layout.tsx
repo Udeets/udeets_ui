@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { UserProfileModalProvider } from "@/components/UserProfileModalProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -23,7 +24,9 @@ export default function RootLayout({
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body className="min-h-screen font-sans antialiased">
         <ThemeProvider>
-          <div className="app-shell flex min-h-screen flex-col">{children}</div>
+          <UserProfileModalProvider>
+            <div className="app-shell flex min-h-screen flex-col">{children}</div>
+          </UserProfileModalProvider>
         </ThemeProvider>
       </body>
     </html>

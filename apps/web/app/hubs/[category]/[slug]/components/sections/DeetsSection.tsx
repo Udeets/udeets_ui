@@ -35,6 +35,7 @@ import { SectionShell } from "../SectionShell";
 import type { ComposerChildFlow } from "../deets/deetTypes";
 import type { DeetComment, DeetViewer, DeetReactor } from "@/lib/services/deets/deet-interactions";
 import { deleteDeet } from "@/lib/services/deets/delete-deet";
+import { useUserProfileModal } from "@/components/UserProfileModalProvider";
 
 function sanitizeHtmlContent(html: string): string {
   const div = document.createElement("div");
@@ -664,6 +665,7 @@ function ReactionsModal({
   isLoading: boolean;
   onClose: () => void;
 }) {
+  const { openProfileModal } = useUserProfileModal();
   const [activeTab, setActiveTab] = useState<string>("all");
 
   // Group by reaction type
@@ -735,7 +737,12 @@ function ReactionsModal({
             <div className="py-1">
               {filteredReactors.map((reactor) => (
                 <div key={reactor.userId} className="flex items-center gap-3 px-5 py-2.5">
-                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
+                  <button
+                    type="button"
+                    onClick={() => { onClose(); openProfileModal(reactor.userId); }}
+                    aria-label={`Open ${reactor.name}'s profile`}
+                    className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)] transition hover:ring-2 hover:ring-[var(--ud-brand-primary)]/40"
+                  >
                     <ImageWithFallback
                       src={reactor.avatar || ""}
                       sources={reactor.avatar ? [reactor.avatar] : []}
@@ -744,10 +751,16 @@ function ReactionsModal({
                       fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-xs font-bold text-[var(--ud-brand-primary)]"
                       fallback={initials(reactor.name)}
                     />
-                  </div>
+                  </button>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-[var(--ud-text-primary)]">{reactor.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => { onClose(); openProfileModal(reactor.userId); }}
+                        className="text-sm font-medium text-[var(--ud-text-primary)] transition hover:underline"
+                      >
+                        {reactor.name}
+                      </button>
                       {reactor.role && reactor.role !== "member" && (
                         <span className="rounded-full bg-[var(--ud-brand-primary)]/10 px-2 py-0.5 text-[10px] font-semibold text-[var(--ud-brand-primary)]">
                           {reactor.role === "creator" ? "Creator" : "Admin"}
@@ -894,6 +907,7 @@ export function DeetsSection({
   viewersLoading?: boolean;
   onToggleViewers?: (deetId: string) => void;
 }) {
+  const { openProfileModal } = useUserProfileModal();
   const [sortOption, setSortOption] = useState<SortOption>("Newest");
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [activeFilterPill, setActiveFilterPill] = useState<string>("All");
@@ -1246,7 +1260,12 @@ export function DeetsSection({
               >
                 {/* ── Author header ── */}
                 <div className="flex items-center gap-3 px-4 pt-4">
-                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
+                  <button
+                    type="button"
+                    onClick={() => item.authorId && openProfileModal(item.authorId)}
+                    aria-label={`Open ${item.author}'s profile`}
+                    className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)] transition hover:ring-2 hover:ring-[var(--ud-brand-primary)]/40"
+                  >
                     <ImageWithFallback
                       src={item.authorAvatar || ""}
                       sources={item.authorAvatar ? [item.authorAvatar] : []}
@@ -1255,10 +1274,16 @@ export function DeetsSection({
                       fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-xs font-bold text-[var(--ud-brand-primary)]"
                       fallback={initials(item.author)}
                     />
-                  </div>
+                  </button>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-[15px] font-semibold text-[var(--ud-text-primary)]">{item.author}</span>
+                      <button
+                        type="button"
+                        onClick={() => item.authorId && openProfileModal(item.authorId)}
+                        className="text-[15px] font-semibold text-[var(--ud-text-primary)] transition hover:underline"
+                      >
+                        {item.author}
+                      </button>
                       {item.role && (
                         <span className="text-sm text-[var(--ud-text-muted)]">
                           {item.role === "creator" ? "Creator" : item.role === "admin" ? "Admin" : ""}
@@ -1847,10 +1872,16 @@ function CommentRow({
   const isConfirmingDelete = confirmDeleteId === comment.id;
   const avatarSize = isNested ? "h-7 w-7" : "h-9 w-9";
   const [showReactPicker, setShowReactPicker] = useState(false);
+  const { openProfileModal } = useUserProfileModal();
 
   return (
     <div className="group relative flex items-start gap-2.5 py-3">
-      <div className={cn("relative shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]", avatarSize)}>
+      <button
+        type="button"
+        onClick={() => comment.userId && openProfileModal(comment.userId)}
+        aria-label={`Open ${comment.authorName ?? "user"}'s profile`}
+        className={cn("relative shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)] transition hover:ring-2 hover:ring-[var(--ud-brand-primary)]/40", avatarSize)}
+      >
         <ImageWithFallback
           src={comment.authorAvatar || ""}
           sources={comment.authorAvatar ? [comment.authorAvatar] : []}
@@ -1859,7 +1890,7 @@ function CommentRow({
           fallbackClassName={cn("grid h-full w-full place-items-center bg-[var(--ud-brand-light)] font-bold text-[var(--ud-brand-primary)]", isNested ? "text-[8px]" : "text-[10px]")}
           fallback={initials(comment.authorName ?? "User")}
         />
-      </div>
+      </button>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-[var(--ud-text-primary)]">{comment.authorName ?? "User"}</span>
