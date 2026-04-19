@@ -623,7 +623,10 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
                 category: hub.category as import("@/lib/hubs").HubCategorySlug,
                 slug: hub.slug,
                 focusId: "",
-                href: `/dashboard?tab=joined`,
+                // Land directly on the hub's About tab so the new member can
+                // read about what they just joined, rather than bouncing them
+                // to the dashboard's Joined list.
+                href: `/hubs/${hub.category}/${hub.slug}?tab=About`,
               });
             }
           }
