@@ -191,7 +191,7 @@ export function CreateDeetModal({
             <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("jobs")} className={ACTION_BTN} title="Jobs">
               <ComposerJobsIcon className="h-[22px] w-[22px]" />
             </button>
-            <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("photo")} className={ACTION_BTN} title="Attach File">
+            <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("file")} className={ACTION_BTN} title="Attach File">
               <ComposerAttachIcon className="h-[22px] w-[22px]" />
             </button>
             <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("event")} className={ACTION_BTN} title="Event">

@@ -37,26 +37,52 @@ export function subscribeToDeets(
   const supabase = createClient();
   const relevantHubIds = new Set(options?.hubIds ?? []);
 
+  // Debounce rapid bursts (e.g. many likes at once) into a single refresh.
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const schedule = () => {
+    if (timer) return;
+    timer = setTimeout(() => {
+      timer = null;
+      onChange();
+    }, 150);
+  };
+
   const channel = supabase
-    .channel(`deets:${options?.hubIds?.join(",") || "all"}`)
+    .channel(`deets-feed:${options?.hubIds?.join(",") || "all"}`)
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "deets" },
       (payload) => {
         if (!relevantHubIds.size) {
-          onChange();
+          schedule();
           return;
         }
-
         const record = (payload.new || payload.old || {}) as { hub_id?: string };
         if (record.hub_id && relevantHubIds.has(record.hub_id)) {
-          onChange();
+          schedule();
         }
       },
+    )
+    // Likes / comments don't carry a hub_id directly; we refresh and let the
+    // feed query filter. This keeps counts and reaction lists live across the
+    // feed without separate per-deet subscriptions.
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "deet_likes" },
+      () => schedule(),
+    )
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "deet_comments" },
+      () => schedule(),
     )
     .subscribe();
 
   return () => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
     void supabase.removeChannel(channel);
   };
 }

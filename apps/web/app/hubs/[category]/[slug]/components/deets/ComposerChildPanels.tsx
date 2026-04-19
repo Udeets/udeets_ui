@@ -427,30 +427,35 @@ export function CheckinChildContent({
         const { latitude, longitude } = position.coords;
         setCoords({ lat: latitude, lng: longitude });
 
-        // Use reverse geocoding via Nominatim (free, no API key)
+        // Reverse geocoding via our server-side proxy (sets required User-Agent,
+        // enforces per-IP rate limit, and keeps upstream errors off the client).
         try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
-          );
-          const data = await res.json();
+          const viewbox = `${longitude - 0.005},${latitude + 0.005},${longitude + 0.005},${latitude - 0.005}`;
+          const [res, nearbyRes] = await Promise.all([
+            fetch(`/api/geo/reverse?lat=${latitude}&lon=${longitude}`),
+            fetch(`/api/geo/search?lat=${latitude}&lon=${longitude}&limit=8&viewbox=${encodeURIComponent(viewbox)}`),
+          ]);
 
-          // Also search nearby places
-          const nearbyRes = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=*&lat=${latitude}&lon=${longitude}&limit=8&bounded=1&viewbox=${longitude - 0.005},${latitude + 0.005},${longitude + 0.005},${latitude - 0.005}`
-          );
-          const nearbyData = await nearbyRes.json();
+          if (!res.ok && !nearbyRes.ok) {
+            throw new Error(`geo proxy error: reverse=${res.status} search=${nearbyRes.status}`);
+          }
+
+          const data = res.ok ? await res.json() : {};
+          const nearbyData = nearbyRes.ok ? await nearbyRes.json() : [];
 
           const currentPlace: NearbyPlace = {
             name: data.name || data.address?.road || "Current Location",
             address: data.display_name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
           };
 
-          const nearby: NearbyPlace[] = nearbyData
-            .filter((p: { display_name: string; name?: string }) => p.name)
-            .map((p: { display_name: string; name: string }) => ({
-              name: p.name,
-              address: p.display_name,
-            }));
+          const nearby: NearbyPlace[] = Array.isArray(nearbyData)
+            ? nearbyData
+                .filter((p: { display_name: string; name?: string }) => p.name)
+                .map((p: { display_name: string; name: string }) => ({
+                  name: p.name,
+                  address: p.display_name,
+                }))
+            : [];
 
           // Deduplicate
           const seen = new Set<string>();
@@ -462,8 +467,9 @@ export function CheckinChildContent({
 
           setPlaces(allPlaces);
           setStatus("loaded");
-        } catch {
-          // Fallback to just coordinates
+        } catch (geoErr) {
+          console.warn("[checkin] reverse geocode failed:", geoErr);
+          // Fallback to just coordinates so the user still gets a usable check-in.
           setPlaces([{
             name: "Current Location",
             address: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,

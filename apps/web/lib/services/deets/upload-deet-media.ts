@@ -1,7 +1,29 @@
 import { createClient } from "@/lib/supabase/client";
 
 const DEET_MEDIA_BUCKET = "deet-media";
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024;
+
+const ALLOWED_FILE_MIME_TYPES = new Set<string>([
+  // images
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  // documents
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  // text
+  "text/plain",
+  "text/csv",
+  // archives
+  "application/zip",
+]);
 
 function sanitizeFileName(value: string) {
   return value
@@ -24,25 +46,41 @@ function fileExtensionFor(file: File) {
 export type UploadedDeetMedia = {
   path: string;
   publicUrl: string;
+  mimeType: string;
+  fileName: string;
+  sizeBytes: number;
+  kind: "image" | "file";
 };
 
 export async function uploadDeetMedia({
   file,
   hubId,
   hubSlug,
+  kind = "image",
 }: {
   file: File;
   hubId: string;
   hubSlug: string;
+  kind?: "image" | "file";
 }): Promise<UploadedDeetMedia> {
   const supabase = createClient();
 
-  if (!file.type.startsWith("image/")) {
+  const isImageByMime = file.type.startsWith("image/");
+
+  if (kind === "image" && !isImageByMime) {
     throw new Error("Please upload an image file for your deet.");
   }
 
-  if (file.size > MAX_FILE_SIZE_BYTES) {
-    throw new Error("Deet images must be 5 MB or smaller.");
+  if (kind === "file") {
+    if (!ALLOWED_FILE_MIME_TYPES.has(file.type)) {
+      throw new Error("This file type isn't supported. Allowed: PDF, Word, Excel, PowerPoint, text, CSV, zip, and common images.");
+    }
+  }
+
+  const maxSize = kind === "image" ? MAX_IMAGE_SIZE_BYTES : MAX_FILE_SIZE_BYTES;
+  if (file.size > maxSize) {
+    const mb = Math.round(maxSize / 1024 / 1024);
+    throw new Error(`File must be ${mb} MB or smaller.`);
   }
 
   const {
@@ -55,11 +93,12 @@ export async function uploadDeetMedia({
   }
 
   if (!user) {
-    throw new Error("You must be signed in to upload deet images.");
+    throw new Error("You must be signed in to upload files.");
   }
 
   const extension = fileExtensionFor(file);
-  const filePath = `${user.id}/${sanitizeFileName(hubSlug || hubId)}/deets/${Date.now()}-${crypto.randomUUID()}.${extension}`;
+  const folder = kind === "image" ? "deets" : "files";
+  const filePath = `${user.id}/${sanitizeFileName(hubSlug || hubId)}/${folder}/${Date.now()}-${crypto.randomUUID()}.${extension}`;
 
   const { error: uploadError } = await supabase.storage
     .from(DEET_MEDIA_BUCKET)
@@ -70,17 +109,21 @@ export async function uploadDeetMedia({
     });
 
   if (uploadError) {
-    throw new Error(`Failed to upload deet image: ${uploadError.message}`);
+    throw new Error(`Failed to upload: ${uploadError.message}`);
   }
 
   const { data } = supabase.storage.from(DEET_MEDIA_BUCKET).getPublicUrl(filePath);
 
   if (!data.publicUrl) {
-    throw new Error("Deet image uploaded, but a public URL could not be generated.");
+    throw new Error("Upload succeeded, but a public URL could not be generated.");
   }
 
   return {
     path: filePath,
     publicUrl: data.publicUrl,
+    mimeType: file.type || "application/octet-stream",
+    fileName: file.name,
+    sizeBytes: file.size,
+    kind,
   };
 }

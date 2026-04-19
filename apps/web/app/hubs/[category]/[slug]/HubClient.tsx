@@ -152,6 +152,24 @@ export default function HubClient({
     return () => { ignore = true; };
   }, [hub.createdBy]);
 
+  // Mark this hub as "seen" by the current user so the dashboard unread dot clears.
+  useEffect(() => {
+    if (!user?.id || !hub.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        if (cancelled) return;
+        await supabase.rpc("mark_hub_seen", { p_hub_id: hub.id });
+      } catch (err) {
+        // RPC may not exist yet if migration isn't applied; best-effort only.
+        console.warn("[hub] mark_hub_seen failed:", err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id, hub.id]);
+
   // Fetch the current logged-in user's profile (for comment input avatar etc.)
   useEffect(() => {
     if (!user?.id) return;
@@ -727,12 +745,14 @@ export default function HubClient({
     attachedDeetItems,
     selectedPhotoPreviews,
     selectedPhotoFiles,
+    selectedDocFiles,
     modalDraftText,
     isSubmittingDeet,
     deetFormatting,
     isFontSizeMenuOpen,
     deetSettings,
     deetPhotoInputRef,
+    deetFileInputRef,
     setActiveComposerChild,
     setModalDraftText,
     setDeetFormatting,
@@ -743,7 +763,9 @@ export default function HubClient({
     discardDeetComposer,
     attachDeetItem,
     removePhoto,
+    removeDocFile,
     handleDeetPhotoFiles,
+    handleDeetDocFiles,
     handleSubmitDeet,
   } = useDeetComposer({
     hubId: hub.id,
@@ -1526,6 +1548,73 @@ export default function HubClient({
                         className={BUTTON_PRIMARY}
                       >
                         Attach
+                      </button>
+                    </div>
+                  </div>
+                </DeetChildModal>
+              ) : null}
+
+              {activeComposerChild === "file" ? (
+                <DeetChildModal title="Attach Files" onClose={() => setActiveComposerChild(null)}>
+                  <div>
+                    <input
+                      ref={deetFileInputRef}
+                      type="file"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,image/*"
+                      multiple
+                      onChange={handleDeetDocFiles}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => deetFileInputRef.current?.click()}
+                      className="w-full rounded-2xl border border-dashed border-[var(--ud-brand-primary)] bg-[var(--ud-bg-subtle)] px-4 py-8 text-center text-sm font-medium text-[var(--ud-brand-primary)] transition hover:bg-[var(--ud-bg-subtle)]"
+                    >
+                      Choose files from device
+                    </button>
+                    <p className="mt-2 text-center text-xs text-[var(--ud-text-muted)]">
+                      PDF, Word, Excel, PowerPoint, text, CSV, zip, and images. Up to 15 MB each.
+                    </p>
+
+                    {selectedDocFiles.length ? (
+                      <div className="mt-4 space-y-2">
+                        {selectedDocFiles.map((file, index) => (
+                          <div
+                            key={`${file.name}-${index}`}
+                            className="flex items-center gap-3 rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] px-3 py-2.5"
+                          >
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--ud-bg-subtle)]">
+                              <svg viewBox="0 0 24 24" className="h-5 w-5 text-[var(--ud-brand-primary)]" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium text-[var(--ud-text-primary)]">{file.name}</p>
+                              <p className="text-xs text-[var(--ud-text-muted)]">
+                                {file.size < 1024
+                                  ? `${file.size} B`
+                                  : file.size < 1024 * 1024
+                                  ? `${(file.size / 1024).toFixed(1)} KB`
+                                  : `${(file.size / 1024 / 1024).toFixed(1)} MB`}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeDocFile(index)}
+                              className="shrink-0 text-xs font-medium text-[var(--ud-text-muted)] transition hover:text-red-500"
+                              aria-label="Remove file"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    <div className="mt-5 flex justify-end gap-3">
+                      <button type="button" onClick={() => setActiveComposerChild(null)} className={BUTTON_SECONDARY}>
+                        Done
                       </button>
                     </div>
                   </div>

@@ -22,6 +22,12 @@ const INITIAL_DEET_SETTINGS: DeetSettingsState = {
   postType: "post",
 };
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
 function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -64,17 +70,20 @@ export function useDeetComposer({
   const [attachedDeetItems, setAttachedDeetItems] = useState<AttachedDeetItem[]>([]);
   const [selectedPhotoPreviews, setSelectedPhotoPreviews] = useState<string[]>([]);
   const [selectedPhotoFiles, setSelectedPhotoFiles] = useState<File[]>([]);
+  const [selectedDocFiles, setSelectedDocFiles] = useState<File[]>([]);
   const [modalDraftText, setModalDraftText] = useState("");
   const [isSubmittingDeet, setIsSubmittingDeet] = useState(false);
   const [deetFormatting, setDeetFormatting] = useState<DeetFormattingState>(INITIAL_DEET_FORMATTING);
   const [isFontSizeMenuOpen, setIsFontSizeMenuOpen] = useState(false);
   const [deetSettings, setDeetSettings] = useState<DeetSettingsState>(INITIAL_DEET_SETTINGS);
   const deetPhotoInputRef = useRef<HTMLInputElement | null>(null);
+  const deetFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const isComposerDirty =
     modalDraftText.trim().length > 0 ||
     attachedDeetItems.length > 0 ||
     selectedPhotoPreviews.length > 0 ||
+    selectedDocFiles.length > 0 ||
     deetSettings.noticeEnabled ||
     !deetSettings.commentsEnabled ||
     deetSettings.postType !== "post";
@@ -88,6 +97,7 @@ export function useDeetComposer({
     setAttachedDeetItems([]);
     setSelectedPhotoPreviews([]);
     setSelectedPhotoFiles([]);
+    setSelectedDocFiles([]);
     setDeetSettings(INITIAL_DEET_SETTINGS);
   }, [composerOpen, demoComposerText]);
 
@@ -118,6 +128,7 @@ export function useDeetComposer({
     setAttachedDeetItems([]);
     setSelectedPhotoPreviews([]);
     setSelectedPhotoFiles([]);
+    setSelectedDocFiles([]);
     setModalDraftText("");
     setIsFontSizeMenuOpen(false);
     setDeetFormatting(INITIAL_DEET_FORMATTING);
@@ -170,6 +181,18 @@ export function useDeetComposer({
     }
   };
 
+  const handleDeetDocFiles = (event: ChangeEvent<HTMLInputElement>) => {
+    const input = event.target;
+    const files = Array.from(input.files ?? []);
+    input.value = "";
+    if (!files.length) return;
+    setSelectedDocFiles((current) => [...current, ...files]);
+  };
+
+  const removeDocFile = (index: number) => {
+    setSelectedDocFiles((current) => current.filter((_, i) => i !== index));
+  };
+
   const sanitizeHtml = (html: string): string => {
     // Remove script tags and event handlers to prevent XSS
     const div = document.createElement("div");
@@ -198,7 +221,7 @@ export function useDeetComposer({
     if (isSubmittingDeet) return;
 
     const trimmedText = modalDraftText.trim();
-    const hasContent = Boolean(trimmedText || attachedDeetItems.length || selectedPhotoPreviews.length);
+    const hasContent = Boolean(trimmedText || attachedDeetItems.length || selectedPhotoPreviews.length || selectedDocFiles.length);
     if (!hasContent) return;
 
     setIsSubmittingDeet(true);
@@ -224,6 +247,7 @@ export function useDeetComposer({
                 file,
                 hubId,
                 hubSlug,
+                kind: "image",
               })
             )
           )
@@ -231,6 +255,27 @@ export function useDeetComposer({
       const uploadedPhotoUrls = uploadedPhotoAssets.map((asset) => asset.publicUrl);
       const uploadedPhotoPaths = uploadedPhotoAssets.map((asset) => asset.path);
       const primaryImage = uploadedPhotoUrls[0];
+
+      const uploadedDocAssets = selectedDocFiles.length
+        ? await Promise.all(
+            selectedDocFiles.map((file) =>
+              uploadDeetMedia({
+                file,
+                hubId,
+                hubSlug,
+                kind: "file",
+              })
+            )
+          )
+        : [];
+      const docFileAttachments: AttachedDeetItem[] = uploadedDocAssets.map((asset, index) => ({
+        id: `file-${Date.now()}-${index}`,
+        type: "file",
+        title: asset.fileName,
+        detail: formatFileSize(asset.sizeBytes),
+        meta: asset.mimeType,
+        previews: [asset.publicUrl],
+      }));
       const newestSticker = [...attachedDeetItems].reverse().find((item) => item.type === "sticker" && item.detail);
 
       const postTypeToKind: Record<string, string> = {
@@ -284,6 +329,8 @@ export function useDeetComposer({
       // Sanitize the HTML content before saving
       const sanitizedBody = sanitizeHtml(rawBody || "");
 
+      const attachmentsWithFiles = [...finalAttachments, ...docFileAttachments];
+
       const createdDeet = await createDeet({
         hubId,
         authorName,
@@ -292,7 +339,7 @@ export function useDeetComposer({
         kind: resolvedKind,
         previewImageUrl: primaryImage,
         previewImageUrls: uploadedPhotoUrls,
-        attachments: finalAttachments.map((item) => ({
+        attachments: attachmentsWithFiles.map((item) => ({
           type: item.type,
           title: item.title,
           detail: item.detail,
@@ -346,12 +393,14 @@ export function useDeetComposer({
     attachedDeetItems,
     selectedPhotoPreviews,
     selectedPhotoFiles,
+    selectedDocFiles,
     modalDraftText,
     isSubmittingDeet,
     deetFormatting,
     isFontSizeMenuOpen,
     deetSettings,
     deetPhotoInputRef,
+    deetFileInputRef,
     authorName,
     authorAvatarSrc,
     setActiveComposerChild,
@@ -364,7 +413,9 @@ export function useDeetComposer({
     discardDeetComposer,
     attachDeetItem,
     removePhoto,
+    removeDocFile,
     handleDeetPhotoFiles,
+    handleDeetDocFiles,
     handleSubmitDeet,
   };
 }

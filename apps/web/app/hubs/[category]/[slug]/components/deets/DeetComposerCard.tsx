@@ -40,7 +40,7 @@ export function DeetComposerCard({
     { key: "announcement", icon: ComposerAnnouncementIcon, label: "Announcement" },
     { key: "poll", icon: ComposerPollIcon, label: "Poll" },
     { key: "jobs", icon: ComposerJobsIcon, label: "Jobs" },
-    { key: "photo", icon: ComposerAttachIcon, label: "Attach File" },
+    { key: "file", icon: ComposerAttachIcon, label: "Attach File" },
     { key: "event", icon: ComposerCalendarIcon, label: "Event" },
     { key: "checkin", icon: ComposerLocationIcon, label: "Check-in" },
     { key: "alert", icon: ComposerAlertIcon, label: "Alert" },

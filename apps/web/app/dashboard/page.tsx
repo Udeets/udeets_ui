@@ -233,6 +233,7 @@ function HubLauncher({
   joinedDot = false,
   acceptedHubIds,
   onAcceptedClick,
+  unreadHubIds,
 }: {
   selectedView: HubView;
   onSelectView: (view: HubView) => void;
@@ -241,6 +242,7 @@ function HubLauncher({
   joinedDot?: boolean;
   acceptedHubIds?: Set<string>;
   onAcceptedClick?: (hub: DashboardHubCardData) => void;
+  unreadHubIds?: Set<string>;
 }) {
   const emptyMessages: Record<HubView, { title: string; description: string; ctaLabel: string; ctaHref: string }> = {
     "my-hubs": {
@@ -310,7 +312,7 @@ function HubLauncher({
               <DashboardHubCard
                 key={hub.id}
                 hub={hub}
-                hasUnread={false}
+                hasUnread={selectedView !== "requested" && (unreadHubIds?.has(hub.id) ?? false)}
                 isPending={selectedView === "requested" && !isAccepted}
                 isAccepted={isAccepted}
                 onAcceptedClick={onAcceptedClick}
@@ -853,6 +855,7 @@ function DashboardPageContent() {
   const [isLoadingHubs, setIsLoadingHubs] = useState(true);
   const [hubsLoadError, setHubsLoadError] = useState<string | null>(null);
   const [myDeetsItems, setMyDeetsItems] = useState<FeedItem[]>([]);
+  const [unreadHubIds, setUnreadHubIds] = useState<Set<string>>(new Set());
 
   // ── Join-request acceptance celebration ──
   const [newlyAcceptedHub, setNewlyAcceptedHub] = useState<{ id: string; name: string; href: string } | null>(null);
@@ -1020,6 +1023,18 @@ function DashboardPageContent() {
           const dashHubs = dbHubs.map(toDashboardHub);
           setHubs(dashHubs);
           setMemberships(myMemberships);
+
+          // ── Load unread hubs (best-effort; ignore if RPC not yet deployed) ──
+          try {
+            const { createClient } = await import("@/lib/supabase/client");
+            const supabase = createClient();
+            const { data: unreadRows, error: unreadError } = await supabase.rpc("user_hubs_with_unread");
+            if (!unreadError && Array.isArray(unreadRows) && !cancelled) {
+              setUnreadHubIds(new Set(unreadRows.map((r: { hub_id: string }) => r.hub_id)));
+            }
+          } catch (unreadErr) {
+            console.warn("[dashboard] unread hubs lookup failed:", unreadErr);
+          }
 
           // ── Track recently accepted memberships (show in Requested tab with dot) ──
           const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
@@ -1376,6 +1391,7 @@ function DashboardPageContent() {
               joinedDot={joinedDot}
               acceptedHubIds={acceptedHubIds}
               onAcceptedClick={handleAcceptedHubClick}
+              unreadHubIds={unreadHubIds}
             />
 
             <section className={cn(CARD, "p-4 sm:p-5")}>

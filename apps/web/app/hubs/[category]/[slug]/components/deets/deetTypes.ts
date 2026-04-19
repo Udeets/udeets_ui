@@ -1,5 +1,5 @@
 export type DeetFontSize = "small" | "medium" | "large";
-export type ComposerChildFlow = "photo" | "emoji" | "settings" | "quit_confirm" | "event" | "checkin" | "announcement" | "notice" | "poll" | "money" | "alert" | "survey" | "payment" | "jobs";
+export type ComposerChildFlow = "photo" | "file" | "emoji" | "settings" | "quit_confirm" | "event" | "checkin" | "announcement" | "notice" | "poll" | "money" | "alert" | "survey" | "payment" | "jobs";
 
 export type PollSettings = {
   allowAnyoneToAdd?: boolean;
