@@ -17,7 +17,6 @@ import {
   ComposerLocationIcon,
   ComposerAlertIcon,
   ComposerSurveyIcon,
-  ComposerPaymentIcon,
 } from "./ComposerIcons";
 
 const ACTION_BTN = "inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)]";
@@ -210,9 +209,6 @@ export function CreateDeetModal({
             </button>
             <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("survey")} className={ACTION_BTN} title="Survey">
               <ComposerSurveyIcon className="h-[22px] w-[22px]" />
-            </button>
-            <button type="button" disabled={isSubmitting} onClick={() => onOpenChild("payment")} className={ACTION_BTN} title="Payment Request">
-              <ComposerPaymentIcon className="h-[22px] w-[22px]" />
             </button>
           </div>
 

@@ -38,7 +38,7 @@ import { SettingsSection } from "./components/sections/SettingsSection";
 import { CreateDeetModal } from "./components/deets/CreateDeetModal";
 import { DeetChildModal } from "./components/deets/DeetChildModal";
 import { DeetSettingsModal } from "./components/deets/DeetSettingsModal";
-import { AnnouncementChildContent, NoticeChildContent, PollChildContent, EventChildContent, CheckinChildContent, AlertChildContent, SurveyChildContent, PaymentChildContent, JobsChildContent } from "./components/deets/ComposerChildPanels";
+import { AnnouncementChildContent, NoticeChildContent, PollChildContent, EventChildContent, CheckinChildContent, AlertChildContent, SurveyChildContent, JobsChildContent } from "./components/deets/ComposerChildPanels";
 import type { HubTab } from "./components/hubTypes";
 import { useHubConnectFlow } from "./hooks/useHubConnectFlow";
 import { useDeetComposer } from "./hooks/useDeetComposer";
@@ -1851,19 +1851,6 @@ export default function HubClient({
                         detail: `${questions.length} question${questions.length > 1 ? "s" : ""}`,
                         options: questions.map((q) => `${q.question}: ${q.options.filter((o) => o.trim()).join(", ")}`),
                       });
-                      setActiveComposerChild(null);
-                    }}
-                    onCancel={() => setActiveComposerChild(null)}
-                  />
-                </DeetChildModal>
-              ) : null}
-
-              {/* ── Payment modal ── */}
-              {activeComposerChild === "payment" ? (
-                <DeetChildModal title="Payment Request" onClose={() => setActiveComposerChild(null)}>
-                  <PaymentChildContent
-                    onAttach={(title, amount, paymentNote) => {
-                      attachDeetItem({ type: "payment", title, detail: `$${amount}${paymentNote ? ` — ${paymentNote}` : ""}` });
                       setActiveComposerChild(null);
                     }}
                     onCancel={() => setActiveComposerChild(null)}
