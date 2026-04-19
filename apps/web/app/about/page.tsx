@@ -194,7 +194,7 @@ export default function AboutPage() {
                 },
                 {
                   icon: Layers,
-                  before: "Info scattered across WhatsApp, email, Facebook, and notice boards",
+                  before: "Info scattered across chats, emails, and apps",
                   after: "One hub — everything in one place",
                 },
                 {
