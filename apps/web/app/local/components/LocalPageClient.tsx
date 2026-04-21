@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import MockAppShell, { cardClass } from "@/components/mock-app-shell";
 import { listDeets, subscribeToDeets } from "@/lib/services/deets/list-deets";
-import { listMyMemberships } from "@/lib/services/members/list-my-memberships";
 import { listHubs } from "@/lib/services/hubs/list-hubs";
 import type { DeetRecord } from "@/lib/services/deets/deet-types";
 
@@ -195,7 +194,7 @@ function NewsCard({ item }: { item: LocalItem }) {
         {/* Title + body */}
         <h3 className="mt-1.5 text-[15px] font-bold leading-snug text-[var(--ud-text-primary)] line-clamp-2">{item.title}</h3>
         {cleanBody ? (
-          <p className="mt-1.5 text-sm leading-relaxed text-[var(--ud-text-secondary)] line-clamp-3">{cleanBody}</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-[var(--ud-text-secondary)] line-clamp-2">{cleanBody}</p>
         ) : null}
       </div>
     </article>
@@ -240,24 +239,18 @@ export default function LocalPageClient() {
 
     async function loadLocal() {
       try {
-        const memberships = await listMyMemberships();
-        const hubIds = memberships.map((m) => m.hubId);
-
-        if (!hubIds.length) {
-          if (!cancelled) { setItems([]); setIsLoading(false); }
-          return;
-        }
-
+        // Local is a platform-wide feed of deals / news / jobs / alerts
+        // pulled from every hub, whether the viewer is a member or not.
+        // That's the whole point of "local" — surfacing community signals
+        // beyond the user's current subscriptions.
         const hubs = await listHubs();
         const hMap = new Map<string, { name: string; href: string }>();
         for (const hub of hubs) {
           hMap.set(hub.id, { name: hub.name, href: `/hubs/${hub.category}/${hub.slug}` });
         }
 
-        const allDeets = await listDeets({ hubIds, limit: 200 });
-
-        const localKinds = new Set(["Deals", "News", "Jobs", "Alerts"]);
-        const localDeets = allDeets.filter((d) => localKinds.has(d.kind));
+        const localKinds = ["Deals", "News", "Jobs", "Alerts", "Hazards"];
+        const localDeets = await listDeets({ kinds: localKinds, limit: 200 });
 
         if (!cancelled) {
           setItems(
@@ -286,13 +279,26 @@ export default function LocalPageClient() {
                 }
               }
 
+              // Route every Local click through the hub's /join page with
+              // the deet id attached. The join page handles:
+              //  - already a member → forward to /hubs/…?tab=Posts&focus=<deet>
+              //  - public hub, not a member → auto-join then forward
+              //  - private hub, not a member → request to join + show pending
+              // This gives us one click handler that's correct for every
+              // membership + visibility combination, and it's also how the
+              // Local feed respects private hubs: the full post body only
+              // renders after approval.
+              const hubHref = hubInfo?.href
+                ? `${hubInfo.href}/join?deet=${encodeURIComponent(d.id)}`
+                : "/dashboard";
+
               return {
                 id: d.id,
                 title: d.title || "Untitled",
                 body: d.body || "",
                 source: d.author_name || "Hub member",
                 hubName: hubInfo?.name || "Hub",
-                hubHref: hubInfo?.href || "/dashboard",
+                hubHref,
                 kind: d.kind,
                 category,
                 tags,

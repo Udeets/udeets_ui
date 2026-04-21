@@ -42,6 +42,7 @@ import {
   StructuredDescriptionShell,
 } from "./components/deets/feedDeetTypeBlocks";
 import { EmojiReactButton, POST_ICON } from "./components/deets/feedEmojiReact";
+import type { LocalFeedTag } from "./components/deets/deetTypes";
 import { DeetsSection } from "./components/sections/DeetsSection";
 import { EventsSection } from "./components/sections/EventsSection";
 import { ReviewsSection } from "./components/sections/ReviewsSection";
@@ -1591,6 +1592,15 @@ export default function HubClient({
               isEditMode={Boolean(editingDeetId)}
               editPersistedGalleryUrls={editPersistedGalleryUrls}
               onRemovePersistedGalleryPhoto={removePersistedGalleryPhoto}
+              authorName={deetAuthorName}
+              authorAvatarSrc={creatorAvatarSrc}
+              onSetPostType={(tag) =>
+                setDeetSettings((prev) => ({
+                  ...prev,
+                  localFeedTag: tag === "post" ? null : (tag as LocalFeedTag),
+                }))
+              }
+              currentPostType={deetSettings.localFeedTag ?? undefined}
             />,
             document.body
           )

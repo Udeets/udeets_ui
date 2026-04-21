@@ -84,6 +84,7 @@ function buildDeetOptionsAttachment(settings: DeetSettingsState): SerializedComp
       publishTiming: settings.publishTiming,
       scheduledAt: settings.scheduledAt,
       audience: settings.audience,
+      localFeedTag: settings.localFeedTag ?? null,
     }),
   };
 }
@@ -213,7 +214,14 @@ export function mapComposerStateToSubmitParts(
     buildDeetOptionsAttachment(input.deetSettings),
   ];
 
-  const resolvedKind = resolvedKindFromComposer(input.composerKind, options.hasPhotos);
+  let resolvedKind = resolvedKindFromComposer(input.composerKind, options.hasPhotos);
+  if (input.composerKind === "post" && input.deetSettings.localFeedTag) {
+    const tag = input.deetSettings.localFeedTag;
+    if (tag === "news") resolvedKind = "News";
+    else if (tag === "hazard") resolvedKind = "Hazards";
+    else if (tag === "deal") resolvedKind = "Deals";
+    else if (tag === "jobs") resolvedKind = "Jobs";
+  }
   const fallbackTitle = fallbackTitleFromComposer(input.composerKind, options.hasPhotos);
 
   const trimmedHtml = input.bodyHtml.trim();

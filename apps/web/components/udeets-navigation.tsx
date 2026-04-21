@@ -911,6 +911,7 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
   const isDiscoverActive = pathname === "/discover";
   const isAlertsActive = pathname === "/alerts";
   const isEventsActive = pathname === "/events";
+  const isLocalActive = pathname === "/local";
 
   return (
     <header className={cn("sticky top-0 z-30", HEADER_BG)}>
@@ -974,6 +975,13 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
                   <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-[#0C5C57] ring-2 ring-white" />
                 ) : null}
               </NavIconButton>
+
+              {/* Local — sits right next to the notification bell so the
+                  platform-wide news/jobs/alerts/deals feed is one tap away
+                  from where users already look for new activity. */}
+              <NavIconLink href="/local" ariaLabel="Local" active={isLocalActive}>
+                <MapPin className={ICON_BASE} />
+              </NavIconLink>
 
               <NavIconButton
                 aria-label="Events"

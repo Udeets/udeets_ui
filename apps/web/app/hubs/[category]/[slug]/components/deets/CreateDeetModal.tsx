@@ -213,6 +213,10 @@ export function CreateDeetModal({
   isEditMode = false,
   editPersistedGalleryUrls = [],
   onRemovePersistedGalleryPhoto,
+  authorName = "You",
+  authorAvatarSrc,
+  onSetPostType,
+  currentPostType,
 }: {
   submitError?: string | null;
   composerEntryStep: "pick" | "compose";
@@ -247,7 +251,15 @@ export function CreateDeetModal({
   isEditMode?: boolean;
   editPersistedGalleryUrls?: string[];
   onRemovePersistedGalleryPhoto?: (index: number) => void;
+  authorName?: string;
+  authorAvatarSrc?: string;
+  onSetPostType?: (postType: string) => void;
+  /** Current Local-feed tag so the corresponding chip can show as active. */
+  currentPostType?: string;
 }) {
+  void authorName;
+  void authorAvatarSrc;
+
   const fontMenuMobileRef = useRef<HTMLDivElement | null>(null);
   const fontMenuDesktopRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
@@ -449,6 +461,41 @@ export function CreateDeetModal({
 
             {composerEntryStep === "compose" ? (
             <>
+            {composerKind === "post" && onSetPostType ? (
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <span className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--ud-text-muted)]">Tag</span>
+                {(
+                  [
+                    { key: "news", label: "#News" },
+                    { key: "hazard", label: "#Hazard" },
+                    { key: "deal", label: "#Deals" },
+                    { key: "jobs", label: "#Jobs" },
+                  ] as const
+                ).map((tag) => {
+                  const active = currentPostType === tag.key;
+                  return (
+                    <button
+                      key={tag.key}
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => onSetPostType(active ? "post" : tag.key)}
+                      className={cn(
+                        "rounded-full border px-3 py-1 text-xs font-semibold transition",
+                        active
+                          ? "border-[var(--ud-brand-primary)] bg-[var(--ud-brand-primary)] text-white"
+                          : "border-[var(--ud-border)] text-[var(--ud-text-secondary)] hover:border-[var(--ud-brand-primary)] hover:text-[var(--ud-brand-primary)]"
+                      )}
+                      title={active ? `Remove ${tag.label}` : `Tag as ${tag.label} — also publishes to the Local feed`}
+                    >
+                      {tag.label}
+                    </button>
+                  );
+                })}
+                {currentPostType && ["news", "hazard", "deal", "jobs"].includes(currentPostType) ? (
+                  <span className="text-[11px] text-[var(--ud-text-muted)]">Will show in Local</span>
+                ) : null}
+              </div>
+            ) : null}
             <div className="mb-3">
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">
                 {titleMeta.label}

@@ -57,6 +57,8 @@ export type DeetFormattingState = {
 };
 
 /** Composer-side defaults for how a deet behaves (stored on submit in a `deet_options` attachment). */
+export type LocalFeedTag = "news" | "hazard" | "deal" | "jobs";
+
 export type DeetSettingsState = {
   commentsEnabled: boolean;
   reactionsEnabled: boolean;
@@ -65,6 +67,8 @@ export type DeetSettingsState = {
   /** `datetime-local` value or ISO string when `publishTiming` is `scheduled` */
   scheduledAt: string;
   audience: DeetVisibility;
+  /** When writing a general post, optional tag so the deet also surfaces on the platform Local feed. */
+  localFeedTag?: LocalFeedTag | null;
 };
 
 export const INITIAL_DEET_SETTINGS: DeetSettingsState = {
@@ -74,4 +78,5 @@ export const INITIAL_DEET_SETTINGS: DeetSettingsState = {
   publishTiming: "now",
   scheduledAt: "",
   audience: "hub_default",
+  localFeedTag: null,
 };

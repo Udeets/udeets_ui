@@ -4,6 +4,13 @@ import { DEET_COLUMNS, normalizeDeetRecord } from "@/lib/services/deets/query-ut
 
 type ListDeetsOptions = {
   hubIds?: string[];
+  /**
+   * Restrict to specific `kind` values (e.g. ["News", "Jobs", "Alerts"]).
+   * When set, the query uses an IN filter so we only pull what the caller
+   * needs — used by the Local page to grab news/alerts/jobs/deals from
+   * every hub on the platform without dragging every post along for the ride.
+   */
+  kinds?: string[];
   limit?: number;
 };
 
@@ -13,6 +20,10 @@ export async function listDeets(options?: ListDeetsOptions): Promise<DeetRecord[
 
   if (options?.hubIds?.length) {
     query = query.in("hub_id", options.hubIds);
+  }
+
+  if (options?.kinds?.length) {
+    query = query.in("kind", options.kinds);
   }
 
   if (options?.limit) {

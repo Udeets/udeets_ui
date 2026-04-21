@@ -138,7 +138,8 @@ export function useDeetComposer({
     deetSettings.pinToTop !== INITIAL_DEET_SETTINGS.pinToTop ||
     deetSettings.publishTiming !== INITIAL_DEET_SETTINGS.publishTiming ||
     deetSettings.scheduledAt !== INITIAL_DEET_SETTINGS.scheduledAt ||
-    deetSettings.audience !== INITIAL_DEET_SETTINGS.audience;
+    deetSettings.audience !== INITIAL_DEET_SETTINGS.audience ||
+    (deetSettings.localFeedTag ?? null) !== (INITIAL_DEET_SETTINGS.localFeedTag ?? null);
 
   const isComposerDirty =
     composerBodyHtml.trim().length > 0 ||
