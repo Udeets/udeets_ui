@@ -143,6 +143,7 @@ export function AboutSection({
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [draftDesc, setDraftDesc] = useState(hubDescription);
   const [isSavingDesc, setIsSavingDesc] = useState(false);
+  const [descLimitHit, setDescLimitHit] = useState(false);
 
   // Sync draft when prop changes (e.g. after settings save or hub navigation)
   useEffect(() => {
@@ -244,14 +245,37 @@ export function AboutSection({
             <div className="space-y-2">
               <textarea
                 value={draftDesc}
-                onChange={(e) => setDraftDesc(e.target.value.slice(0, 300))}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Enforce the limit but remember if we had to truncate so
+                  // we can surface the warning instead of silently clipping.
+                  if (value.length > 300) {
+                    setDraftDesc(value.slice(0, 300));
+                    setDescLimitHit(true);
+                  } else {
+                    setDraftDesc(value);
+                    if (value.length < 300) setDescLimitHit(false);
+                  }
+                }}
                 placeholder={`Tell people what ${hubName} is about, who it's for, and what they can expect...`}
                 rows={3}
                 autoFocus
+                maxLength={300}
                 className="w-full rounded-lg border border-[var(--ud-brand-primary)] bg-[var(--ud-bg-card)] px-3 py-2 text-sm text-[var(--ud-text-primary)] outline-none transition-colors duration-150 focus:ring-2 focus:ring-[var(--ud-brand-primary)]"
               />
               <div className="flex items-center justify-between">
-                <span className="text-xs text-[var(--ud-text-muted)]">{draftDesc.length}/300</span>
+                <span
+                  className={cn(
+                    "text-xs transition-colors",
+                    draftDesc.length >= 300
+                      ? "font-medium text-red-600"
+                      : draftDesc.length >= 270
+                        ? "font-medium text-amber-600"
+                        : "text-[var(--ud-text-muted)]"
+                  )}
+                >
+                  {draftDesc.length}/300{descLimitHit ? " · character limit reached" : draftDesc.length >= 270 ? ` · ${300 - draftDesc.length} left` : ""}
+                </span>
                 <div className="flex items-center gap-2">
                   <button type="button" onClick={handleCancelEditDesc} disabled={isSavingDesc} className="rounded-lg border border-[var(--ud-border)] p-1.5 text-[var(--ud-text-secondary)] transition-colors duration-150 hover:bg-[var(--ud-bg-subtle)]">
                     <X className="h-3.5 w-3.5 stroke-2" />

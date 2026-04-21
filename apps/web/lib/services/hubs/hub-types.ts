@@ -84,6 +84,7 @@ export interface UpdateHubInput {
   youtubeUrl?: string | null;
   phoneNumber?: string | null;
   coverImageUrl?: string | null;
+  coverImageOffsetY?: number;
   dpImageUrl?: string | null;
   galleryImageUrls?: string[] | null;
   accentColor?: string | null;
@@ -100,6 +101,7 @@ export interface HubRecord {
   state: string | null;
   country: string | null;
   cover_image_url: string | null;
+  cover_image_offset_y?: number | null;
   dp_image_url: string | null;
   gallery_image_urls: string[] | null;
   website_url: string | null;

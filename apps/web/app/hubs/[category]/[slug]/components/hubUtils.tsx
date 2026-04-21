@@ -98,6 +98,7 @@ export function ImageWithFallback({
   sources,
   alt,
   className,
+  style,
   fallbackClassName,
   fallback,
   loading,
@@ -107,6 +108,7 @@ export function ImageWithFallback({
   sources?: string[];
   alt: string;
   className: string;
+  style?: React.CSSProperties;
   fallbackClassName: string;
   fallback: React.ReactNode;
   loading?: "lazy" | "eager";
@@ -128,6 +130,7 @@ export function ImageWithFallback({
       src={activeSrc}
       alt={alt}
       className={className}
+      style={style}
       loading={loading}
       onError={() => setSourceIndex((current) => current + 1)}
     />

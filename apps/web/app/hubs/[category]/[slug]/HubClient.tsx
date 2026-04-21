@@ -121,7 +121,13 @@ export default function HubClient({
   const demoLiked = searchParams.get("demo_liked") === "1";
 
   const initialHubName = demoHubName || hub.name;
-  const hubDescription = demoHubDescription || hub.description;
+  // Track description as local state so UI reflects saves without needing a route refresh.
+  const [hubDescriptionState, setHubDescriptionState] = useState<string>(hub.description || "");
+  const hubDescription = demoHubDescription || hubDescriptionState;
+  // Cover image vertical offset (0–100). Defaults to 50 (center).
+  const [coverImageOffsetY, setCoverImageOffsetY] = useState<number>(
+    typeof hub.coverImageOffsetY === "number" ? hub.coverImageOffsetY : 50
+  );
   const [isAdminsEditorOpen, setIsAdminsEditorOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isDeleteHubModalOpen, setIsDeleteHubModalOpen] = useState(false);
@@ -1098,6 +1104,7 @@ export default function HubClient({
           onSaveDescription={async (desc: string) => {
             const { updateHub } = await import("@/lib/services/hubs/update-hub");
             await updateHub(hub.id, { description: desc });
+            setHubDescriptionState(desc);
           }}
           onOpenViewer={openViewer}
           customSections={customSections}
@@ -1249,6 +1256,17 @@ export default function HubClient({
           onOpenMembers={() => openCenterMembers("list")}
           onInviteMembers={() => setIsInviteModalOpen(true)}
           onOpenAlerts={() => router.push(`/alerts?hub_id=${hub.id}`)}
+          coverImageOffsetY={coverImageOffsetY}
+          onSaveCoverOffsetY={async (percent) => {
+            setCoverImageOffsetY(percent);
+            try {
+              const { updateHub } = await import("@/lib/services/hubs/update-hub");
+              await updateHub(hub.id, { coverImageOffsetY: percent });
+            } catch (err) {
+              console.error("[hub] save cover offset failed:", err);
+              // Best-effort: surface nothing. Next page load will re-read the DB value.
+            }
+          }}
         />
 
         {mediaSuccess ? <p className="px-4 pt-3 text-sm font-medium text-[var(--ud-brand-primary)]">{mediaSuccess}</p> : null}
