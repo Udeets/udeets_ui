@@ -96,7 +96,10 @@ function toDiscoverHub(hub: SupabaseHub, memberCount?: number): Hub {
     locationLabel: locationLabelFor(hub),
     distanceMi: 0,
     memberCount: count,
-    membersLabel: count === 0 ? "New hub" : `${count} Member${count !== 1 ? "s" : ""}`,
+    // When we have 0 members we'd rather hide the count entirely than show a
+    // "New hub" badge on every just-created hub (which ends up showing on almost
+    // everything since the creator's membership row may not be joined in here).
+    membersLabel: count > 0 ? `${count} Member${count !== 1 ? "s" : ""}` : "",
     visibility: vis === "private" ? "Private" : "Public",
     description: hub.description || "A new uDeets hub is getting set up.",
     href: `/hubs/${hub.category}/${hub.slug}`,
@@ -173,12 +176,16 @@ function HubListItem({ hub }: { hub: Hub }) {
             <span className="text-[11px]">{hub.categoryEmoji}</span>
             <span>{hub.categoryLabel}</span>
           </span>
-          <span>·</span>
-          {/* Member count */}
-          <span className="inline-flex items-center gap-1">
-            <svg className="h-3 w-3 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
-            <span>{hub.membersLabel}</span>
-          </span>
+          {hub.membersLabel ? (
+            <>
+              <span>·</span>
+              {/* Member count — only rendered when we actually have a count to show */}
+              <span className="inline-flex items-center gap-1">
+                <svg className="h-3 w-3 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                <span>{hub.membersLabel}</span>
+              </span>
+            </>
+          ) : null}
           {hub.locationLabel ? (
             <>
               <span>·</span>
