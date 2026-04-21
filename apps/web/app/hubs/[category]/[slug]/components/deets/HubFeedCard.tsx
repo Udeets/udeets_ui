@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { Eye, Flag, Loader2, MessageSquare, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { DeetSharePopover } from "@/components/deets/DeetSharePopover";
+import { useUserProfileModal } from "@/components/UserProfileModalProvider";
 import type { HubContent } from "@/lib/hub-content";
 import type { DeetReactor, DeetViewer } from "@/lib/services/deets/deet-interactions";
 import type { OpenComposerArg } from "../../hooks/useDeetComposer";
@@ -91,6 +92,7 @@ export function HubFeedCard({
   reactors = [],
   commentsSlot,
 }: HubFeedCardProps) {
+  const { openProfileModal } = useUserProfileModal();
   const deetType = resolveDeetType(item.kind, item.deetAttachments);
   const hasRichSection = Boolean(deetType && item.deetAttachments?.some((a) => a.type === deetType));
   const showStructuredRichBody = Boolean(hasRichSection && deetType && deetType !== "poll");
@@ -131,7 +133,12 @@ export function HubFeedCard({
       )}
     >
       <div className="flex items-center gap-3 px-4 pt-4">
-        <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
+        <button
+          type="button"
+          onClick={() => item.authorId && openProfileModal(item.authorId)}
+          aria-label={`Open ${item.author}'s profile`}
+          className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)] transition hover:ring-2 hover:ring-[var(--ud-brand-primary)]/40"
+        >
           <ImageWithFallback
             src={item.authorAvatar || ""}
             sources={item.authorAvatar ? [item.authorAvatar] : []}
@@ -140,10 +147,16 @@ export function HubFeedCard({
             fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-xs font-bold text-[var(--ud-brand-primary)]"
             fallback={initials(item.author)}
           />
-        </div>
+        </button>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[15px] font-semibold text-[var(--ud-text-primary)]">{item.author}</span>
+            <button
+              type="button"
+              onClick={() => item.authorId && openProfileModal(item.authorId)}
+              className="text-[15px] font-semibold text-[var(--ud-text-primary)] transition hover:underline"
+            >
+              {item.author}
+            </button>
             {item.role ? (
               <span className="rounded-full border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--ud-text-muted)]">
                 {item.role === "creator" ? "Creator" : item.role === "admin" ? "Admin" : ""}

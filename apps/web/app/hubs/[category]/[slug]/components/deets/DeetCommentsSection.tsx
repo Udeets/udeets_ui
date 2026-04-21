@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import type { RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useUserProfileModal } from "@/components/UserProfileModalProvider";
 import { EMOJI_TEXT_MAP } from "./feedEmojiReact";
 import { ImageWithFallback, cn, initials } from "../hubUtils";
 
@@ -85,10 +86,19 @@ function CommentRow({
   const isConfirmingDelete = confirmDeleteId === comment.id;
   const avatarSize = isNested ? "h-7 w-7" : "h-9 w-9";
   const [showReactPicker, setShowReactPicker] = useState(false);
+  const { openProfileModal } = useUserProfileModal();
 
   return (
     <div className="group relative flex items-start gap-2.5 py-3">
-      <div className={cn("relative shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]", avatarSize)}>
+      <button
+        type="button"
+        onClick={() => comment.userId && openProfileModal(comment.userId)}
+        aria-label={`Open ${comment.authorName ?? "user"}'s profile`}
+        className={cn(
+          "relative shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)] transition hover:ring-2 hover:ring-[var(--ud-brand-primary)]/40",
+          avatarSize,
+        )}
+      >
         <ImageWithFallback
           src={comment.authorAvatar || ""}
           sources={comment.authorAvatar ? [comment.authorAvatar] : []}
@@ -97,7 +107,7 @@ function CommentRow({
           fallbackClassName={cn("grid h-full w-full place-items-center bg-[var(--ud-brand-light)] font-bold text-[var(--ud-brand-primary)]", isNested ? "text-[8px]" : "text-[10px]")}
           fallback={initials(comment.authorName ?? "User")}
         />
-      </div>
+      </button>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-[var(--ud-text-primary)]">{comment.authorName ?? "User"}</span>

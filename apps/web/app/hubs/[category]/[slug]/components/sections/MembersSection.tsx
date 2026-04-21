@@ -4,6 +4,7 @@ import { Check, Loader2, UserPlus, UsersRound, X } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { initials, cn } from "../hubUtils";
 import { SectionShell } from "../SectionShell";
+import { useUserProfileModal } from "@/components/UserProfileModalProvider";
 
 export type MemberItem = {
   userId: string;
@@ -384,7 +385,12 @@ export function MembersSection({
   onMuteNotifications?: () => void;
   onReportHub?: () => void;
 }) {
+  const { openProfileModal } = useUserProfileModal();
   const hasPending = isCreatorAdmin && pendingRequests && pendingRequests.length > 0;
+  // Kept in state so the legacy MemberProfilePopup can still render for
+  // scenarios where someone wants the hub-scoped detail card instead of the
+  // new platform-wide profile modal. The avatar/name click now opens the
+  // new UserProfileModal by default.
   const [selectedMember, setSelectedMember] = useState<MemberItem | null>(null);
 
   // Sort: creator first, then admins, then members. Current user within their role group.
@@ -471,7 +477,7 @@ export function MembersSection({
                 member={member}
                 isCurrentUser={member.userId === currentUserId}
                 isCreatorAdmin={isCreatorAdmin ?? false}
-                onClickProfile={() => setSelectedMember(member)}
+                onClickProfile={() => openProfileModal(member.userId)}
                 onLeaveHub={member.userId === currentUserId && !["creator", "Creator"].includes(member.role) ? onLeaveHub : undefined}
                 onMuteNotifications={member.userId === currentUserId && !["creator", "Creator"].includes(member.role) ? onMuteNotifications : undefined}
                 onReportHub={member.userId === currentUserId && !["creator", "Creator"].includes(member.role) ? onReportHub : undefined}

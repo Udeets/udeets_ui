@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
+import { useUserProfileModal } from "@/components/UserProfileModalProvider";
 import { mapDeetToDashboardCard } from "@/lib/mappers/deets/map-deet-to-dashboard-card";
 import { listDeets, subscribeToDeets } from "@/lib/services/deets/list-deets";
 import type { DeetAttachment, DeetRecord } from "@/lib/services/deets/deet-types";
@@ -461,6 +462,7 @@ function ReactorsPopup({
 function DashboardPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { openProfileModal } = useUserProfileModal();
   const [authStatus, setAuthStatus] = useState<AuthStatus>("checking");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [selectedHubView, setSelectedHubView] = useState<HubView>("my-hubs");
@@ -1028,10 +1030,14 @@ function DashboardPageContent() {
           .map(deetRecordToDashboardItem)
           .map((item) => {
             const hub = hubById.get(item.hubId);
+            // Deep-link every deet card to the specific post on the hub's
+            // Posts tab. Without ?tab=Posts the hub would open on About and
+            // the ?focus scroll-to-deet logic would silently miss.
+            const href = hub?.href ? `${hub.href}?tab=Posts&focus=${item.id}` : undefined;
             return {
               ...item,
               hubName: hub?.name || "Hub",
-              href: hub?.href,
+              href,
             };
           });
 
@@ -1360,7 +1366,16 @@ function DashboardPageContent() {
 
                       const authorRow = (
                         <div className="flex items-center gap-3 px-4 pt-4">
-                          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (item.authorId) openProfileModal(item.authorId);
+                            }}
+                            aria-label={`Open ${item.authorName}'s profile`}
+                            className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)] transition hover:ring-2 hover:ring-[var(--ud-brand-primary)]/40"
+                          >
                             <ImageWithFallback
                               src={item.authorAvatar || ""}
                               sources={item.authorAvatar ? [item.authorAvatar] : []}
@@ -1369,10 +1384,20 @@ function DashboardPageContent() {
                               fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-xs font-bold text-[var(--ud-brand-primary)]"
                               fallback={initials(item.authorName)}
                             />
-                          </div>
+                          </button>
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="text-[15px] font-semibold text-[var(--ud-text-primary)]">{item.authorName}</span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  if (item.authorId) openProfileModal(item.authorId);
+                                }}
+                                className="text-[15px] font-semibold text-[var(--ud-text-primary)] transition hover:underline"
+                              >
+                                {item.authorName}
+                              </button>
                               {item.hubName ? (
                                 <span className="text-xs text-[var(--ud-text-muted)]">in {item.hubName}</span>
                               ) : null}
