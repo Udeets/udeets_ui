@@ -94,10 +94,10 @@ uDeets is a Next.js community platform (inspired by the Band app). Users create 
 - Uses 9 custom hooks for different concerns (composer, interactions, filters, media, settings, etc.)
 - Modals rendered via `createPortal` to `document.body`
 - `ComposerChildFlow` pattern: parent modal opens child panels (photo, emoji, announcement, notice, poll, event, checkin, settings)
-- `DeetChildModal` wrapper for all composer sub-panels
+- Composer sub-panels are composed inline (legacy `DeetChildModal` wrapper removed in favor of `ComposerChildPanels` / dedicated flows)
 
 ### Composer System
-- **CreateDeetModal** — Full popup composer with rich text editor (contentEditable), formatting toolbar, 8 action buttons, attached items display
+- **CreateDeetModal** — Two-step flow: pick a **content kind** (post, announcement, poll, event, …), then compose. Rich text (`contentEditable`), formatting toolbar, photo strip, and **DeetSettingsFields** (comments, pin, schedule, audience). For the **general update** kind (`post`) only, optional **Local feed tag chips** (#News, #Hazard, #Deals, #Jobs) set `deetSettings.localFeedTag`; submit maps that to `deets.kind` (`News` / `Hazards` / `Deals` / `Jobs`) via `composer/composerMapper.ts` and also stores `localFeedTag` inside the `deet_options` attachment meta. Clearing a chip sets `localFeedTag` back to `null` (ordinary hub post / `Posts` or `Photos` as before).
 - **DeetComposerCard** — Mini inline composer in the feed, matching popup style with all 8 action buttons
 - **ComposerChildPanels.tsx** — 5 child panel components:
   - `AnnouncementChildContent` — title + details
@@ -140,8 +140,8 @@ uDeets is a Next.js community platform (inspired by the Band app). Users create 
 | `hubs/.../components/deets/CreateDeetModal.tsx` | Popup composer |
 | `hubs/.../components/deets/DeetComposerCard.tsx` | Inline feed composer |
 | `hubs/.../components/deets/ComposerChildPanels.tsx` | 5 child modal panels |
-| `hubs/.../components/deets/DeetChildModal.tsx` | Child modal wrapper |
-| `hubs/.../components/deets/deetTypes.ts` | Type definitions |
+| `hubs/.../components/deets/deetTypes.ts` | Type definitions (`DeetSettingsState`, including `localFeedTag`) |
+| `hubs/.../components/deets/composer/composerMapper.ts` | Maps composer state → create/update payload (`resolvedKind`, attachments) |
 | `hubs/.../components/sections/DeetsSection.tsx` | Feed section with comments |
 | `hubs/.../hooks/useDeetComposer.ts` | Composer state management |
 | `hubs/.../hooks/useDeetInteractions.ts` | Like/comment/view state |
@@ -345,6 +345,11 @@ Verified via code audit that the following items from the April 3 session were a
 - Modal: "Still there?" title, live-countdown body, **Stay signed in** primary button (autoFocused) and **Sign out** secondary
 - After auto-signout: redirects to `/auth?redirect=<path>&reason=idle` so the user lands back where they were after re-auth (and you can show a "signed out for security" banner on the auth page by reading `?reason=idle`)
 
+### DD. Local feed + `origin/main` port notes (`integration/main-port`)
+- **`listDeets`** accepts optional `kinds?: string[]` (and `hubIds`, `limit`) so `/local` can query only the deet kinds it needs instead of every row on the platform.
+- **`LocalPageClient`** + nav polish and **`/hubs/.../join`** refinements were brought over via staged cherry-picks from `origin/main` (see repo script `scripts/cherry-pick-origin-main-staged.ps1`).
+- **Composer vs `origin/main`:** On main, Local tags toggled a legacy `postType` field. On this branch they use **`localFeedTag`** on `DeetSettingsState` so they do not collide with the unified composer’s **`jobs`** *template* (job posting). Tag chips only appear when the chosen kind is **general update** (`post`).
+
 ---
 
 ## 9. Known Issues / Pending Items (as of April 19, 2026)
@@ -361,6 +366,8 @@ All migrations below are committed to `supabase/migrations/`. Apply via `supabas
 6. `20260418_create_hub_attachments.sql` — creates `public.attachments` table + backfills DP/cover/gallery URLs
 7. `20260418_create_hub_invitations.sql` — creates `public.hub_invitations` table + RLS
 8. `20260418_expand_deet_media_mime_types.sql` — expands `deet-media` bucket MIME allowlist to include PDF/Office/text/CSV/zip, raises cap to 15 MB
+9. `20260419_create_profile_interactions.sql` — profile likes / follow-style interactions table + RLS (profile modal stack)
+10. `20260419_allow_self_profile_like.sql` — policy tweak for self-actions if required by the above
 
 ### Remaining open items
 
