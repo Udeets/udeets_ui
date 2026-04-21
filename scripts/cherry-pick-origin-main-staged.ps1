@@ -109,14 +109,14 @@ If you still need a file from those commits (e.g. a migration), use:
 )
 
 function Run-Git {
-  param([string[]] $Args)
+  param([string[]] $GitArguments)
   if ($DryRun) {
-    Write-Host ("RUN: git " + ($Args -join " ")) -ForegroundColor Cyan
+    Write-Host ("RUN: git " + ($GitArguments -join " ")) -ForegroundColor Cyan
     return
   }
-  & git @Args
+  & git @GitArguments
   if ($LASTEXITCODE -ne 0) {
-    throw "git $($Args -join ' ') failed (exit $LASTEXITCODE)"
+    throw "git $($GitArguments -join ' ') failed (exit $LASTEXITCODE)"
   }
 }
 
