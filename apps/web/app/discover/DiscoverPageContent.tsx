@@ -10,6 +10,8 @@ import { isUdeetsLogoSrc } from "@/lib/branding";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import type { Hub as SupabaseHub } from "@/types/hub";
 
+type InitialHubRow = SupabaseHub & { _memberCount?: number };
+
 const PAGE_BG = "bg-[var(--ud-bg-page)]";
 
 const ROUTE_AUTH = "/auth";
@@ -265,14 +267,14 @@ function CategoryIcon({
 
 /* ── Main page component ─────────────────────────────────────────── */
 
-export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any[] }) {
+export default function DiscoverPageContent({ initialHubs }: { initialHubs?: InitialHubRow[] }) {
   const searchParams = useSearchParams();
   const isDemoPreview = searchParams.get("demo_preview") === "1";
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<DisplayCategory>("All");
   const [supabaseHubs, setSupabaseHubs] = useState<Hub[]>(() =>
-    (initialHubs ?? []).map((h: any) => toDiscoverHub(h, h._memberCount ?? undefined))
+    (initialHubs ?? []).map((h) => toDiscoverHub(h, h._memberCount ?? undefined))
   );
   const [supabaseLoadState, setSupabaseLoadState] = useState<SupabaseLoadState>(initialHubs && initialHubs.length > 0 ? "success" : "idle");
   const [supabaseLoadError, setSupabaseLoadError] = useState<string | null>(null);

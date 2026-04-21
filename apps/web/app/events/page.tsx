@@ -63,7 +63,7 @@ function buildCalendarGrid(year: number, month: number) {
   const first = new Date(year, month, 1);
   const startDay = first.getDay();
   const rows: Array<Array<{ date: Date; inMonth: boolean }>> = [];
-  let current = new Date(year, month, 1 - startDay);
+  const current = new Date(year, month, 1 - startDay);
 
   for (let r = 0; r < 6; r++) {
     const row: Array<{ date: Date; inMonth: boolean }> = [];

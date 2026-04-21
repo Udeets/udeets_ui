@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertCircle, ArrowLeft, Heart, Loader2, MessageSquare, MoreVertical, Send, Trash2, X } from "lucide-react";
 import { getProfileSummary, type ProfileSummary } from "@/lib/services/profile/get-profile-summary";
 import { useAuthSession } from "@/services/auth/useAuthSession";
@@ -224,7 +224,7 @@ export function UserProfileModal({
   };
 
   const displayName = summary?.fullName ?? "uDeets User";
-  const joinedLabel = useMemo(() => (summary?.joinedAt ? `Joined on ${formatJoined(summary.joinedAt)}` : ""), [summary?.joinedAt]);
+  const joinedLabel = summary?.joinedAt ? `Joined on ${formatJoined(summary.joinedAt)}` : "";
 
   // ── Render ────────────────────────────────────────────────────
   return (

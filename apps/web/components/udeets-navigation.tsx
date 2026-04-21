@@ -617,7 +617,7 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
         }
 
         // ── Fetch recently-accepted join requests for the current user ──
-        let acceptedNotifications: HubNotificationItem[] = [];
+        const acceptedNotifications: HubNotificationItem[] = [];
         {
           const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
           const { data: acceptedMemberships } = await supabase

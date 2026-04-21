@@ -1179,7 +1179,7 @@ function DashboardPageContent() {
           <section className={cn(CARD, "p-6 text-center")}>
             <h1 className={cn("text-2xl font-semibold tracking-tight", TEXT_DARK)}>Loading dashboard…</h1>
             <p className={cn("mt-3 text-sm leading-relaxed", TEXT_MUTED)}>
-              We're checking your session and loading your hubs.
+              We&apos;re checking your session and loading your hubs.
             </p>
           </section>
         </main>
@@ -1199,7 +1199,7 @@ function DashboardPageContent() {
               Redirecting to sign in…
             </h1>
             <p className={cn("mt-3 text-sm leading-relaxed", TEXT_MUTED)}>
-              Your session could not be found, so we're sending you to the auth page.
+              Your session could not be found, so we&apos;re sending you to the auth page.
             </p>
           </section>
         </main>
@@ -1218,7 +1218,7 @@ function DashboardPageContent() {
           <section className={cn(CARD, "mt-6 p-6 text-center sm:p-8")}>
             <h2 className={cn("text-2xl font-semibold tracking-tight", TEXT_DARK)}>Loading your hubs…</h2>
             <p className={cn("mt-3 text-sm leading-6 sm:text-base", TEXT_MUTED)}>
-              We're organizing your dashboard now.
+              We&apos;re organizing your dashboard now.
             </p>
           </section>
         ) : null}
@@ -1226,7 +1226,7 @@ function DashboardPageContent() {
         {hubsLoadError ? (
           <section className={cn(CARD, "mt-6 p-6 text-center sm:p-8")}>
             <h2 className={cn("text-2xl font-semibold tracking-tight", TEXT_DARK)}>
-              We couldn't load your dashboard
+              We couldn&apos;t load your dashboard
             </h2>
             <p className="mt-3 text-sm leading-6 text-red-600 sm:text-base">{hubsLoadError}</p>
           </section>

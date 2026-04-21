@@ -45,7 +45,7 @@ export function ComposerMenuSelect({
   } | null>(null);
 
   useEffect(() => {
-    setMounted(true);
+    queueMicrotask(() => setMounted(true));
   }, []);
 
   const selected = options.find((o) => o.value === value);
@@ -68,7 +68,7 @@ export function ComposerMenuSelect({
 
   useLayoutEffect(() => {
     if (!open) {
-      setMenuBox(null);
+      queueMicrotask(() => setMenuBox(null));
       return;
     }
     updatePosition();

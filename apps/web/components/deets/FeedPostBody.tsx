@@ -34,8 +34,10 @@ export function FeedPostBody({
 
   useLayoutEffect(() => {
     if (!source.trim()) {
-      setExpanded(false);
-      setOverflowing(false);
+      queueMicrotask(() => {
+        setExpanded(false);
+        setOverflowing(false);
+      });
       return;
     }
     const el = outerRef.current;
@@ -43,15 +45,17 @@ export function FeedPostBody({
     if (expanded) {
       el.style.maxHeight = "none";
       requestAnimationFrame(() => {
-        setOverflowing(el.scrollHeight > COLLAPSED_MAX_PX + 2);
+        queueMicrotask(() => setOverflowing(el.scrollHeight > COLLAPSED_MAX_PX + 2));
       });
       return;
     }
     el.style.maxHeight = `${COLLAPSED_MAX_PX}px`;
     requestAnimationFrame(() => {
       const o = el.scrollHeight > el.clientHeight + 2;
-      setOverflowing(o);
-      if (!o) el.style.maxHeight = "none";
+      queueMicrotask(() => {
+        setOverflowing(o);
+        if (!o) el.style.maxHeight = "none";
+      });
     });
   }, [source, expanded]);
 

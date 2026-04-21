@@ -1,12 +1,15 @@
 import { Suspense } from "react";
+import type { Hub as SupabaseHubRow } from "@/types/hub";
 import { getSupabasePublishableOrAnonKey, getSupabaseUrl } from "@/lib/supabase/env";
 import DiscoverPageContent from "./DiscoverPageContent";
+
+type HubRowWithCount = SupabaseHubRow & { _memberCount?: number };
 
 export default async function DiscoverPage() {
   const SUPABASE_URL = getSupabaseUrl();
   const SUPABASE_KEY = getSupabasePublishableOrAnonKey();
 
-  let initialHubs: any[] = [];
+  let initialHubs: HubRowWithCount[] = [];
 
   try {
     const res = await fetch(
@@ -20,9 +23,9 @@ export default async function DiscoverPage() {
       }
     );
     if (res.ok) {
-      const hubs = await res.json();
+      const hubs = (await res.json()) as SupabaseHubRow[];
       // Fetch active member counts
-      const hubIds: string[] = hubs.map((h: any) => h.id);
+      const hubIds: string[] = hubs.map((h) => h.id);
       const countMap = new Map<string, number>();
       if (hubIds.length > 0) {
         try {
@@ -47,7 +50,7 @@ export default async function DiscoverPage() {
         }
       }
       // Attach _memberCount so client can use it
-      initialHubs = hubs.map((h: any) => ({ ...h, _memberCount: countMap.get(h.id) ?? 0 }));
+      initialHubs = hubs.map((h) => ({ ...h, _memberCount: countMap.get(h.id) ?? 0 }));
     }
   } catch (e) {
     console.error("[discover] server fetch:", e);

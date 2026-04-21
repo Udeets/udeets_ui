@@ -8,7 +8,7 @@ function clamp(n: number, min: number, max: number) {
 export function parseTime24ToParts(hhmm: string): { hour12: number; minute: string; ampm: AmPm } {
   const m = hhmm.trim().match(/^(\d{1,2}):(\d{2})$/);
   if (!m) return { hour12: 12, minute: "00", ampm: "AM" };
-  let H = parseInt(m[1], 10);
+  const H = parseInt(m[1], 10);
   const minute = m[2].slice(0, 2).padStart(2, "0");
   if (Number.isNaN(H) || H < 0 || H > 23) return { hour12: 12, minute: "00", ampm: "AM" };
   const ampm: AmPm = H >= 12 ? "PM" : "AM";

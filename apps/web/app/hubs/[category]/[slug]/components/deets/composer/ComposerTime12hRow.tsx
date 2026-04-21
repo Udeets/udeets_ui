@@ -39,6 +39,18 @@ export function ComposerTime12hRow({ value24, onChange24, disabled, optionalTime
   const normalized = normalizeEventTimeTo24h(value24);
   const emptyOptional = optionalTime && !normalized;
 
+  const { hourStr, minuteStr, apStr } = useMemo(() => {
+    const base = normalized || "12:00";
+    const p = parseTime24ToParts(base);
+    return {
+      hourStr: String(p.hour12),
+      minuteStr: p.minute,
+      apStr: p.ampm,
+    };
+  }, [normalized]);
+
+  const hourOptions = useMemo(() => (optionalTime ? [OPTIONAL_SENTINEL, ...HOUR_OPTIONS] : HOUR_OPTIONS), [optionalTime]);
+
   if (emptyOptional) {
     return (
       <ComposerMenuSelect
@@ -53,18 +65,6 @@ export function ComposerTime12hRow({ value24, onChange24, disabled, optionalTime
       />
     );
   }
-
-  const { hourStr, minuteStr, apStr } = useMemo(() => {
-    const base = normalized || "12:00";
-    const p = parseTime24ToParts(base);
-    return {
-      hourStr: String(p.hour12),
-      minuteStr: p.minute,
-      apStr: p.ampm,
-    };
-  }, [normalized]);
-
-  const hourOptions = useMemo(() => (optionalTime ? [OPTIONAL_SENTINEL, ...HOUR_OPTIONS] : HOUR_OPTIONS), [optionalTime]);
 
   const onHour = (v: string) => {
     if (optionalTime && v === NONE) {

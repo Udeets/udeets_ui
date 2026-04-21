@@ -115,6 +115,16 @@ function HubSection({ title, hubs, emptyMessage }: { title?: string; hubs: Mappe
 }
 
 /* ─── City suggestion type ─── */
+type NominatimAddress = {
+  city?: string;
+  town?: string;
+  village?: string;
+  county?: string;
+  state?: string;
+  country?: string;
+};
+type NominatimResult = { address?: NominatimAddress };
+
 type CitySuggestion = {
   display_name: string;
   city: string;
@@ -149,18 +159,21 @@ function LocationChangePopup({
           `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(trimmed)}&addressdetails=1&limit=5&featuretype=city`
         );
         if (res.ok) {
-          const data = await res.json();
+          const data = (await res.json()) as NominatimResult[];
           const mapped: CitySuggestion[] = data
-            .filter((r: any) => r.address)
-            .map((r: any) => ({
+            .filter((r): r is NominatimResult & { address: NominatimAddress } => Boolean(r.address))
+            .map((r) => {
+              const a = r.address;
+              return {
               display_name: [
-                r.address.city || r.address.town || r.address.village || r.address.county || "",
-                r.address.state || "",
-                r.address.country || "",
+                a.city || a.town || a.village || a.county || "",
+                a.state || "",
+                a.country || "",
               ].filter(Boolean).join(", "),
-              city: r.address.city || r.address.town || r.address.village || r.address.county || "",
-              state: r.address.state || "",
-            }))
+              city: a.city || a.town || a.village || a.county || "",
+              state: a.state || "",
+            };
+            })
             .filter((s: CitySuggestion) => s.city);
           // Dedupe by display_name
           const seen = new Set<string>();

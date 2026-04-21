@@ -31,8 +31,10 @@ export function usePlatformRole(): PlatformRoleState {
   useEffect(() => {
     if (status === "loading") return;
     if (!user?.id) {
-      setAppRole(null);
-      setLoaded(true);
+      queueMicrotask(() => {
+        setAppRole(null);
+        setLoaded(true);
+      });
       return;
     }
 
@@ -98,10 +100,12 @@ export function useHubRole(hubId: string, hubCreatedBy: string | null): HubRoleS
   useEffect(() => {
     if (status === "loading") return;
     if (!user?.id) {
-      setAppRole(null);
-      setHubRole(null);
-      setHubStatus(null);
-      setLoaded(true);
+      queueMicrotask(() => {
+        setAppRole(null);
+        setHubRole(null);
+        setHubStatus(null);
+        setLoaded(true);
+      });
       return;
     }
 

@@ -114,7 +114,10 @@ function AdminPanelContent() {
   }, [search, roleFilter, page]);
 
   useEffect(() => {
-    if (canAccess) fetchUsers();
+    if (!canAccess) return;
+    queueMicrotask(() => {
+      void fetchUsers();
+    });
   }, [canAccess, fetchUsers]);
 
   const handleToggleRole = (userId: string, newRole: AppRole) => {

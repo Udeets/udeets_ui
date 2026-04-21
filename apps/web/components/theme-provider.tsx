@@ -40,8 +40,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setThemeState(getStoredTheme());
-    setMounted(true);
+    queueMicrotask(() => {
+      setThemeState(getStoredTheme());
+      setMounted(true);
+    });
   }, []);
 
   useEffect(() => {
