@@ -11,6 +11,8 @@ export type ReactionSummaryProps = {
   currentUserId?: string;
   onOpenReactionsModal?: () => void;
   onToggleComments: () => void;
+  /** When false, comment count is display-only (comments disabled on the post). */
+  commentsInteractive?: boolean;
 };
 
 /**
@@ -22,6 +24,7 @@ export function ReactionSummary({
   commentCount,
   onOpenReactionsModal,
   onToggleComments,
+  commentsInteractive = true,
 }: ReactionSummaryProps) {
   const showReactions = likeCount > 0;
   const showComments = commentCount > 0;
@@ -54,14 +57,21 @@ export function ReactionSummary({
       ) : null}
 
       {showComments ? (
-        <button
-          type="button"
-          onClick={onToggleComments}
-          className="rounded-md py-0.5 text-[var(--ud-text-secondary)] transition hover:text-[var(--ud-text-primary)] motion-reduce:transition-none"
-        >
-          <span className="font-semibold tabular-nums text-[var(--ud-text-primary)]">{commentCount}</span>
-          <span> {commentsLabel}</span>
-        </button>
+        commentsInteractive ? (
+          <button
+            type="button"
+            onClick={onToggleComments}
+            className="rounded-md py-0.5 text-[var(--ud-text-secondary)] transition hover:text-[var(--ud-text-primary)] motion-reduce:transition-none"
+          >
+            <span className="font-semibold tabular-nums text-[var(--ud-text-primary)]">{commentCount}</span>
+            <span> {commentsLabel}</span>
+          </button>
+        ) : (
+          <span className="rounded-md py-0.5 text-[var(--ud-text-muted)]">
+            <span className="font-semibold tabular-nums text-[var(--ud-text-primary)]">{commentCount}</span>
+            <span> {commentsLabel}</span>
+          </span>
+        )
       ) : null}
     </div>
   );

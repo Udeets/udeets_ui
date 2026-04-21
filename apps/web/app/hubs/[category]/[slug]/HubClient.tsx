@@ -37,6 +37,7 @@ import { isGenericDeetTitle } from "@/lib/deets/deet-title";
 import {
   DeetTypeContent,
   getStructuredHeadlineForFeed,
+  headlineForHubFeedPoll,
   PollContent,
   resolveDeetType,
   StructuredDescriptionShell,
@@ -1774,11 +1775,15 @@ export default function HubClient({
                     ? getStructuredHeadlineForFeed(deetType, fi.deetAttachments, fi.title)
                     : null;
                   const headline =
-                    structuredHeadline ||
-                    (fi.title?.trim() && !isGenericDeetTitle(fi.title) ? fi.title.trim() : null);
+                    deetType === "poll"
+                      ? headlineForHubFeedPoll(structuredHeadline, fi.deetAttachments, fi.title)
+                      : structuredHeadline ||
+                        (fi.title?.trim() && !isGenericDeetTitle(fi.title) ? fi.title.trim() : null);
                   const isPlainFeedPost = deetType === null;
-                  const hasTextBlock = Boolean(headline || (fi.body && !hasRichSection) || deetType);
-                  const typeBlockSpacing = headline || (fi.body && !hasRichSection) ? "mt-3" : "mt-1";
+                  const showPollDescriptionBody = Boolean(deetType === "poll" && fi.body?.trim());
+                  const showBodyBlock = Boolean(fi.body?.trim() && (!hasRichSection || showPollDescriptionBody));
+                  const hasTextBlock = Boolean(headline || showBodyBlock || deetType);
+                  const typeBlockSpacing = headline || showBodyBlock ? "mt-3" : "mt-1";
 
                   return (
                     <div
@@ -1790,8 +1795,17 @@ export default function HubClient({
                       {headline ? (
                         <h3 className="text-base font-semibold tracking-tight text-[var(--ud-text-primary)]">{headline}</h3>
                       ) : null}
-                      {fi.body && !hasRichSection ? (
-                        isPlainFeedPost ? (
+                      {showBodyBlock ? (
+                        deetType === "poll" ? (
+                          <StructuredDescriptionShell type="poll" className={headline ? "mt-2" : "mt-3"}>
+                            <FeedPostBody
+                              body={fi.body}
+                              title={fi.title}
+                              dedupeBodyAgainstTitle={false}
+                              className="text-sm leading-relaxed text-[var(--ud-text-secondary)]"
+                            />
+                          </StructuredDescriptionShell>
+                        ) : isPlainFeedPost ? (
                           <StructuredDescriptionShell type="post" className={headline ? "mt-2" : "mt-3"}>
                             <FeedPostBody
                               body={fi.body}
@@ -1814,7 +1828,11 @@ export default function HubClient({
                       ) : null}
                       {deetType === "poll" ? (
                         <div className={typeBlockSpacing}>
-                          <PollContent deetId={fi.id} attachments={fi.deetAttachments} />
+                          <PollContent
+                            deetId={fi.id}
+                            attachments={fi.deetAttachments}
+                            className={showPollDescriptionBody ? "mt-2" : undefined}
+                          />
                         </div>
                       ) : deetType ? (
                         <div className={typeBlockSpacing}>
@@ -1900,43 +1918,56 @@ export default function HubClient({
                 {/* Actions — same behavior as feed card (react / comment / share) */}
                 {viewer.focusId ? (
                   <div className="mt-3 flex shrink-0 gap-1 border-t border-[var(--ud-border)] pt-3 sm:gap-2 lg:mt-4 lg:pt-4">
-                    <div className="min-w-0 flex-1 rounded-lg motion-reduce:active:scale-100">
-                      <EmojiReactButton
-                        deetId={viewer.focusId}
-                        isLiked={likedDeetIds?.has(viewer.focusId) ?? false}
-                        isLiking={likingDeetIds?.has(viewer.focusId) ?? false}
-                        onToggleLike={handleToggleLike}
-                        syncedReaction={myReactionsByDeetId[viewer.focusId] ?? null}
-                        triggerClassName="max-sm:min-h-[44px] w-full rounded-lg active:scale-[0.98] motion-reduce:active:scale-100"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      aria-expanded={imageViewerComposerFooterVisible}
-                      onClick={() => setImageViewerComposerFooterVisible((open) => !open)}
-                      className={cn(
-                        "flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg text-sm transition-colors motion-reduce:transition-none sm:min-h-0 sm:py-2.5 active:scale-[0.98] motion-reduce:active:scale-100",
-                        imageViewerComposerFooterVisible
-                          ? "font-semibold text-[var(--ud-brand-primary)]"
-                          : "text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)]",
-                      )}
-                    >
-                      <MessageSquare className={POST_ICON} />
-                      <span>Comment</span>
-                    </button>
-                    <DeetSharePopover
-                      shareUrl={`${pageOrigin}${hubBaseHref}?focus=${viewer.focusId}`}
-                      title={(() => {
-                        const fi = allFeedItems.find((f) => f.id === viewer.focusId);
-                        const t = (fi?.title ?? viewer.title ?? "").trim();
-                        return t || "Post";
-                      })()}
-                      deetId={viewer.focusId}
-                      onRecordShare={recordShareForDeet}
-                      onCopySuccess={flashViewerShareCopied}
-                      copied={viewerShareCopied}
-                      triggerClassName="max-sm:min-h-[44px] rounded-lg active:scale-[0.98] motion-reduce:active:scale-100"
-                    />
+                    {(() => {
+                      const vItem = allFeedItems.find((f) => f.id === viewer.focusId) ?? null;
+                      const viewerCommentsOn = vItem?.deetOptions?.commentsEnabled !== false;
+                      const viewerReactionsOn = vItem?.deetOptions?.reactionsEnabled !== false;
+                      const shareTitle = ((vItem?.title ?? viewer.title ?? "").trim() || "Post");
+                      return (
+                        <>
+                          <div className="min-w-0 flex-1 rounded-lg motion-reduce:active:scale-100">
+                            <EmojiReactButton
+                              deetId={viewer.focusId}
+                              isLiked={likedDeetIds?.has(viewer.focusId) ?? false}
+                              isLiking={likingDeetIds?.has(viewer.focusId) ?? false}
+                              onToggleLike={handleToggleLike}
+                              syncedReaction={myReactionsByDeetId[viewer.focusId] ?? null}
+                              interactionsEnabled={viewerReactionsOn}
+                              triggerClassName="max-sm:min-h-[44px] w-full rounded-lg active:scale-[0.98] motion-reduce:active:scale-100"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            aria-expanded={imageViewerComposerFooterVisible}
+                            disabled={!viewerCommentsOn}
+                            title={!viewerCommentsOn ? "Comments are turned off for this post" : undefined}
+                            onClick={() => {
+                              if (!viewerCommentsOn) return;
+                              setImageViewerComposerFooterVisible((open) => !open);
+                            }}
+                            className={cn(
+                              "flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg text-sm transition-colors motion-reduce:transition-none sm:min-h-0 sm:py-2.5 active:scale-[0.98] motion-reduce:active:scale-100",
+                              imageViewerComposerFooterVisible
+                                ? "font-semibold text-[var(--ud-brand-primary)]"
+                                : "text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)]",
+                              !viewerCommentsOn && "cursor-not-allowed opacity-50 hover:bg-transparent",
+                            )}
+                          >
+                            <MessageSquare className={POST_ICON} />
+                            <span>Comment</span>
+                          </button>
+                          <DeetSharePopover
+                            shareUrl={`${pageOrigin}${hubBaseHref}?focus=${viewer.focusId}`}
+                            title={shareTitle}
+                            deetId={viewer.focusId}
+                            onRecordShare={recordShareForDeet}
+                            onCopySuccess={flashViewerShareCopied}
+                            copied={viewerShareCopied}
+                            triggerClassName="max-sm:min-h-[44px] rounded-lg active:scale-[0.98] motion-reduce:active:scale-100"
+                          />
+                        </>
+                      );
+                    })()}
                   </div>
                 ) : null}
 
@@ -1956,6 +1987,9 @@ export default function HubClient({
                       key={viewer.focusId}
                       layout="embedded"
                       deetId={viewer.focusId}
+                      allowNewComments={
+                        (allFeedItems.find((f) => f.id === viewer.focusId)?.deetOptions?.commentsEnabled !== false)
+                      }
                       comments={commentsByDeetId[viewer.focusId] ?? []}
                       isLoading={commentLoadingDeetIds.has(viewer.focusId)}
                       isSubmitting={commentSubmittingDeetId === viewer.focusId}

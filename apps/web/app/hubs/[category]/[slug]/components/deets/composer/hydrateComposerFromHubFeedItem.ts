@@ -1,5 +1,6 @@
 import type { HubContent, HubFeedItemKind } from "@/lib/hub-content";
 import { isGenericDeetTitle } from "@/lib/deets/deet-title";
+import { INITIAL_DEET_SETTINGS, type DeetSettingsState } from "../deetTypes";
 import type {
   ComposerAlertExtension,
   ComposerContentKind,
@@ -15,6 +16,30 @@ import { normalizeEventTimeTo24h } from "./composerTimeFormat";
 import { parseSurveyAttachmentQuestions } from "../surveyFeedParse";
 
 const STRUCTURED_FALLBACK_TITLES = new Set(["Announcement", "Notice"]);
+
+/** Turn stored plain `detail` into minimal HTML for the rich-text composer when `body` was empty. */
+function plainDetailToComposerHtml(detail: string): string {
+  const t = detail.trim();
+  if (!t) return "";
+  const esc = t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return `<p>${esc}</p>`;
+}
+
+/** Merge `deet_options` from the feed row into full composer settings for edit. */
+export function deetSettingsStateFromHubFeedItem(item: HubContent["feed"][number]): DeetSettingsState {
+  const o = item.deetOptions;
+  if (!o) return { ...INITIAL_DEET_SETTINGS };
+  return {
+    ...INITIAL_DEET_SETTINGS,
+    ...(typeof o.commentsEnabled === "boolean" ? { commentsEnabled: o.commentsEnabled } : {}),
+    ...(typeof o.reactionsEnabled === "boolean" ? { reactionsEnabled: o.reactionsEnabled } : {}),
+    ...(typeof o.pinToTop === "boolean" ? { pinToTop: o.pinToTop } : {}),
+    ...(o.publishTiming === "now" || o.publishTiming === "scheduled" ? { publishTiming: o.publishTiming } : {}),
+    ...(typeof o.scheduledAt === "string" ? { scheduledAt: o.scheduledAt } : {}),
+    ...(o.audience ? { audience: o.audience } : {}),
+    ...(o.localFeedTag !== undefined ? { localFeedTag: o.localFeedTag } : {}),
+  };
+}
 
 function composerKindFromStructuredAttachments(item: HubContent["feed"][number]): ComposerContentKind | null {
   const atts = item.deetAttachments;
@@ -254,10 +279,29 @@ export function hydrateComposerFromHubFeedItem(item: HubContent["feed"][number])
     (u) => typeof u === "string" && u.trim().length > 0 && !u.startsWith("data:") && !u.startsWith("blob:"),
   );
 
+  let composerBodyHtml = item.body?.trim() ?? "";
+  if (!composerBodyHtml) {
+    const structured = item.deetAttachments?.find((a) => a.type === composerKind);
+    if (
+      structured?.detail?.trim() &&
+      (composerKind === "announcement" ||
+        composerKind === "notice" ||
+        composerKind === "payment" ||
+        composerKind === "alert")
+    ) {
+      composerBodyHtml = plainDetailToComposerHtml(structured.detail);
+    }
+    if (!composerBodyHtml && composerKind === "jobs") {
+      const jobsAtt = item.deetAttachments?.find((a) => a.type === "jobs");
+      const jd = jobsAtt?.jobData?.rolesAndResponsibilities?.trim() || jobsAtt?.detail?.trim();
+      if (jd) composerBodyHtml = plainDetailToComposerHtml(jd);
+    }
+  }
+
   return {
     composerKind,
     composerTitle: title,
-    composerBodyHtml: item.body?.trim() ?? "",
+    composerBodyHtml,
     composerTypePayload,
     editPersistedGalleryUrls,
   };

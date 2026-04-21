@@ -36,19 +36,22 @@ function FeedImage({
   alt,
   sizes,
   className,
+  objectFit = "cover",
 }: {
   src: string;
   sources: string[];
   alt: string;
   sizes: string;
   className: string;
+  objectFit?: "cover" | "contain";
 }) {
   const optimize = shouldOptimizeRemoteImageSrc(src);
+  const fitClass = objectFit === "contain" ? "object-contain" : "object-cover";
 
   if (optimize) {
     return (
       <span className={cn("absolute inset-0 block", className)}>
-        <Image src={src} alt={alt} fill sizes={sizes} className="object-cover" loading="lazy" />
+        <Image src={src} alt={alt} fill sizes={sizes} className={fitClass} loading="lazy" />
       </span>
     );
   }
@@ -59,7 +62,7 @@ function FeedImage({
         src={src}
         sources={sources}
         alt={alt}
-        className="h-full w-full object-cover"
+        className={cn("h-full w-full", fitClass)}
         fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)]/20 text-sm text-[var(--ud-text-muted)]"
         fallback="Image unavailable"
         loading="lazy"
@@ -76,6 +79,7 @@ function MediaTile({
   onClick,
   className,
   overlay,
+  objectFit = "cover",
 }: {
   src: string;
   sources: string[];
@@ -84,6 +88,7 @@ function MediaTile({
   onClick: () => void;
   className?: string;
   overlay?: ReactNode;
+  objectFit?: "cover" | "contain";
 }) {
   return (
     <button
@@ -95,7 +100,7 @@ function MediaTile({
         className
       )}
     >
-      <FeedImage src={src} sources={sources} alt={alt} sizes={sizes} className="" />
+      <FeedImage src={src} sources={sources} alt={alt} sizes={sizes} className="" objectFit={objectFit} />
       {overlay}
     </button>
   );
@@ -134,6 +139,7 @@ export function FeedMedia({
           alt={alt}
           sizes={heroSizes}
           onClick={() => onOpen(0)}
+          objectFit="contain"
           className={cn(
             "max-h-[min(72vw,420px)] w-full shadow-inner",
             isPhotoKind ? "aspect-[4/5] max-h-[480px] sm:aspect-[3/4]" : "aspect-video max-h-[360px]"

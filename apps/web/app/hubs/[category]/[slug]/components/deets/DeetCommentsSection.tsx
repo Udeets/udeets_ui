@@ -270,6 +270,7 @@ export function DeetCommentsSection({
   showComposerFooter = true,
   onRequestComposerFooter,
   onDismissComposerFooter,
+  allowNewComments = true,
 }: {
   deetId: string;
   comments: DeetComment[];
@@ -292,6 +293,8 @@ export function DeetCommentsSection({
   onRequestComposerFooter?: () => void;
   /** When set (e.g. image viewer), second tap on Reply for the same comment closes the composer. */
   onDismissComposerFooter?: () => void;
+  /** When false, hide composer and replies — post has comments disabled in settings. */
+  allowNewComments?: boolean;
 }) {
   const [commentText, setCommentText] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
@@ -490,6 +493,11 @@ export function DeetCommentsSection({
           layout === "embedded" && "flex-1",
         )}
       >
+        {!allowNewComments ? (
+          <p className="border-b border-[var(--ud-border-subtle)] px-4 py-2.5 text-center text-xs text-[var(--ud-text-muted)]">
+            Comments are turned off for this post.
+          </p>
+        ) : null}
         {isLoading ? (
           <div className="flex items-center justify-center py-4">
             <Loader2 className="h-4 w-4 animate-spin text-[var(--ud-text-muted)]" />
@@ -506,7 +514,7 @@ export function DeetCommentsSection({
                     isOwn={!!(currentUserId && comment.userId === currentUserId)}
                     isNested={false}
                     reactedEmoji={commentReactions[comment.id] ?? null}
-                    onReply={startReply}
+                    onReply={allowNewComments ? startReply : undefined}
                     {...commonRowProps}
                   />
                   {replies.length > 2 && !repliesExpandedByParentId[comment.id] && (
@@ -548,12 +556,16 @@ export function DeetCommentsSection({
         ) : (
           <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
             <MessageCircle className="h-8 w-8 text-[var(--ud-text-muted)] opacity-70" aria-hidden />
-            <p className="text-sm text-[var(--ud-text-muted)]">Be the first to comment and join the discussion.</p>
+            <p className="text-sm text-[var(--ud-text-muted)]">
+              {allowNewComments
+                ? "Be the first to comment and join the discussion."
+                : "Comments are turned off for this post."}
+            </p>
           </div>
         )}
       </div>
 
-      {showComposerFooter && replyToId ? (
+      {allowNewComments && showComposerFooter && replyToId ? (
         <div className="flex shrink-0 items-center gap-2 border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)]/80 px-4 py-1.5">
           <Reply className="h-3.5 w-3.5 text-[var(--ud-text-muted)]" />
           <span className="text-xs text-[var(--ud-text-muted)]">
@@ -569,7 +581,7 @@ export function DeetCommentsSection({
         </div>
       ) : null}
 
-      {showComposerFooter ? (
+      {allowNewComments && showComposerFooter ? (
       <div
         className={cn(
           "sticky bottom-0 z-10 shrink-0 border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] px-4 py-2.5 shadow-[0_-6px_16px_-8px_rgba(0,0,0,0.08)]",

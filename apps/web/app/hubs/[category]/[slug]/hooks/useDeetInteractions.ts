@@ -30,6 +30,28 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   ]);
 }
 
+function isLikelyStaleSessionError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  return /jwt|session|expired|not authenticated|401|invalid refresh/i.test(msg);
+}
+
+async function addDeetCommentWithSessionRetry(
+  deetId: string,
+  body: string,
+  parentId?: string,
+  attachments?: { imageUrl?: string; attachmentUrl?: string; attachmentName?: string },
+): Promise<DeetComment> {
+  try {
+    return await addDeetComment(deetId, body, parentId, attachments);
+  } catch (error) {
+    if (!isLikelyStaleSessionError(error)) throw error;
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    await supabase.auth.refreshSession();
+    return await addDeetComment(deetId, body, parentId, attachments);
+  }
+}
+
 export function useDeetInteractions(feedItems: HubContent["feed"]) {
   const [likedDeetIds, setLikedDeetIds] = useState<Set<string>>(new Set());
   /** Canonical emoji per deet for the signed-in user (only keys where the user has reacted). */
@@ -283,7 +305,11 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
     setCommentError(null);
 
     try {
-      const newComment = await withTimeout(addDeetComment(deetId, body, parentId, attachments), 10_000, "Submit comment");
+      const newComment = await withTimeout(
+        addDeetCommentWithSessionRetry(deetId, body, parentId, attachments),
+        10_000,
+        "Submit comment",
+      );
       if (parentId) {
         // Add reply under its parent
         setCommentsByDeetId((prev) => {

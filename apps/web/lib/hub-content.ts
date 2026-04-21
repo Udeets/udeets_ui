@@ -65,6 +65,17 @@ export type HubFeedItemAttachment = {
   jobData?: HubJobDataPersisted;
 };
 
+/** Parsed from a `deet_options` attachment `meta` JSON (v1). Omitted fields = not set in DB yet. */
+export type HubFeedDeetOptions = {
+  commentsEnabled?: boolean;
+  reactionsEnabled?: boolean;
+  pinToTop?: boolean;
+  publishTiming?: "now" | "scheduled";
+  scheduledAt?: string;
+  audience?: "hub_default" | "admins_only" | "members_only" | "everyone_with_access";
+  localFeedTag?: "news" | "hazard" | "deal" | "jobs" | null;
+};
+
 export type HubFeedItem = {
   id: string;
   kind: HubFeedItemKind;
@@ -84,6 +95,8 @@ export type HubFeedItem = {
   views: number;
   shares: number;
   deetAttachments?: HubFeedItemAttachment[];
+  /** Hub behavior flags from `deet_options` when the composer saved them. */
+  deetOptions?: HubFeedDeetOptions;
 };
 
 export type HubEventItem = {

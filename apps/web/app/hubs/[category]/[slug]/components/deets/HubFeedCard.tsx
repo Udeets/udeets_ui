@@ -15,6 +15,7 @@ import {
   DeetTypeContent,
   DeetTypeKindChip,
   getStructuredHeadlineForFeed,
+  headlineForHubFeedPoll,
   PollContent,
   resolveDeetType,
   StructuredDescriptionShell,
@@ -93,6 +94,8 @@ export function HubFeedCard({
   commentsSlot,
 }: HubFeedCardProps) {
   const { openProfileModal } = useUserProfileModal();
+  const commentsEnabled = item.deetOptions?.commentsEnabled !== false;
+  const reactionsEnabled = item.deetOptions?.reactionsEnabled !== false;
   const deetType = resolveDeetType(item.kind, item.deetAttachments);
   const hasRichSection = Boolean(deetType && item.deetAttachments?.some((a) => a.type === deetType));
   const showStructuredRichBody = Boolean(hasRichSection && deetType && deetType !== "poll");
@@ -102,8 +105,12 @@ export function HubFeedCard({
   /** Plain hub post: no structured attachment type — title (h3) and body are separate; do not strip body against title. */
   const isPlainFeedPost = deetType === null;
   const headline =
-    structuredHeadline ||
-    (item.title?.trim() && !isGenericDeetTitle(item.title) ? item.title.trim() : null);
+    deetType === "poll"
+      ? headlineForHubFeedPoll(structuredHeadline, item.deetAttachments, item.title)
+      : structuredHeadline ||
+        (item.title?.trim() && !isGenericDeetTitle(item.title) ? item.title.trim() : null);
+  const showPollDescriptionBody = Boolean(deetType === "poll" && item.body?.trim());
+  const showBodyBlock = Boolean(item.body?.trim() && (!hasRichSection || showPollDescriptionBody));
   const kindMeta = feedKindMeta(item.kind);
   const showEngagementSummary = likeCount > 0 || commentCount > 0;
 
@@ -307,8 +314,17 @@ export function HubFeedCard({
         </h3>
       ) : null}
 
-      {item.body && !hasRichSection ? (
-        isPlainFeedPost ? (
+      {showBodyBlock ? (
+        deetType === "poll" ? (
+          <StructuredDescriptionShell type="poll" className={headline ? "mt-2" : "mt-3"}>
+            <FeedPostBody
+              body={item.body}
+              title={item.title}
+              dedupeBodyAgainstTitle={false}
+              className="text-[15px] leading-relaxed text-[var(--ud-text-secondary)]"
+            />
+          </StructuredDescriptionShell>
+        ) : isPlainFeedPost ? (
           <StructuredDescriptionShell type="post" className={headline ? "mt-2" : "mt-3"}>
             <FeedPostBody
               body={item.body}
@@ -327,7 +343,11 @@ export function HubFeedCard({
         )
       ) : null}
       {deetType === "poll" ? (
-        <PollContent deetId={item.id} attachments={item.deetAttachments} />
+        <PollContent
+          deetId={item.id}
+          attachments={item.deetAttachments}
+          className={showPollDescriptionBody ? "mt-2" : undefined}
+        />
       ) : deetType ? (
         <DeetTypeContent
           type={deetType}
@@ -364,6 +384,7 @@ export function HubFeedCard({
             currentUserId={currentUserId}
             onOpenReactionsModal={onOpenReactionsSummary}
             onToggleComments={onToggleComments}
+            commentsInteractive={commentsEnabled}
           />
         ) : null}
 
@@ -380,19 +401,27 @@ export function HubFeedCard({
               isLiking={isLiking}
               onToggleLike={onToggleLike}
               syncedReaction={myReactionType ?? null}
+              interactionsEnabled={reactionsEnabled}
               triggerClassName="max-sm:min-h-[44px] rounded-lg active:scale-[0.98] motion-reduce:active:scale-100"
             />
           </div>
           <button
             type="button"
-            onClick={onToggleComments}
+            onClick={() => {
+              if (!commentsEnabled) return;
+              onToggleComments();
+            }}
+            disabled={!commentsEnabled}
+            title={!commentsEnabled ? "Comments are turned off for this post" : undefined}
             aria-expanded={expandedComments}
             className={cn(
-              "flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg text-sm transition-colors hover:bg-[var(--ud-bg-subtle)] motion-reduce:transition-none sm:min-h-0 sm:py-2.5",
+              "flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg text-sm transition-colors motion-reduce:transition-none sm:min-h-0 sm:py-2.5",
               expandedComments
                 ? "font-semibold text-[var(--ud-brand-primary)]"
                 : "text-[var(--ud-text-muted)]",
-              "active:scale-[0.98] motion-reduce:active:scale-100",
+              commentsEnabled
+                ? "hover:bg-[var(--ud-bg-subtle)] active:scale-[0.98] motion-reduce:active:scale-100"
+                : "cursor-not-allowed opacity-50",
             )}
           >
             <MessageSquare className={POST_ICON} />
@@ -410,7 +439,7 @@ export function HubFeedCard({
         </div>
       </div>
 
-      <CollapsibleEngagementPanel open={expandedComments && Boolean(commentsSlot)}>
+      <CollapsibleEngagementPanel open={commentsEnabled && expandedComments && Boolean(commentsSlot)}>
         {commentsSlot}
       </CollapsibleEngagementPanel>
     </article>

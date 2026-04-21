@@ -66,6 +66,14 @@ const KIND_GROUPS: Array<{ heading: string; hint?: string; items: KindOption[] }
   },
 ];
 
+function composerKindPickerLabel(kind: ComposerContentKind): string {
+  for (const g of KIND_GROUPS) {
+    const hit = g.items.find((i) => i.value === kind);
+    if (hit) return hit.label;
+  }
+  return headerTitle(kind);
+}
+
 function headerTitle(kind: ComposerContentKind): string {
   const labels: Record<ComposerContentKind, string> = {
     post: "Write Your Deet",
@@ -461,6 +469,20 @@ export function CreateDeetModal({
 
             {composerEntryStep === "compose" ? (
             <>
+            <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)]/60 px-3 py-2.5 sm:px-3.5">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ud-text-muted)]">
+                {isEditMode ? "Post type" : "Type"}
+              </span>
+              <span className="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-3 py-1 text-xs font-semibold text-[var(--ud-text-primary)]">
+                {kindIcon(composerKind) ? <span className="shrink-0">{kindIcon(composerKind)}</span> : null}
+                <span className="truncate">{composerKindPickerLabel(composerKind)}</span>
+              </span>
+              {!isEditMode ? (
+                <span className="text-[11px] leading-snug text-[var(--ud-text-muted)]">
+                  Use the back arrow to choose a different type.
+                </span>
+              ) : null}
+            </div>
             {composerKind === "post" && onSetPostType ? (
               <div className="mb-4 flex flex-wrap items-center gap-2">
                 <span className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--ud-text-muted)]">Tag</span>

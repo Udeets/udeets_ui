@@ -192,6 +192,24 @@ export function getStructuredHeadlineForFeed(
   return pick;
 }
 
+/**
+ * Card-level heading for polls: hide when it would only repeat the ballot question
+ * (the question stays with {@link PollContent}).
+ */
+export function headlineForHubFeedPoll(
+  structuredHeadline: string | null,
+  attachments: HubFeedItemAttachment[] | undefined,
+  feedTitle: string | undefined,
+): string | null {
+  const pollQ = attachments?.find((a) => a.type === "poll")?.title?.trim() ?? "";
+  const fromStructure = structuredHeadline?.trim() ?? "";
+  if (fromStructure && pollQ && fromStructure === pollQ) return null;
+  if (fromStructure) return fromStructure;
+  const t = feedTitle?.trim() ?? "";
+  if (t && !isGenericDeetTitle(t) && (!pollQ || t !== pollQ)) return t;
+  return null;
+}
+
 export function StructuredDescriptionShell({
   type,
   className,
@@ -450,17 +468,36 @@ export function DeetTypeContent({
 /** Fired on `window` after a poll vote is saved so every mounted {@link PollContent} for that deet refetches. */
 export const UDEETS_POLL_VOTE_UPDATED_EVENT = "udeets-poll-vote-updated";
 
-export function PollContent({ deetId, attachments }: { deetId: string; attachments?: HubFeedItemAttachment[] }) {
+export function PollContent({
+  deetId,
+  attachments,
+  className,
+}: {
+  deetId: string;
+  attachments?: HubFeedItemAttachment[];
+  /** Merges onto the outer poll card (e.g. spacing when a description sits above). */
+  className?: string;
+}) {
   const matchingAtt = attachments?.find((a) => a.type === "poll");
   const options = matchingAtt?.options ?? [];
   const parsedOptions =
     options.length > 0 ? options : (matchingAtt?.detail?.split(" · ").filter(Boolean) ?? []);
   const parsedOptionsKey = parsedOptions.join("\u0001");
+  const allowMultiSelect = Boolean(matchingAtt?.pollSettings?.allowMultiSelect);
+  const multiSelectLimit =
+    matchingAtt?.pollSettings?.multiSelectLimit === undefined || matchingAtt?.pollSettings?.multiSelectLimit === null
+      ? null
+      : matchingAtt.pollSettings.multiSelectLimit;
 
   const parsedOptionsRef = useRef(parsedOptions);
   parsedOptionsRef.current = parsedOptions;
+  const allowMultiRef = useRef(allowMultiSelect);
+  allowMultiRef.current = allowMultiSelect;
+  const limitRef = useRef(multiSelectLimit);
+  limitRef.current = multiSelectLimit;
 
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  /** Indices the current user selected (0-based). */
+  const [mySelected, setMySelected] = useState<number[]>([]);
   const [isVoting, setIsVoting] = useState(false);
   const [totalVotes, setTotalVotes] = useState(0);
   const [voteCounts, setVoteCounts] = useState<number[]>(() => parsedOptions.map(() => 0));
@@ -485,11 +522,8 @@ export function PollContent({ deetId, attachments }: { deetId: string; attachmen
       setTotalVotes(total);
 
       const myDeetVotes = myVotes.filter((v) => v.deetId === deetId);
-      if (myDeetVotes.length > 0) {
-        setSelectedIndex(myDeetVotes[0].optionIndex);
-      } else {
-        setSelectedIndex(null);
-      }
+      const mine = [...new Set(myDeetVotes.map((v) => v.optionIndex))].sort((a, b) => a - b);
+      setMySelected(mine);
     } catch {
       // Table might not exist yet
     }
@@ -518,69 +552,108 @@ export function PollContent({ deetId, attachments }: { deetId: string; attachmen
     return () => window.removeEventListener(UDEETS_POLL_VOTE_UPDATED_EVENT, onSync);
   }, [deetId, loadPollState]);
 
-  const handleVote = async (index: number) => {
+  const handleVoteSingle = async (index: number) => {
     if (isVoting) return;
     setIsVoting(true);
-
-    const prevIndex = selectedIndex;
-    setSelectedIndex(index);
+    const prevMine = [...mySelected];
+    const prevSingle = prevMine[0] ?? null;
+    setMySelected([index]);
     setVoteCounts((prev) => {
       const next = [...prev];
-      if (prevIndex !== null && prevIndex < next.length) next[prevIndex]--;
+      if (prevSingle !== null && prevSingle < next.length) next[prevSingle]--;
       if (index < next.length) next[index]++;
       return next;
     });
-    if (prevIndex === null) setTotalVotes((t) => t + 1);
+    if (prevSingle === null) setTotalVotes((t) => t + 1);
 
     try {
       const { castPollVote } = await import("@/lib/services/deets/poll-votes");
       const success = await castPollVote(deetId, index);
       if (!success) {
-        setSelectedIndex(prevIndex);
+        setMySelected(prevMine);
         setVoteCounts((prev) => {
           const next = [...prev];
           if (index < next.length) next[index]--;
-          if (prevIndex !== null && prevIndex < next.length) next[prevIndex]++;
+          if (prevSingle !== null && prevSingle < next.length) next[prevSingle]++;
           return next;
         });
-        if (prevIndex === null) setTotalVotes((t) => t - 1);
+        if (prevSingle === null) setTotalVotes((t) => t - 1);
       } else if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent(UDEETS_POLL_VOTE_UPDATED_EVENT, { detail: { deetId } }));
       }
     } catch {
-      setSelectedIndex(prevIndex);
+      setMySelected(prevMine);
       setVoteCounts((prev) => {
         const next = [...prev];
         if (index < next.length) next[index]--;
-        if (prevIndex !== null && prevIndex < next.length) next[prevIndex]++;
+        if (prevSingle !== null && prevSingle < next.length) next[prevSingle]++;
         return next;
       });
-      if (prevIndex === null) setTotalVotes((t) => t - 1);
+      if (prevSingle === null) setTotalVotes((t) => t - 1);
     } finally {
       setIsVoting(false);
     }
   };
 
+  const handleVoteMulti = async (index: number) => {
+    if (isVoting) return;
+    setIsVoting(true);
+    try {
+      const { togglePollMultiVote } = await import("@/lib/services/deets/poll-votes");
+      const success = await togglePollMultiVote(deetId, index, limitRef.current);
+      if (success) {
+        await loadPollState();
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent(UDEETS_POLL_VOTE_UPDATED_EVENT, { detail: { deetId } }));
+        }
+      }
+    } finally {
+      setIsVoting(false);
+    }
+  };
+
+  const handleVote = (index: number) => {
+    if (allowMultiRef.current) void handleVoteMulti(index);
+    else void handleVoteSingle(index);
+  };
+
   if (!parsedOptions.length) return null;
 
+  const hasAnyMine = mySelected.length > 0;
+  const question = (matchingAtt?.title || "Poll").trim() || "Poll";
+
   return (
-    <div className="mx-4 mt-3 overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)]/30">
-      <div className="flex items-center gap-3 px-4 py-3">
+    <div
+      className={cn(
+        "mx-4 mt-3 overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)]/30",
+        className,
+      )}
+    >
+      <div className="flex gap-3 px-4 pb-2 pt-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
           <BarChart3 className="h-5 w-5 stroke-[1.5] text-emerald-600" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-emerald-600">Poll Opened</span>
-            <span className="text-xs text-[var(--ud-text-muted)]">{totalVotes} voted</span>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--ud-text-muted)]">Poll</p>
+          <p className="mt-1 text-[15px] font-semibold leading-snug tracking-tight text-[var(--ud-text-primary)]">
+            {question}
+          </p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--ud-text-muted)]">
+            <span>
+              <span className="font-semibold tabular-nums text-[var(--ud-text-secondary)]">{totalVotes}</span> voted
+            </span>
+            {allowMultiSelect ? (
+              <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--ud-text-muted)]">
+                · Multi-select
+              </span>
+            ) : null}
           </div>
-          <p className="mt-0.5 text-sm font-semibold text-[var(--ud-text-primary)]">{matchingAtt?.title || "Poll"}</p>
         </div>
       </div>
 
       <div className="border-t border-[var(--ud-border-subtle)] px-4 py-2">
         {parsedOptions.map((opt, i) => {
-          const isSelected = selectedIndex === i;
+          const isSelected = mySelected.includes(i);
           const count = voteCounts[i] ?? 0;
           const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
 
@@ -592,10 +665,10 @@ export function PollContent({ deetId, attachments }: { deetId: string; attachmen
               onClick={() => handleVote(i)}
               className={cn(
                 "relative flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-sm transition",
-                isSelected ? "text-emerald-700" : "text-[var(--ud-text-primary)] hover:bg-[var(--ud-bg-subtle)]"
+                isSelected ? "text-emerald-700" : "text-[var(--ud-text-primary)] hover:bg-[var(--ud-bg-subtle)]",
               )}
             >
-              {selectedIndex !== null && totalVotes > 0 && (
+              {hasAnyMine && totalVotes > 0 && (
                 <div
                   className="pointer-events-none absolute inset-y-0 left-0 overflow-hidden rounded-l-lg transition-[width]"
                   style={{ width: `${pct}%` }}
@@ -605,14 +678,23 @@ export function PollContent({ deetId, attachments }: { deetId: string; attachmen
               )}
               <span
                 className={cn(
-                  "relative z-10 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition",
-                  isSelected ? "border-emerald-500 bg-emerald-500" : "border-gray-300"
+                  "relative z-10 flex h-4 w-4 shrink-0 items-center justify-center border-2 transition",
+                  allowMultiSelect ? "rounded-sm" : "rounded-full",
+                  isSelected ? "border-emerald-500 bg-emerald-500" : "border-gray-300",
                 )}
               >
-                {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                {isSelected ? (
+                  allowMultiSelect ? (
+                    <span className="text-[10px] font-bold leading-none text-white" aria-hidden>
+                      ✓
+                    </span>
+                  ) : (
+                    <span className="h-1.5 w-1.5 rounded-full bg-white" aria-hidden />
+                  )
+                ) : null}
               </span>
               <span className="relative z-10 flex-1 text-left">{opt}</span>
-              {selectedIndex !== null && totalVotes > 0 && (
+              {hasAnyMine && totalVotes > 0 && (
                 <span className="relative z-10 text-xs text-[var(--ud-text-muted)]">{count}</span>
               )}
             </button>

@@ -58,20 +58,84 @@ export async function castPollVote(deetId: string, optionIndex: number): Promise
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
 
-  // Remove existing votes for this poll (single-select behavior)
-  await supabase
+  const { error: deleteError } = await supabase
     .from("poll_votes")
     .delete()
     .eq("deet_id", deetId)
     .eq("user_id", user.id);
 
-  // Insert new vote
+  if (deleteError) {
+    console.error("[poll-votes] delete before cast error:", deleteError);
+    return false;
+  }
+
   const { error } = await supabase
     .from("poll_votes")
     .insert({ deet_id: deetId, user_id: user.id, option_index: optionIndex });
 
   if (error) {
     console.error("[poll-votes] cast error:", error);
+    return false;
+  }
+
+  return true;
+}
+
+type PollVoteRow = { id: string; option_index: number; created_at: string };
+
+/**
+ * Multi-select: tap an option to add it; tap again to remove. Enforces `multiSelectLimit` (null = unlimited).
+ */
+export async function togglePollMultiVote(
+  deetId: string,
+  optionIndex: number,
+  multiSelectLimit: number | null,
+): Promise<boolean> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  const { data: rows, error: fetchError } = await supabase
+    .from("poll_votes")
+    .select("id, option_index, created_at")
+    .eq("deet_id", deetId)
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: true });
+
+  if (fetchError) {
+    console.error("[poll-votes] toggle fetch error:", fetchError);
+    return false;
+  }
+
+  const mine = (rows ?? []) as PollVoteRow[];
+  const hit = mine.find((r) => r.option_index === optionIndex);
+  if (hit) {
+    const { error } = await supabase.from("poll_votes").delete().eq("id", hit.id);
+    if (error) {
+      console.error("[poll-votes] toggle remove error:", error);
+      return false;
+    }
+    return true;
+  }
+
+  const limit = multiSelectLimit == null ? Number.POSITIVE_INFINITY : Math.max(1, multiSelectLimit);
+  if (mine.length >= limit) {
+    const oldest = mine[0];
+    if (oldest?.id) {
+      const { error: evictError } = await supabase.from("poll_votes").delete().eq("id", oldest.id);
+      if (evictError) {
+        console.error("[poll-votes] toggle evict error:", evictError);
+        return false;
+      }
+    }
+  }
+
+  const { error } = await supabase
+    .from("poll_votes")
+    .insert({ deet_id: deetId, user_id: user.id, option_index: optionIndex });
+
+  if (error) {
+    console.error("[poll-votes] toggle insert error:", error);
     return false;
   }
 

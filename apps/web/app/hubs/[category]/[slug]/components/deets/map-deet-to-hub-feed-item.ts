@@ -1,5 +1,6 @@
 import type {
   HubContent,
+  HubFeedDeetOptions,
   HubFeedItemAttachment,
   HubFeedItemKind,
   HubJobDataPersisted,
@@ -28,6 +29,37 @@ function formatDeetTime(createdAt?: string | null) {
   if (diffDays < 7) return `${diffDays}d ago`;
 
   return new Date(createdAt).toLocaleDateString();
+}
+
+const LOCAL_FEED_TAGS = new Set(["news", "hazard", "deal", "jobs"]);
+const DEET_AUDIENCES = new Set(["hub_default", "admins_only", "members_only", "everyone_with_access"]);
+
+function parseDeetOptionsMeta(attachments: unknown[] | undefined): HubFeedDeetOptions | undefined {
+  if (!Array.isArray(attachments)) return undefined;
+  const raw = attachments.find(
+    (a) => a && typeof a === "object" && (a as DeetAttachment).type === "deet_options",
+  ) as DeetAttachment | undefined;
+  const metaStr = typeof raw?.meta === "string" ? raw.meta.trim() : "";
+  if (!metaStr) return undefined;
+  try {
+    const m = JSON.parse(metaStr) as Record<string, unknown>;
+    const out: HubFeedDeetOptions = {};
+    if (typeof m.commentsEnabled === "boolean") out.commentsEnabled = m.commentsEnabled;
+    if (typeof m.reactionsEnabled === "boolean") out.reactionsEnabled = m.reactionsEnabled;
+    if (typeof m.pinToTop === "boolean") out.pinToTop = m.pinToTop;
+    if (m.publishTiming === "now" || m.publishTiming === "scheduled") out.publishTiming = m.publishTiming;
+    if (typeof m.scheduledAt === "string") out.scheduledAt = m.scheduledAt;
+    if (typeof m.audience === "string" && DEET_AUDIENCES.has(m.audience)) {
+      out.audience = m.audience as HubFeedDeetOptions["audience"];
+    }
+    if (m.localFeedTag === null) out.localFeedTag = null;
+    else if (typeof m.localFeedTag === "string" && LOCAL_FEED_TAGS.has(m.localFeedTag)) {
+      out.localFeedTag = m.localFeedTag as HubFeedDeetOptions["localFeedTag"];
+    }
+    return Object.keys(out).length ? out : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export function mapDeetToHubFeedItem(item: Partial<DeetRecord>, hubCreatorId?: string): HubContent["feed"][number] {
@@ -72,6 +104,7 @@ export function mapDeetToHubFeedItem(item: Partial<DeetRecord>, hubCreatorId?: s
 
   const createdRaw = card.createdAt ?? item.created_at;
   const createdMs = createdRaw ? new Date(createdRaw).getTime() : NaN;
+  const deetOptions = parseDeetOptionsMeta(item.attachments as unknown[] | undefined);
 
   return {
     id: item.id ?? "",
@@ -90,6 +123,7 @@ export function mapDeetToHubFeedItem(item: Partial<DeetRecord>, hubCreatorId?: s
     views: item.view_count ?? 0,
     shares: item.share_count ?? 0,
     deetAttachments: deetAttachments.length > 0 ? deetAttachments : undefined,
+    deetOptions,
   };
 }
 

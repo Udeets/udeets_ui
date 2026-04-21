@@ -31,6 +31,8 @@ export function EmojiReactButton({
   /** Canonical emoji from server / parent; keeps picker remove/change logic correct after refresh. */
   syncedReaction,
   triggerClassName,
+  /** When false, reactions are disabled for this post (deet settings). */
+  interactionsEnabled = true,
 }: {
   deetId: string;
   isLiked: boolean;
@@ -38,6 +40,7 @@ export function EmojiReactButton({
   onToggleLike?: (deetId: string, reactionType?: string) => void;
   syncedReaction?: string | null;
   triggerClassName?: string;
+  interactionsEnabled?: boolean;
 }) {
   const [showPicker, setShowPicker] = useState(false);
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
@@ -85,6 +88,7 @@ export function EmojiReactButton({
 
   /** Tap / click / Enter: open or close the emoji picker so every reaction is one tap away. */
   const handleReactClick = () => {
+    if (!interactionsEnabled) return;
     setShowPicker((v) => !v);
   };
 
@@ -154,13 +158,15 @@ export function EmojiReactButton({
             handleReactClick();
           }
         }}
-        disabled={isLiking}
+        disabled={isLiking || !interactionsEnabled}
+        title={!interactionsEnabled ? "Reactions are turned off for this post" : undefined}
         aria-expanded={showPicker}
         aria-haspopup="listbox"
         style={{ touchAction: "manipulation" }}
         className={cn(
           "flex w-full items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]",
           isLiked ? "font-semibold text-[var(--ud-brand-primary)]" : "text-[var(--ud-text-muted)]",
+          !interactionsEnabled && "cursor-not-allowed opacity-50 hover:bg-transparent",
           triggerClassName,
         )}
       >

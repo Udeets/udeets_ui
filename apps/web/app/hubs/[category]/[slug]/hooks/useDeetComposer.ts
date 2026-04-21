@@ -20,7 +20,10 @@ import {
 import type { ComposerContentKind, ComposerTypePayload } from "../components/deets/composer/composerTypes";
 import { migrateComposerTypePayload } from "../components/deets/composer/composerMigrate";
 import { defaultTypePayload } from "../components/deets/composer/composerTypes";
-import { hydrateComposerFromHubFeedItem } from "../components/deets/composer/hydrateComposerFromHubFeedItem";
+import {
+  deetSettingsStateFromHubFeedItem,
+  hydrateComposerFromHubFeedItem,
+} from "../components/deets/composer/hydrateComposerFromHubFeedItem";
 import { sanitizeDeetBodyHtml } from "@/lib/deets/sanitize-deet-html";
 
 const INITIAL_DEET_FORMATTING: DeetFormattingState = {
@@ -233,7 +236,7 @@ export function useDeetComposer({
       setSelectedPhotoFiles([]);
       setDeetFormatting(INITIAL_DEET_FORMATTING);
       setIsFontSizeMenuOpen(false);
-      setDeetSettings({ ...INITIAL_DEET_SETTINGS });
+      setDeetSettings(deetSettingsStateFromHubFeedItem(feedItem));
       setPickPhotosOnOpen(false);
       setComposerAccessoryPanel(null);
       setActiveComposerChild(null);

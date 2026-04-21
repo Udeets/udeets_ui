@@ -413,13 +413,14 @@ export function DeetsSection({
   const buildCommentsSection = (
     deetId: string,
     layout: "inline" | "sheet",
-    opts?: { autoFocusComposer?: boolean },
+    opts?: { autoFocusComposer?: boolean; allowNewComments?: boolean },
   ) => (
     <DeetCommentsSection
       layout={layout}
       deetId={deetId}
       autoFocusComposer={opts?.autoFocusComposer ?? false}
       onAutoFocusConsumed={() => setFocusComposerDeetId(null)}
+      allowNewComments={opts?.allowNewComments !== false}
       comments={commentsByDeetId?.[deetId] ?? []}
       isLoading={commentLoadingDeetIds?.has(deetId) ?? false}
       isSubmitting={commentSubmittingDeetId === deetId}
@@ -748,6 +749,7 @@ export function DeetsSection({
                       expandedCommentDeetId === item.id && !useCommentSheet
                         ? buildCommentsSection(item.id, "inline", {
                             autoFocusComposer: focusComposerDeetId === item.id,
+                            allowNewComments: item.deetOptions?.commentsEnabled !== false,
                           })
                         : null
                     }
@@ -818,6 +820,7 @@ export function DeetsSection({
           <CommentThreadSheet key={sheetId} title="Comments" onClose={() => handleToggleCommentsFor(sheetId)}>
             {buildCommentsSection(sheetId, "sheet", {
               autoFocusComposer: focusComposerDeetId === sheetId,
+              allowNewComments: post.deetOptions?.commentsEnabled !== false,
             })}
           </CommentThreadSheet>
         );
