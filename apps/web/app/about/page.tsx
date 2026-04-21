@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Globe, Heart, Megaphone, Shield, Sparkles, Target, Users, Zap } from "lucide-react";
+import { ArrowRight, Globe, Heart, Inbox, Layers, Megaphone, Shield, Sparkles, Target, TrendingDown, Users, Wallet, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { UdeetsBrandLockup, UdeetsLogoIcon } from "@/components/brand-logo";
 
@@ -107,12 +107,35 @@ function OrbitGraphic() {
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-[var(--ud-bg-page)]">
-      {/* Header */}
+      {/* Header — matches home page with About highlighted as current route */}
       <header className="sticky top-0 z-50 border-b border-[var(--ud-border-subtle)] bg-[var(--ud-bg-page)]/80 backdrop-blur-lg">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
-          <Link href="/" className="flex items-center gap-2">
-            <UdeetsBrandLockup textClassName="text-xl sm:text-2xl" priority />
-          </Link>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Link href="/" className="flex items-center gap-2 mr-2 sm:mr-4">
+              <UdeetsBrandLockup textClassName="text-xl sm:text-2xl" priority />
+            </Link>
+            <nav className="hidden items-center gap-0.5 md:flex">
+              <Link
+                href="/about"
+                aria-current="page"
+                className="rounded-full bg-[var(--ud-brand-light)] px-3 py-2 text-sm font-semibold text-[var(--ud-brand-primary)]"
+              >
+                About
+              </Link>
+              <Link
+                href="/use-cases"
+                className="rounded-full px-3 py-2 text-sm font-medium text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
+              >
+                Use Cases
+              </Link>
+              <Link
+                href="/resources"
+                className="rounded-full px-3 py-2 text-sm font-medium text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
+              >
+                Resources
+              </Link>
+            </nav>
+          </div>
           <nav className="flex items-center gap-2 sm:gap-3">
             <Link href="/discover" className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]" aria-label="Discover">
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 21l-4.3-4.3" /><circle cx="11" cy="11" r="7" /></svg>
@@ -142,7 +165,7 @@ export default function AboutPage() {
                   <span className="text-[var(--ud-brand-primary)]">reimagined</span>
                 </h1>
                 <p className="mt-6 max-w-lg text-lg leading-relaxed text-slate-500">
-                  Every community deserves a clean, organized space to share what matters. That&apos;s why we built uDeets.
+                  Every community &amp; member in the community deserves a clean, organized space to share what matters. That&apos;s why we built uDeets.
                 </p>
               </div>
 
@@ -154,7 +177,7 @@ export default function AboutPage() {
         </section>
 
         {/* The problem → solution — visual cards, not paragraphs */}
-        <section className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] py-20 sm:py-28">
+        <section className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] py-12 sm:py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
             <AnimateOnScroll className="mx-auto max-w-2xl text-center">
               <h2 className="text-3xl font-semibold tracking-tight text-[var(--ud-text-primary)] sm:text-4xl">
@@ -162,43 +185,61 @@ export default function AboutPage() {
               </h2>
             </AnimateOnScroll>
 
-            <div className="mt-14 grid gap-6 sm:grid-cols-3">
+            <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {[
                 {
-                  emoji: "😩",
+                  icon: Inbox,
                   before: "Important updates buried in 200+ unread messages",
                   after: "Every update organized and easy to find",
                 },
                 {
-                  emoji: "🔀",
-                  before: "Info scattered across WhatsApp, email, Facebook, and notice boards",
+                  icon: Layers,
+                  before: "Info scattered across chats, emails, and apps",
                   after: "One hub — everything in one place",
                 },
                 {
-                  emoji: "📉",
+                  icon: TrendingDown,
                   before: "Members miss events, deadlines, and announcements",
                   after: "Members stay informed and engaged",
                 },
-              ].map((item, i) => (
-                <AnimateOnScroll key={item.emoji} delay={i * 150}>
-                  <div className="rounded-2xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-page)] p-6 text-center">
-                    <div className="text-4xl">{item.emoji}</div>
-                    <div className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600/80 line-through decoration-red-300">
-                      {item.before}
+                {
+                  icon: Wallet,
+                  before: "Community events rely on out-of-pocket funding",
+                  after: "Generate sponsorship revenue for community events",
+                },
+              ].map((item, i) => {
+                const Icon = item.icon;
+                return (
+                  <AnimateOnScroll key={item.before} delay={i * 150} className="h-full">
+                    {/*
+                      Card is a flex-column stretched to the tallest sibling (h-full
+                      on both the AnimateOnScroll wrapper and the card itself). The
+                      before/after pills use flex-1 + items-center so their heights
+                      match across cards regardless of text length, keeping the
+                      icons, arrows, and pills all on the same baseline across the
+                      row.
+                    */}
+                    <div className="flex h-full flex-col rounded-2xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-page)] p-6 text-center shadow-sm transition hover:border-[#A9D1CA] hover:shadow-md">
+                      <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#EAF6F3] to-[#d4ece7] shadow-sm ring-1 ring-[#A9D1CA]/30">
+                        <Icon className="h-6 w-6 stroke-[1.5] text-[var(--ud-brand-primary)]" />
+                      </div>
+                      <div className="mt-5 flex flex-1 items-center justify-center rounded-lg bg-red-50 px-3 py-3 text-sm leading-snug text-red-600/80 line-through decoration-red-300">
+                        {item.before}
+                      </div>
+                      <div className="my-3 text-lg leading-none text-slate-300">↓</div>
+                      <div className="flex flex-1 items-center justify-center rounded-lg bg-[var(--ud-brand-light)] px-3 py-3 text-sm font-medium leading-snug text-[var(--ud-brand-primary)]">
+                        {item.after}
+                      </div>
                     </div>
-                    <div className="my-3 text-lg text-slate-300">↓</div>
-                    <div className="rounded-lg bg-[var(--ud-brand-light)] px-3 py-2 text-sm font-medium text-[var(--ud-brand-primary)]">
-                      {item.after}
-                    </div>
-                  </div>
-                </AnimateOnScroll>
-              ))}
+                  </AnimateOnScroll>
+                );
+              })}
             </div>
           </div>
         </section>
 
         {/* Values — icon grid with staggered animation */}
-        <section className="py-20 sm:py-28">
+        <section className="py-12 sm:py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
             <AnimateOnScroll className="mx-auto max-w-2xl text-center">
               <h2 className="text-3xl font-semibold tracking-tight text-[var(--ud-text-primary)] sm:text-4xl">
@@ -206,11 +247,11 @@ export default function AboutPage() {
               </h2>
             </AnimateOnScroll>
 
-            <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {[
                 { icon: Target, title: "Simplicity first", description: "No bloat, no learning curve. If it takes more than a minute to understand, we haven't done our job." },
                 { icon: Shield, title: "Privacy by default", description: "We don't sell data, run ads, or monetize your members' attention. Your data stays yours." },
-                { icon: Users, title: "Built for real people", description: "Designed for the small business owner, the HOA board member, the church volunteer." },
+                { icon: Users, title: "Built for local connection", description: "Feel connected at home in a global world — designed for the small business owner, the HOA board member, the church volunteer." },
                 { icon: Zap, title: "Speed matters", description: "Fast load times, instant updates. Members find what they need in seconds." },
                 { icon: Globe, title: "Free & accessible", description: "Free to start, mobile-friendly, works for communities of all sizes." },
                 { icon: Sparkles, title: "Always improving", description: "We ship improvements every week based on real community feedback." },
@@ -297,20 +338,20 @@ export default function AboutPage() {
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-10">
           <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
             <div className="flex items-center gap-3">
-              <UdeetsLogoIcon className="h-7 w-7 text-white/80" alt="uDeets" />
-              <span className="text-lg font-semibold text-white">uDeets</span>
+              <UdeetsLogoIcon className="h-7 w-7 text-[var(--ud-brand-primary)]" alt="uDeets" />
+              <span className="text-lg font-semibold text-[var(--ud-text-primary)]">uDeets</span>
             </div>
             <div className="flex flex-wrap items-center gap-4 sm:gap-8">
-              <Link href="/" className="text-sm text-white/60 transition hover:text-white">Home</Link>
-              <Link href="/discover" className="text-sm text-white/60 transition hover:text-white">Discover</Link>
-              <Link href="/use-cases" className="text-sm text-white/60 transition hover:text-white">Use Cases</Link>
-              <Link href="/resources" className="text-sm text-white/60 transition hover:text-white">Resources</Link>
-              <Link href="/terms" className="text-sm text-white/60 transition hover:text-white">Terms</Link>
-              <Link href="/privacy" className="text-sm text-white/60 transition hover:text-white">Privacy</Link>
+              <Link href="/" className="text-sm text-[var(--ud-text-secondary)] transition hover:text-[var(--ud-text-primary)]">Home</Link>
+              <Link href="/discover" className="text-sm text-[var(--ud-text-secondary)] transition hover:text-[var(--ud-text-primary)]">Discover</Link>
+              <Link href="/use-cases" className="text-sm text-[var(--ud-text-secondary)] transition hover:text-[var(--ud-text-primary)]">Use Cases</Link>
+              <Link href="/resources" className="text-sm text-[var(--ud-text-secondary)] transition hover:text-[var(--ud-text-primary)]">Resources</Link>
+              <Link href="/terms" className="text-sm text-[var(--ud-text-secondary)] transition hover:text-[var(--ud-text-primary)]">Terms</Link>
+              <Link href="/privacy" className="text-sm text-[var(--ud-text-secondary)] transition hover:text-[var(--ud-text-primary)]">Privacy</Link>
             </div>
           </div>
-          <div className="mt-8 border-t border-white/10 pt-6 text-center">
-            <p className="text-xs text-white/40">&copy; {new Date().getFullYear()} uDeets. All rights reserved.</p>
+          <div className="mt-8 border-t border-[var(--ud-border-subtle)] pt-6 text-center">
+            <p className="text-xs text-[var(--ud-text-muted)]">&copy; {new Date().getFullYear()} uDeets. All rights reserved.</p>
           </div>
         </div>
       </footer>

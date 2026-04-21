@@ -1,6 +1,6 @@
 # uDeets — Project Context
 
-> Last updated: April 4, 2026
+> Last updated: April 19, 2026
 > Owner: udeets (udeetsdev1@gmail.com)
 
 ---
@@ -213,19 +213,171 @@ uDeets is a Next.js community platform (inspired by the Band app). Users create 
 
 ---
 
-## 9. Known Issues / Pending Items
+## 8b. Completed Work (April 18–19, 2026 Session)
 
-1. **Avatars bucket migration** — File `supabase/migrations/20260404100003_create_avatars_bucket.sql`; apply with `supabase db push` or paste the SQL into the Supabase dashboard SQL editor.
+This session addressed 24 of 30 bugs/items from user testing. TypeScript clean after every batch.
 
-2. **Profile names for existing users** — The `useProfileSync` hook backfills profiles on login, but users who signed up before the fix will only get their profile updated the next time they log in. There is no batch migration script to backfill all existing users at once.
+### K. Profile Requests & Invitations Tabs
+- `/profile` Requests tab — real data fetch from `hub_members status='pending'`, cancel with optimistic UI (`profile/page.tsx`)
+- `/profile` Invitations tab — real data fetch from `hub_invitations`, Accept (upserts `hub_members` + bumps joined count) / Decline flows
+- New migration `20260418_create_hub_invitations.sql` — table + RLS (invitee read/respond; hub admins read/create/revoke) + unique-pending index
+- Invitee cascade for inviter names (profiles → auth metadata → email prefix)
 
-3. **Home page mobile nav** — The nav links (About, Use Cases, Resources) are hidden on mobile (`hidden md:flex`) with no hamburger menu. Users can still access everything via footer links and the Discover search, but a mobile menu would be a nice addition.
+### L. Home Page Mobile Hamburger
+- Added `Menu` icon button (mobile-only) to `apps/web/app/page.tsx` header
+- Dropdown reveals About / Use Cases / Resources / Discover / Terms / Privacy
+- Outside-click + Escape close; `aria-expanded` for a11y
 
-4. **File attachment** — The "Attach File" button in the composer currently opens the photo picker as a placeholder. A proper file picker needs to be implemented.
+### M. Composer File Attachment Flow (End-to-End)
+- New `ComposerChildFlow = "file"` type + DB-safe `AttachedDeetItem` with `type="file"`
+- `DeetComposerCard` + `CreateDeetModal` "Attach File" now opens a file picker (not the photo one)
+- New file modal in `HubClient.tsx` — file chips with name + size, remove-per-file
+- `upload-deet-media.ts` — explicit MIME allowlist (PDF/Word/Excel/PowerPoint/text/CSV/zip/images), 15 MB for files, 5 MB for images, returns richer `{path, publicUrl, mimeType, fileName, sizeBytes, kind}`
+- New migration `20260418_expand_deet_media_mime_types.sql` — expands the `deet-media` bucket to allow the new MIME types
+- `useDeetComposer.ts` wires `selectedDocFiles` + doc attachments into the submit flow
 
-5. **Nominatim rate limiting** — The check-in feature uses the free Nominatim API for reverse geocoding. For production, consider self-hosting or using a paid service to avoid rate limits.
+### N. Dashboard Unread Dot Wired to Real DB
+- New migration `20260418_add_hub_members_last_seen.sql`:
+  - `last_seen_at` column on `hub_members`, backfilled to `now()` for existing active members
+  - `user_hubs_with_unread()` RPC — returns hubs where any deet exists newer than the user's `last_seen_at`
+  - `mark_hub_seen(p_hub_id)` RPC — called when the user opens a hub page
+- Dashboard calls the RPC and passes `unreadHubIds` into `DashboardHubCard.hasUnread`
 
-6. **Real-time updates** — Deets feed currently requires manual refresh. Supabase Realtime subscriptions could be added for live updates.
+### O. Supabase Realtime on Deets Feed
+- `subscribeToDeets` now watches `deets`, `deet_likes`, and `deet_comments` (previously only `deets`)
+- Debounced 150 ms so bursts coalesce into a single refetch
+- Both `HubClient` and `dashboard/page.tsx` pick up live likes + comments without manual refresh
+
+### P. Nominatim Rate-Limit Protection
+- New API routes `app/api/geo/reverse/route.ts` and `app/api/geo/search/route.ts`
+- Adds required `User-Agent: uDeets/1.0 (contact: udeetsdev1@gmail.com)` header per Nominatim ToS
+- Per-IP 1 req/sec in-memory token bucket
+- Client-side errors surfaced to the user; fallback to raw coords on failure
+
+### Q. Profile Name Backfill
+- New migration `20260418_backfill_profile_names.sql`
+- One-shot SQL that fills NULL `full_name` / `avatar_url` / `email` on `profiles` from `auth.users.raw_user_meta_data`
+- Uses `coalesce(p.full_name, u.raw_user_meta_data->>'full_name', u.raw_user_meta_data->>'name', split_part(u.email, '@', 1))` — never overwrites a value the user has already set
+- Raises a notice with the remaining-null count for sanity-check after run
+
+### R. Verification of "Already Done" April 3 Items
+Verified via code audit that the following items from the April 3 session were already complete (no work needed):
+- Hub sidebar Settings highlight bug — fixed in `HubSidebarNav.tsx`
+- Profile dropdown Band-style redesign — `udeets-navigation.tsx`
+- Settings page polish — `settings/page.tsx`
+- Preferences migration — `20260330_add_profile_preferences.sql` present
+- Author name cascade in deet feed — `HubClient.tsx` lines 191–196
+- "Photo" title handling via `GENERIC_TITLE_LABELS` — dashboard/profile/alerts
+- Design system — `lib/theme.ts` (169 lines, centralized tokens)
+- April 1 migrations `hub_template_fields` + `attachment_source` — superseded by actual April 1 migrations (ctas, visibility, sections)
+
+### S. Data-Loss Saving Bugs
+- **Hub About description not saving** — fixed UI refresh (description is now local state in `HubClient.tsx` set on save success)
+- **Comments not saving** — `addDeetComment` retries once after `refreshSession()` on RLS failure; if the session really did expire, surfaces a specific "Your session expired…" message instead of the generic toast
+- **Disable-comments setting not persisting** — new migration `20260418_add_deets_allow_comments.sql`; `allow_comments` flows through `CreateDeetInput`/`UpdateDeetInput` → `createDeet`/`updateDeet` with graceful fallback when the column isn't migrated yet; `DeetsSection` renders a muted "Comments off" chip instead of the Comment button when `allow_comments = false`
+- **Announcement update + generic Edit flow** — replaced the `TODO` placeholder edit-button with a real `startEditingDeet(item)` on `useDeetComposer`; pre-fills text/attachments/post-type/commentsEnabled, preserves existing image URLs if no new photo picked, calls `updateDeet` instead of `createDeet`, fires `onDeetUpdated` → new `replaceDeet` helper in `useHubLiveFeed` (in-place update, not a prepend)
+- **Content + poll + image combined rendering** — `DeetsSection` was swallowing `item.body` whenever a rich attachment was present; now only suppresses body when it's literally the rich attachment's title/detail echo, so user-typed text alongside a poll/event/etc. renders
+
+### T. Poll Correctness (#22 + #26)
+- `castPollVote` now aborts if the pre-insert DELETE fails (previously a failed cleanup + successful insert left duplicate rows, which is what produced the "both options stay selected" bug)
+- `PollContent` tracks `selectedIndices: Set<number>` instead of a single index; reads all existing user votes on mount so pre-existing duplicates are reflected honestly
+- New `togglePollVote` service for multi-select
+- `HubFeedItemAttachment.pollSettings` propagates through the mapper; `PollContent` honors `allowMultiSelect` + `multiSelectLimit` (checkbox indicators, limit counter, limit-aware disabling)
+
+### U. Feed Gallery (multi-image in a single deet)
+- Replaced the single `item.image` hero with a layout that adapts by count:
+  - 1 image → `object-contain` hero at natural aspect (no forced-crop blur on small images)
+  - 2 images → 50/50 split
+  - 3+ images → large left tile + two stacked right tiles, `+N` overlay on the third
+- All tiles open the viewer at the clicked index
+
+### V. Viewer Sidebar HTML Rendering (#17 part 2)
+- Post body in the image-viewer sidebar was rendered inside a `<p>` so HTML tags from the rich editor showed as literal text ("source code on right")
+- Fixed via sanitized `dangerouslySetInnerHTML` (script + on* handler strip) so rich text renders correctly
+
+### W. Composer Overflow (#15)
+- `CreateDeetModal` now has `maxHeight: calc(100vh - 2rem)` on the shell + `flex flex-col` layout
+- Form body is `flex-1 overflow-y-auto` so long posts + attachment previews scroll inside the modal while Header/Post button stay pinned
+
+### X. Hub Photos / Album Picker (#27)
+- Album picker no longer hides the current DP and cover from "Choose from Albums" (it previously filtered them out, which is why users with 3 photos saw only 1 option when both DP and cover were set)
+- `allPhotos` now explicitly includes DP + cover + attachments + gallery (de-duplicated); tiles already in use get a small "Current DP" / "Current cover" / "Current DP & cover" badge
+- New migration `20260418_create_hub_attachments.sql` creates the missing `public.attachments` table that `useHubMediaFlow.ts` and the Photos loader already assumed existed. Backfills every hub's current DP, cover, and gallery URLs on migrate
+- Every hub image upload (dp/cover/gallery) now writes a row to `attachments`
+
+### Y. About Page Rewrite (#1–#7, minus #5)
+- **#1** Header gained About / Use Cases / Resources nav links matching the home page; "About" is filled-pill highlighted with `aria-current="page"`
+- **#2** Hero tagline: "Every community & member in the community deserves a clean, organized space to share what matters. That's why we built uDeets."
+- **#3** "The problem we solve" padding: `py-20 sm:py-28` → `py-12 sm:py-16`; grid expanded to 4 cards, new 💰 Generate Sponsorship Revenue card
+- **#4** "What we stand for" padding reduced the same way (`mt-14` → `mt-10`)
+- **#6** Value card "Built for real people" → "Built for local connection" with updated description ("Feel connected at home in a global world…")
+- **#7** Footer text was invisible because it used `text-white` on a white `bg-[var(--ud-bg-card)]` — swapped to `--ud-text-secondary` / `--ud-text-primary` / `--ud-text-muted` tokens so every link and the copyright line renders
+
+### Z. Hub Hero Admin UX (#8 + #9)
+- **#8** Pencil badge pinned bottom-right on DP (both mobile + desktop), camera button top-right on cover. Both click through to the same media chooser the whole tile had — just gives the visual affordance that was missing
+- **#9** Cover vertical-positioning: admins see a `Move` button next to the camera; click opens an inline range slider overlaid on the cover; dragging updates `object-position: 50% <y>%` live, Save persists via `updateHub(id, { coverImageOffsetY })`, Cancel reverts
+- New migration `20260418_add_hub_cover_position.sql` — `cover_image_offset_y numeric(5,2) default 50.00` with 0–100 check; added to `HUB_COLUMNS_BASE` and `toHubRecord`
+- `ImageWithFallback` now accepts an optional `style` prop (was swallowing style overrides before)
+
+### AA. Hub About Tab (#10 + #12)
+- **#10** Connect save — toast text changed "Connect links updated." → "Connect updated", auto-dismisses after 3 s (was previously sticky)
+- **#12** Description character limit UX — counter turns amber at 270+, red at 300; appends "· N left" when approaching and "· character limit reached" when the cap is hit; `maxLength={300}` on the textarea
+
+### BB. Hub Invite (Search + QR) (#29 + #30)
+- New server-side typeahead `lib/services/profile/search-profiles.ts` — 2+ chars, `ILIKE` on name + email, up to 10 matches, escape-safe
+- New `lib/services/hubs/invite-user-to-hub.ts` — checks existing membership + pending invites, inserts into `hub_invitations` (the April 18 table); falls back to legacy `hub_members status='invited'` if the invitations table isn't deployed
+- Rebuilt `InviteModal` with two tabs:
+  - **Search** — debounced 250 ms typeahead, cancels stale requests via `AbortController`, pills for Invite/Member/Invited, loads existing member + invite sets once on mount
+  - **QR Code** — `QRCodeSVG` from `qrcode.react` (new dep, 4.2.0), encodes `<origin>/hubs/<category>/<slug>/join`, shows the raw link with a Copy button below
+- New public route `/hubs/[category]/[slug]/join/page.tsx` — hub-join landing page for QR scans:
+  - Not signed in → prompts with `?redirect_to=` so the user returns to the join flow after auth
+  - Signed in → inserts a pending `hub_members` row (admin still approves in Members)
+  - Already a member → auto-redirects to the hub
+  - Hub slug not found → friendly message + Discover link
+
+### CC. Auto-Logout on Inactivity (#21)
+- New `services/auth/useIdleTimeout.ts` hook
+- 30 min total idle → 60 sec warning → auto sign-out (configurable via args)
+- Activity events: mousemove / mousedown / keydown / touchstart / scroll / wheel (throttled 1/sec so mousemove doesn't spam rescheduling)
+- Cross-tab sync via `localStorage:udeets:last-activity` — activity in any tab resets every tab
+- Tab visibility reconciliation — if the user was over the threshold while the tab was hidden, warning fires immediately on return
+- Wired into `AuthGuard` (so every authenticated page inherits the behavior; public pages unaffected)
+- Modal: "Still there?" title, live-countdown body, **Stay signed in** primary button (autoFocused) and **Sign out** secondary
+- After auto-signout: redirects to `/auth?redirect=<path>&reason=idle` so the user lands back where they were after re-auth (and you can show a "signed out for security" banner on the auth page by reading `?reason=idle`)
+
+---
+
+## 9. Known Issues / Pending Items (as of April 19, 2026)
+
+### Operational — apply to live Supabase
+
+All migrations below are committed to `supabase/migrations/`. Apply via `supabase db push` or the SQL Editor in the Supabase dashboard, in chronological order:
+
+1. `20260404100003_create_avatars_bucket.sql` — avatars storage bucket; need to confirm applied in dashboard
+2. `20260418_add_deets_allow_comments.sql` — adds `deets.allow_comments bool default true`
+3. `20260418_add_hub_cover_position.sql` — adds `hubs.cover_image_offset_y numeric`
+4. `20260418_add_hub_members_last_seen.sql` — adds `hub_members.last_seen_at` + `user_hubs_with_unread()` + `mark_hub_seen()` RPCs
+5. `20260418_backfill_profile_names.sql` — one-shot profile backfill from `auth.users.user_metadata`
+6. `20260418_create_hub_attachments.sql` — creates `public.attachments` table + backfills DP/cover/gallery URLs
+7. `20260418_create_hub_invitations.sql` — creates `public.hub_invitations` table + RLS
+8. `20260418_expand_deet_media_mime_types.sql` — expands `deet-media` bucket MIME allowlist to include PDF/Office/text/CSV/zip, raises cap to 15 MB
+
+### Remaining open items
+
+Six items from the April 18 user testing list remain open and out of scope per user direction:
+
+- **#5** Ad positioning / privacy-by-default copy on `/about` — needs a product decision from the owner before writing copy
+- **#13** Members section rebuild — the invite flow is done, but the member-list view itself needs a dedicated design
+- **#14** Custom section area — needs product discussion (scope and authoring model)
+- **#18** Like / Share re-test after deploy — Comment is fixed this session; Like and Share were reported as "implemented?" and need a verification pass after deploy
+- **#24** Move post-type picker (Announcement, Poll, etc.) above the editor — composer reflow; not yet started
+- **#28** File attachment re-test — code shipped this session (see section M + the MIME bucket migration). Will work end-to-end once the branch deploys to Vercel and `20260418_expand_deet_media_mime_types.sql` is applied
+
+### Caveats worth knowing
+
+- Search for users in the new Invite modal (#29/#30) is scoped to **all signed-up users** per the product call. If you want to restrict to opt-in discoverability later, add a `profiles.searchable boolean default true` column and narrow the `searchProfiles` query — hook in `lib/services/profile/search-profiles.ts`
+- `useIdleTimeout`'s 30 min / 60 sec durations are defaults; they can be overridden by passing `idleTimeoutMs` / `warningDurationMs` to the hook from anywhere it's used
+- `searchProfiles` is a simple ILIKE scan; if the `profiles` table grows past ~100k rows, add a `pg_trgm` GIN index on `full_name` for performance
 
 ---
 
