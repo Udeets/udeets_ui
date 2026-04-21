@@ -18,33 +18,37 @@ create index if not exists idx_hub_ctas_hub_id on public.hub_ctas(hub_id);
 alter table public.hub_ctas enable row level security;
 
 -- Anyone can read CTAs (they're displayed publicly on hub pages)
+drop policy if exists "hub_ctas_select" on public.hub_ctas;
 create policy "hub_ctas_select" on public.hub_ctas
   for select using (true);
 
 -- Only the hub creator can insert/update/delete CTAs
+drop policy if exists "hub_ctas_insert" on public.hub_ctas;
 create policy "hub_ctas_insert" on public.hub_ctas
   for insert with check (
     exists (
       select 1 from public.hubs
-      where hubs.id = hub_ctas.hub_id
+      where hubs.id::text = hub_ctas.hub_id
         and hubs.created_by = auth.uid()::text
     )
   );
 
+drop policy if exists "hub_ctas_update" on public.hub_ctas;
 create policy "hub_ctas_update" on public.hub_ctas
   for update using (
     exists (
       select 1 from public.hubs
-      where hubs.id = hub_ctas.hub_id
+      where hubs.id::text = hub_ctas.hub_id
         and hubs.created_by = auth.uid()::text
     )
   );
 
+drop policy if exists "hub_ctas_delete" on public.hub_ctas;
 create policy "hub_ctas_delete" on public.hub_ctas
   for delete using (
     exists (
       select 1 from public.hubs
-      where hubs.id = hub_ctas.hub_id
+      where hubs.id::text = hub_ctas.hub_id
         and hubs.created_by = auth.uid()::text
     )
   );

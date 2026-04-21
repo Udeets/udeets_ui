@@ -67,7 +67,7 @@ uDeets is a Next.js community platform (inspired by the Band app). Users create 
 ### Storage Buckets
 
 - **deet-media** — Photos/files attached to deets
-- **avatars** — Profile pictures (migration: `20260404_create_avatars_bucket.sql`)
+- **avatars** — Profile pictures (migration: `20260404100003_create_avatars_bucket.sql`)
   - **IMPORTANT**: This bucket migration may need to be applied to the live Supabase instance. Run `supabase db push` or apply manually via Supabase dashboard SQL editor.
 
 ### Key RLS Notes
@@ -215,7 +215,7 @@ uDeets is a Next.js community platform (inspired by the Band app). Users create 
 
 ## 9. Known Issues / Pending Items
 
-1. **Avatars bucket migration** — Created at `supabase/migrations/20260404_create_avatars_bucket.sql` but needs to be applied to the live Supabase instance for avatar uploads to work. Run: `supabase db push` or paste the SQL into the Supabase dashboard SQL editor.
+1. **Avatars bucket migration** — File `supabase/migrations/20260404100003_create_avatars_bucket.sql`; apply with `supabase db push` or paste the SQL into the Supabase dashboard SQL editor.
 
 2. **Profile names for existing users** — The `useProfileSync` hook backfills profiles on login, but users who signed up before the fix will only get their profile updated the next time they log in. There is no batch migration script to backfill all existing users at once.
 

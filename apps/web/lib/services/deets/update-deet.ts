@@ -1,3 +1,4 @@
+import { sanitizeDeetBodyHtml } from "@/lib/deets/sanitize-deet-html";
 import { createClient } from "@/lib/supabase/client";
 import type { DeetAttachment, DeetKind, DeetRecord } from "@/lib/services/deets/deet-types";
 import { DEET_COLUMNS, normalizeDeetAttachment, normalizeDeetRecord } from "@/lib/services/deets/query-utils";
@@ -44,7 +45,7 @@ export async function updateDeet(input: UpdateDeetInput): Promise<DeetRecord> {
   const payload: Record<string, unknown> = {};
 
   if (input.title !== undefined) payload.title = input.title.trim();
-  if (input.body !== undefined) payload.body = input.body.trim();
+  if (input.body !== undefined) payload.body = sanitizeDeetBodyHtml(input.body);
   if (input.kind !== undefined) payload.kind = input.kind;
 
   if (input.previewImageUrl !== undefined) {

@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { UdeetsBrandLockup } from "@/components/brand-logo";
+import { UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
 
 import { isUdeetsLogoSrc } from "@/lib/branding";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
@@ -370,32 +370,21 @@ export default function LocationDiscoverPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-[var(--ud-bg-card)] border-b border-[var(--ud-border-subtle)]">
-        <div className="flex min-h-14 w-full items-center justify-between px-4 py-2 sm:px-6 lg:px-10">
-          <Link href="/discover" className="flex items-center gap-2">
-            <svg viewBox="0 0 24 24" className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2">
+      <UdeetsHeader />
+      <div className="flex flex-1 flex-col">
+      <div className="border-b border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] px-4 py-2 sm:px-6 lg:px-10">
+        <div className="mx-auto max-w-4xl">
+          <Link
+            href="/discover"
+            className="inline-flex items-center gap-2 text-sm font-medium text-[var(--ud-text-secondary)] transition hover:text-[var(--ud-brand-primary)]"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M15 18l-6-6 6-6" />
             </svg>
-            <span className="text-sm font-medium text-gray-500">Discover</span>
+            Back to Discover
           </Link>
-          <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <UdeetsBrandLockup textClassName="text-xl sm:text-2xl" priority />
-          </Link>
-          <div className="flex items-center gap-1.5">
-            <Link
-              href={isAuthenticated ? "/dashboard" : "/"}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
-              aria-label="Home"
-            >
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                <polyline points="9 22 9 12 15 12 15 22" />
-              </svg>
-            </Link>
-          </div>
         </div>
-      </header>
+      </div>
 
       {/* ─── Location permission prompt ─── */}
       {geoState === "asking" && (
@@ -548,12 +537,9 @@ export default function LocationDiscoverPage() {
           onClose={() => setShowChangePopup(false)}
         />
       )}
+      </div>
 
-      <footer className="mt-auto border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] py-6">
-        <div className="mx-auto max-w-4xl px-4 text-left text-xs text-[var(--ud-text-muted)] sm:px-6 lg:px-10">
-          uDeets © {new Date().getFullYear()}
-        </div>
-      </footer>
+      <UdeetsFooter />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { Calendar, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MockAppShell from "@/components/mock-app-shell";
 import { AuthGuard } from "@/components/AuthGuard";
+import { getUpcomingPublicHolidays } from "@/lib/calendar/public-holidays";
 import { createClient } from "@/lib/supabase/client";
 import { listMyMemberships } from "@/lib/services/members/list-my-memberships";
 
@@ -55,43 +56,6 @@ function formatTime(start: string | null, end: string | null): string {
     return `${display}:${m} ${suffix}`;
   };
   return end ? `${fmt(start)} – ${fmt(end)}` : fmt(start);
-}
-
-function getUpcomingHolidays(): EventDisplay[] {
-  const now = new Date();
-  const year = now.getFullYear();
-  const holidays: Array<{ month: number; day: number; title: string }> = [
-    { month: 0, day: 1, title: "New Year's Day" },
-    { month: 0, day: 15, title: "Makar Sankranti" },
-    { month: 0, day: 26, title: "Republic Day" },
-    { month: 2, day: 14, title: "Holi" },
-    { month: 3, day: 14, title: "Ambedkar Jayanti" },
-    { month: 4, day: 1, title: "May Day" },
-    { month: 7, day: 15, title: "Independence Day" },
-    { month: 8, day: 5, title: "Teachers' Day" },
-    { month: 9, day: 2, title: "Gandhi Jayanti" },
-    { month: 9, day: 24, title: "Dussehra" },
-    { month: 10, day: 1, title: "Diwali" },
-    { month: 10, day: 14, title: "Children's Day" },
-    { month: 11, day: 25, title: "Christmas" },
-  ];
-
-  return holidays
-    .map((h) => {
-      let d = new Date(year, h.month, h.day);
-      if (d < now) d = new Date(year + 1, h.month, h.day);
-      return {
-        id: `holiday-${h.month}-${h.day}`,
-        title: h.title,
-        hubName: "Public Holiday",
-        eventDate: d,
-        time: "All day",
-        location: "",
-        isHoliday: true,
-      };
-    })
-    .sort((a, b) => a.eventDate.getTime() - b.eventDate.getTime())
-    .slice(0, 12);
 }
 
 /* ── Calendar grid helpers ── */
@@ -159,7 +123,7 @@ export default function EventsPage() {
       const hubIds = memberships.filter((m) => m.status === "active").map((m) => m.hubId);
 
       if (!hubIds.length || cancelled) {
-        if (!cancelled) { setEvents(getUpcomingHolidays()); setLoading(false); }
+        if (!cancelled) { setEvents(getUpcomingPublicHolidays()); setLoading(false); }
         return;
       }
 
@@ -173,7 +137,7 @@ export default function EventsPage() {
         .limit(50);
 
       if (error || cancelled) {
-        if (!cancelled) { setEvents(getUpcomingHolidays()); setLoading(false); }
+        if (!cancelled) { setEvents(getUpcomingPublicHolidays()); setLoading(false); }
         return;
       }
 
@@ -191,7 +155,7 @@ export default function EventsPage() {
         isHoliday: false,
       }));
 
-      setEvents(mapped.length > 0 ? mapped : getUpcomingHolidays());
+      setEvents(mapped.length > 0 ? mapped : getUpcomingPublicHolidays());
       setLoading(false);
     }
 

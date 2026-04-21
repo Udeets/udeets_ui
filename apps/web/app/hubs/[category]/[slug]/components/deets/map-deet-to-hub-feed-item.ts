@@ -1,6 +1,12 @@
-import type { HubContent, HubFeedItemAttachment, HubFeedItemKind } from "@/lib/hub-content";
+import type {
+  HubContent,
+  HubFeedItemAttachment,
+  HubFeedItemKind,
+  HubJobDataPersisted,
+  HubPollSettingsPersisted,
+} from "@/lib/hub-content";
 import { mapDeetToDashboardCard } from "@/lib/mappers/deets/map-deet-to-dashboard-card";
-import type { DeetRecord } from "@/lib/services/deets/deet-types";
+import type { DeetAttachment, DeetRecord } from "@/lib/services/deets/deet-types";
 
 function formatDeetTime(createdAt?: string | null) {
   if (!createdAt) return "";
@@ -39,19 +45,33 @@ export function mapDeetToHubFeedItem(item: Partial<DeetRecord>, hubCreatorId?: s
   // Extract structured attachment data for rich rendering
   const deetAttachments: HubFeedItemAttachment[] = Array.isArray(item.attachments)
     ? item.attachments
-        .filter((a) => a && typeof a === "object" && a.type)
-        .map((a) => ({
-          type: a.type,
-          title: a.title || undefined,
-          detail: a.detail || undefined,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          options: Array.isArray((a as any).options)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            ? ((a as any).options as string[])
-            : undefined,
-          previews: a.previews || undefined,
-        }))
+        .filter((a) => a && typeof a === "object" && a.type && a.type !== "deet_options")
+        .map((a) => {
+          const raw = a as DeetAttachment;
+          const base: HubFeedItemAttachment = {
+            type: a.type,
+            title: a.title || undefined,
+            detail: a.detail || undefined,
+            options: Array.isArray(raw.options) ? (raw.options as string[]) : undefined,
+            previews: a.previews || undefined,
+            meta: typeof raw.meta === "string" && raw.meta.trim() ? raw.meta : undefined,
+            eventData:
+              a.type === "event" && raw.eventData && typeof raw.eventData === "object"
+                ? (raw.eventData as HubFeedItemAttachment["eventData"])
+                : undefined,
+          };
+          if (a.type === "poll" && raw.pollSettings && typeof raw.pollSettings === "object") {
+            base.pollSettings = raw.pollSettings as HubPollSettingsPersisted;
+          }
+          if (a.type === "jobs" && raw.jobData && typeof raw.jobData === "object") {
+            base.jobData = raw.jobData as HubJobDataPersisted;
+          }
+          return base;
+        })
     : [];
+
+  const createdRaw = card.createdAt ?? item.created_at;
+  const createdMs = createdRaw ? new Date(createdRaw).getTime() : NaN;
 
   return {
     id: item.id ?? "",
@@ -59,6 +79,7 @@ export function mapDeetToHubFeedItem(item: Partial<DeetRecord>, hubCreatorId?: s
     author: asNonEmptyString(item.author_name) ?? "Hub member",
     authorId: item.created_by ?? "",
     role,
+    createdAtMs: Number.isFinite(createdMs) ? createdMs : undefined,
     time: formatDeetTime(card.createdAt ?? item.created_at),
     title: asNonEmptyString(item.title) ?? defaultFeedLabel(kind),
     body: asNonEmptyString(item.body) ?? "",
@@ -76,7 +97,11 @@ function asNonEmptyString(value: unknown) {
   return typeof value === "string" && value.trim() ? value : null;
 }
 
-function resolveHubFeedItemKind(card: ReturnType<typeof mapDeetToDashboardCard>, item?: Partial<DeetRecord>): HubFeedItemKind {
+/** Shared by hub feed and dashboard so `resolveDeetType` / chips match the same rules. */
+export function resolveHubFeedItemKind(
+  card: ReturnType<typeof mapDeetToDashboardCard>,
+  item?: Partial<DeetRecord>,
+): HubFeedItemKind {
   const hasImage = Boolean(card.previewImageUrl ?? card.previewImageUrls?.[0]);
 
   // Check attachments for specific types (poll, event, jobs, etc.)
@@ -84,6 +109,14 @@ function resolveHubFeedItemKind(card: ReturnType<typeof mapDeetToDashboardCard>,
     const attTypes = item.attachments.map((a) => a?.type).filter(Boolean);
     if (attTypes.includes("jobs")) return "jobs";
     if (attTypes.includes("poll")) return "poll";
+    // Structured hub post types (stored on legacy "Posts" rows) — must win over bucket heuristics.
+    if (attTypes.includes("announcement")) return "announcement";
+    if (attTypes.includes("notice")) return "notice";
+    if (attTypes.includes("event")) return "event";
+    if (attTypes.includes("survey")) return "survey";
+    if (attTypes.includes("payment")) return "payment";
+    // Composer `alert` attachment (distinct from legacy sourceType === "alert" → notice below).
+    if (attTypes.includes("alert")) return "alert";
   }
 
   // Notice: only alert sourceType or explicit "Notices" bucket
@@ -104,7 +137,10 @@ function defaultFeedLabel(kind: HubFeedItemKind) {
   if (kind === "event") return "Event";
   if (kind === "poll") return "Poll";
   if (kind === "jobs") return "Jobs";
+  if (kind === "survey") return "Survey";
+  if (kind === "payment") return "Fundraiser";
+  if (kind === "alert") return "Alert";
   if (kind === "file") return "File";
-  if (kind === "post") return "Post";
+  if (kind === "post") return "Deet";
   return "Deet";
 }

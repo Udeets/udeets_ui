@@ -168,7 +168,7 @@ DeetsSection (exported function, ~30 props)
 | `server.ts` | Server client via `createServerClient()` with cookie handling |
 | `middleware.ts` | `updateSession(request)` — auth middleware |
 
-**Env vars:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+**Env vars:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (or legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY`)
 
 ### Deet Services (`lib/services/deets/`)
 
@@ -377,35 +377,36 @@ Dark mode overrides are defined in `@media (prefers-color-scheme: dark)`.
 ## Migration File Index (chronological)
 
 ```
-20260330_create_deets.sql                        # deets table + triggers
-20260330_enable_deets_rls.sql                    # RLS for deets
-20260330_create_deet_media_bucket.sql            # deet-media storage
-20260330_create_hub_members.sql                  # hub_members table
-20260330_backfill_hub_members.sql                # backfill creators
-20260330_fix_hub_members_rls.sql                 # RLS fix v1
-20260330_fix_hub_members_rls_v2.sql              # RLS fix v2
-20260330_create_profiles.sql                     # profiles table
-20260330_add_profile_preferences.sql             # JSON prefs columns
-20260401_create_hub_ctas.sql                     # hub_ctas table
-20260401_add_hub_visibility.sql                  # visibility column
-20260401_create_hub_sections.sql                 # sections + items
-20260402_add_hub_accent_color.sql                # accent_color column
-20260402_create_deet_interactions.sql             # deet_likes + deet_comments + count columns
-20260402_hub_members_admin_update_rls.sql        # admin can update members
-20260403_create_events.sql                       # events + event_rsvps
-20260403_add_hubs_delete_rls.sql                 # creator can delete hub
-20260404_add_profiles_app_role.sql               # app_role column
-20260404_admin_manage_roles_rls.sql              # super admin policies
-20260404_create_avatars_bucket.sql               # avatars storage
-20260405_fix_profiles_rls_recursion.sql          # is_super_admin() function
-20260405_expand_deets_kind_check.sql             # extended kind enum
-20260405_create_poll_votes.sql                   # poll_votes table
-20260413_add_deets_update_policy.sql             # count update + comment edit RLS
-20260413_create_deet_views.sql                   # deet_views table
-20260413_add_reaction_type_and_comment_replies.sql  # reaction_type + parent_id
-20260413_add_comment_attachments.sql             # comment image/file columns
-20260413_add_comment_reactions.sql               # comment_reactions table
-20260413_add_deet_shares.sql                     # deet_shares + share_count
+20260329100000_create_hubs.sql                   # hubs table + RLS (before deets / hub_members)
+20260330100001_create_deet_media_bucket.sql      # deet-media storage
+20260330100002_create_deets.sql                   # deets table + triggers
+20260330100003_enable_deets_rls.sql              # RLS for deets
+20260330100004_create_hub_members.sql            # hub_members table
+20260330100005_create_hub_members_backfill.sql   # backfill creators
+20260330100006_create_profiles.sql               # profiles table
+20260330100007_create_profiles_preferences.sql   # JSON prefs on profiles
+20260330100008_fix_hub_members_rls.sql           # RLS fix v1
+20260330100009_fix_hub_members_rls_v2.sql        # RLS fix v2
+20260401100001_add_hub_visibility.sql            # visibility column (idempotent)
+20260401100002_create_hub_ctas.sql               # hub_ctas table
+20260401100003_create_hub_sections.sql          # sections + items
+20260402100001_add_hub_accent_color.sql          # accent_color column
+20260402100002_create_deet_interactions.sql      # deet_likes + deet_comments + counts
+20260402100003_hub_members_admin_update_rls.sql  # admin can update members
+20260403100001_add_hubs_delete_rls.sql           # creator can delete hub
+20260403100002_create_events.sql                 # events + event_rsvps
+20260404100001_add_profiles_app_role.sql        # app_role column
+20260404100002_admin_manage_roles_rls.sql        # super admin policies
+20260404100003_create_avatars_bucket.sql         # avatars storage
+20260405100001_create_poll_votes.sql             # poll_votes table
+20260405100002_expand_deets_kind_check.sql       # extended kind enum
+20260405100003_fix_profiles_rls_recursion.sql    # is_super_admin() + RLS
+20260413100001_add_comment_attachments.sql       # comment image/file columns
+20260413100002_add_comment_reactions.sql         # comment_reactions table
+20260413100003_add_deet_shares.sql               # deet_shares + share_count
+20260413100004_add_deets_update_policy.sql      # count update + comment edit RLS
+20260413100005_add_reaction_type_and_comment_replies.sql  # reaction_type + parent_id
+20260413100006_create_deet_views.sql             # deet_views table
 ```
 
 ---
@@ -467,8 +468,9 @@ cd apps/web && npm run dev
 npm run build
 
 # Required env vars (in apps/web/.env.local):
-NEXT_PUBLIC_SUPABASE_URL=https://psckhdbtissnmdgcfwgo.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon_key>
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable_key>
+# or: NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon_jwt>
 ```
 
 **Supabase project:** `psckhdbtissnmdgcfwgo`

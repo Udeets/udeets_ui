@@ -1,9 +1,10 @@
 import { Suspense } from "react";
+import { getSupabasePublishableOrAnonKey, getSupabaseUrl } from "@/lib/supabase/env";
 import DiscoverPageContent from "./DiscoverPageContent";
 
 export default async function DiscoverPage() {
-  const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const SUPABASE_URL = getSupabaseUrl();
+  const SUPABASE_KEY = getSupabasePublishableOrAnonKey();
 
   let initialHubs: any[] = [];
 
@@ -12,8 +13,8 @@ export default async function DiscoverPage() {
       `${SUPABASE_URL}/rest/v1/hubs?select=*&order=created_at.desc`,
       {
         headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
         },
         cache: "no-store",
       }
@@ -29,8 +30,8 @@ export default async function DiscoverPage() {
             `${SUPABASE_URL}/rest/v1/hub_members?select=hub_id&status=eq.active&hub_id=in.(${hubIds.join(",")})`,
             {
               headers: {
-                apikey: SUPABASE_ANON_KEY,
-                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+                apikey: SUPABASE_KEY,
+                Authorization: `Bearer ${SUPABASE_KEY}`,
               },
               cache: "no-store",
             }

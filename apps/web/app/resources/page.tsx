@@ -90,7 +90,7 @@ const FAQ_ITEMS = [
   {
     question: "How do I post a deet?",
     answer:
-      "From your hub's Deets tab, click the 'Create Deet' button. You can write rich text with formatting (bold, italic, color), attach photos, and publish to your entire community. Members will see it in their feed instantly.",
+      "From your hub's Posts tab, click the 'Create Deet' button. You can write rich text with formatting (bold, italic, color), attach photos, and publish to your entire community. Members will see it in their feed instantly.",
   },
   {
     question: "Can I create events in my hub?",

@@ -9,10 +9,9 @@ import {
   Loader2,
   MessageSquare,
   Plus,
-  Share2,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
@@ -31,14 +30,25 @@ import { CTAEditorModal } from "./components/ctas/CTAEditorModal";
 import { CustomSectionEditorModal } from "./components/sections/custom/CustomSectionEditorModal";
 import { InviteModal } from "./components/modals/InviteModal";
 import { DeleteHubModal } from "./components/modals/DeleteHubModal";
+import { DeetSharePopover } from "@/components/deets/DeetSharePopover";
+import { FeedPostBody } from "@/components/deets/FeedPostBody";
+import { SafeDeetBody } from "@/components/deets/SafeDeetBody";
+import { isGenericDeetTitle } from "@/lib/deets/deet-title";
+import {
+  DeetTypeContent,
+  getStructuredHeadlineForFeed,
+  PollContent,
+  resolveDeetType,
+  StructuredDescriptionShell,
+} from "./components/deets/feedDeetTypeBlocks";
+import { EmojiReactButton, POST_ICON } from "./components/deets/feedEmojiReact";
 import { DeetsSection } from "./components/sections/DeetsSection";
 import { EventsSection } from "./components/sections/EventsSection";
 import { ReviewsSection } from "./components/sections/ReviewsSection";
 import { SettingsSection } from "./components/sections/SettingsSection";
 import { CreateDeetModal } from "./components/deets/CreateDeetModal";
-import { DeetChildModal } from "./components/deets/DeetChildModal";
-import { DeetSettingsModal } from "./components/deets/DeetSettingsModal";
-import { NoticeChildContent, PollChildContent, EventChildContent, CheckinChildContent, AlertChildContent, SurveyChildContent, PaymentChildContent, JobsChildContent } from "./components/deets/ComposerChildPanels";
+import { DeetCommentsSection } from "./components/deets/DeetCommentsSection";
+import type { DeetComment } from "@/lib/services/deets/deet-interactions";
 import type { HubTab } from "./components/hubTypes";
 import { useHubConnectFlow } from "./hooks/useHubConnectFlow";
 import { useDeetComposer } from "./hooks/useDeetComposer";
@@ -58,8 +68,10 @@ import {
   SettingField,
   categoryMetaFor,
   cn,
+  initials,
   normalizePublicSrc,
 } from "./components/hubUtils";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { useHubRole } from "@/hooks/useUserRole";
 import { can } from "@/lib/roles";
 
@@ -293,7 +305,7 @@ export default function HubClient({
     loadAttachmentPhotos();
   }, [hub.id]);
 
-  const { liveFeedItems, prependCreatedDeet, removeDeet } = useHubLiveFeed(hub.id, hub.createdBy);
+  const { liveFeedItems, prependCreatedDeet, removeDeet, replaceFeedDeet } = useHubLiveFeed(hub.id, hub.createdBy);
   const {
     savedHubName,
     savedHubCategory,
@@ -398,16 +410,24 @@ export default function HubClient({
   const visibilityLabel: "Public" | "Private" = settingsVisibility;
   const accentTheme = getHubColorTheme(hub.accentColor || "teal");
 
-  // Inject author avatars into feed items
-  const allFeedItems = [...liveFeedItems, ...hubContent.feed].map((item) => ({
-    ...item,
-    authorAvatar:
-      item.authorAvatar ||
-      (item.authorId && item.authorId === hub.createdBy ? creatorAvatarSrc : undefined) ||
-      undefined,
-  }));
+  // Inject author avatars into feed items (memoized so useDeetInteractions' feed effect does not
+  // re-fire every render and race / overwrite reactions after a change.)
+  // Prefer the live Supabase-backed list once it has loaded. Concatenating SSR `hubContent.feed`
+  // with `liveFeedItems` duplicated every deet, so a client-side remove left the SSR copy visible
+  // (and looked like delete failed after refresh if the DB was fine).
+  const allFeedItems = useMemo(() => {
+    const source = liveFeedItems.length > 0 ? liveFeedItems : hubContent.feed;
+    return source.map((item) => ({
+      ...item,
+      authorAvatar:
+        item.authorAvatar ||
+        (item.authorId && item.authorId === hub.createdBy ? creatorAvatarSrc : undefined) ||
+        undefined,
+    }));
+  }, [liveFeedItems, hubContent.feed, creatorAvatarSrc, hub.createdBy]);
   const {
     likedDeetIds,
+    myReactionsByDeetId,
     likingDeetIds,
     likeCountOverrides,
     viewCountOverrides,
@@ -426,6 +446,8 @@ export default function HubClient({
     commentCountOverrides,
     commentError,
     handleToggleComments,
+    openCommentsPanelForDeet,
+    loadCommentsForDeetIfNeeded,
     handleSubmitComment,
     handleEditComment,
     handleDeleteComment,
@@ -433,11 +455,39 @@ export default function HubClient({
     viewersByDeetId,
     viewersLoading,
     handleToggleViewers,
+    prefetchViewersForDeet,
   } = useDeetInteractions(allFeedItems);
+
+  const recordShareForDeet = useCallback((deetId: string) => {
+    void import("@/lib/services/deets/deet-interactions").then(({ recordDeetShare }) => {
+      void recordDeetShare(deetId);
+    });
+  }, []);
+
+  const [pageOrigin, setPageOrigin] = useState("");
+  useEffect(() => {
+    setPageOrigin(window.location.origin);
+  }, []);
+
+  const [viewerShareCopied, setViewerShareCopied] = useState(false);
+  const viewerShareCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flashViewerShareCopied = useCallback(() => {
+    setViewerShareCopied(true);
+    if (viewerShareCopiedTimeoutRef.current) clearTimeout(viewerShareCopiedTimeoutRef.current);
+    viewerShareCopiedTimeoutRef.current = setTimeout(() => setViewerShareCopied(false), 2000);
+  }, []);
+
   const feedItemCount = allFeedItems.length;
   const totalEngagement = allFeedItems.reduce((sum, item) => sum + item.likes + item.comments, 0);
   const totalViews = allFeedItems.reduce((sum, item) => sum + item.views, 0);
-  const announcementCount = allFeedItems.filter((item) => item.kind === "announcement" || item.kind === "notice").length;
+  const announcementCount = allFeedItems.filter(
+    (item) =>
+      item.kind === "announcement" ||
+      item.kind === "notice" ||
+      item.kind === "survey" ||
+      item.kind === "payment" ||
+      item.kind === "alert",
+  ).length;
   const photoDeetCount = allFeedItems.filter((item) => item.kind === "photo").length;
   const activeAdminCount = 1;
   const knownActivityCount = feedItemCount + hubContent.events.length + recentPhotos.length;
@@ -702,6 +752,27 @@ export default function HubClient({
 
   const { viewer, openViewer, closeViewer, nextViewerImage, prevViewerImage } =
     useHubViewerState();
+  useBodyScrollLock(viewer.open);
+
+  const [imageViewerViewersOpen, setImageViewerViewersOpen] = useState(false);
+  useEffect(() => {
+    if (!viewer.open) setImageViewerViewersOpen(false);
+  }, [viewer.open]);
+
+  useEffect(() => {
+    if (!viewer.open || !viewer.focusId || viewer.commentContext) return;
+    void loadCommentsForDeetIfNeeded(viewer.focusId);
+  }, [viewer.open, viewer.focusId, viewer.commentContext, loadCommentsForDeetIfNeeded]);
+
+  const [imageViewerComposerFooterVisible, setImageViewerComposerFooterVisible] = useState(false);
+  useEffect(() => {
+    if (!viewer.open || viewer.commentContext || !viewer.focusId) {
+      setImageViewerComposerFooterVisible(false);
+      return;
+    }
+    setImageViewerComposerFooterVisible(false);
+  }, [viewer.open, viewer.focusId, viewer.commentContext]);
+
   const {
     postSearchQuery,
     setPostSearchQuery,
@@ -723,34 +794,41 @@ export default function HubClient({
 
   const {
     composerOpen,
-    composerVariant,
-    announcementTitle,
-    announcementBody,
-    setAnnouncementTitle,
-    setAnnouncementBody,
-    enterAnnouncementMode,
+    composerPhase,
+    selectComposerKindAndCompose,
+    backToComposerPickStep,
     activeComposerChild,
-    attachedDeetItems,
+    composerAccessoryPanel,
+    setComposerAccessoryPanel,
+    pickPhotosOnOpen,
+    setPickPhotosOnOpen,
+    composerKind,
+    composerTitle,
+    setComposerTitle,
+    composerBodyHtml,
+    setComposerBodyHtml,
+    composerTypePayload,
+    setComposerTypePayload,
     selectedPhotoPreviews,
-    selectedPhotoFiles,
-    modalDraftText,
     isSubmittingDeet,
+    submitError,
     deetFormatting,
     isFontSizeMenuOpen,
     deetSettings,
     deetPhotoInputRef,
     setActiveComposerChild,
-    setModalDraftText,
     setDeetFormatting,
     setIsFontSizeMenuOpen,
     setDeetSettings,
     openDeetComposer,
     closeDeetComposer,
     discardDeetComposer,
-    attachDeetItem,
     removePhoto,
     handleDeetPhotoFiles,
     handleSubmitDeet,
+    editingDeetId,
+    editPersistedGalleryUrls,
+    removePersistedGalleryPhoto,
   } = useDeetComposer({
     hubId: hub.id,
     hubSlug: hub.slug,
@@ -760,6 +838,7 @@ export default function HubClient({
     authorAvatarSrc: creatorAvatarSrc,
     userId: user?.id ?? null,
     onDeetCreated: prependCreatedDeet,
+    onDeetUpdated: replaceFeedDeet,
   });
 
   const shouldOpenComments = searchParams.get("comments") === "1";
@@ -773,17 +852,18 @@ export default function HubClient({
       setHighlightedItemId(focusTarget);
       window.setTimeout(() => setHighlightedItemId((current) => (current === focusTarget ? null : current)), 2200);
 
-      // Auto-expand comments if ?comments=1 is present
+      // Auto-expand comments if ?comments=1 is present (open, do not toggle closed)
       if (shouldOpenComments) {
-        handleToggleComments(focusTarget);
+        void openCommentsPanelForDeet(focusTarget);
       }
     }, 180);
     return () => window.clearTimeout(timer);
-  }, [activeSection, focusTarget, shouldOpenComments, handleToggleComments]);
+  }, [activeSection, focusTarget, shouldOpenComments, openCommentsPanelForDeet]);
 
-  const navigateToFocus = (focusId: string, tab?: HubTab) => {
+  const navigateToFocus = (focusId: string, tab?: HubTab, opts?: { openComments?: boolean }) => {
     const params = new URLSearchParams();
     params.set("focus", focusId);
+    if (opts?.openComments) params.set("comments", "1");
     if (tab) params.set("tab", tab);
     router.push(`${hubBaseHref}?${params.toString()}`, { scroll: false });
     if (tab) setActiveSection(tab);
@@ -1097,9 +1177,9 @@ export default function HubClient({
         onOpenViewer={(images, index, title, body, focusId, commentContext) => openViewer(images, index, title, body, focusId, commentContext)}
         onDeleteDeet={removeDeet}
         likedDeetIds={likedDeetIds}
+        myReactionsByDeetId={myReactionsByDeetId}
         likingDeetIds={likingDeetIds}
         likeCountOverrides={likeCountOverrides}
-        viewCountOverrides={viewCountOverrides}
         onToggleLike={handleToggleLike}
         reactorsByDeetId={reactorsByDeetId}
         reactionsModalDeetId={reactionsModalDeetId}
@@ -1297,7 +1377,7 @@ export default function HubClient({
                     requestNavigation({ tab: "Posts", panel: "posts" });
                   }}
                 >
-                  View Deets
+                  View Posts
                 </button>
               ) : null}
               <button
@@ -1457,16 +1537,17 @@ export default function HubClient({
       {composerOpen && typeof document !== "undefined"
         ? createPortal(
             <CreateDeetModal
-              composerVariant={composerVariant}
-              announcementTitle={announcementTitle}
-              announcementBody={announcementBody}
-              onAnnouncementTitleChange={setAnnouncementTitle}
-              onAnnouncementBodyChange={setAnnouncementBody}
-              enterAnnouncementMode={enterAnnouncementMode}
-              photoInputRef={deetPhotoInputRef}
-              onPhotoFilesChange={handleDeetPhotoFiles}
-              draftText={modalDraftText}
-              onDraftTextChange={setModalDraftText}
+              submitError={submitError}
+              composerEntryStep={composerPhase}
+              onBackToPickStep={backToComposerPickStep}
+              onPickComposerKind={selectComposerKindAndCompose}
+              composerKind={composerKind}
+              composerTitle={composerTitle}
+              onComposerTitleChange={setComposerTitle}
+              draftText={composerBodyHtml}
+              onDraftTextChange={setComposerBodyHtml}
+              composerTypePayload={composerTypePayload}
+              onComposerTypePayloadChange={setComposerTypePayload}
               formatting={deetFormatting}
               onFormattingChange={(next) => {
                 setDeetFormatting(next);
@@ -1475,279 +1556,23 @@ export default function HubClient({
               isFontSizeMenuOpen={isFontSizeMenuOpen}
               onToggleFontSizeMenu={() => setIsFontSizeMenuOpen((current) => !current)}
               onCloseFontSizeMenu={() => setIsFontSizeMenuOpen(false)}
-              attachedItems={attachedDeetItems}
               selectedPhotoPreviews={selectedPhotoPreviews}
               onRemovePhoto={removePhoto}
               onClose={closeDeetComposer}
-              onOpenChild={setActiveComposerChild}
               onSubmit={handleSubmitDeet}
               isSubmitting={isSubmittingDeet}
-              authorName={deetAuthorName}
-              authorAvatarSrc={creatorAvatarSrc}
-              onSetPostType={(postType) => setDeetSettings((prev) => ({ ...prev, postType: postType as import("./components/deets/deetTypes").DeetPostType }))}
-              isNotice={deetSettings.noticeEnabled}
-              onToggleNotice={() => setDeetSettings((prev) => ({
-                ...prev,
-                noticeEnabled: !prev.noticeEnabled,
-                postType: !prev.noticeEnabled ? "notice" : "post",
-              }))}
+              deetPhotoInputRef={deetPhotoInputRef}
+              onPhotoFilesChange={handleDeetPhotoFiles}
+              pickPhotosOnOpen={pickPhotosOnOpen}
+              onConsumePickPhotosIntent={() => setPickPhotosOnOpen(false)}
+              deetSettings={deetSettings}
+              onDeetSettingsChange={setDeetSettings}
+              composerAccessoryPanel={composerAccessoryPanel}
+              onComposerAccessoryChange={setComposerAccessoryPanel}
+              isEditMode={Boolean(editingDeetId)}
+              editPersistedGalleryUrls={editPersistedGalleryUrls}
+              onRemovePersistedGalleryPhoto={removePersistedGalleryPhoto}
             />,
-            document.body
-          )
-        : null}
-
-      {composerOpen && activeComposerChild && activeComposerChild !== "quit_confirm" && typeof document !== "undefined"
-        ? createPortal(
-            <>
-              {activeComposerChild === "photo" ? (
-                <DeetChildModal title="Upload Photos" onClose={() => setActiveComposerChild(null)}>
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => deetPhotoInputRef.current?.click()}
-                      className="w-full rounded-2xl border border-dashed border-[var(--ud-brand-primary)] bg-[var(--ud-bg-subtle)] px-4 py-8 text-center text-sm font-medium text-[var(--ud-brand-primary)] transition hover:bg-[var(--ud-bg-subtle)]"
-                    >
-                      Choose images from device
-                    </button>
-
-                    {selectedPhotoPreviews.length ? (
-                      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                        {selectedPhotoPreviews.map((preview, index) => (
-                          <div key={`${preview}-${index}`} className="aspect-square overflow-hidden rounded-2xl bg-[var(--ud-bg-subtle)]">
-                            <img src={preview} alt={`Selected ${index + 1}`} className="h-full w-full object-cover" />
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    <div className="mt-5 flex justify-end gap-3">
-                      <button type="button" onClick={() => setActiveComposerChild(null)} className={BUTTON_SECONDARY}>
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!selectedPhotoPreviews.length) return;
-                          attachDeetItem({
-                            type: "photo",
-                            title: selectedPhotoPreviews.length === 1 ? "1 photo attached" : `${selectedPhotoPreviews.length} photos attached`,
-                            detail: "Ready to post in this deet.",
-                            previews: selectedPhotoPreviews,
-                            files: selectedPhotoFiles,
-                          });
-                        }}
-                        className={BUTTON_PRIMARY}
-                      >
-                        Attach
-                      </button>
-                    </div>
-                  </div>
-                </DeetChildModal>
-              ) : null}
-
-              {activeComposerChild === "emoji" ? (
-                <DeetChildModal title="Emoji & Stickers" onClose={() => setActiveComposerChild(null)}>
-                  <div className="space-y-4">
-                    <div>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Smileys & People</p>
-                      <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
-                        {["😀","😃","😄","😁","😆","😅","🤣","😂","🙂","🙃","😉","😊","😇","🥰","😍","🤩","😘","😗","😚","😙","🥲","😋","😛","😜","🤪","😝","🤗","🤭","🫣","🤫","🤔","🫡","🤐","🤨","😐","😑","😶","🫥","😏","😒","🙄","😬","🤥","😌","😔","😪","🤤","😴","😷","🤒","🤕","🤢","🤮","🥵","🥶","🥴","😵","🤯","🤠","🥳","🥸","😎","🤓","🧐","😕","🫤","😟","🙁","😮","😯","😲","😳","🥺","🥹","😦","😧","😨","😰","😥","😢","😭","😱","😖","😣","😞","😓","😩","😫","🥱","😤","😡","😠","🤬","😈","👿","💀","☠️","💩","🤡","👹","👺","👻","👽","👾","🤖"].map((e) => (
-                          <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Gestures & Body</p>
-                      <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
-                        {["👋","🤚","🖐️","✋","🖖","🫱","🫲","🫳","🫴","👌","🤌","🤏","✌️","🤞","🫰","🤟","🤘","🤙","👈","👉","👆","🖕","👇","☝️","🫵","👍","👎","✊","👊","🤛","🤜","👏","🙌","🫶","👐","🤲","🤝","🙏","✍️","💅","🤳","💪","🦾","🦿","🦵","🦶","👂","🦻","👃","🧠","🫀","🫁","🦷","🦴","👀","👁️","👅","👄"].map((e) => (
-                          <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Hearts & Symbols</p>
-                      <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
-                        {["❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💔","❣️","💕","💞","💓","💗","💖","💘","💝","💟","❤️‍🔥","❤️‍🩹","♥️","🔥","⭐","🌟","✨","💫","🎯","💯","💢","💥","💦","💨","🕊️","🎶","🎵","🔔","📢","📣","💬","💭","🗯️","♠️","♣️","♥️","♦️","🏆","🥇","🥈","🥉","🎖️","🏅","🎗️","🎪"].map((e) => (
-                          <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Food & Nature</p>
-                      <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
-                        {["🍎","🍊","🍋","🍌","🍉","🍇","🍓","🫐","🍈","🍒","🍑","🥭","🍍","🥥","🥝","🍅","🥑","🥦","🥬","🥒","🌶️","🫑","🌽","🥕","🫒","🧄","🧅","🥔","🍞","🥐","🥖","🫓","🥨","🥯","🧀","🍳","🥞","🧇","🥓","🍔","🍟","🍕","🌭","🌮","🌯","🫔","🥙","🧆","🥗","🍝","🍜","🍲","🍛","🍣","🍱","🥟","🍤","🍚","🍘","🍥","🥮","🍡","🧁","🍰","🎂","🍮","🍭","🍬","🍫","🍩","🍪","☕","🍵","🥤","🧋","🍺","🍻","🥂","🍷"].map((e) => (
-                          <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Activities & Celebrations</p>
-                      <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
-                        {["🎉","🎊","🎈","🎁","🎀","🎄","🎃","🎆","🎇","🧨","🪔","🪅","🎋","🎍","🎎","🎏","🎐","🧧","🎑","🎠","🎡","🎢","🎪","🎭","🎨","🎬","🎤","🎧","🎼","🎹","🥁","🎷","🎺","🎸","🪕","🎻","🪘","🎲","♟️","🎯","🎳","🎮","🕹️","⚽","🏀","🏈","⚾","🥎","🎾","🏐","🏉","🥏","🎱","🪀","🏓","🏸","🏒","🥍","🏏","🪃","🥅","⛳","🏹","🎣","🤿","🥊","🥋","🛹","🛼","⛸️","🎿","🛷","🏂","🧗","🏋️","🤸","🤺","⛷️","🏄","🚴"].map((e) => (
-                          <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Animals</p>
-                      <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
-                        {["🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐻‍❄️","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🙈","🙉","🙊","🐒","🐔","🐧","🐦","🐤","🐣","🐥","🦆","🦅","🦉","🦇","🐺","🐗","🐴","🦄","🐝","🪱","🐛","🦋","🐌","🐞","🐜","🪰","🪲","🪳","🐢","🐍","🦎","🦖","🦕","🐙","🦑","🦐","🦞","🦀","🐡","🐠","🐟","🐬","🐳","🐋","🦈","🐊","🐅","🐆","🦓","🦍","🦧","🐘","🦛","🦏","🐪","🐫","🦒","🦘","🦬","🐃","🐂","🐄","🐎","🐖","🐏","🐑","🦙","🐐","🦌","🐕","🐩","🦮","🐕‍🦺","🐈","🐈‍⬛","🐓","🦃","🦤","🦚","🦜","🦢","🦩","🕊️","🐇","🦝","🦨","🦡","🦫","🦦","🦥","🐁","🐀","🐿️","🦔"].map((e) => (
-                          <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Travel & Places</p>
-                      <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
-                        {["🏠","🏡","🏘️","🏚️","🏗️","🏢","🏣","🏤","🏥","🏦","🏨","🏩","🏪","🏫","🏬","🏭","🏯","🏰","💒","🗼","🗽","⛪","🕌","🛕","🕍","⛩️","🕋","⛲","⛺","🌁","🌃","🏙️","🌄","🌅","🌆","🌇","🌉","🌌","🎠","🛝","🎡","🎢","🚂","🚃","🚄","🚅","🚆","🚇","🚈","🚉","🚊","🚝","🚞","🚋","🚌","🚍","🚎","🚐","🚑","🚒","🚓","🚔","🚕","🚖","🚗","🚘","🚙","🛻","🚚","🚛","🚜","✈️","🛩️","🚀","🛸","🚁","🛶","⛵","🚤","🛥️","🛳️","⛴️","🚢"].map((e) => (
-                          <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Indian & Cultural</p>
-                      <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
-                        {["🪔","🕉️","🪷","📿","🛕","🐘","🦚","🙏","🧘","🧿","🪬","🫶","🍛","🥥","🍚","🌶️","🫖","🍵","🎭","🪘","🎶","🎵","💃","🕺","👳","👳‍♀️","🧕","🪭","🏵️","🌺","🌸","🌼","💐","🌻","🌹","🪻"].map((e) => (
-                          <button key={e} type="button" onClick={() => { setModalDraftText((c) => `${c}${e}`); }} className="flex h-10 items-center justify-center rounded-lg text-xl transition hover:bg-[var(--ud-bg-subtle)] hover:scale-110">{e}</button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </DeetChildModal>
-              ) : null}
-
-              {/* ── Notice modal ── */}
-              {activeComposerChild === "notice" ? (
-                <DeetChildModal title="Notice" onClose={() => setActiveComposerChild(null)}>
-                  <NoticeChildContent
-                    onAttach={(title, body) => {
-                      attachDeetItem({ type: "notice", title, detail: body });
-                      setDeetSettings((prev) => ({ ...prev, postType: "notice" as import("./components/deets/deetTypes").DeetPostType }));
-                      setActiveComposerChild(null);
-                    }}
-                    onCancel={() => setActiveComposerChild(null)}
-                  />
-                </DeetChildModal>
-              ) : null}
-
-              {/* ── Poll modal ── */}
-              {activeComposerChild === "poll" ? (
-                <DeetChildModal title="Poll" onClose={() => setActiveComposerChild(null)}>
-                  <PollChildContent
-                    onAttach={(question, options, settings) => {
-                      attachDeetItem({
-                        type: "poll",
-                        title: question,
-                        detail: options.join(" · "),
-                        options,
-                        pollSettings: settings,
-                      });
-                      setActiveComposerChild(null);
-                    }}
-                    onCancel={() => setActiveComposerChild(null)}
-                  />
-                </DeetChildModal>
-              ) : null}
-
-              {/* ── Event modal ── */}
-              {activeComposerChild === "event" ? (
-                <DeetChildModal title="Add Event" onClose={() => setActiveComposerChild(null)}>
-                  <EventChildContent
-                    onAttach={(title, date, time, location) => {
-                      attachDeetItem({ type: "event", title, detail: `${date}${time ? ` at ${time}` : ""}${location ? ` · ${location}` : ""}`, eventData: { date, time, location } });
-                      setDeetSettings((prev) => ({ ...prev, postType: "news" as import("./components/deets/deetTypes").DeetPostType }));
-                      setActiveComposerChild(null);
-                    }}
-                    onCancel={() => setActiveComposerChild(null)}
-                  />
-                </DeetChildModal>
-              ) : null}
-
-              {/* ── Check-in modal ── */}
-              {activeComposerChild === "checkin" ? (
-                <DeetChildModal title="Check In" onClose={() => setActiveComposerChild(null)}>
-                  <CheckinChildContent
-                    onAttach={(placeName, address) => {
-                      attachDeetItem({ type: "checkin", title: `📍 ${placeName}`, detail: address || undefined });
-                      setActiveComposerChild(null);
-                    }}
-                    onCancel={() => setActiveComposerChild(null)}
-                  />
-                </DeetChildModal>
-              ) : null}
-
-              {/* ── Alert modal ── */}
-              {activeComposerChild === "alert" ? (
-                <DeetChildModal title="Alert" onClose={() => setActiveComposerChild(null)}>
-                  <AlertChildContent
-                    onAttach={(title, body, level) => {
-                      attachDeetItem({ type: "alert", title, detail: `[${level.toUpperCase()}] ${body}` });
-                      setDeetSettings((prev) => ({ ...prev, postType: "hazard" as import("./components/deets/deetTypes").DeetPostType }));
-                      setActiveComposerChild(null);
-                    }}
-                    onCancel={() => setActiveComposerChild(null)}
-                  />
-                </DeetChildModal>
-              ) : null}
-
-              {/* ── Survey modal ── */}
-              {activeComposerChild === "survey" ? (
-                <DeetChildModal title="Survey" onClose={() => setActiveComposerChild(null)}>
-                  <SurveyChildContent
-                    onAttach={(title, questions) => {
-                      attachDeetItem({
-                        type: "survey",
-                        title,
-                        detail: `${questions.length} question${questions.length > 1 ? "s" : ""}`,
-                        options: questions.map((q) => `${q.question}: ${q.options.filter((o) => o.trim()).join(", ")}`),
-                      });
-                      setActiveComposerChild(null);
-                    }}
-                    onCancel={() => setActiveComposerChild(null)}
-                  />
-                </DeetChildModal>
-              ) : null}
-
-              {/* ── Payment modal ── */}
-              {activeComposerChild === "payment" ? (
-                <DeetChildModal title="Payment Request" onClose={() => setActiveComposerChild(null)}>
-                  <PaymentChildContent
-                    onAttach={(title, amount, paymentNote) => {
-                      attachDeetItem({ type: "payment", title, detail: `$${amount}${paymentNote ? ` — ${paymentNote}` : ""}` });
-                      setActiveComposerChild(null);
-                    }}
-                    onCancel={() => setActiveComposerChild(null)}
-                  />
-                </DeetChildModal>
-              ) : null}
-
-              {/* ── Jobs modal ── */}
-              {activeComposerChild === "jobs" ? (
-                <DeetChildModal title="Post a Job" onClose={() => setActiveComposerChild(null)}>
-                  <JobsChildContent
-                    onAttach={(data) => {
-                      const kindLabel = { full_time: "Full-Time", part_time: "Part-Time", contract: "Contract", freelance: "Freelance", internship: "Internship" }[data.kind] ?? data.kind;
-                      attachDeetItem({
-                        type: "jobs",
-                        title: data.jobTitle,
-                        detail: `${kindLabel}${data.pay ? ` · ${data.pay}` : ""}${data.timings ? ` · ${data.timings}` : ""}${data.daysPerWeek ? ` · ${data.daysPerWeek} days/wk` : ""}`,
-                        meta: data.rolesAndResponsibilities,
-                        jobData: data,
-                      });
-                      setDeetSettings((prev) => ({ ...prev, postType: "jobs" as import("./components/deets/deetTypes").DeetPostType }));
-                      setActiveComposerChild(null);
-                    }}
-                    onCancel={() => setActiveComposerChild(null)}
-                  />
-                </DeetChildModal>
-              ) : null}
-
-              {activeComposerChild === "settings" ? (
-                <DeetChildModal title="Deet Settings" onClose={() => setActiveComposerChild(null)}>
-                  <DeetSettingsModal settings={deetSettings} onChange={setDeetSettings} onCancel={() => setActiveComposerChild(null)} onSave={() => setActiveComposerChild(null)} />
-                </DeetChildModal>
-              ) : null}
-            </>,
             document.body
           )
         : null}
@@ -1756,8 +1581,14 @@ export default function HubClient({
         ? createPortal(
             <div className="fixed inset-0 z-[230] flex items-center justify-center bg-[rgba(15,23,42,0.72)] p-4">
               <div className={cn(CARD, "w-full max-w-sm p-5")}>
-                <h4 className="text-xl font-semibold tracking-tight text-[var(--ud-text-primary)]">Discard this deet?</h4>
-                <p className="mt-2 text-sm leading-relaxed text-[var(--ud-text-secondary)]">You have unsaved text or attached content. If you leave now, those changes will be lost.</p>
+                <h4 className="text-xl font-semibold tracking-tight text-[var(--ud-text-primary)]">
+                  {editingDeetId ? "Discard your changes?" : "Discard this deet?"}
+                </h4>
+                <p className="mt-2 text-sm leading-relaxed text-[var(--ud-text-secondary)]">
+                  {editingDeetId
+                    ? "You have unsaved edits to this post. If you leave now, those changes will be lost."
+                    : "You have unsaved text or attached content. If you leave now, those changes will be lost."}
+                </p>
                 <div className="mt-5 flex justify-end gap-3">
                   <button type="button" onClick={() => setActiveComposerChild(null)} className={BUTTON_SECONDARY}>
                     Cancel
@@ -1773,9 +1604,9 @@ export default function HubClient({
         : null}
 
       {viewer.open ? (
-        <div className="fixed inset-0 z-[120] flex flex-col bg-black/90 lg:flex-row">
-          {/* Image area */}
-          <div className="relative flex min-h-0 flex-1 items-center justify-center p-4 lg:p-6">
+        <div className="fixed inset-0 z-[120] flex min-h-0 min-w-0 flex-col overflow-x-hidden bg-black/90 lg:flex-row">
+          {/* Image area — min-w-0 so huge intrinsic image widths cannot blow out the row and clip the sidebar */}
+          <div className="relative flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden p-4 lg:min-h-0 lg:flex-1 lg:p-6">
             {/* Close button */}
             <button type="button" onClick={closeViewer} className="absolute right-4 top-4 z-20 rounded-full bg-white/15 p-2 text-white transition hover:bg-white/25 lg:right-6 lg:top-6">
               <X className="h-5 w-5 stroke-[1.8]" />
@@ -1800,17 +1631,21 @@ export default function HubClient({
               </>
             ) : null}
 
-            {/* Image */}
-            <img src={viewer.images[viewer.index]} alt="Hub photo" className="max-h-[85vh] max-w-[90vw] w-auto h-auto rounded-2xl object-contain lg:max-h-[85vh] lg:max-w-[90vw] lg:rounded-3xl" />
+            {/* Image — max-w-full respects flex column width (min-w-0 ancestor); avoids pushing reactions panel off-screen */}
+            <img
+              src={viewer.images[viewer.index]}
+              alt="Hub photo"
+              className="h-auto max-h-[85vh] w-auto max-w-full rounded-2xl object-contain lg:max-h-[85vh] lg:rounded-3xl"
+            />
           </div>
 
-          {/* Engagement panel — bottom sheet on mobile, sidebar on desktop */}
-          <div className="shrink-0 rounded-t-2xl bg-[var(--ud-bg-card)] p-4 lg:flex lg:w-[360px] lg:flex-col lg:rounded-none lg:border-l lg:border-white/20 lg:p-5">
+          {/* Engagement panel — grows to use remaining height (mobile) / full viewport (desktop) */}
+          <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-t-2xl bg-[var(--ud-bg-card)] p-4 lg:h-full lg:min-h-0 lg:w-[360px] lg:max-w-[360px] lg:shrink-0 lg:grow-0 lg:flex-none lg:self-stretch lg:rounded-none lg:border-l lg:border-white/20 lg:p-5">
             {viewer.commentContext ? (
               /* ── Comment image sidebar ── */
-              <>
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                 {/* Comment author */}
-                <div className="flex items-center gap-3">
+                <div className="flex shrink-0 items-center gap-3">
                   <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
                     {viewer.commentContext.authorAvatar ? (
                       <img src={viewer.commentContext.authorAvatar} alt={viewer.commentContext.authorName} className="h-full w-full object-cover" />
@@ -1827,12 +1662,12 @@ export default function HubClient({
                 </div>
 
                 {/* Comment body */}
-                {viewer.commentContext.body && viewer.commentContext.body !== "📷" && (
-                  <p className="mt-3 text-sm leading-relaxed text-[var(--ud-text-secondary)]">{viewer.commentContext.body}</p>
-                )}
+                {viewer.commentContext.body && viewer.commentContext.body !== "📷" ? (
+                  <p className="mt-3 shrink-0 text-sm leading-relaxed text-[var(--ud-text-secondary)]">{viewer.commentContext.body}</p>
+                ) : null}
 
                 {/* Action buttons */}
-                <div className="mt-3 flex items-center gap-3 border-t border-[var(--ud-border)] pt-3 text-sm text-[var(--ud-text-secondary)] lg:mt-4 lg:pt-4">
+                <div className="mt-3 flex shrink-0 items-center gap-3 border-t border-[var(--ud-border)] pt-3 text-sm text-[var(--ud-text-secondary)] lg:mt-4 lg:pt-4">
                   {viewer.commentContext.reactedEmoji ? (
                     <span className="inline-flex items-center gap-1.5 font-medium text-[var(--ud-brand-primary)]">
                       <span className="text-base">{viewer.commentContext.reactedEmoji}</span>
@@ -1852,7 +1687,7 @@ export default function HubClient({
 
                 {/* Replies to this comment */}
                 {viewer.commentContext.replies && viewer.commentContext.replies.length > 0 ? (
-                  <div className="mt-3 hidden max-h-[300px] flex-1 overflow-y-auto rounded-xl bg-[var(--ud-bg-subtle)] p-3 text-sm lg:mt-4 lg:block space-y-3">
+                  <div className="mt-3 hidden min-h-0 flex-1 overflow-y-auto rounded-xl bg-[var(--ud-bg-subtle)] p-3 text-sm lg:mt-4 lg:block lg:min-h-0 space-y-3">
                     <p className="text-xs font-medium text-[var(--ud-text-muted)]">{viewer.commentContext.replies.length} {viewer.commentContext.replies.length === 1 ? "reply" : "replies"}</p>
                     {viewer.commentContext.replies.map((reply) => (
                       <div key={reply.id} className="flex items-start gap-2">
@@ -1876,92 +1711,329 @@ export default function HubClient({
                     ))}
                   </div>
                 ) : (
-                  <div className="mt-3 hidden rounded-xl bg-[var(--ud-bg-subtle)] p-3 text-sm lg:mt-4 lg:block">
+                  <div className="mt-3 hidden min-h-0 flex-1 rounded-xl bg-[var(--ud-bg-subtle)] p-3 text-sm lg:mt-4 lg:block lg:min-h-0">
                     <p className="text-xs italic text-[var(--ud-text-muted)]">No replies yet</p>
                   </div>
                 )}
-              </>
+              </div>
             ) : (
-              /* ── Post image sidebar (original) ── */
-              <>
-                <h3 className="text-base font-semibold tracking-tight text-[var(--ud-text-primary)]">{viewer.title || "Photo"}</h3>
-                <p className="mt-1 text-sm text-[var(--ud-text-secondary)] lg:mt-2">{viewer.body || "Shared from this hub."}</p>
+              /* ── Post image sidebar ── */
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                {viewer.focusId ? (() => {
+                  const fi = allFeedItems.find((f) => f.id === viewer.focusId) ?? null;
+                  if (!fi) {
+                    return (
+                      <>
+                        <h3 className="shrink-0 text-base font-semibold tracking-tight text-[var(--ud-text-primary)]">
+                          {viewer.title || "Photo"}
+                        </h3>
+                        {viewer.body?.trim() ? (
+                          <SafeDeetBody
+                            source={viewer.body}
+                            className="mt-1 shrink-0 text-sm text-[var(--ud-text-secondary)] lg:mt-2"
+                          />
+                        ) : (
+                          <p className="mt-1 shrink-0 text-sm text-[var(--ud-text-secondary)] lg:mt-2">Shared from this hub.</p>
+                        )}
+                      </>
+                    );
+                  }
+                  const deetType = resolveDeetType(fi.kind, fi.deetAttachments);
+                  const hasRichSection = Boolean(deetType && fi.deetAttachments?.some((a) => a.type === deetType));
+                  const showStructuredRichBody = Boolean(hasRichSection && deetType && deetType !== "poll");
+                  const structuredHeadline = deetType
+                    ? getStructuredHeadlineForFeed(deetType, fi.deetAttachments, fi.title)
+                    : null;
+                  const headline =
+                    structuredHeadline ||
+                    (fi.title?.trim() && !isGenericDeetTitle(fi.title) ? fi.title.trim() : null);
+                  const isPlainFeedPost = deetType === null;
+                  const hasTextBlock = Boolean(headline || (fi.body && !hasRichSection) || deetType);
+                  const typeBlockSpacing = headline || (fi.body && !hasRichSection) ? "mt-3" : "mt-1";
 
-                {/* Engagement metrics */}
-                <div className="mt-3 flex items-center gap-4 text-sm text-[var(--ud-text-muted)] lg:mt-4">
-                  <span className="inline-flex items-center gap-1">
-                    <Eye className="h-3.5 w-3.5" />
-                    {(() => { const fi = viewer.focusId ? allFeedItems.find(f => f.id === viewer.focusId) : null; return fi ? fi.views + (viewCountOverrides[fi.id] ?? 0) : 0; })()} views
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <Heart className="h-3.5 w-3.5" />
-                    {(() => { const fi = viewer.focusId ? allFeedItems.find(f => f.id === viewer.focusId) : null; return fi ? (likeCountOverrides[fi.id] ?? fi.likes) : 0; })()} likes
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <MessageSquare className="h-3.5 w-3.5" />
-                    {(() => { const fi = viewer.focusId ? allFeedItems.find(f => f.id === viewer.focusId) : null; return fi ? fi.comments : 0; })()} comments
-                  </span>
-                </div>
-
-                {/* Action buttons */}
-                <div className="mt-3 flex items-center gap-3 border-t border-[var(--ud-border)] pt-3 text-sm text-[var(--ud-text-secondary)] lg:mt-4 lg:pt-4">
-                  <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[var(--ud-brand-primary)]">
-                    <Heart className={ICON} />
-                    Like
-                  </button>
-                  <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[var(--ud-brand-primary)]">
-                    <MessageSquare className={ICON} />
-                    Comment
-                  </button>
-                  <button type="button" className="inline-flex items-center gap-1.5 transition hover:text-[var(--ud-brand-primary)]">
-                    <Share2 className={ICON} />
-                    Share
-                  </button>
-                </div>
-
-                {/* Comments area — hidden on mobile for compact view */}
-                {viewer.focusId && commentsByDeetId[viewer.focusId] ? (
-                  <div className="mt-3 hidden max-h-[200px] overflow-y-auto rounded-xl bg-[var(--ud-bg-subtle)] p-3 text-sm text-[var(--ud-text-muted)] lg:mt-4 lg:block space-y-2">
-                    <p className="font-medium text-[var(--ud-text-secondary)]">Comments</p>
-                    {commentsByDeetId[viewer.focusId].length === 0 ? (
-                      <p className="mt-2 italic text-[var(--ud-text-muted)]">No comments yet. Be the first to comment.</p>
+                  return (
+                    <div
+                      className={cn(
+                        "min-h-0 max-h-[42vh] shrink-0 overflow-y-auto pr-1 lg:max-h-[min(60vh,520px)] lg:pr-0",
+                        hasTextBlock && "min-h-[80px]",
+                      )}
+                    >
+                      {headline ? (
+                        <h3 className="text-base font-semibold tracking-tight text-[var(--ud-text-primary)]">{headline}</h3>
+                      ) : null}
+                      {fi.body && !hasRichSection ? (
+                        isPlainFeedPost ? (
+                          <StructuredDescriptionShell type="post" className={headline ? "mt-2" : "mt-3"}>
+                            <FeedPostBody
+                              body={fi.body}
+                              title={fi.title}
+                              dedupeBodyAgainstTitle={false}
+                              className="text-sm leading-relaxed text-[var(--ud-text-secondary)]"
+                            />
+                          </StructuredDescriptionShell>
+                        ) : (
+                          <FeedPostBody
+                            body={fi.body}
+                            title={fi.title}
+                            dedupeBodyAgainstTitle
+                            className={cn(
+                              "text-sm leading-relaxed text-[var(--ud-text-secondary)]",
+                              headline ? "mt-2" : "mt-3",
+                            )}
+                          />
+                        )
+                      ) : null}
+                      {deetType === "poll" ? (
+                        <div className={typeBlockSpacing}>
+                          <PollContent deetId={fi.id} attachments={fi.deetAttachments} />
+                        </div>
+                      ) : deetType ? (
+                        <div className={typeBlockSpacing}>
+                          <DeetTypeContent
+                            type={deetType}
+                            attachments={fi.deetAttachments}
+                            bodyHtml={showStructuredRichBody ? fi.body : undefined}
+                            deetId={fi.id}
+                            currentUserId={user?.id}
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })() : (
+                  <>
+                    <h3 className="shrink-0 text-base font-semibold tracking-tight text-[var(--ud-text-primary)]">
+                      {viewer.title || "Photo"}
+                    </h3>
+                    {viewer.body?.trim() ? (
+                      <SafeDeetBody
+                        source={viewer.body}
+                        className="mt-1 shrink-0 text-sm text-[var(--ud-text-secondary)] lg:mt-2"
+                      />
                     ) : (
-                      <div className="space-y-2">
-                        {commentsByDeetId[viewer.focusId].map((comment) => (
-                          <div key={comment.id} className="text-xs">
-                            <div className="flex items-center gap-1">
-                              <span className="font-medium text-[var(--ud-text-primary)]">{comment.authorName || "Anonymous"}</span>
-                              <span className="text-[var(--ud-text-muted)]">{formatViewerCommentTime(comment.createdAt)}</span>
-                            </div>
-                            <p className="text-[var(--ud-text-secondary)] mt-0.5">{comment.body}</p>
-                          </div>
-                        ))}
-                      </div>
+                      <p className="mt-1 shrink-0 text-sm text-[var(--ud-text-secondary)] lg:mt-2">Shared from this hub.</p>
                     )}
-                  </div>
-                ) : (
-                  <div className="mt-3 hidden max-h-[200px] overflow-y-auto rounded-xl bg-[var(--ud-bg-subtle)] p-3 text-sm text-[var(--ud-text-muted)] lg:mt-4 lg:block">
-                    <p className="font-medium text-[var(--ud-text-secondary)]">Comments</p>
-                    <p className="mt-2 italic text-[var(--ud-text-muted)]">No comments yet. Be the first to comment.</p>
-                  </div>
+                  </>
                 )}
 
-                {/* Show the post button */}
+                {/* Engagement metrics — Views & Reactions only (comments list is below) */}
+                {viewer.focusId
+                  ? (() => {
+                      const fid = viewer.focusId;
+                      const fi = allFeedItems.find((f) => f.id === fid) ?? null;
+                      const viewCount = fi ? fi.views + (viewCountOverrides[fi.id] ?? 0) : 0;
+                      const reactionCount = fi ? (likeCountOverrides[fi.id] ?? fi.likes) : 0;
+                      const canSeeViewers = Boolean(
+                        user?.id && fi && (user.id === fi.authorId || isCreatorAdmin),
+                      );
+                      const reactionsLabel = reactionCount === 1 ? "Reaction" : "Reactions";
+                      const viewsControl = canSeeViewers ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void prefetchViewersForDeet(fid);
+                            setImageViewerViewersOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-md py-0.5 text-left text-[var(--ud-text-secondary)] transition hover:text-[var(--ud-text-primary)] motion-reduce:transition-none"
+                          aria-label={`${viewCount} Views. Open list of viewers.`}
+                        >
+                          <Eye className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                          <span className="font-semibold tabular-nums text-[var(--ud-text-primary)]">{viewCount}</span>
+                          <span> Views</span>
+                        </button>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[var(--ud-text-muted)]">
+                          <Eye className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                          <span className="font-semibold tabular-nums text-[var(--ud-text-primary)]">{viewCount}</span>
+                          <span> Views</span>
+                        </span>
+                      );
+                      return (
+                        <div className="mt-3 flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-[var(--ud-text-muted)] lg:mt-4">
+                          {viewsControl}
+                          <span className="text-[var(--ud-text-muted)]" aria-hidden>
+                            ·
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => void handleOpenReactionsModal(fid)}
+                            className="rounded-md py-0.5 text-left text-[var(--ud-text-secondary)] transition hover:text-[var(--ud-text-primary)] motion-reduce:transition-none"
+                            aria-label={`${reactionCount} ${reactionsLabel}. Open list of people who reacted.`}
+                          >
+                            <span className="font-semibold tabular-nums text-[var(--ud-text-primary)]">{reactionCount}</span>
+                            <span> {reactionsLabel}</span>
+                          </button>
+                        </div>
+                      );
+                    })()
+                  : null}
+
+                {/* Actions — same behavior as feed card (react / comment / share) */}
                 {viewer.focusId ? (
-                  <button
-                    type="button"
-                    className={cn(BUTTON_PRIMARY, "mt-3 w-full lg:mt-auto")}
-                    onClick={() => {
-                      closeViewer();
-                      navigateToFocus(viewer.focusId!, "Posts");
-                    }}
-                  >
-                    Show the post
-                  </button>
+                  <div className="mt-3 flex shrink-0 gap-1 border-t border-[var(--ud-border)] pt-3 sm:gap-2 lg:mt-4 lg:pt-4">
+                    <div className="min-w-0 flex-1 rounded-lg motion-reduce:active:scale-100">
+                      <EmojiReactButton
+                        deetId={viewer.focusId}
+                        isLiked={likedDeetIds?.has(viewer.focusId) ?? false}
+                        isLiking={likingDeetIds?.has(viewer.focusId) ?? false}
+                        onToggleLike={handleToggleLike}
+                        syncedReaction={myReactionsByDeetId[viewer.focusId] ?? null}
+                        triggerClassName="max-sm:min-h-[44px] w-full rounded-lg active:scale-[0.98] motion-reduce:active:scale-100"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      aria-expanded={imageViewerComposerFooterVisible}
+                      onClick={() => setImageViewerComposerFooterVisible((open) => !open)}
+                      className={cn(
+                        "flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg text-sm transition-colors motion-reduce:transition-none sm:min-h-0 sm:py-2.5 active:scale-[0.98] motion-reduce:active:scale-100",
+                        imageViewerComposerFooterVisible
+                          ? "font-semibold text-[var(--ud-brand-primary)]"
+                          : "text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)]",
+                      )}
+                    >
+                      <MessageSquare className={POST_ICON} />
+                      <span>Comment</span>
+                    </button>
+                    <DeetSharePopover
+                      shareUrl={`${pageOrigin}${hubBaseHref}?focus=${viewer.focusId}`}
+                      title={(() => {
+                        const fi = allFeedItems.find((f) => f.id === viewer.focusId);
+                        const t = (fi?.title ?? viewer.title ?? "").trim();
+                        return t || "Post";
+                      })()}
+                      deetId={viewer.focusId}
+                      onRecordShare={recordShareForDeet}
+                      onCopySuccess={flashViewerShareCopied}
+                      copied={viewerShareCopied}
+                      triggerClassName="max-sm:min-h-[44px] rounded-lg active:scale-[0.98] motion-reduce:active:scale-100"
+                    />
+                  </div>
                 ) : null}
-              </>
+
+                {viewer.focusId ? (
+                  <div className="mt-3 flex min-h-0 min-w-0 flex-1 flex-col gap-2">
+                    <div className="flex shrink-0 items-baseline justify-between gap-2 px-0.5">
+                      <p className="font-medium text-[var(--ud-text-secondary)]">Comments</p>
+                      <span className="text-xs tabular-nums text-[var(--ud-text-muted)]">
+                        {(() => {
+                          const fi = allFeedItems.find((f) => f.id === viewer.focusId) ?? null;
+                          const n = fi ? fi.comments + (commentCountOverrides[fi.id] ?? 0) : 0;
+                          return `${n} ${n === 1 ? "Comment" : "Comments"}`;
+                        })()}
+                      </span>
+                    </div>
+                    <DeetCommentsSection
+                      key={viewer.focusId}
+                      layout="embedded"
+                      deetId={viewer.focusId}
+                      comments={commentsByDeetId[viewer.focusId] ?? []}
+                      isLoading={commentLoadingDeetIds.has(viewer.focusId)}
+                      isSubmitting={commentSubmittingDeetId === viewer.focusId}
+                      error={commentError}
+                      currentUserId={user?.id}
+                      onSubmitComment={handleSubmitComment}
+                      onEditComment={handleEditComment}
+                      onDeleteComment={handleDeleteComment}
+                      showComposerFooter={imageViewerComposerFooterVisible}
+                      onRequestComposerFooter={() => setImageViewerComposerFooterVisible(true)}
+                      onDismissComposerFooter={() => setImageViewerComposerFooterVisible(false)}
+                      autoFocusComposer={imageViewerComposerFooterVisible}
+                      onOpenViewer={(images, index, comment) => {
+                        if (comment) {
+                          const clientReaction =
+                            (comment as DeetComment & { _clientReaction?: string | null })._clientReaction ?? null;
+                          openViewer(images, index, "", "", undefined, {
+                            commentId: comment.id,
+                            authorName: comment.authorName ?? "User",
+                            authorAvatar: comment.authorAvatar,
+                            body: comment.body,
+                            createdAt: comment.createdAt,
+                            reactedEmoji: clientReaction,
+                            replies: comment.replies?.map((r) => ({
+                              id: r.id,
+                              authorName: r.authorName ?? "User",
+                              authorAvatar: r.authorAvatar,
+                              body: r.body,
+                              createdAt: r.createdAt,
+                            })),
+                          });
+                        } else {
+                          openViewer(images, index, viewer.title, viewer.body, viewer.focusId);
+                        }
+                      }}
+                      userAvatarSrc={currentUserAvatarSrc}
+                      userName={
+                        currentUserProfile?.fullName ||
+                        (user?.user_metadata?.full_name as string | undefined) ||
+                        user?.email?.split("@")[0] ||
+                        "You"
+                      }
+                    />
+                  </div>
+                ) : null}
+              </div>
             )}
           </div>
+
+          {imageViewerViewersOpen && viewer.focusId && !viewer.commentContext ? (
+            <div
+              className="fixed inset-0 z-[125] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="hub-image-viewer-viewers-title"
+              onClick={() => setImageViewerViewersOpen(false)}
+            >
+              <div
+                className="mx-4 w-full max-w-sm rounded-2xl border border-[var(--ud-border)] bg-[var(--ud-bg-card)] shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between border-b border-[var(--ud-border-subtle)] px-5 py-3.5">
+                  <h3 id="hub-image-viewer-viewers-title" className="text-base font-semibold text-[var(--ud-text-primary)]">
+                    Viewers
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setImageViewerViewersOpen(false)}
+                    className="rounded-full p-1 text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
+                    aria-label="Close viewers"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <div className="max-h-[min(60vh,320px)] overflow-y-auto">
+                  {viewersLoading && !(viewer.focusId in viewersByDeetId) ? (
+                    <div className="flex items-center justify-center py-10">
+                      <Loader2 className="h-5 w-5 animate-spin text-[var(--ud-text-muted)]" />
+                    </div>
+                  ) : (viewersByDeetId[viewer.focusId] ?? []).length > 0 ? (
+                    <div className="py-1">
+                      {(viewersByDeetId[viewer.focusId] ?? []).map((v) => (
+                        <div key={v.userId} className="flex items-center gap-3 px-5 py-2.5">
+                          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
+                            <ImageWithFallback
+                              src={v.avatar || ""}
+                              sources={v.avatar ? [v.avatar] : []}
+                              alt={v.name}
+                              className="h-full w-full object-cover"
+                              fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-xs font-bold text-[var(--ud-brand-primary)]"
+                              fallback={initials(v.name)}
+                            />
+                          </div>
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--ud-text-primary)]">{v.name}</span>
+                          <span className="shrink-0 text-xs text-[var(--ud-text-muted)]">
+                            {v.viewedAt ? new Date(v.viewedAt).toLocaleDateString() : ""}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="px-5 py-8 text-center text-sm text-[var(--ud-text-muted)]">No views yet</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
 

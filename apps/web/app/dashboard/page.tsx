@@ -2,28 +2,56 @@
 
 export const dynamic = "force-dynamic";
 
-import { CheckCircle, Loader2, MessageCircle, Send, Share2, SmilePlus, X } from "lucide-react";
+import { CheckCircle, ChevronDown, ChevronLeft, ChevronRight, Loader2, MessageSquare, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
 import { mapDeetToDashboardCard } from "@/lib/mappers/deets/map-deet-to-dashboard-card";
 import { listDeets, subscribeToDeets } from "@/lib/services/deets/list-deets";
-import type { DeetRecord } from "@/lib/services/deets/deet-types";
+import type { DeetAttachment, DeetRecord } from "@/lib/services/deets/deet-types";
 import {
   toggleDeetLike,
   getDeetLikeStatus,
   addDeetComment,
   listDeetComments,
   listDeetReactors,
+  editDeetComment,
+  deleteDeetComment,
+  syncDeetCommentCounts,
   type DeetComment,
   type DeetReactor,
 } from "@/lib/services/deets/deet-interactions";
+import { SafeDeetBody } from "@/components/deets/SafeDeetBody";
+import { DeetCommentsSection } from "@/app/hubs/[category]/[slug]/components/deets/DeetCommentsSection";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import { listHubs } from "@/lib/services/hubs/list-hubs";
 import { listMyMemberships, type MyMembership } from "@/lib/services/members/list-my-memberships";
 import type { Hub as SupabaseHub } from "@/types/hub";
 import { DashboardHubCard, type DashboardHubCardData } from "./components/DashboardHubCard";
+import { isGenericDeetTitle } from "@/lib/deets/deet-title";
+import { DeetSharePopover } from "@/components/deets/DeetSharePopover";
+import { FeedPostBody } from "@/components/deets/FeedPostBody";
+import { FeedMedia } from "@/app/hubs/[category]/[slug]/components/deets/FeedMedia";
+import type {
+  HubFeedItemAttachment,
+  HubFeedItemKind,
+  HubJobDataPersisted,
+  HubPollSettingsPersisted,
+} from "@/lib/hub-content";
+import { resolveHubFeedItemKind } from "@/app/hubs/[category]/[slug]/components/deets/map-deet-to-hub-feed-item";
+import {
+  DeetTypeContent,
+  DeetTypeKindChip,
+  getStructuredHeadlineForFeed,
+  PollContent,
+  resolveDeetType,
+  StructuredDescriptionShell,
+} from "@/app/hubs/[category]/[slug]/components/deets/feedDeetTypeBlocks";
+import { EmojiReactButton, POST_ICON } from "@/app/hubs/[category]/[slug]/components/deets/feedEmojiReact";
+import { ReactionSummary } from "@/app/hubs/[category]/[slug]/components/deets/ReactionSummary";
+import { feedKindMeta, ImageWithFallback, initials } from "@/app/hubs/[category]/[slug]/components/hubUtils";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 type DashboardHub = DashboardHubCardData & { createdBy: string };
 
@@ -36,6 +64,10 @@ type FeedAttachment = {
   detail?: string;
   options?: string[];
   previews?: string[];
+  eventData?: { date?: string | null; time?: string | null; location?: string | null };
+  pollSettings?: HubPollSettingsPersisted;
+  jobData?: HubJobDataPersisted;
+  meta?: string;
 };
 
 type FeedItem = {
@@ -44,6 +76,8 @@ type FeedItem = {
   body: string;
   kind: string;
   type: FeedFilter;
+  /** Normalized hub feed kind — same pipeline as hub cards for chips and `resolveDeetType`. */
+  feedKind: HubFeedItemKind;
   hubName: string;
   hubId: string;
   authorName: string;
@@ -54,6 +88,8 @@ type FeedItem = {
   previewImages: string[];
   href?: string;
   attachments: FeedAttachment[];
+  /** Total comments from `deets.comment_count` (accurate before the thread is fetched). */
+  commentCount: number;
 };
 
 const PAGE_BG = "bg-[var(--ud-bg-page)]";
@@ -101,64 +137,43 @@ function formatDeetTime(createdAt: string) {
   return new Date(createdAt).toLocaleDateString();
 }
 
-/** Type-only labels that shouldn't be shown as prominent titles */
-const GENERIC_TITLE_LABELS = new Set(["Deet", "Notice", "Photo", "Event", "File", "News", "Deal", "Hazard", "Alert"]);
-
 function getInitials(name: string): string {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "U";
 }
 
-function isGenericTitle(title: string | null | undefined): boolean {
-  if (!title) return true;
-  return GENERIC_TITLE_LABELS.has(title.trim());
-}
-
-function sanitizeHtmlContent(html: string): string {
-  if (typeof document === "undefined") return html;
-  const div = document.createElement("div");
-  div.innerHTML = html;
-  const scripts = div.querySelectorAll("script");
-  scripts.forEach((script) => script.remove());
-  const allElements = div.querySelectorAll("*");
-  allElements.forEach((el) => {
-    Array.from(el.attributes).forEach((attr) => {
-      if (attr.name.startsWith("on")) {
-        el.removeAttribute(attr.name);
-      }
-    });
-  });
-  return div.innerHTML;
-}
-
-/**
- * Strip body text that duplicates the title to avoid showing the same content twice.
- * This handles posts where attachments (announcements, events, polls) have their title
- * duplicated into the body text.
- */
-function deduplicateBodyFromTitle(body: string | undefined | null, title: string | undefined | null): string {
-  if (!body || !title || isGenericTitle(title)) return body || "";
-  const plainBody = body.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-  const plainTitle = title.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-  if (!plainTitle) return body;
-  // If the plain body starts with the title text, strip it
-  if (plainBody.startsWith(plainTitle)) {
-    const remainder = plainBody.slice(plainTitle.length).trim();
-    return remainder;
-  }
-  return body;
+/** All rows in the threaded list (top-level + replies). */
+function totalCommentsInTree(comments: DeetComment[] | undefined): number {
+  if (!comments?.length) return 0;
+  return comments.reduce((sum, c) => sum + 1 + (c.replies?.length ?? 0), 0);
 }
 
 function deetRecordToDashboardItem(item: DeetRecord): FeedItem {
   const card = mapDeetToDashboardCard(item);
+  const feedKind = resolveHubFeedItemKind(card, item);
 
   // Normalize attachments to FeedAttachment shape
-  const attachments: FeedAttachment[] = (item.attachments ?? []).map((a) => ({
-    type: a.type,
-    title: a.title || undefined,
-    detail: a.detail || undefined,
-    options: (a as unknown as Record<string, unknown>).options as string[] | undefined,
-    previews: a.previews || undefined,
-  }));
+  const attachments: FeedAttachment[] = (item.attachments ?? []).map((a) => {
+    const raw = a as DeetAttachment;
+    const row: FeedAttachment = {
+      type: a.type,
+      title: a.title || undefined,
+      detail: a.detail || undefined,
+      options: raw.options as string[] | undefined,
+      previews: a.previews || undefined,
+      meta: typeof raw.meta === "string" ? raw.meta : undefined,
+      eventData:
+        a.type === "event" && raw.eventData && typeof raw.eventData === "object"
+          ? (raw.eventData as FeedAttachment["eventData"])
+          : undefined,
+    };
+    if (a.type === "poll" && raw.pollSettings && typeof raw.pollSettings === "object") {
+      row.pollSettings = raw.pollSettings as HubPollSettingsPersisted;
+    }
+    if (a.type === "jobs" && raw.jobData && typeof raw.jobData === "object") {
+      row.jobData = raw.jobData as HubJobDataPersisted;
+    }
+    return row;
+  });
 
   return {
     id: card.id,
@@ -166,6 +181,7 @@ function deetRecordToDashboardItem(item: DeetRecord): FeedItem {
     body: card.body ?? "",
     kind: item.kind,
     type: card.type,
+    feedKind,
     hubName: "",
     hubId: card.hubId,
     authorName: item.author_name || "Hub member",
@@ -175,26 +191,45 @@ function deetRecordToDashboardItem(item: DeetRecord): FeedItem {
     previewImages: card.previewImageUrls,
     href: undefined,
     attachments,
+    commentCount: item.comment_count ?? 0,
   };
 }
 
-function DashboardDeetImage({ src, alt }: { src?: string; alt: string }) {
-  const [imageFailed, setImageFailed] = useState(false);
+function dashboardDeetGalleryUrls(item: FeedItem): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const u of item.previewImages ?? []) {
+    const t = u?.trim();
+    if (!t || seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+  }
+  const primary = item.previewImage?.trim();
+  if (primary && !seen.has(primary)) {
+    out.unshift(primary);
+  }
+  return out;
+}
 
-  if (!src || imageFailed) return null;
+function dashboardMediaFeedKind(feedKind: HubFeedItemKind): HubFeedItemKind | undefined {
+  if (feedKind === "photo") return "photo";
+  return undefined;
+}
 
-  return (
-    <div className="mt-3 aspect-video max-h-[280px] overflow-hidden rounded-2xl border border-[var(--ud-border-subtle)]">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={alt}
-        className="h-full w-full object-cover"
-        loading="lazy"
-        onError={() => setImageFailed(true)}
-      />
-    </div>
-  );
+function feedAttachmentsToHubShape(att: FeedAttachment[]): HubFeedItemAttachment[] {
+  return att
+    .filter((a) => a && typeof a.type === "string" && a.type && a.type !== "deet_options")
+    .map((a) => ({
+      type: a.type,
+      title: a.title,
+      detail: a.detail,
+      options: a.options,
+      previews: a.previews,
+      meta: a.meta,
+      eventData: a.eventData,
+      pollSettings: a.pollSettings,
+      jobData: a.jobData,
+    }));
 }
 
 function toDashboardHub(hub: SupabaseHub): DashboardHub {
@@ -344,420 +379,6 @@ function HubLauncher({
   );
 }
 
-function formatCommentTime(timestamp: string): string {
-  const date = new Date(timestamp);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return "now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-
-  return date.toLocaleDateString();
-}
-
-function DashboardCommentSection({
-  deetId,
-  comments,
-  isLoading,
-  isSubmitting,
-  onSubmitComment,
-}: {
-  deetId: string;
-  comments: DeetComment[];
-  isLoading: boolean;
-  isSubmitting: boolean;
-  onSubmitComment: (deetId: string, body: string) => void;
-}) {
-  const [commentText, setCommentText] = useState("");
-
-  const handleSubmit = () => {
-    if (commentText.trim() && !isSubmitting) {
-      onSubmitComment(deetId, commentText);
-      setCommentText("");
-    }
-  };
-
-  return (
-    <div className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] px-4 py-3">
-      {isLoading ? (
-        <div className="flex items-center justify-center py-4">
-          <Loader2 className="h-5 w-5 animate-spin text-[var(--ud-text-muted)]" />
-        </div>
-      ) : comments.length === 0 ? (
-        <p className="mb-3 text-xs italic text-[var(--ud-text-muted)]">No comments yet. Be the first!</p>
-      ) : (
-        <div className="mb-3 max-h-[240px] space-y-2.5 overflow-y-auto">
-          {comments.map((comment) => (
-            <div key={comment.id} className="text-sm">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-[var(--ud-text-primary)]">{comment.authorName || "User"}</span>
-                <span className="text-xs text-[var(--ud-text-muted)]">{formatCommentTime(comment.createdAt)}</span>
-              </div>
-              <p className="mt-0.5 text-[var(--ud-text-secondary)]">{comment.body}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="flex items-end gap-2">
-        <input
-          type="text"
-          placeholder="Write a comment..."
-          value={commentText}
-          onChange={(e) => setCommentText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSubmit();
-            }
-          }}
-          disabled={isSubmitting}
-          className="min-w-0 flex-1 rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-3 py-2 text-sm text-[var(--ud-text-secondary)] outline-none placeholder:text-[var(--ud-text-muted)] focus:border-[var(--ud-brand-primary)] focus:ring-2 focus:ring-[var(--ud-brand-light)] disabled:opacity-75"
-        />
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={!commentText.trim() || isSubmitting}
-          className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-[var(--ud-brand-primary)] to-[#1a8a82] px-3 py-2 text-white transition disabled:cursor-not-allowed disabled:opacity-50 hover:opacity-90"
-          aria-label="Send comment"
-        >
-          {isSubmitting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* ── Interactive Poll (same as hub DeetsSection) ── */
-function DashboardPollContent({ deetId, attachments }: { deetId: string; attachments: FeedAttachment[] }) {
-  const matchingAtt = attachments.find((a) => a.type === "poll");
-  const options = matchingAtt?.options ?? [];
-  const parsedOptions = options.length > 0
-    ? options
-    : (matchingAtt?.detail?.split(" · ").filter(Boolean) ?? []);
-
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [isVoting, setIsVoting] = useState(false);
-  const [totalVotes, setTotalVotes] = useState(0);
-  const [voteCounts, setVoteCounts] = useState<number[]>(parsedOptions.map(() => 0));
-
-  useEffect(() => {
-    if (!deetId) return;
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const { getPollVotes, getMyPollVotes } = await import("@/lib/services/deets/poll-votes");
-        const [allVotes, myVotes] = await Promise.all([
-          getPollVotes([deetId]),
-          getMyPollVotes([deetId]),
-        ]);
-        if (cancelled) return;
-
-        const counts = parsedOptions.map(() => 0);
-        const deetVotes = allVotes.filter((v) => v.deetId === deetId);
-        const uniqueVoters = new Set(deetVotes.map((v) => v.userId));
-        for (const v of deetVotes) {
-          if (v.optionIndex >= 0 && v.optionIndex < counts.length) {
-            counts[v.optionIndex]++;
-          }
-        }
-        setVoteCounts(counts);
-        setTotalVotes(uniqueVoters.size);
-
-        const myDeetVotes = myVotes.filter((v) => v.deetId === deetId);
-        if (myDeetVotes.length > 0) {
-          setSelectedIndex(myDeetVotes[0].optionIndex);
-        }
-      } catch {
-        // Table might not exist yet
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [deetId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleVote = async (index: number) => {
-    if (isVoting) return;
-    setIsVoting(true);
-
-    const prevIndex = selectedIndex;
-    setSelectedIndex(index);
-    setVoteCounts((prev) => {
-      const next = [...prev];
-      if (prevIndex !== null && prevIndex < next.length) next[prevIndex]--;
-      if (index < next.length) next[index]++;
-      return next;
-    });
-    if (prevIndex === null) setTotalVotes((t) => t + 1);
-
-    try {
-      const { castPollVote } = await import("@/lib/services/deets/poll-votes");
-      const success = await castPollVote(deetId, index);
-      if (!success) {
-        setSelectedIndex(prevIndex);
-        setVoteCounts((prev) => {
-          const next = [...prev];
-          if (index < next.length) next[index]--;
-          if (prevIndex !== null && prevIndex < next.length) next[prevIndex]++;
-          return next;
-        });
-        if (prevIndex === null) setTotalVotes((t) => t - 1);
-      }
-    } catch {
-      setSelectedIndex(prevIndex);
-      setVoteCounts((prev) => {
-        const next = [...prev];
-        if (index < next.length) next[index]--;
-        if (prevIndex !== null && prevIndex < next.length) next[prevIndex]++;
-        return next;
-      });
-      if (prevIndex === null) setTotalVotes((t) => t - 1);
-    } finally {
-      setIsVoting(false);
-    }
-  };
-
-  if (!parsedOptions.length) return null;
-
-  return (
-    <div className="mx-4 mt-3 overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)]/30">
-      <div className="flex items-center gap-3 px-4 py-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
-          <svg className="h-5 w-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 20V10M12 20V4M6 20v-6" /></svg>
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-emerald-600">Poll</span>
-            <span className="text-xs text-[var(--ud-text-muted)]">{totalVotes} voted</span>
-          </div>
-          <p className="mt-0.5 text-sm font-semibold text-[var(--ud-text-primary)]">
-            {matchingAtt?.title || "Poll"}
-          </p>
-        </div>
-      </div>
-
-      <div className="border-t border-[var(--ud-border-subtle)] px-4 py-2">
-        {parsedOptions.map((opt, i) => {
-          const isSelected = selectedIndex === i;
-          const count = voteCounts[i] ?? 0;
-          const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-
-          return (
-            <button
-              key={i}
-              type="button"
-              disabled={isVoting}
-              onClick={() => handleVote(i)}
-              className={cn(
-                "relative flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-sm transition",
-                isSelected ? "text-emerald-700" : "text-[var(--ud-text-primary)] hover:bg-[var(--ud-bg-subtle)]"
-              )}
-            >
-              {selectedIndex !== null && totalVotes > 0 && (
-                <div
-                  className={cn("absolute inset-0 rounded-lg transition-all", isSelected ? "bg-emerald-100" : "bg-gray-100")}
-                  style={{ width: `${pct}%` }}
-                />
-              )}
-              <span className={cn(
-                "relative z-10 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition",
-                isSelected ? "border-emerald-500 bg-emerald-500" : "border-gray-300"
-              )}>
-                {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
-              </span>
-              <span className="relative z-10 flex-1 text-left">{opt}</span>
-              {selectedIndex !== null && totalVotes > 0 && (
-                <span className="relative z-10 text-xs text-[var(--ud-text-muted)]">{count}</span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/* ── Rich content renderer for dashboard deets ── */
-function DashboardDeetRichContent({ item }: { item: FeedItem }) {
-  const hasPoll = item.attachments.some((a) => a.type === "poll");
-  const announcement = item.attachments.find((a) => a.type === "announcement");
-  const notice = item.attachments.find((a) => a.type === "notice");
-  const event = item.attachments.find((a) => a.type === "event");
-
-  return (
-    <>
-      {/* Announcement banner */}
-      {announcement && (
-        <div className="mx-4 mt-3 overflow-hidden rounded-xl border border-blue-200">
-          <div className="flex items-center gap-2 bg-blue-50 px-3 py-2">
-            <svg className="h-4 w-4 text-blue-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 11 18-5v12L3 13v-2z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></svg>
-            <span className="text-sm font-bold text-blue-700">{announcement.title || "Announcement"}</span>
-          </div>
-          {announcement.detail && (
-            <div className="px-3 py-2.5">
-              <p className="text-sm leading-relaxed text-[var(--ud-text-secondary)]">{announcement.detail}</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Notice highlight */}
-      {notice && !announcement && (
-        <div className="mx-4 mt-3 rounded-xl border-l-4 border-amber-300 bg-amber-50 p-3">
-          <div className="flex items-start gap-2.5">
-            <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-100">
-              <svg className="h-4 w-4 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4M12 17h.01" /></svg>
-            </div>
-            <div className="min-w-0 flex-1">
-              {notice.title && <p className="text-sm font-bold text-amber-700">{notice.title}</p>}
-              {notice.detail && <p className="mt-0.5 text-sm text-[var(--ud-text-secondary)]">{notice.detail}</p>}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Event card */}
-      {event && (
-        <div className="mx-4 mt-3 overflow-hidden rounded-xl border border-purple-200">
-          <div className="flex items-center gap-2 bg-purple-50 px-3 py-2">
-            <svg className="h-4 w-4 text-purple-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></svg>
-            <span className="text-sm font-bold text-purple-700">{event.title || "Event"}</span>
-          </div>
-          {event.detail && (
-            <div className="px-3 py-2.5">
-              <p className="text-sm leading-relaxed text-[var(--ud-text-secondary)]">{event.detail}</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Interactive poll */}
-      {hasPoll && <DashboardPollContent deetId={item.id} attachments={item.attachments} />}
-    </>
-  );
-}
-
-/* ── Emoji reactions ── */
-const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
-
-function DashboardEmojiReactButton({
-  deetId,
-  isLiked,
-  isLiking,
-  likeCount,
-  onToggleLike,
-  onShowReactors,
-}: {
-  deetId: string;
-  isLiked: boolean;
-  isLiking: boolean;
-  likeCount: number;
-  onToggleLike: (deetId: string) => void;
-  onShowReactors: (deetId: string) => void;
-}) {
-  const [showPicker, setShowPicker] = useState(false);
-  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
-  const pickerRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!showPicker) return;
-    const handleClick = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (
-        pickerRef.current && !pickerRef.current.contains(target) &&
-        buttonRef.current && !buttonRef.current.contains(target)
-      ) {
-        setShowPicker(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [showPicker]);
-
-  const handleReactClick = () => {
-    if (isLiked) {
-      onToggleLike(deetId);
-      setSelectedEmoji(null);
-    } else {
-      setShowPicker((v) => !v);
-    }
-  };
-
-  const handleEmojiSelect = (emoji: string) => {
-    setSelectedEmoji(emoji);
-    setShowPicker(false);
-    if (!isLiked) {
-      onToggleLike(deetId);
-    }
-  };
-
-  const displayEmoji = isLiked ? (selectedEmoji || "👍") : null;
-
-  return (
-    <div className="relative inline-flex items-center">
-      {/* Emoji picker popup */}
-      {showPicker && (
-        <div
-          ref={pickerRef}
-          className="absolute -top-12 left-0 z-30 flex items-center gap-1 rounded-full border border-[var(--ud-border)] bg-white px-2 py-1.5 shadow-lg"
-        >
-          {REACTION_EMOJIS.map((emoji) => (
-            <button
-              key={emoji}
-              type="button"
-              onClick={() => handleEmojiSelect(emoji)}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-xl transition-transform hover:scale-125 active:scale-95"
-            >
-              {emoji}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={handleReactClick}
-        disabled={isLiking}
-        className={cn(
-          "inline-flex items-center gap-1.5 py-2 text-sm transition-colors hover:text-[var(--ud-brand-primary)]",
-          isLiked ? "text-[var(--ud-brand-primary)] font-medium" : "text-[var(--ud-text-muted)]"
-        )}
-      >
-        {isLiking ? (
-          <Loader2 className="h-[18px] w-[18px] animate-spin" />
-        ) : displayEmoji ? (
-          <span className="text-base">{displayEmoji}</span>
-        ) : (
-          <SmilePlus className="h-[18px] w-[18px] stroke-[1.5]" />
-        )}
-        <span>{isLiked ? "Reacted" : "React"}</span>
-      </button>
-
-      {likeCount > 0 && (
-        <button
-          type="button"
-          onClick={() => onShowReactors(deetId)}
-          className="ml-1 text-xs text-[var(--ud-text-muted)] underline decoration-dotted hover:text-[var(--ud-brand-primary)]"
-        >
-          ({likeCount})
-        </button>
-      )}
-    </div>
-  );
-}
-
 /* ── Who Reacted popup ── */
 function ReactorsPopup({
   deetId,
@@ -797,7 +418,7 @@ function ReactorsPopup({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/40">
       <div
         ref={popupRef}
         className="mx-4 w-full max-w-sm rounded-2xl bg-white p-4 shadow-xl"
@@ -847,6 +468,7 @@ function DashboardPageContent() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+  const myPostsToolbarRef = useRef<HTMLDivElement>(null);
 
   const [hubs, setHubs] = useState<DashboardHub[]>([]);
   const [memberships, setMemberships] = useState<MyMembership[]>([]);
@@ -870,27 +492,171 @@ function DashboardPageContent() {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    if (!isFilterMenuOpen && !isSearchOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const el = myPostsToolbarRef.current;
+      if (!el || el.contains(e.target as Node)) return;
+      setIsFilterMenuOpen(false);
+      setIsSearchOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [isFilterMenuOpen, isSearchOpen]);
+
+  useEffect(() => {
+    if (!isFilterMenuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsFilterMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isFilterMenuOpen]);
+
   // ── Interaction state (likes, comments, share) ──
   const [likedDeets, setLikedDeets] = useState<Set<string>>(new Set());
+  const [myDeetReactions, setMyDeetReactions] = useState<Record<string, string>>({});
   const [likingDeets, setLikingDeets] = useState<Set<string>>(new Set());
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
+  /** True counts from `deet_comments` — `deets.comment_count` is often stale until healed (same as hub feed). */
+  const [healedCommentCounts, setHealedCommentCounts] = useState<Record<string, number>>({});
   const [expandedCommentDeetId, setExpandedCommentDeetId] = useState<string | null>(null);
   const [commentsByDeetId, setCommentsByDeetId] = useState<Record<string, DeetComment[]>>({});
   const [commentLoadingDeetIds, setCommentLoadingDeetIds] = useState<Set<string>>(new Set());
   const [commentSubmittingDeetId, setCommentSubmittingDeetId] = useState<string | null>(null);
+  const [commentError, setCommentError] = useState<string | null>(null);
   const [copiedDeetId, setCopiedDeetId] = useState<string | null>(null);
   const [reactorsDeetId, setReactorsDeetId] = useState<string | null>(null);
+  const [feedGallery, setFeedGallery] = useState<{
+    urls: string[];
+    index: number;
+    deetId: string;
+    displayTitle: string;
+    body: string;
+    hubHref?: string;
+  } | null>(null);
+  const [imageViewerComposerFooterVisible, setImageViewerComposerFooterVisible] = useState(false);
+  const [viewerShareCopied, setViewerShareCopied] = useState(false);
+  const viewerShareCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [currentUserDisplayName, setCurrentUserDisplayName] = useState("");
+  const [currentUserAvatarUrl, setCurrentUserAvatarUrl] = useState("");
   const copiedTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const toggleLike = useCallback(async (deetId: string) => {
+  useBodyScrollLock(Boolean(feedGallery));
+
+  useEffect(() => {
+    if (!feedGallery) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setFeedGallery(null);
+        return;
+      }
+      if (e.key === "ArrowLeft") {
+        setFeedGallery((g) =>
+          g && g.urls.length > 1
+            ? { ...g, index: (g.index + g.urls.length - 1) % g.urls.length }
+            : g,
+        );
+      }
+      if (e.key === "ArrowRight") {
+        setFeedGallery((g) =>
+          g && g.urls.length > 1 ? { ...g, index: (g.index + 1) % g.urls.length } : g,
+        );
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [feedGallery]);
+
+  useEffect(() => {
+    if (!feedGallery) {
+      setImageViewerComposerFooterVisible(false);
+      setCommentError(null);
+    }
+  }, [feedGallery]);
+
+  useEffect(() => {
+    if (!feedGallery?.deetId) return;
+    const deetId = feedGallery.deetId;
+    if (commentsByDeetId[deetId] !== undefined) return;
+
+    let cancelled = false;
+    setCommentLoadingDeetIds((prev) => new Set(prev).add(deetId));
+    void listDeetComments(deetId)
+      .then((comments) => {
+        if (!cancelled) {
+          setCommentsByDeetId((prev) => ({ ...prev, [deetId]: comments }));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCommentsByDeetId((prev) => ({ ...prev, [deetId]: [] }));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setCommentLoadingDeetIds((prev) => {
+            const next = new Set(prev);
+            next.delete(deetId);
+            return next;
+          });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [feedGallery, commentsByDeetId]);
+
+  useEffect(() => {
+    if (authStatus !== "authenticated" || !currentUserId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (cancelled || !user) return;
+        const meta = user.user_metadata ?? {};
+        const fallbackName =
+          (meta.full_name as string | undefined)?.trim() ||
+          user.email?.split("@")[0] ||
+          "You";
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name, avatar_url")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (cancelled) return;
+        setCurrentUserDisplayName(profile?.full_name?.trim() || fallbackName);
+        setCurrentUserAvatarUrl(profile?.avatar_url ?? (meta.avatar_url as string) ?? "");
+      } catch {
+        if (!cancelled) {
+          setCurrentUserDisplayName("You");
+          setCurrentUserAvatarUrl("");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authStatus, currentUserId]);
+
+  const toggleLike = useCallback(async (deetId: string, reactionType?: string) => {
     if (likingDeets.has(deetId)) return;
     setLikingDeets((prev) => new Set(prev).add(deetId));
     try {
-      const result = await toggleDeetLike(deetId);
+      const result = await toggleDeetLike(deetId, reactionType ?? "like");
       setLikedDeets((prev) => {
         const next = new Set(prev);
         if (result.liked) next.add(deetId);
         else next.delete(deetId);
+        return next;
+      });
+      setMyDeetReactions((prev) => {
+        const next = { ...prev };
+        if (result.liked && result.myReactionType) next[deetId] = result.myReactionType;
+        else delete next[deetId];
         return next;
       });
       setLikeCounts((prev) => ({ ...prev, [deetId]: result.likeCount }));
@@ -928,40 +694,101 @@ function DashboardPageContent() {
     }
   }, [expandedCommentDeetId, commentsByDeetId, commentLoadingDeetIds]);
 
-  const handleSubmitComment = useCallback(async (deetId: string, body: string) => {
-    if (commentSubmittingDeetId) return;
-    setCommentSubmittingDeetId(deetId);
-    try {
-      const newComment = await addDeetComment(deetId, body);
-      setCommentsByDeetId((prev) => ({
-        ...prev,
-        [deetId]: [...(prev[deetId] ?? []), newComment],
-      }));
-    } catch (error) {
-      console.error("Failed to submit comment:", error);
-    } finally {
-      setCommentSubmittingDeetId(null);
-    }
-  }, [commentSubmittingDeetId]);
+  const handleSubmitComment = useCallback(
+    async (
+      deetId: string,
+      body: string,
+      parentId?: string,
+      attachments?: { imageUrl?: string; attachmentUrl?: string; attachmentName?: string },
+    ): Promise<{ success: boolean }> => {
+      if (commentSubmittingDeetId) return { success: false };
+      setCommentSubmittingDeetId(deetId);
+      setCommentError(null);
+      try {
+        const newComment = await addDeetComment(deetId, body, parentId, attachments);
+        setCommentsByDeetId((prev) => {
+          const existing = prev[deetId] ?? [];
+          if (parentId) {
+            return {
+              ...prev,
+              [deetId]: existing.map((c) =>
+                c.id === parentId ? { ...c, replies: [...(c.replies ?? []), newComment] } : c,
+              ),
+            };
+          }
+          return { ...prev, [deetId]: [...existing, { ...newComment, replies: [] }] };
+        });
+        return { success: true };
+      } catch (error) {
+        console.error("Failed to submit comment:", error);
+        setCommentError("Could not post comment. Please try again.");
+        return { success: false };
+      } finally {
+        setCommentSubmittingDeetId(null);
+      }
+    },
+    [commentSubmittingDeetId],
+  );
 
-  const handleShareDeet = useCallback(async (deetId: string, hubHref?: string) => {
-    const shareUrl = hubHref
-      ? `${window.location.origin}${hubHref}?focus=${deetId}`
-      : `${window.location.origin}/dashboard`;
+  const handleEditComment = useCallback(
+    async (commentId: string, deetId: string, newBody: string): Promise<{ success: boolean }> => {
+      setCommentError(null);
+      try {
+        await editDeetComment(commentId, newBody);
+        setCommentsByDeetId((prev) => {
+          const existing = prev[deetId] ?? [];
+          const mapTree = (comments: DeetComment[]): DeetComment[] =>
+            comments.map((c) => {
+              if (c.id === commentId) return { ...c, body: newBody.trim() };
+              if (c.replies?.length) return { ...c, replies: mapTree(c.replies) };
+              return c;
+            });
+          return { ...prev, [deetId]: mapTree(existing) };
+        });
+        return { success: true };
+      } catch (error) {
+        console.error("Failed to edit comment:", error);
+        setCommentError("Could not edit comment. Please try again.");
+        return { success: false };
+      }
+    },
+    [],
+  );
+
+  const handleDeleteComment = useCallback(async (commentId: string, deetId: string): Promise<{ success: boolean }> => {
+    setCommentError(null);
     try {
-      await navigator.clipboard.writeText(shareUrl);
-      setCopiedDeetId(deetId);
-      if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
-      copiedTimeoutRef.current = setTimeout(() => setCopiedDeetId(null), 2000);
-    } catch {
-      // Silently fail
+      await deleteDeetComment(commentId, deetId);
+      setCommentsByDeetId((prev) => {
+        const existing = prev[deetId] ?? [];
+        const removeFromTree = (comments: DeetComment[]): DeetComment[] =>
+          comments
+            .filter((c) => c.id !== commentId)
+            .map((c) => ({
+              ...c,
+              replies: c.replies?.length ? removeFromTree(c.replies) : c.replies,
+            }));
+        return { ...prev, [deetId]: removeFromTree(existing) };
+      });
+      return { success: true };
+    } catch (error) {
+      console.error("Failed to delete comment:", error);
+      setCommentError("Could not delete comment. Please try again.");
+      return { success: false };
     }
+  }, []);
+
+  const flashViewerShareCopied = useCallback(() => {
+    setViewerShareCopied(true);
+    if (viewerShareCopiedTimeoutRef.current) clearTimeout(viewerShareCopiedTimeoutRef.current);
+    viewerShareCopiedTimeoutRef.current = setTimeout(() => setViewerShareCopied(false), 2000);
   }, []);
 
   // Cleanup copied timeout
   useEffect(() => {
     return () => {
       if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+      if (viewerShareCopiedTimeoutRef.current) clearTimeout(viewerShareCopiedTimeoutRef.current);
     };
   }, []);
 
@@ -1257,6 +1084,37 @@ function DashboardPageContent() {
     };
   }, [authStatus, allActiveHubs]);
 
+  const myDeetsIdsKey = useMemo(
+    () => [...new Set(myDeetsItems.map((item) => item.id).filter(Boolean))].sort().join(","),
+    [myDeetsItems],
+  );
+
+  useEffect(() => {
+    if (!myDeetsIdsKey) {
+      setHealedCommentCounts({});
+      return;
+    }
+    const deetIds = myDeetsIdsKey.split(",").filter(Boolean);
+    let cancelled = false;
+
+    void syncDeetCommentCounts(deetIds)
+      .then((counts) => {
+        if (cancelled) return;
+        const next: Record<string, number> = {};
+        for (const id of deetIds) {
+          next[id] = counts[id] ?? 0;
+        }
+        setHealedCommentCounts(next);
+      })
+      .catch(() => {
+        /* keep prior counts on failure */
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [myDeetsIdsKey]);
+
   // Fetch like statuses when deets items change
   useEffect(() => {
     const deetIds = myDeetsItems.map((item) => item.id).filter(Boolean);
@@ -1270,11 +1128,16 @@ function DashboardPageContent() {
         if (!cancelled) {
           const liked = new Set<string>();
           const counts: Record<string, number> = {};
+          const reactions: Record<string, string> = {};
           for (const [id, status] of statusMap) {
-            if (status.liked) liked.add(id);
+            if (status.liked) {
+              liked.add(id);
+              reactions[id] = status.myReactionType ?? "👍";
+            }
             counts[id] = status.count;
           }
           setLikedDeets(liked);
+          setMyDeetReactions(reactions);
           setLikeCounts(counts);
         }
       } catch {
@@ -1379,80 +1242,92 @@ function DashboardPageContent() {
             />
 
             <section className={cn(CARD, "p-4 sm:p-5")}>
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h2 className={cn("text-2xl font-semibold tracking-tight", TEXT_DARK)}>My Posts</h2>
-                </div>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+                <h2 className={cn("text-2xl font-semibold tracking-tight", TEXT_DARK)}>My Posts</h2>
 
-                <div className="relative flex items-center gap-2">
-                  <div
-                    className={cn(
-                      "overflow-hidden rounded-full bg-[var(--ud-bg-subtle)] transition-all duration-300",
-                      isSearchOpen ? "w-56 px-3 py-2 opacity-100 sm:w-72" : "w-0 px-0 py-0 opacity-0",
-                    )}
-                  >
-                    <input
-                      value={searchQuery}
-                      onChange={(event) => setSearchQuery(event.target.value)}
-                      placeholder="Search posts"
-                      className="w-full bg-transparent text-sm text-[var(--ud-text-primary)] outline-none placeholder:text-[var(--ud-text-muted)]"
-                      aria-label="Search posts"
-                    />
+                <div
+                  ref={myPostsToolbarRef}
+                  className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end sm:gap-2"
+                >
+                  <div className="relative w-full sm:min-w-[11rem] sm:max-w-[min(100%,16rem)] sm:flex-1">
+                    <button
+                      type="button"
+                      aria-expanded={isFilterMenuOpen}
+                      aria-haspopup="listbox"
+                      onClick={() => setIsFilterMenuOpen((current) => !current)}
+                      className={cn(
+                        "flex h-10 w-full items-center justify-between gap-2 rounded-full border bg-[var(--ud-bg-card)] px-4 text-left text-sm font-medium text-[var(--ud-text-primary)] shadow-sm transition",
+                        isFilterMenuOpen
+                          ? "border-[var(--ud-border-focus)] ring-2 ring-[var(--ud-brand-light)]"
+                          : "border-[var(--ud-border)] hover:border-[var(--ud-border-focus)]",
+                      )}
+                    >
+                      <span className="min-w-0 truncate">{selectedFeedFilter}</span>
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 shrink-0 text-[var(--ud-text-muted)] transition-transform duration-200",
+                          isFilterMenuOpen && "rotate-180",
+                        )}
+                        aria-hidden
+                      />
+                    </button>
+                    {isFilterMenuOpen ? (
+                      <div
+                        className="absolute left-0 right-0 top-full z-30 mt-1 max-h-[min(50vh,280px)] overflow-y-auto rounded-xl border border-[var(--ud-border)] bg-[var(--ud-bg-card)] p-1.5 shadow-lg sm:left-0 sm:right-auto sm:min-w-[12rem]"
+                        role="listbox"
+                        aria-label="Post type filter"
+                      >
+                        {FEED_FILTERS.map((filter) => (
+                          <button
+                            key={filter}
+                            type="button"
+                            role="option"
+                            aria-selected={selectedFeedFilter === filter}
+                            onClick={() => {
+                              setSelectedFeedFilter(filter);
+                              setIsFilterMenuOpen(false);
+                            }}
+                            className={cn(
+                              "flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm transition",
+                              selectedFeedFilter === filter
+                                ? "bg-[var(--ud-brand-light)] font-medium text-[var(--ud-brand-primary)]"
+                                : "text-[var(--ud-text-secondary)] hover:bg-[var(--ud-bg-subtle)]",
+                            )}
+                          >
+                            {filter}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
-                  <button
-                    type="button"
-                    className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-full bg-[var(--ud-bg-subtle)] text-[var(--ud-text-primary)] transition-colors duration-150 hover:bg-[var(--ud-bg-subtle)]",
-                      isSearchOpen && "bg-[var(--ud-bg-subtle)]",
-                    )}
-                    onClick={() => setIsSearchOpen((current) => !current)}
-                    aria-label="Toggle search"
-                  >
-                    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="11" cy="11" r="6" />
-                      <path d="m20 20-3.5-3.5" strokeLinecap="round" />
-                    </svg>
-                  </button>
 
-                  <button
-                    type="button"
-                    className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-full bg-[var(--ud-bg-subtle)] text-[var(--ud-text-primary)] transition-colors duration-150 hover:bg-[var(--ud-bg-subtle)]",
-                      isFilterMenuOpen && "bg-[var(--ud-bg-subtle)]",
-                    )}
-                    onClick={() => setIsFilterMenuOpen((current) => !current)}
-                    aria-label="Open filters"
-                  >
-                    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M4 6h16" strokeLinecap="round" />
-                      <path d="M7 12h10" strokeLinecap="round" />
-                      <path d="M10 18h4" strokeLinecap="round" />
-                    </svg>
-                  </button>
-
-                  {isFilterMenuOpen ? (
-                    <div className="absolute right-0 top-12 z-10 w-48 rounded-xl bg-[var(--ud-bg-card)] p-2 shadow-sm border border-[var(--ud-border-subtle)]">
-                      {FEED_FILTERS.map((filter) => (
-                        <button
-                          key={filter}
-                          type="button"
-                          onClick={() => {
-                            setSelectedFeedFilter(filter);
-                            setIsFilterMenuOpen(false);
-                          }}
-                          className={cn(
-                            "flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm transition-colors duration-150",
-                            selectedFeedFilter === filter
-                              ? "bg-[var(--ud-brand-light)] font-semibold text-[var(--ud-text-primary)]"
-                              : "text-[var(--ud-text-secondary)] hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]",
-                          )}
-                        >
-                          <span>{filter}</span>
-                          {selectedFeedFilter === filter ? <span className="h-2 w-2 rounded-full bg-[var(--ud-brand-primary)]" /> : null}
-                        </button>
-                      ))}
+                  <div className="flex shrink-0 items-center justify-end gap-2">
+                    <div
+                      className={cn(
+                        "overflow-hidden rounded-full border border-transparent bg-[var(--ud-bg-subtle)] transition-all duration-300 ease-out",
+                        isSearchOpen ? "min-w-0 flex-1 border-[var(--ud-border)] px-3 py-2 opacity-100 sm:max-w-72 sm:flex-initial" : "w-0 border-0 px-0 py-0 opacity-0",
+                      )}
+                    >
+                      <input
+                        value={searchQuery}
+                        onChange={(event) => setSearchQuery(event.target.value)}
+                        placeholder="Search posts…"
+                        className="w-full min-w-0 bg-transparent text-sm text-[var(--ud-text-primary)] outline-none placeholder:text-[var(--ud-text-muted)]"
+                        aria-label="Search posts"
+                      />
                     </div>
-                  ) : null}
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--ud-border)] bg-[var(--ud-bg-card)] text-[var(--ud-text-secondary)] shadow-sm transition hover:border-[var(--ud-border-focus)] hover:text-[var(--ud-brand-primary)]",
+                        isSearchOpen && "border-[var(--ud-border-focus)] text-[var(--ud-brand-primary)]",
+                      )}
+                      onClick={() => setIsSearchOpen((current) => !current)}
+                      aria-label={isSearchOpen ? "Close search" : "Search posts"}
+                    >
+                      <Search className="h-[18px] w-[18px] stroke-[1.75]" aria-hidden />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1463,109 +1338,240 @@ function DashboardPageContent() {
                       const isLiked = likedDeets.has(item.id);
                       const isLiking = likingDeets.has(item.id);
                       const likeCount = likeCounts[item.id] ?? 0;
-                      const commentCount = (commentsByDeetId[item.id] ?? []).length;
+                      const commentCount = Math.max(
+                        item.commentCount,
+                        healedCommentCounts[item.id] ?? 0,
+                        totalCommentsInTree(commentsByDeetId[item.id]),
+                      );
                       const isCommentsOpen = expandedCommentDeetId === item.id;
 
-                      return (
-                        <article key={item.id} className="overflow-hidden rounded-lg border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] transition-colors duration-150 hover:border-[var(--ud-border)]">
-                          {/* Header — author, title, text (clickable to hub) */}
-                          {item.href ? (
-                            <Link href={item.href} className="block px-4 pt-4">
-                              <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
-                                  {item.authorAvatar ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={item.authorAvatar} alt="" className="h-full w-full object-cover" />
-                                  ) : (
-                                    <span className="text-xs font-bold text-[var(--ud-brand-primary)]">{getInitials(item.authorName)}</span>
+                      const hubAtt = feedAttachmentsToHubShape(item.attachments);
+                      const deetType = resolveDeetType(item.feedKind, hubAtt);
+                      const hasRichSection = Boolean(deetType && hubAtt.some((a) => a.type === deetType));
+                      const showStructuredRichBody = Boolean(hasRichSection && deetType && deetType !== "poll");
+                      const structuredHeadline = deetType
+                        ? getStructuredHeadlineForFeed(deetType, hubAtt, item.title)
+                        : null;
+                      const headline =
+                        structuredHeadline ||
+                        (item.title?.trim() && !isGenericDeetTitle(item.title) ? item.title.trim() : null);
+                      const isPlainFeedPost = deetType === null;
+                      const kindMeta = feedKindMeta(item.feedKind);
+
+                      const authorRow = (
+                        <div className="flex items-center gap-3 px-4 pt-4">
+                          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
+                            <ImageWithFallback
+                              src={item.authorAvatar || ""}
+                              sources={item.authorAvatar ? [item.authorAvatar] : []}
+                              alt=""
+                              className="h-full w-full object-cover"
+                              fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-xs font-bold text-[var(--ud-brand-primary)]"
+                              fallback={initials(item.authorName)}
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-[15px] font-semibold text-[var(--ud-text-primary)]">{item.authorName}</span>
+                              {item.hubName ? (
+                                <span className="text-xs text-[var(--ud-text-muted)]">in {item.hubName}</span>
+                              ) : null}
+                            </div>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                              <span className="text-xs text-[var(--ud-text-muted)]">{item.timeLabel}</span>
+                              <span className="select-none text-xs text-[var(--ud-text-muted)]/70" aria-hidden>
+                                ·
+                              </span>
+                              {deetType ? (
+                                <DeetTypeKindChip type={deetType} />
+                              ) : (
+                                <span
+                                  className={cn(
+                                    "rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                                    kindMeta.badgeClass,
                                   )}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-sm font-semibold text-[var(--ud-text-primary)]">{item.authorName}</span>
-                                    <span className="text-xs text-[var(--ud-text-muted)]">{item.hubName ? `in ${item.hubName}` : ""}</span>
-                                  </div>
-                                  <span className="text-xs text-[var(--ud-text-muted)]">{item.timeLabel}</span>
-                                </div>
-                              </div>
-                              {item.title && !isGenericTitle(item.title) ? <h3 className={cn("mt-3 text-base font-semibold tracking-tight", TEXT_DARK)}>{item.title}</h3> : null}
-                              {(() => { const cleaned = deduplicateBodyFromTitle(item.body, item.title); return cleaned ? <div className={cn("mt-1 text-sm leading-6", TEXT_MUTED)} dangerouslySetInnerHTML={{ __html: sanitizeHtmlContent(cleaned) }} /> : null; })()}
+                                >
+                                  {kindMeta.label}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+
+                      return (
+                        <article
+                          key={item.id}
+                          className="w-full overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-sm transition-colors duration-150 hover:border-[var(--ud-border)]"
+                        >
+                          {item.href ? (
+                            <Link href={item.href} className="block">
+                              {authorRow}
                             </Link>
                           ) : (
-                            <div className="px-4 pt-4">
-                              <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
-                                  {item.authorAvatar ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={item.authorAvatar} alt="" className="h-full w-full object-cover" />
-                                  ) : (
-                                    <span className="text-xs font-bold text-[var(--ud-brand-primary)]">{getInitials(item.authorName)}</span>
-                                  )}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-sm font-semibold text-[var(--ud-text-primary)]">{item.authorName}</span>
-                                    <span className="text-xs text-[var(--ud-text-muted)]">{item.hubName ? `in ${item.hubName}` : ""}</span>
-                                  </div>
-                                  <span className="text-xs text-[var(--ud-text-muted)]">{item.timeLabel}</span>
-                                </div>
-                              </div>
-                              {item.title && !isGenericTitle(item.title) ? <h3 className={cn("mt-3 text-base font-semibold tracking-tight", TEXT_DARK)}>{item.title}</h3> : null}
-                              {(() => { const cleaned = deduplicateBodyFromTitle(item.body, item.title); return cleaned ? <div className={cn("mt-1 text-sm leading-6", TEXT_MUTED)} dangerouslySetInnerHTML={{ __html: sanitizeHtmlContent(cleaned) }} /> : null; })()}
-                            </div>
+                            authorRow
                           )}
 
-                          {/* Rich content — polls, announcements, events, notices (outside Link so interactive) */}
-                          {item.attachments.length > 0 && <DashboardDeetRichContent item={item} />}
+                          {headline ? (
+                            <h3 className="px-4 pt-3 text-[15px] font-semibold leading-snug tracking-tight text-[var(--ud-text-primary)]">
+                              {headline}
+                            </h3>
+                          ) : null}
 
-                          {/* Preview image */}
-                          <div className="px-4 pb-4">
-                            <DashboardDeetImage src={item.previewImage || item.previewImages[0]} alt={item.title} />
-                          </div>
-
-                          {/* Action bar */}
-                          <div className="flex items-center justify-between border-t border-[var(--ud-border-subtle)] px-4 py-1.5">
-                            <div className="flex items-center gap-4">
-                              <DashboardEmojiReactButton
-                                deetId={item.id}
-                                isLiked={isLiked}
-                                isLiking={isLiking}
-                                likeCount={likeCount}
-                                onToggleLike={toggleLike}
-                                onShowReactors={setReactorsDeetId}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleToggleComments(item.id)}
+                          {item.body && !hasRichSection ? (
+                            isPlainFeedPost ? (
+                              <StructuredDescriptionShell type="post" className={headline ? "mt-2" : "mt-3"}>
+                                <FeedPostBody
+                                  body={item.body}
+                                  title={item.title}
+                                  dedupeBodyAgainstTitle={false}
+                                  className="text-[15px] leading-relaxed text-[var(--ud-text-primary)]"
+                                />
+                              </StructuredDescriptionShell>
+                            ) : (
+                              <FeedPostBody
+                                body={item.body}
+                                title={item.title}
+                                dedupeBodyAgainstTitle
                                 className={cn(
-                                  "inline-flex items-center gap-1.5 py-2 text-sm transition-colors hover:text-[var(--ud-brand-primary)]",
-                                  isCommentsOpen ? "text-[var(--ud-brand-primary)] font-medium" : "text-[var(--ud-text-muted)]"
+                                  "px-4 text-[15px] leading-relaxed text-[var(--ud-text-primary)]",
+                                  headline ? "pt-2" : "pt-3",
                                 )}
-                              >
-                                <MessageCircle className="h-[18px] w-[18px] stroke-[1.5]" />
-                                <span>{commentCount}</span>
-                              </button>
-                              <div className="relative">
-                                <button
-                                  type="button"
-                                  onClick={() => handleShareDeet(item.id, item.href)}
-                                  className="inline-flex items-center gap-1.5 py-2 text-sm text-[var(--ud-text-muted)] transition-colors hover:text-[var(--ud-brand-primary)]"
-                                >
-                                  <Share2 className="h-[18px] w-[18px] stroke-[1.5]" />
-                                  <span>{copiedDeetId === item.id ? "Copied!" : "Share"}</span>
-                                </button>
-                              </div>
-                            </div>
-                          </div>
+                              />
+                            )
+                          ) : null}
 
-                          {/* Inline comments section */}
+                          {deetType === "poll" ? (
+                            <PollContent deetId={item.id} attachments={hubAtt} />
+                          ) : deetType ? (
+                            <DeetTypeContent
+                              type={deetType}
+                              attachments={hubAtt}
+                              bodyHtml={showStructuredRichBody ? item.body : undefined}
+                              deetId={item.id}
+                              currentUserId={currentUserId}
+                            />
+                          ) : null}
+
+                          {(() => {
+                            const urls = dashboardDeetGalleryUrls(item);
+                            if (!urls.length) return null;
+                            return (
+                              <FeedMedia
+                                imageUrls={urls}
+                                alt={item.title}
+                                feedKind={dashboardMediaFeedKind(item.feedKind)}
+                                sizesVariant={urls.length > 1 ? "mosaic" : "hero"}
+                                onOpen={(index) =>
+                                  setFeedGallery({
+                                    urls,
+                                    index,
+                                    deetId: item.id,
+                                    displayTitle: headline || item.title?.trim() || "Photo",
+                                    body: item.body,
+                                    hubHref: item.href,
+                                  })
+                                }
+                              />
+                            );
+                          })()}
+
+                          {/* Engagement — match hub feed card (summary row + action row) */}
+                          {(() => {
+                            const showEngagementSummary = likeCount > 0 || commentCount > 0;
+                            const shareUrl =
+                              typeof window !== "undefined"
+                                ? item.href
+                                  ? `${window.location.origin}${item.href}?focus=${item.id}`
+                                  : `${window.location.origin}/dashboard`
+                                : "";
+                            const flashShareCopied = () => {
+                              setCopiedDeetId(item.id);
+                              if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
+                              copiedTimeoutRef.current = setTimeout(() => setCopiedDeetId(null), 2000);
+                            };
+                            return (
+                              <div className="border-t border-[var(--ud-border-subtle)]">
+                                {showEngagementSummary ? (
+                                  <ReactionSummary
+                                    likeCount={likeCount}
+                                    commentCount={commentCount}
+                                    isLiked={isLiked}
+                                    currentUserId={currentUserId ?? undefined}
+                                    onOpenReactionsModal={() => setReactorsDeetId(item.id)}
+                                    onToggleComments={() => void handleToggleComments(item.id)}
+                                  />
+                                ) : null}
+                                <div
+                                  className={cn(
+                                    "flex gap-1 px-1 py-1 sm:px-2",
+                                    showEngagementSummary && "bg-[var(--ud-bg-subtle)]/30",
+                                  )}
+                                >
+                                  <div className="min-w-0 flex-1 rounded-lg motion-reduce:active:scale-100">
+                                    <EmojiReactButton
+                                      deetId={item.id}
+                                      isLiked={isLiked}
+                                      isLiking={isLiking}
+                                      onToggleLike={toggleLike}
+                                      syncedReaction={myDeetReactions[item.id] ?? null}
+                                      triggerClassName="max-sm:min-h-[44px] rounded-lg active:scale-[0.98] motion-reduce:active:scale-100"
+                                    />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => void handleToggleComments(item.id)}
+                                    aria-expanded={isCommentsOpen}
+                                    className={cn(
+                                      "flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg text-sm transition-colors hover:bg-[var(--ud-bg-subtle)] motion-reduce:transition-none sm:min-h-0 sm:py-2.5",
+                                      isCommentsOpen
+                                        ? "font-semibold text-[var(--ud-brand-primary)]"
+                                        : "text-[var(--ud-text-muted)]",
+                                      "active:scale-[0.98] motion-reduce:active:scale-100",
+                                    )}
+                                  >
+                                    <MessageSquare className={POST_ICON} />
+                                    <span>Comment</span>
+                                  </button>
+                                  <DeetSharePopover
+                                    shareUrl={shareUrl}
+                                    title={(item.title ?? "").trim() || "Post"}
+                                    deetId={item.id}
+                                    onCopySuccess={flashShareCopied}
+                                    copied={copiedDeetId === item.id}
+                                    triggerClassName="max-sm:min-h-[44px] rounded-lg active:scale-[0.98] motion-reduce:active:scale-100"
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })()}
+
+                          {/* Inline comments — same component as hub feed */}
                           {isCommentsOpen ? (
-                            <DashboardCommentSection
+                            <DeetCommentsSection
+                              layout="inline"
                               deetId={item.id}
                               comments={commentsByDeetId[item.id] ?? []}
                               isLoading={commentLoadingDeetIds.has(item.id)}
                               isSubmitting={commentSubmittingDeetId === item.id}
+                              error={commentError}
+                              currentUserId={currentUserId ?? undefined}
                               onSubmitComment={handleSubmitComment}
+                              onEditComment={handleEditComment}
+                              onDeleteComment={handleDeleteComment}
+                              onOpenViewer={(images, index) => {
+                                if (!images.length) return;
+                                setFeedGallery({
+                                  urls: images,
+                                  index,
+                                  deetId: item.id,
+                                  displayTitle: headline || item.title?.trim() || "Photo",
+                                  body: item.body,
+                                  hubHref: item.href,
+                                });
+                              }}
+                              userAvatarSrc={currentUserAvatarUrl || undefined}
+                              userName={currentUserDisplayName || "You"}
                             />
                           ) : null}
                         </article>
@@ -1616,6 +1622,273 @@ function DashboardPageContent() {
       {reactorsDeetId && (
         <ReactorsPopup deetId={reactorsDeetId} onClose={() => setReactorsDeetId(null)} />
       )}
+
+      {/* Feed image viewer — same split layout as hub (image + title/body + react / comment / share + comments) */}
+      {feedGallery ? (
+        <div
+          className="fixed inset-0 z-[130] flex min-h-0 min-w-0 flex-col overflow-x-hidden bg-black/90 lg:flex-row"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Post photo viewer"
+        >
+          <div className="relative flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden p-4 lg:min-h-0 lg:flex-1 lg:p-6">
+            <button
+              type="button"
+              onClick={() => setFeedGallery(null)}
+              className="absolute right-4 top-4 z-20 rounded-full bg-white/15 p-2 text-white transition hover:bg-white/25 lg:right-6 lg:top-6"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5 stroke-[1.8]" />
+            </button>
+
+            {feedGallery.urls.length > 1 ? (
+              <div className="absolute left-4 top-4 z-20 rounded-full bg-black/50 px-3 py-1 text-xs font-medium text-white lg:left-6 lg:top-6">
+                {feedGallery.index + 1} / {feedGallery.urls.length}
+              </div>
+            ) : null}
+
+            {feedGallery.urls.length > 1 ? (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFeedGallery((g) =>
+                      g && g.urls.length > 1
+                        ? { ...g, index: (g.index + g.urls.length - 1) % g.urls.length }
+                        : g,
+                    );
+                  }}
+                  className="absolute left-3 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/15 text-white transition hover:bg-white/25 lg:left-6"
+                  aria-label="Previous image"
+                >
+                  <ChevronLeft className="h-5 w-5 stroke-[1.8]" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFeedGallery((g) =>
+                      g && g.urls.length > 1 ? { ...g, index: (g.index + 1) % g.urls.length } : g,
+                    );
+                  }}
+                  className="absolute right-3 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/15 text-white transition hover:bg-white/25 lg:right-6"
+                  aria-label="Next image"
+                >
+                  <ChevronRight className="h-5 w-5 stroke-[1.8]" />
+                </button>
+              </>
+            ) : null}
+
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={feedGallery.urls[feedGallery.index]}
+              alt=""
+              className="h-auto max-h-[85vh] w-auto max-w-full rounded-2xl object-contain lg:max-h-[85vh] lg:rounded-3xl"
+            />
+          </div>
+
+          <div
+            className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-t-2xl bg-[var(--ud-bg-card)] p-4 lg:h-full lg:min-h-0 lg:w-[360px] lg:max-w-[360px] lg:shrink-0 lg:grow-0 lg:flex-none lg:self-stretch lg:rounded-none lg:border-l lg:border-white/20 lg:p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+              {(() => {
+                const fi = myDeetsItems.find((i) => i.id === feedGallery.deetId) ?? null;
+                if (!fi) {
+                  return (
+                    <>
+                      <h3 className="shrink-0 text-base font-semibold tracking-tight text-[var(--ud-text-primary)]">
+                        {feedGallery.displayTitle}
+                      </h3>
+                      {feedGallery.body?.trim() ? (
+                        <SafeDeetBody
+                          source={feedGallery.body}
+                          className="mt-1 shrink-0 text-sm text-[var(--ud-text-secondary)] lg:mt-2"
+                        />
+                      ) : (
+                        <p className="mt-1 shrink-0 text-sm text-[var(--ud-text-secondary)] lg:mt-2">
+                          {feedGallery.hubHref ? "From one of your hubs." : "Shared post."}
+                        </p>
+                      )}
+                    </>
+                  );
+                }
+                const hubAtt = feedAttachmentsToHubShape(fi.attachments);
+                const deetType = resolveDeetType(fi.feedKind, hubAtt);
+                const hasRichSection = Boolean(deetType && hubAtt.some((a) => a.type === deetType));
+                const showStructuredRichBody = Boolean(hasRichSection && deetType && deetType !== "poll");
+                const structuredHeadline = deetType
+                  ? getStructuredHeadlineForFeed(deetType, hubAtt, fi.title)
+                  : null;
+                const headline =
+                  structuredHeadline ||
+                  (fi.title?.trim() && !isGenericDeetTitle(fi.title) ? fi.title.trim() : null);
+                const isPlainFeedPost = deetType === null;
+                const hasTextBlock = Boolean(headline || (fi.body && !hasRichSection) || deetType);
+                const typeBlockSpacing = headline || (fi.body && !hasRichSection) ? "mt-3" : "mt-1";
+
+                return (
+                  <div
+                    className={cn(
+                      "min-h-0 max-h-[42vh] shrink-0 overflow-y-auto pr-1 lg:max-h-[min(60vh,520px)] lg:pr-0",
+                      hasTextBlock && "min-h-[80px]",
+                    )}
+                  >
+                    {headline ? (
+                      <h3 className="text-base font-semibold tracking-tight text-[var(--ud-text-primary)]">{headline}</h3>
+                    ) : null}
+                    {fi.body && !hasRichSection ? (
+                      isPlainFeedPost ? (
+                        <StructuredDescriptionShell type="post" className={headline ? "mt-2" : "mt-3"}>
+                          <FeedPostBody
+                            body={fi.body}
+                            title={fi.title}
+                            dedupeBodyAgainstTitle={false}
+                            className="text-sm leading-relaxed text-[var(--ud-text-secondary)]"
+                          />
+                        </StructuredDescriptionShell>
+                      ) : (
+                        <FeedPostBody
+                          body={fi.body}
+                          title={fi.title}
+                          dedupeBodyAgainstTitle
+                          className={cn(
+                            "text-sm leading-relaxed text-[var(--ud-text-secondary)]",
+                            headline ? "mt-2" : "mt-3",
+                          )}
+                        />
+                      )
+                    ) : null}
+                    {deetType === "poll" ? (
+                      <div className={typeBlockSpacing}>
+                        <PollContent deetId={fi.id} attachments={hubAtt} />
+                      </div>
+                    ) : deetType ? (
+                      <div className={typeBlockSpacing}>
+                        <DeetTypeContent
+                          type={deetType}
+                          attachments={hubAtt}
+                          bodyHtml={showStructuredRichBody ? fi.body : undefined}
+                          deetId={fi.id}
+                          currentUserId={currentUserId}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })()}
+
+              <div className="mt-3 flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-[var(--ud-text-muted)] lg:mt-4">
+                <button
+                  type="button"
+                  onClick={() => setReactorsDeetId(feedGallery.deetId)}
+                  className="rounded-md py-0.5 text-left text-[var(--ud-text-secondary)] transition hover:text-[var(--ud-text-primary)] motion-reduce:transition-none"
+                  aria-label={`${likeCounts[feedGallery.deetId] ?? 0} reactions. Open list.`}
+                >
+                  <span className="font-semibold tabular-nums text-[var(--ud-text-primary)]">
+                    {likeCounts[feedGallery.deetId] ?? 0}
+                  </span>
+                  <span>
+                    {" "}
+                    {(likeCounts[feedGallery.deetId] ?? 0) === 1 ? "Reaction" : "Reactions"}
+                  </span>
+                </button>
+              </div>
+
+              <div className="mt-3 flex shrink-0 gap-1 border-t border-[var(--ud-border)] pt-3 sm:gap-2 lg:mt-4 lg:pt-4">
+                <div className="min-w-0 flex-1 rounded-lg motion-reduce:active:scale-100">
+                  <EmojiReactButton
+                    deetId={feedGallery.deetId}
+                    isLiked={likedDeets.has(feedGallery.deetId)}
+                    isLiking={likingDeets.has(feedGallery.deetId)}
+                    onToggleLike={toggleLike}
+                    syncedReaction={myDeetReactions[feedGallery.deetId] ?? null}
+                    triggerClassName="max-sm:min-h-[44px] w-full rounded-lg active:scale-[0.98] motion-reduce:active:scale-100"
+                  />
+                </div>
+                <button
+                  type="button"
+                  aria-expanded={imageViewerComposerFooterVisible}
+                  onClick={() => setImageViewerComposerFooterVisible((open) => !open)}
+                  className={cn(
+                    "flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg text-sm transition-colors motion-reduce:transition-none sm:min-h-0 sm:py-2.5 active:scale-[0.98] motion-reduce:active:scale-100",
+                    imageViewerComposerFooterVisible
+                      ? "font-semibold text-[var(--ud-brand-primary)]"
+                      : "text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)]",
+                  )}
+                >
+                  <MessageSquare className={POST_ICON} />
+                  <span>Comment</span>
+                </button>
+                <DeetSharePopover
+                  shareUrl={
+                    typeof window !== "undefined"
+                      ? feedGallery.hubHref
+                        ? `${window.location.origin}${feedGallery.hubHref}?focus=${feedGallery.deetId}`
+                        : `${window.location.origin}/dashboard`
+                      : ""
+                  }
+                  title={feedGallery.displayTitle}
+                  deetId={feedGallery.deetId}
+                  onCopySuccess={flashViewerShareCopied}
+                  copied={viewerShareCopied}
+                  triggerClassName="max-sm:min-h-[44px] rounded-lg active:scale-[0.98] motion-reduce:active:scale-100"
+                />
+              </div>
+
+              <div className="mt-3 flex min-h-0 min-w-0 flex-1 flex-col gap-2">
+                <div className="flex shrink-0 items-baseline justify-between gap-2 px-0.5">
+                  <p className="font-medium text-[var(--ud-text-secondary)]">Comments</p>
+                  <span className="text-xs tabular-nums text-[var(--ud-text-muted)]">
+                    {(() => {
+                      const loaded = commentsByDeetId[feedGallery.deetId];
+                      const fromDeet = myDeetsItems.find((i) => i.id === feedGallery.deetId)?.commentCount ?? 0;
+                      const healed = healedCommentCounts[feedGallery.deetId] ?? 0;
+                      const n = Math.max(fromDeet, healed, totalCommentsInTree(loaded));
+                      return (
+                        <>
+                          {n} {n === 1 ? "Comment" : "Comments"}
+                        </>
+                      );
+                    })()}
+                  </span>
+                </div>
+                <DeetCommentsSection
+                  key={feedGallery.deetId}
+                  layout="embedded"
+                  deetId={feedGallery.deetId}
+                  comments={commentsByDeetId[feedGallery.deetId] ?? []}
+                  isLoading={commentLoadingDeetIds.has(feedGallery.deetId)}
+                  isSubmitting={commentSubmittingDeetId === feedGallery.deetId}
+                  error={commentError}
+                  currentUserId={currentUserId ?? undefined}
+                  onSubmitComment={handleSubmitComment}
+                  onEditComment={handleEditComment}
+                  onDeleteComment={handleDeleteComment}
+                  showComposerFooter={imageViewerComposerFooterVisible}
+                  onRequestComposerFooter={() => setImageViewerComposerFooterVisible(true)}
+                  onDismissComposerFooter={() => setImageViewerComposerFooterVisible(false)}
+                  autoFocusComposer={imageViewerComposerFooterVisible}
+                  onOpenViewer={(images, index) => {
+                    setFeedGallery((g) =>
+                      g
+                        ? {
+                            ...g,
+                            urls: images.length ? images : g.urls,
+                            index,
+                          }
+                        : g,
+                    );
+                  }}
+                  userAvatarSrc={currentUserAvatarUrl || undefined}
+                  userName={currentUserDisplayName || "You"}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Celebration modal — shown when a join request is accepted */}
       {showCelebration && newlyAcceptedHub ? (

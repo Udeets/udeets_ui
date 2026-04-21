@@ -9,6 +9,7 @@ import {
   Briefcase,
   Building2,
   CalendarDays,
+  ClipboardList,
   DollarSign,
   Dumbbell,
   Files,
@@ -143,6 +144,8 @@ export function FeedItemIcon({ kind }: { kind: HubFeedItemKind }) {
   if (kind === "hazard") return <AlertTriangle className={ICON} />;
   if (kind === "alert") return <ShieldAlert className={ICON} />;
   if (kind === "jobs") return <Briefcase className={ICON} />;
+  if (kind === "survey") return <ClipboardList className={ICON} />;
+  if (kind === "payment") return <DollarSign className={ICON} />;
   return <Files className={ICON} />;
 }
 
@@ -167,6 +170,14 @@ export function feedKindMeta(kind: HubFeedItemKind): { label: string; badgeClass
       return { label: "Alert", badgeClass: "bg-red-50 text-red-600 border-red-200" };
     case "jobs":
       return { label: "Jobs", badgeClass: "bg-indigo-50 text-indigo-600 border-indigo-200" };
+    case "poll":
+      return { label: "Poll", badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+    case "survey":
+      return { label: "Survey", badgeClass: "bg-violet-50 text-violet-700 border-violet-200" };
+    case "payment":
+      return { label: "Fundraiser", badgeClass: "bg-teal-50 text-teal-700 border-teal-200" };
+    case "file":
+      return { label: "File", badgeClass: "bg-slate-50 text-slate-600 border-slate-200" };
     default:
       return { label: "Post", badgeClass: "bg-gray-50 text-gray-600 border-gray-200" };
   }

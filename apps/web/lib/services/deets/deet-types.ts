@@ -88,11 +88,16 @@ export interface DeetAttachment {
   type: string;
   title: string;
   detail?: string;
+  meta?: string;
+  options?: string[];
   previews?: string[];
   storagePaths?: string[];
   image?: string;
   imageUrl?: string;
   src?: string;
+  eventData?: { date?: string | null; time?: string | null; location?: string | null };
+  pollSettings?: Record<string, unknown>;
+  jobData?: Record<string, unknown>;
 }
 
 export interface DeetRecord {

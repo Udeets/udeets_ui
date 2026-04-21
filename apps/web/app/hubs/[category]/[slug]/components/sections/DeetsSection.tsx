@@ -7,588 +7,38 @@ import {
   Briefcase,
   Calendar,
   ChevronDown,
-  ChevronRight,
   CircleDollarSign,
   Eye,
-  Image as ImageIcon,
   Loader2,
   MapPin,
   Megaphone,
   MessageSquare,
-  MoreVertical,
-  Paperclip,
   Pencil,
-  Reply,
   Search,
-  Send,
-  Share2,
-  Smile,
   SmilePlus,
-  Trash2,
   X,
 } from "lucide-react";
 import type { HubFeedItemAttachment } from "@/lib/hub-content";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DeetComposerCard } from "../deets/DeetComposerCard";
+import { resolveDeetType } from "../deets/feedDeetTypeBlocks";
+import { POST_ICON } from "../deets/feedEmojiReact";
+import { DeetCommentsSection } from "../deets/DeetCommentsSection";
+import { HubFeedCard } from "../deets/HubFeedCard";
+import { CommentThreadSheet } from "../deets/CommentThreadSheet";
 import { ImageWithFallback, cn, initials } from "../hubUtils";
 import { SectionShell } from "../SectionShell";
-import type { ComposerChildFlow } from "../deets/deetTypes";
+import type { OpenComposerArg } from "../../hooks/useDeetComposer";
 import type { DeetComment, DeetViewer, DeetReactor } from "@/lib/services/deets/deet-interactions";
 import { deleteDeet } from "@/lib/services/deets/delete-deet";
-
-function sanitizeHtmlContent(html: string): string {
-  const div = document.createElement("div");
-  div.innerHTML = html;
-  const scripts = div.querySelectorAll("script");
-  scripts.forEach((script) => script.remove());
-  const allElements = div.querySelectorAll("*");
-  allElements.forEach((el) => {
-    Array.from(el.attributes).forEach((attr) => {
-      if (attr.name.startsWith("on")) {
-        el.removeAttribute(attr.name);
-      }
-    });
-  });
-  return div.innerHTML;
-}
-
-/* ── Deet type styling config ── */
-const DEET_TYPE_CONFIG: Record<string, {
-  icon: typeof Megaphone;
-  label: string;
-  bg: string;
-  text: string;
-  border: string;
-  accent: string;
-}> = {
-  announcement: {
-    icon: Megaphone,
-    label: "Announcement",
-    bg: "bg-blue-50",
-    text: "text-blue-700",
-    border: "border-blue-200",
-    accent: "bg-blue-100",
-  },
-  notice: {
-    icon: AlertTriangle,
-    label: "Notice",
-    bg: "bg-amber-50",
-    text: "text-amber-700",
-    border: "border-amber-300",
-    accent: "bg-amber-100",
-  },
-  event: {
-    icon: Calendar,
-    label: "Event",
-    bg: "bg-purple-50",
-    text: "text-purple-700",
-    border: "border-purple-200",
-    accent: "bg-purple-100",
-  },
-  poll: {
-    icon: BarChart3,
-    label: "Poll",
-    bg: "bg-emerald-50",
-    text: "text-emerald-700",
-    border: "border-emerald-200",
-    accent: "bg-emerald-100",
-  },
-  checkin: {
-    icon: MapPin,
-    label: "Check-in",
-    bg: "bg-rose-50",
-    text: "text-rose-700",
-    border: "border-rose-200",
-    accent: "bg-rose-100",
-  },
-  money: {
-    icon: CircleDollarSign,
-    label: "Payment Request",
-    bg: "bg-teal-50",
-    text: "text-teal-700",
-    border: "border-teal-200",
-    accent: "bg-teal-100",
-  },
-  jobs: {
-    icon: Briefcase,
-    label: "Job Posting",
-    bg: "bg-indigo-50",
-    text: "text-indigo-700",
-    border: "border-indigo-200",
-    accent: "bg-indigo-100",
-  },
-};
-
-/** Resolve the deet type from kind + attachments */
-function resolveDeetType(kind: string, attachments?: HubFeedItemAttachment[]): string | null {
-  // Check attachments for specific types first
-  if (attachments?.length) {
-    for (const a of attachments) {
-      if (a.type === "announcement" || a.type === "poll" || a.type === "event" || a.type === "checkin" || a.type === "money" || a.type === "jobs") {
-        return a.type;
-      }
-    }
-  }
-  // Fall back to kind
-  if (kind === "notice") return "notice";
-  if (kind === "announcement") return "announcement";
-  if (kind === "event") return "event";
-  if (kind === "poll") return "poll";
-  if (kind === "jobs") return "jobs";
-  return null;
-}
-
-/** Type badge shown below author header */
-function DeetTypeBadge({ type }: { type: string }) {
-  const config = DEET_TYPE_CONFIG[type];
-  if (!config) return null;
-  const Icon = config.icon;
-
-  return (
-    <div className="px-4 pt-2">
-      <span className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
-        config.accent, config.text
-      )}>
-        <Icon className="h-3.5 w-3.5 stroke-[2]" />
-        {config.label}
-      </span>
-    </div>
-  );
-}
-
-/** Rich content section for specific deet types */
-function DeetTypeContent({ type, attachments }: { type: string; attachments?: HubFeedItemAttachment[] }) {
-  const config = DEET_TYPE_CONFIG[type];
-  if (!config) return null;
-  const Icon = config.icon;
-
-  const matchingAtt = attachments?.find((a) => a.type === type);
-
-  // Notice: special highlighted section
-  if (type === "notice") {
-    return (
-      <div className={cn("mx-4 mt-3 rounded-xl border-l-4 p-3", config.border, config.bg)}>
-        <div className="flex items-start gap-2.5">
-          <div className={cn("mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg", config.accent)}>
-            <Icon className={cn("h-4 w-4 stroke-[2]", config.text)} />
-          </div>
-          <div className="min-w-0 flex-1">
-            {matchingAtt?.title && (
-              <p className={cn("text-sm font-bold", config.text)}>{matchingAtt.title}</p>
-            )}
-            {matchingAtt?.detail && (
-              <p className="mt-0.5 text-sm text-[var(--ud-text-secondary)]">{matchingAtt.detail}</p>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Announcement: colored header bar with content
-  if (type === "announcement") {
-    return (
-      <div className={cn("mx-4 mt-3 overflow-hidden rounded-xl border", config.border)}>
-        <div className={cn("flex items-center gap-2 px-3 py-2", config.bg)}>
-          <Icon className={cn("h-4 w-4 stroke-[2]", config.text)} />
-          <span className={cn("text-sm font-bold", config.text)}>
-            {matchingAtt?.title || "Announcement"}
-          </span>
-        </div>
-        {matchingAtt?.detail && (
-          <div className="px-3 py-2.5">
-            <p className="text-sm leading-relaxed text-[var(--ud-text-secondary)]">{matchingAtt.detail}</p>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Poll: handled separately by PollContent component (needs state)
-  if (type === "poll") return null;
-
-  // Event: date/location card
-  if (type === "event") {
-    return (
-      <div className={cn("mx-4 mt-3 overflow-hidden rounded-xl border", config.border)}>
-        <div className={cn("flex items-center gap-2 px-3 py-2", config.bg)}>
-          <Icon className={cn("h-4 w-4 stroke-[2]", config.text)} />
-          <span className={cn("text-sm font-bold", config.text)}>
-            {matchingAtt?.title || "Event"}
-          </span>
-        </div>
-        {matchingAtt?.detail && (
-          <div className="px-3 py-2.5">
-            <p className="text-sm leading-relaxed text-[var(--ud-text-secondary)]">{matchingAtt.detail}</p>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Check-in: location display
-  if (type === "checkin") {
-    return (
-      <div className={cn("mx-4 mt-3 overflow-hidden rounded-xl border", config.border)}>
-        <div className={cn("flex items-center gap-2 px-3 py-2", config.bg)}>
-          <Icon className={cn("h-4 w-4 stroke-[2]", config.text)} />
-          <span className={cn("text-sm font-bold", config.text)}>
-            {matchingAtt?.title || "Checked in"}
-          </span>
-        </div>
-        {matchingAtt?.detail && (
-          <div className="px-3 py-2.5">
-            <p className="text-sm text-[var(--ud-text-secondary)]">{matchingAtt.detail}</p>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Money / payment request
-  if (type === "money") {
-    return (
-      <div className={cn("mx-4 mt-3 overflow-hidden rounded-xl border", config.border)}>
-        <div className={cn("flex items-center gap-2 px-3 py-2", config.bg)}>
-          <Icon className={cn("h-4 w-4 stroke-[2]", config.text)} />
-          <span className={cn("text-sm font-bold", config.text)}>
-            {matchingAtt?.title || "Payment Request"}
-          </span>
-        </div>
-        {matchingAtt?.detail && (
-          <div className="px-3 py-2.5">
-            <p className="text-sm text-[var(--ud-text-secondary)]">{matchingAtt.detail}</p>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Jobs: rich job listing card
-  if (type === "jobs") {
-    const jobMeta = matchingAtt?.meta;
-    const detailParts = matchingAtt?.detail?.split(" · ").filter(Boolean) ?? [];
-    return (
-      <div className={cn("mx-4 mt-3 overflow-hidden rounded-xl border", config.border)}>
-        <div className={cn("flex items-center gap-2 px-3 py-2", config.bg)}>
-          <Icon className={cn("h-4 w-4 stroke-[2]", config.text)} />
-          <span className={cn("text-sm font-bold", config.text)}>
-            {matchingAtt?.title || "Job Posting"}
-          </span>
-        </div>
-        <div className="px-3 py-2.5 space-y-2">
-          {detailParts.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {detailParts.map((part, i) => (
-                <span key={i} className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
-                  {part}
-                </span>
-              ))}
-            </div>
-          )}
-          {jobMeta && (
-            <p className="text-sm leading-relaxed text-[var(--ud-text-secondary)]">{jobMeta}</p>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  return null;
-}
-
-/** Interactive poll component with voting */
-function PollContent({ deetId, attachments }: { deetId: string; attachments?: HubFeedItemAttachment[] }) {
-  const matchingAtt = attachments?.find((a) => a.type === "poll");
-  const options = matchingAtt?.options ?? [];
-  const parsedOptions = options.length > 0
-    ? options
-    : (matchingAtt?.detail?.split(" · ").filter(Boolean) ?? []);
-
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [isVoting, setIsVoting] = useState(false);
-  const [totalVotes, setTotalVotes] = useState(0);
-  const [voteCounts, setVoteCounts] = useState<number[]>(parsedOptions.map(() => 0));
-
-  // Fetch existing votes on mount
-  useEffect(() => {
-    if (!deetId) return;
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const { getPollVotes, getMyPollVotes } = await import("@/lib/services/deets/poll-votes");
-        const [allVotes, myVotes] = await Promise.all([
-          getPollVotes([deetId]),
-          getMyPollVotes([deetId]),
-        ]);
-
-        if (cancelled) return;
-
-        // Count votes per option
-        const counts = parsedOptions.map(() => 0);
-        let total = 0;
-        const deetVotes = allVotes.filter((v) => v.deetId === deetId);
-        // Count unique users (not individual option_index entries for multi-select)
-        const uniqueVoters = new Set(deetVotes.map((v) => v.userId));
-        total = uniqueVoters.size;
-        for (const v of deetVotes) {
-          if (v.optionIndex >= 0 && v.optionIndex < counts.length) {
-            counts[v.optionIndex]++;
-          }
-        }
-        setVoteCounts(counts);
-        setTotalVotes(total);
-
-        // Set user's selection
-        const myDeetVotes = myVotes.filter((v) => v.deetId === deetId);
-        if (myDeetVotes.length > 0) {
-          setSelectedIndex(myDeetVotes[0].optionIndex);
-        }
-      } catch {
-        // Table might not exist yet
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [deetId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleVote = async (index: number) => {
-    if (isVoting) return;
-    setIsVoting(true);
-
-    const prevIndex = selectedIndex;
-    // Optimistic update
-    setSelectedIndex(index);
-    setVoteCounts((prev) => {
-      const next = [...prev];
-      if (prevIndex !== null && prevIndex < next.length) next[prevIndex]--;
-      if (index < next.length) next[index]++;
-      return next;
-    });
-    if (prevIndex === null) setTotalVotes((t) => t + 1);
-
-    try {
-      const { castPollVote } = await import("@/lib/services/deets/poll-votes");
-      const success = await castPollVote(deetId, index);
-      if (!success) {
-        // Revert
-        setSelectedIndex(prevIndex);
-        setVoteCounts((prev) => {
-          const next = [...prev];
-          if (index < next.length) next[index]--;
-          if (prevIndex !== null && prevIndex < next.length) next[prevIndex]++;
-          return next;
-        });
-        if (prevIndex === null) setTotalVotes((t) => t - 1);
-      }
-    } catch {
-      // Revert on error
-      setSelectedIndex(prevIndex);
-      setVoteCounts((prev) => {
-        const next = [...prev];
-        if (index < next.length) next[index]--;
-        if (prevIndex !== null && prevIndex < next.length) next[prevIndex]++;
-        return next;
-      });
-      if (prevIndex === null) setTotalVotes((t) => t - 1);
-    } finally {
-      setIsVoting(false);
-    }
-  };
-
-  if (!parsedOptions.length) return null;
-
-  return (
-    <div className="mx-4 mt-3 overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)]/30">
-      {/* Poll header */}
-      <div className="flex items-center gap-3 px-4 py-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
-          <BarChart3 className="h-5 w-5 stroke-[1.5] text-emerald-600" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-emerald-600">Poll Opened</span>
-            <span className="text-xs text-[var(--ud-text-muted)]">{totalVotes} voted</span>
-          </div>
-          <p className="mt-0.5 text-sm font-semibold text-[var(--ud-text-primary)]">
-            {matchingAtt?.title || "Poll"}
-          </p>
-        </div>
-      </div>
-
-      {/* Poll options */}
-      <div className="border-t border-[var(--ud-border-subtle)] px-4 py-2">
-        {parsedOptions.map((opt, i) => {
-          const isSelected = selectedIndex === i;
-          const count = voteCounts[i] ?? 0;
-          const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-
-          return (
-            <button
-              key={i}
-              type="button"
-              disabled={isVoting}
-              onClick={() => handleVote(i)}
-              className={cn(
-                "relative flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-sm transition",
-                isSelected
-                  ? "text-emerald-700"
-                  : "text-[var(--ud-text-primary)] hover:bg-[var(--ud-bg-subtle)]"
-              )}
-            >
-              {/* Progress bar background */}
-              {selectedIndex !== null && totalVotes > 0 && (
-                <div
-                  className={cn(
-                    "absolute inset-0 rounded-lg transition-all",
-                    isSelected ? "bg-emerald-100" : "bg-gray-100"
-                  )}
-                  style={{ width: `${pct}%` }}
-                />
-              )}
-              {/* Radio circle */}
-              <span className={cn(
-                "relative z-10 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition",
-                isSelected ? "border-emerald-500 bg-emerald-500" : "border-gray-300"
-              )}>
-                {isSelected && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-white" />
-                )}
-              </span>
-              <span className="relative z-10 flex-1 text-left">{opt}</span>
-              {/* Vote count shown after voting */}
-              {selectedIndex !== null && totalVotes > 0 && (
-                <span className="relative z-10 text-xs text-[var(--ud-text-muted)]">{count}</span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/* ── Icon sizing ── */
-const POST_ICON = "h-[18px] w-[18px] stroke-[1.5]";
-
-/* ── Emoji reactions (inline) ── */
-const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
-
-/** Map emoji to human-readable label for the React button */
-const EMOJI_TEXT_MAP: Record<string, string> = {
-  "👍": "Liked",
-  "❤️": "Loved",
-  "😂": "Haha",
-  "😮": "Surprised",
-  "😢": "Sad",
-  "🙏": "Grateful",
-  "like": "Liked",
-};
-
-function EmojiReactButton({
-  deetId,
-  isLiked,
-  isLiking,
-  onToggleLike,
-}: {
-  deetId: string;
-  isLiked: boolean;
-  isLiking: boolean;
-  onToggleLike?: (deetId: string, reactionType?: string) => void;
-}) {
-  const [showPicker, setShowPicker] = useState(false);
-  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
-  const pickerRef = useRef<HTMLDivElement | null>(null);
-
-  // Close picker on outside click
-  useEffect(() => {
-    if (!showPicker) return;
-    const handleClick = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (
-        pickerRef.current && !pickerRef.current.contains(target) &&
-        buttonRef.current && !buttonRef.current.contains(target)
-      ) {
-        setShowPicker(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [showPicker]);
-
-  const handleReactClick = () => {
-    // Always show the emoji picker (whether reacted or not)
-    setShowPicker((v) => !v);
-  };
-
-  const handleEmojiSelect = (emoji: string) => {
-    setShowPicker(false);
-    if (isLiked && selectedEmoji === emoji) {
-      // Same emoji picked again — un-react
-      onToggleLike?.(deetId, emoji);
-      setSelectedEmoji(null);
-    } else {
-      // New reaction or changed emoji
-      setSelectedEmoji(emoji);
-      onToggleLike?.(deetId, emoji);
-    }
-  };
-
-  const displayEmoji = isLiked ? (selectedEmoji || "👍") : null;
-
-  return (
-    <div className="relative flex-1">
-      {/* Emoji picker popup */}
-      {showPicker && (
-        <div
-          ref={pickerRef}
-          className="absolute -top-12 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 rounded-full border border-[var(--ud-border)] bg-white px-2 py-1.5 shadow-lg"
-        >
-          {REACTION_EMOJIS.map((emoji) => (
-            <button
-              key={emoji}
-              type="button"
-              onClick={() => handleEmojiSelect(emoji)}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-xl transition-transform hover:scale-125 active:scale-95"
-            >
-              {emoji}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={handleReactClick}
-        disabled={isLiking}
-        className={cn(
-          "flex w-full items-center justify-center gap-1.5 py-2.5 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]",
-          isLiked
-            ? "text-[var(--ud-brand-primary)] font-medium"
-            : "text-[var(--ud-text-muted)]"
-        )}
-      >
-        {isLiking ? (
-          <Loader2 className={cn(POST_ICON, "animate-spin")} />
-        ) : displayEmoji ? (
-          <span className="text-base">{displayEmoji}</span>
-        ) : (
-          <SmilePlus className={POST_ICON} />
-        )}
-        <span>{isLiked ? (EMOJI_TEXT_MAP[selectedEmoji ?? "like"] ?? "Reacted") : "React"}</span>
-      </button>
-    </div>
-  );
-}
+import { plainTextFromHtml } from "@/lib/deets/plain-text-from-html";
 
 /* ── Sort options ── */
 type SortOption = "Newest" | "Oldest";
 
 type FeedFilterOption = "Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos";
+
+const COMMENT_SHEET_THRESHOLD = 8;
 
 /* ── Filter pill options (pill filters) ── */
 const FILTER_PILLS: Array<{ key: string; label: string }> = [
@@ -627,7 +77,7 @@ function ReactionsModal({
   const filteredReactors = activeTab === "all" ? reactors : (grouped.get(activeTab) ?? []);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[125] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div
         className="mx-4 w-full max-w-sm rounded-2xl border border-[var(--ud-border)] bg-[var(--ud-bg-card)] shadow-xl"
         onClick={(e) => e.stopPropagation()}
@@ -760,9 +210,9 @@ export function DeetsSection({
   onOpenViewer,
   onDeleteDeet,
   likedDeetIds,
+  myReactionsByDeetId,
   likingDeetIds,
   likeCountOverrides,
-  viewCountOverrides,
   onToggleLike,
   reactorsByDeetId,
   reactionsModalDeetId,
@@ -812,13 +262,13 @@ export function DeetsSection({
   userAvatarSrc?: string;
   userName?: string;
   currentUserId?: string;
-  onOpenComposer: (child?: ComposerChildFlow | null) => void;
+  onOpenComposer: (arg?: OpenComposerArg) => void;
   onOpenViewer: (images: string[], index: number, title: string, body: string, focusId?: string, commentContext?: { commentId: string; authorName: string; authorAvatar?: string; body: string; createdAt: string; reactedEmoji?: string | null; replies?: Array<{ id: string; authorName: string; authorAvatar?: string; body: string; createdAt: string }> }) => void;
   onDeleteDeet?: (deetId: string) => void;
   likedDeetIds?: Set<string>;
+  myReactionsByDeetId?: Record<string, string>;
   likingDeetIds?: Set<string>;
   likeCountOverrides?: Record<string, number>;
-  viewCountOverrides?: Record<string, number>;
   onToggleLike?: (deetId: string, reactionType?: string) => void;
   reactorsByDeetId?: Record<string, DeetReactor[]>;
   reactionsModalDeetId?: string | null;
@@ -865,47 +315,22 @@ export function DeetsSection({
     }
   };
 
-  const [shareCountOverrides, setShareCountOverrides] = useState<Record<string, number>>({});
-  // Track deets the current user has already shared this session (prevents double-counting)
-  const [sharedDeetIds, setSharedDeetIds] = useState<Set<string>>(new Set());
+  const [shareOrigin, setShareOrigin] = useState("");
+  useEffect(() => {
+    setShareOrigin(window.location.origin);
+  }, []);
 
-  const handleShareDeet = async (deetId: string) => {
-    const shareUrl = `${window.location.origin}/hubs/${hubCategory}/${hubSlug}?focus=${deetId}`;
-    // Always copy to clipboard — no native share sheet
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-    } catch {
-      const textarea = document.createElement("textarea");
-      textarea.value = shareUrl;
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-    }
+  const flashCopied = useCallback((deetId: string) => {
     setCopiedDeetId(deetId);
-
-    // Only bump the count optimistically if user hasn't already shared this deet
-    const alreadySharedLocally = sharedDeetIds.has(deetId);
-    if (!alreadySharedLocally) {
-      setShareCountOverrides((prev) => ({ ...prev, [deetId]: (prev[deetId] ?? 0) + 1 }));
-      setSharedDeetIds((prev) => new Set(prev).add(deetId));
-    }
-
-    // Persist to database (non-blocking, idempotent)
-    import("@/lib/services/deets/deet-interactions").then(({ recordDeetShare }) => {
-      recordDeetShare(deetId).then(({ total }) => {
-        if (total > 0) {
-          const item = filteredFeedItems.find((fi) => fi.id === deetId);
-          const base = item?.shares ?? 0;
-          setShareCountOverrides((prev) => ({ ...prev, [deetId]: total - base }));
-        }
-      }).catch(() => { /* swallow — optimistic count stays */ });
-    }).catch(() => { /* swallow */ });
     if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
     copiedTimeoutRef.current = setTimeout(() => setCopiedDeetId(null), 2000);
-  };
+  }, []);
+
+  const recordShareOnly = useCallback((deetId: string) => {
+    void import("@/lib/services/deets/deet-interactions").then(({ recordDeetShare }) => {
+      void recordDeetShare(deetId);
+    });
+  }, []);
 
   /* Handle sort change — route through existing feedFilter prop */
   const handleSortChange = (option: SortOption) => {
@@ -942,6 +367,75 @@ export function DeetsSection({
     const resolved = resolveDeetType(item.kind, item.deetAttachments);
     return resolved !== "announcement";
   });
+
+  const [commentSheetMobile, setCommentSheetMobile] = useState(false);
+  const [focusComposerDeetId, setFocusComposerDeetId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 639px)");
+    const fn = () => setCommentSheetMobile(mq.matches);
+    fn();
+    mq.addEventListener("change", fn);
+    return () => mq.removeEventListener("change", fn);
+  }, []);
+
+  useEffect(() => {
+    if (!expandedCommentDeetId) setFocusComposerDeetId(null);
+  }, [expandedCommentDeetId]);
+
+  const handleToggleCommentsFor = (itemId: string) => {
+    const willOpen = expandedCommentDeetId !== itemId;
+    onToggleComments?.(itemId);
+    if (willOpen) setFocusComposerDeetId(itemId);
+    else setFocusComposerDeetId(null);
+  };
+
+  const buildCommentsSection = (
+    deetId: string,
+    layout: "inline" | "sheet",
+    opts?: { autoFocusComposer?: boolean },
+  ) => (
+    <DeetCommentsSection
+      layout={layout}
+      deetId={deetId}
+      autoFocusComposer={opts?.autoFocusComposer ?? false}
+      onAutoFocusConsumed={() => setFocusComposerDeetId(null)}
+      comments={commentsByDeetId?.[deetId] ?? []}
+      isLoading={commentLoadingDeetIds?.has(deetId) ?? false}
+      isSubmitting={commentSubmittingDeetId === deetId}
+      error={commentError}
+      currentUserId={currentUserId}
+      onSubmitComment={onSubmitComment}
+      onEditComment={onEditComment}
+      onDeleteComment={onDeleteComment}
+      onOpenViewer={(images, index, comment) => {
+        if (comment) {
+          const clientReaction =
+            (comment as DeetComment & { _clientReaction?: string | null })._clientReaction ?? null;
+          onOpenViewer(images, index, "", "", undefined, {
+            commentId: comment.id,
+            authorName: comment.authorName ?? "User",
+            authorAvatar: comment.authorAvatar,
+            body: comment.body,
+            createdAt: comment.createdAt,
+            reactedEmoji: clientReaction,
+            replies: comment.replies?.map((r) => ({
+              id: r.id,
+              authorName: r.authorName ?? "User",
+              authorAvatar: r.authorAvatar,
+              body: r.body,
+              createdAt: r.createdAt,
+            })),
+          });
+        } else {
+          onOpenViewer(images, index, "", "");
+        }
+      }}
+      userAvatarSrc={userAvatarSrc}
+      userName={userName}
+    />
+  );
 
   return (
     <>
@@ -1017,7 +511,11 @@ export function DeetsSection({
                         {notice.title && notice.title !== "Notice" ? (
                           notice.title
                         ) : (
-                          <span dangerouslySetInnerHTML={{ __html: sanitizeHtmlContent(notice.body).slice(0, 80) }} />
+                          (() => {
+                            const preview = plainTextFromHtml(notice.body);
+                            const short = preview.slice(0, 80);
+                            return short + (preview.length > 80 ? "…" : "");
+                          })()
                         )}
                       </span>
                       <ChevronDown className="h-4 w-4 shrink-0 text-amber-400 -rotate-90" />
@@ -1180,377 +678,64 @@ export function DeetsSection({
                 </div>
               </div>
             )}
-            {filteredFeedItems.map((item) => (
-              <div key={item.id} className="relative">
-                {/* Viewers dropdown removed from here — now rendered inline near the eye icon */}
+            {filteredFeedItems.map((item) => {
+              const commentCountForItem = item.comments + (commentCountOverrides?.[item.id] ?? 0);
+              const loadedCommentsLen = commentsByDeetId?.[item.id]?.length ?? 0;
+              const useCommentSheet =
+                commentSheetMobile &&
+                expandedCommentDeetId === item.id &&
+                (commentCountForItem >= COMMENT_SHEET_THRESHOLD ||
+                  loadedCommentsLen >= COMMENT_SHEET_THRESHOLD);
 
-              <article
-                id={item.id}
-                className={cn(
-                  "w-full overflow-visible rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-sm transition",
-                  highlightedItemId === item.id && "ring-2 ring-[var(--ud-brand-primary)] ring-offset-2"
-                )}
-              >
-                {/* ── Author header ── */}
-                <div className="flex items-center gap-3 px-4 pt-4">
-                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
-                    <ImageWithFallback
-                      src={item.authorAvatar || ""}
-                      sources={item.authorAvatar ? [item.authorAvatar] : []}
-                      alt={item.author}
-                      className="h-full w-full object-cover"
-                      fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-xs font-bold text-[var(--ud-brand-primary)]"
-                      fallback={initials(item.author)}
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[15px] font-semibold text-[var(--ud-text-primary)]">{item.author}</span>
-                      {item.role && (
-                        <span className="text-sm text-[var(--ud-text-muted)]">
-                          {item.role === "creator" ? "Creator" : item.role === "admin" ? "Admin" : ""}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-xs text-[var(--ud-text-muted)]">{item.time}</span>
-                  </div>
-                  {/* Three-dot menu (styled) */}
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setOpenMenuDeetId(openMenuDeetId === item.id ? null : item.id)}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-secondary)]"
-                      aria-label="More options"
-                    >
-                      <MoreVertical className="h-[18px] w-[18px] stroke-[1.5]" />
-                    </button>
-                    {openMenuDeetId === item.id && (
-                      <div className="absolute right-0 top-9 z-20 min-w-[160px] rounded-xl border border-[var(--ud-border)] bg-[var(--ud-bg-card)] p-1.5 shadow-lg">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleShareDeet(item.id);
-                            setOpenMenuDeetId(null);
-                          }}
-                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)]"
-                        >
-                          <Share2 className="h-3.5 w-3.5" />
-                          Copy link
-                        </button>
-                        {(currentUserId === item.authorId || isCreatorAdmin) && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setOpenMenuDeetId(null);
-                                onOpenComposer(null);
-                                // TODO: open composer in edit mode with this deet's data
-                              }}
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)]"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setOpenMenuDeetId(null);
-                                setConfirmDeleteDeetId(item.id);
-                              }}
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 transition hover:bg-red-50"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                              Delete
-                            </button>
-                          </>
-                        )}
-                        {currentUserId !== item.authorId && !isCreatorAdmin && (
-                          <button
-                            type="button"
-                            onClick={() => setOpenMenuDeetId(null)}
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)]"
-                          >
-                            Report
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* ── Type badge + rich content ── */}
-                {(() => {
-                  const deetType = resolveDeetType(item.kind, item.deetAttachments);
-                  const hasRichSection = deetType && item.deetAttachments?.some((a) => a.type === deetType);
-
-                  return (
-                    <>
-                      {deetType ? <DeetTypeBadge type={deetType} /> : null}
-
-                      {/* Body content — skip if rich section will render the same info */}
-                      {item.body && !hasRichSection ? (
-                        <div
-                          className="px-4 pt-3 text-[15px] leading-relaxed text-[var(--ud-text-primary)]"
-                          dangerouslySetInnerHTML={{ __html: sanitizeHtmlContent(item.body) }}
-                        />
-                      ) : null}
-
-                      {/* Rich type content section */}
-                      {deetType === "poll" ? (
-                        <PollContent deetId={item.id} attachments={item.deetAttachments} />
-                      ) : deetType ? (
-                        <DeetTypeContent type={deetType} attachments={item.deetAttachments} />
-                      ) : null}
-                    </>
-                  );
-                })()}
-
-                {/* ── Image / gallery ── */}
-                {item.image ? (
-                  <button
-                    type="button"
-                    className="mt-3 block w-full bg-[var(--ud-bg-subtle)]"
-                    onClick={() =>
-                      onOpenViewer(
-                        item.images?.length ? item.images : [item.image!],
-                        0,
-                        item.title,
-                        item.body,
-                        item.id
-                      )
+              return (
+                <div key={item.id} className="relative">
+                  <HubFeedCard
+                    item={item}
+                    highlighted={highlightedItemId === item.id}
+                    menuOpen={openMenuDeetId === item.id}
+                    onToggleMenu={() => {
+                      if (viewersDeetId === item.id) onToggleViewers?.(item.id);
+                      setOpenMenuDeetId(openMenuDeetId === item.id ? null : item.id);
+                    }}
+                    currentUserId={currentUserId}
+                    isCreatorAdmin={isCreatorAdmin}
+                    onOpenComposer={onOpenComposer}
+                    onConfirmDelete={setConfirmDeleteDeetId}
+                    onRecordShare={recordShareOnly}
+                    shareUrl={`${shareOrigin}/hubs/${hubCategory}/${hubSlug}?focus=${item.id}`}
+                    onOpenViewer={(images, index, title, body, focusId) =>
+                      onOpenViewer(images, index, title, body, focusId)
                     }
-                  >
-                    <div className="aspect-video max-h-[320px] w-full overflow-hidden">
-                      <ImageWithFallback
-                        src={item.image}
-                        sources={item.images?.length ? item.images : [item.image]}
-                        alt={item.title}
-                        className="h-full w-full object-cover"
-                        fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)]/20 text-sm text-[var(--ud-text-muted)]"
-                        fallback="Image unavailable"
-                        loading="lazy"
-                      />
-                    </div>
-                  </button>
-                ) : null}
-
-                {/* ── Stats row: reactions · comments · shares (left) + chevron | views (right) ── */}
-                <div className="relative flex items-center justify-between px-4 pt-2 pb-1">
-                  <div className="flex items-center gap-3 text-xs text-[var(--ud-text-muted)]">
-                    {(likeCountOverrides?.[item.id] ?? item.likes) > 0 && (
-                      <span className="inline-flex items-center gap-1">
-                        <SmilePlus className="h-3.5 w-3.5 stroke-[1.5]" />
-                        {likeCountOverrides?.[item.id] ?? item.likes}
-                      </span>
+                    likeCount={likeCountOverrides?.[item.id] ?? item.likes}
+                    commentCount={item.comments + (commentCountOverrides?.[item.id] ?? 0)}
+                    expandedComments={expandedCommentDeetId === item.id}
+                    onToggleComments={() => handleToggleCommentsFor(item.id)}
+                    canSeeViewers={Boolean(
+                      currentUserId && (currentUserId === item.authorId || isCreatorAdmin),
                     )}
-                    {(item.comments + (commentCountOverrides?.[item.id] ?? 0)) > 0 && (
-                      <span className="inline-flex items-center gap-1">
-                        <MessageSquare className="h-3.5 w-3.5 stroke-[1.5]" />
-                        {item.comments + (commentCountOverrides?.[item.id] ?? 0)}
-                      </span>
-                    )}
-                    {(item.shares + (shareCountOverrides[item.id] ?? 0)) > 0 && (
-                      <span className="inline-flex items-center gap-1">
-                        <Share2 className="h-3.5 w-3.5 stroke-[1.5]" />
-                        {item.shares + (shareCountOverrides[item.id] ?? 0)}
-                      </span>
-                    )}
-                    {/* Dropdown chevron to toggle comments (like Band) */}
-                    {(item.comments + (commentCountOverrides?.[item.id] ?? 0)) > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => onToggleComments?.(item.id)}
-                        className="inline-flex items-center justify-center rounded-full hover:bg-[var(--ud-bg-subtle)] transition"
-                        title="Toggle comments"
-                      >
-                        <ChevronDown className={cn("h-4 w-4 transition-transform", expandedCommentDeetId === item.id && "rotate-180")} />
-                      </button>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => onToggleViewers?.(item.id)}
-                    className={cn(
-                      "inline-flex items-center gap-1 text-xs transition",
-                      viewersDeetId === item.id
-                        ? "text-[var(--ud-brand-primary)] font-medium"
-                        : "text-[var(--ud-text-muted)] hover:text-[var(--ud-text-secondary)]"
-                    )}
-                    title="See who viewed"
-                  >
-                    <Eye className="h-3.5 w-3.5 stroke-[1.5]" />
-                    <span>{(viewCountOverrides?.[item.id] != null ? item.views + viewCountOverrides[item.id] : item.views)}</span>
-                  </button>
-
-                  {/* ── Viewers popover ── */}
-                  {viewersDeetId === item.id && (
-                    <div className="absolute bottom-full right-4 z-50 mb-1 w-56 rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] shadow-lg">
-                      <div className="flex items-center justify-between border-b border-[var(--ud-border-subtle)] px-3 py-2">
-                        <span className="text-[11px] font-semibold text-[var(--ud-text-primary)]">Viewed by</span>
-                        <button
-                          type="button"
-                          onClick={() => onToggleViewers?.(item.id)}
-                          className="text-[10px] text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                      <div className="max-h-[200px] overflow-y-auto">
-                        {viewersLoading ? (
-                          <div className="flex items-center justify-center py-3">
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--ud-text-muted)]" />
-                          </div>
-                        ) : (viewersByDeetId?.[item.id] ?? []).length > 0 ? (
-                          <div className="py-1">
-                            {(viewersByDeetId?.[item.id] ?? []).map((viewer) => (
-                              <div key={viewer.userId} className="flex items-center gap-2 px-3 py-1.5">
-                                <div className="relative h-6 w-6 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
-                                  <ImageWithFallback
-                                    src={viewer.avatar || ""}
-                                    sources={viewer.avatar ? [viewer.avatar] : []}
-                                    alt={viewer.name}
-                                    className="h-full w-full object-cover"
-                                    fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-[7px] font-bold text-[var(--ud-brand-primary)]"
-                                    fallback={initials(viewer.name)}
-                                  />
-                                </div>
-                                <span className="min-w-0 flex-1 truncate text-xs text-[var(--ud-text-primary)]">{viewer.name}</span>
-                                <span className="shrink-0 text-[9px] text-[var(--ud-text-muted)]">
-                                  {viewer.viewedAt ? new Date(viewer.viewedAt).toLocaleDateString() : ""}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="px-3 py-3 text-center text-[11px] text-[var(--ud-text-muted)]">No views yet</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* ── Action bar: React + Comment + Share ── */}
-                <div className="flex items-center border-t border-[var(--ud-border-subtle)]">
-                  {/* React button with emoji picker */}
-                  <EmojiReactButton
-                    deetId={item.id}
+                    viewersOpen={viewersDeetId === item.id}
+                    viewersLoading={viewersLoading}
+                    viewers={viewersByDeetId?.[item.id] ?? []}
+                    onToggleViewers={() => onToggleViewers?.(item.id)}
+                    copied={copiedDeetId === item.id}
+                    onCopied={() => flashCopied(item.id)}
+                    onToggleLike={onToggleLike}
+                    myReactionType={myReactionsByDeetId?.[item.id] ?? null}
                     isLiked={likedDeetIds?.has(item.id) ?? false}
                     isLiking={likingDeetIds?.has(item.id) ?? false}
-                    onToggleLike={onToggleLike}
+                    onOpenReactionsSummary={() => onOpenReactionsModal?.(item.id)}
+                    reactors={reactorsByDeetId?.[item.id] ?? []}
+                    commentsSlot={
+                      expandedCommentDeetId === item.id && !useCommentSheet
+                        ? buildCommentsSection(item.id, "inline", {
+                            autoFocusComposer: focusComposerDeetId === item.id,
+                          })
+                        : null
+                    }
                   />
-
-                  {/* Comment button */}
-                  <button
-                    type="button"
-                    onClick={() => onToggleComments?.(item.id)}
-                    className={cn(
-                      "flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]",
-                      expandedCommentDeetId === item.id
-                        ? "text-[var(--ud-brand-primary)] font-medium"
-                        : "text-[var(--ud-text-muted)]"
-                    )}
-                  >
-                    <MessageSquare className={POST_ICON} />
-                    <span>Comment</span>
-                  </button>
-
-                  {/* Share button */}
-                  <button
-                    type="button"
-                    onClick={() => handleShareDeet(item.id)}
-                    className={cn(
-                      "flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]",
-                      copiedDeetId === item.id
-                        ? "text-[var(--ud-brand-primary)] font-medium"
-                        : "text-[var(--ud-text-muted)]"
-                    )}
-                  >
-                    <Share2 className={POST_ICON} />
-                    <span>{copiedDeetId === item.id ? "Copied!" : "Share"}</span>
-                  </button>
                 </div>
-
-                {/* ── Comments section (with reactor preview inside) ── */}
-                {expandedCommentDeetId === item.id && (
-                  <>
-                  {/* ── Reactions preview row (avatars + emoji + > arrow) — only when expanded ── */}
-                  {(reactorsByDeetId?.[item.id]?.length ?? 0) > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => onOpenReactionsModal?.(item.id)}
-                      className="flex w-full items-center justify-between border-t border-[var(--ud-border-subtle)] px-4 py-2 hover:bg-[var(--ud-bg-subtle)] transition"
-                    >
-                      <div className="flex items-center">
-                        {/* Overlapping avatars with emoji badges */}
-                        <div className="flex items-center -space-x-2">
-                          {(reactorsByDeetId?.[item.id] ?? []).slice(0, 5).map((reactor, idx) => (
-                            <div key={reactor.userId} className="relative" style={{ zIndex: 5 - idx }}>
-                              <div className="h-8 w-8 overflow-hidden rounded-full border-2 border-[var(--ud-bg-card)] bg-[var(--ud-brand-light)]">
-                                <ImageWithFallback
-                                  src={reactor.avatar || ""}
-                                  sources={reactor.avatar ? [reactor.avatar] : []}
-                                  alt={reactor.name}
-                                  className="h-full w-full object-cover"
-                                  fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-[9px] font-bold text-[var(--ud-brand-primary)]"
-                                  fallback={initials(reactor.name)}
-                                />
-                              </div>
-                              {/* Emoji badge */}
-                              {reactor.reactionType && reactor.reactionType !== "like" && (
-                                <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs leading-none shadow-sm">
-                                  {reactor.reactionType}
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-[var(--ud-text-muted)]" />
-                    </button>
-                  )}
-                  <DeetCommentsSection
-                    deetId={item.id}
-                    comments={commentsByDeetId?.[item.id] ?? []}
-                    isLoading={commentLoadingDeetIds?.has(item.id) ?? false}
-                    isSubmitting={commentSubmittingDeetId === item.id}
-                    error={commentError}
-                    currentUserId={currentUserId}
-                    onSubmitComment={onSubmitComment}
-                    onEditComment={onEditComment}
-                    onDeleteComment={onDeleteComment}
-                    onOpenViewer={(images, index, comment) => {
-                      if (comment) {
-                        // Comment image — pass comment context so sidebar shows this comment's data
-                        const clientReaction = (comment as DeetComment & { _clientReaction?: string | null })._clientReaction ?? null;
-                        onOpenViewer(images, index, "", "", undefined, {
-                          commentId: comment.id,
-                          authorName: comment.authorName ?? "User",
-                          authorAvatar: comment.authorAvatar,
-                          body: comment.body,
-                          createdAt: comment.createdAt,
-                          reactedEmoji: clientReaction,
-                          replies: comment.replies?.map(r => ({
-                            id: r.id,
-                            authorName: r.authorName ?? "User",
-                            authorAvatar: r.authorAvatar,
-                            body: r.body,
-                            createdAt: r.createdAt,
-                          })),
-                        });
-                      } else {
-                        onOpenViewer(images, index, "", "");
-                      }
-                    }}
-                    userAvatarSrc={userAvatarSrc}
-                    userName={userName}
-                  />
-                  </>
-                )}
-
-              </article>
-              </div>
-            ))}
+              );
+            })}
           </section>
         </div>
 
@@ -1601,6 +786,24 @@ export function DeetsSection({
       </button>
     )}
 
+    {expandedCommentDeetId &&
+      commentSheetMobile &&
+      (() => {
+        const sheetId = expandedCommentDeetId;
+        const post = filteredFeedItems.find((i) => i.id === sheetId);
+        if (!post) return null;
+        const cc = post.comments + (commentCountOverrides?.[sheetId] ?? 0);
+        const loadedLen = commentsByDeetId?.[sheetId]?.length ?? 0;
+        if (cc < COMMENT_SHEET_THRESHOLD && loadedLen < COMMENT_SHEET_THRESHOLD) return null;
+        return (
+          <CommentThreadSheet key={sheetId} title="Comments" onClose={() => handleToggleCommentsFor(sheetId)}>
+            {buildCommentsSection(sheetId, "sheet", {
+              autoFocusComposer: focusComposerDeetId === sheetId,
+            })}
+          </CommentThreadSheet>
+        );
+      })()}
+
     {/* ── Reactions modal (blurred BG overlay) ── */}
     {reactionsModalDeetId && (
       <ReactionsModal
@@ -1610,631 +813,5 @@ export function DeetsSection({
       />
     )}
     </>
-  );
-}
-
-/* ── Comments panel (inline) ── */
-
-/** Relative time helper */
-function commentTimeAgo(dateStr: string): string {
-  const d = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins} minute${mins > 1 ? "s" : ""} ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs} hour${hrs > 1 ? "s" : ""} ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 7) return `${days} day${days > 1 ? "s" : ""} ago`;
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-/** Single comment row — used for both top-level and replies */
-function CommentRow({
-  comment,
-  deetId,
-  isOwn,
-  isNested,
-  editingCommentId,
-  editText,
-  confirmDeleteId,
-  menuOpenCommentId,
-  reactedEmoji,
-  onSetReactedEmoji,
-  onSetEditText,
-  onStartEdit,
-  onSaveEdit,
-  onStartDelete,
-  onConfirmDelete,
-  onCancelDelete,
-  onCancelEdit,
-  onToggleMenu,
-  onReply,
-  onOpenViewer,
-  menuRef,
-  editInputRef,
-}: {
-  comment: DeetComment;
-  deetId: string;
-  isOwn: boolean;
-  isNested: boolean;
-  editingCommentId: string | null;
-  editText: string;
-  confirmDeleteId: string | null;
-  menuOpenCommentId: string | null;
-  reactedEmoji: string | null;
-  onSetReactedEmoji: (commentId: string, emoji: string | null) => void;
-  onSetEditText: (v: string) => void;
-  onStartEdit: (c: DeetComment) => void;
-  onSaveEdit: () => void;
-  onStartDelete: (id: string) => void;
-  onConfirmDelete: (id: string) => void;
-  onCancelDelete: () => void;
-  onCancelEdit: () => void;
-  onToggleMenu: (id: string) => void;
-  onReply?: (commentId: string, authorName: string) => void;
-  onOpenViewer?: (images: string[], index: number, comment?: DeetComment) => void;
-  menuRef: React.RefObject<HTMLDivElement | null>;
-  editInputRef: React.RefObject<HTMLInputElement | null>;
-}) {
-  const isEditing = editingCommentId === comment.id;
-  const isConfirmingDelete = confirmDeleteId === comment.id;
-  const avatarSize = isNested ? "h-7 w-7" : "h-9 w-9";
-  const [showReactPicker, setShowReactPicker] = useState(false);
-
-  return (
-    <div className="group relative flex items-start gap-2.5 py-3">
-      <div className={cn("relative shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]", avatarSize)}>
-        <ImageWithFallback
-          src={comment.authorAvatar || ""}
-          sources={comment.authorAvatar ? [comment.authorAvatar] : []}
-          alt={comment.authorName ?? "User"}
-          className="h-full w-full object-cover"
-          fallbackClassName={cn("grid h-full w-full place-items-center bg-[var(--ud-brand-light)] font-bold text-[var(--ud-brand-primary)]", isNested ? "text-[8px]" : "text-[10px]")}
-          fallback={initials(comment.authorName ?? "User")}
-        />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-[var(--ud-text-primary)]">{comment.authorName ?? "User"}</span>
-          {/* Three-dot menu for own comments */}
-          {isOwn && !isEditing && !isConfirmingDelete && (
-            <div className="relative ml-auto" ref={menuOpenCommentId === comment.id ? menuRef : undefined}>
-              <button
-                type="button"
-                onClick={() => onToggleMenu(comment.id)}
-                className="invisible rounded-full p-0.5 text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-secondary)] group-hover:visible"
-                title="More options"
-              >
-                <MoreVertical className="h-3.5 w-3.5" />
-              </button>
-              {menuOpenCommentId === comment.id && (
-                <div className="absolute right-0 top-6 z-20 min-w-[120px] rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] py-1 shadow-lg">
-                  <button type="button" onClick={() => onStartEdit(comment)} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-[var(--ud-text-primary)] hover:bg-[var(--ud-bg-subtle)]">
-                    <Pencil className="h-3.5 w-3.5" /> Edit
-                  </button>
-                  <button type="button" onClick={() => onStartDelete(comment.id)} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-red-500 hover:bg-red-50">
-                    <Trash2 className="h-3.5 w-3.5" /> Delete
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {isEditing ? (
-          <div className="mt-1 flex items-center gap-1.5">
-            <input
-              ref={editInputRef}
-              value={editText}
-              onChange={(e) => onSetEditText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") { e.preventDefault(); onSaveEdit(); }
-                if (e.key === "Escape") onCancelEdit();
-              }}
-              className="h-7 flex-1 rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-2.5 text-xs text-[var(--ud-text-primary)] outline-none focus:border-[var(--ud-brand-primary)]"
-            />
-            <button type="button" onClick={onSaveEdit} disabled={!editText.trim()} className="rounded-lg bg-[var(--ud-brand-primary)] px-2 py-1 text-[11px] font-medium text-white hover:opacity-90 disabled:opacity-50">Save</button>
-            <button type="button" onClick={onCancelEdit} className="rounded-lg px-2 py-1 text-[11px] text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]">Cancel</button>
-          </div>
-        ) : isConfirmingDelete ? (
-          <div className="mt-1 flex items-center gap-2">
-            <span className="text-[11px] text-red-500">Delete?</span>
-            <button type="button" onClick={() => onConfirmDelete(comment.id)} className="rounded-lg bg-red-500 px-2 py-0.5 text-[11px] font-medium text-white hover:bg-red-600">Yes</button>
-            <button type="button" onClick={onCancelDelete} className="rounded-lg px-2 py-0.5 text-[11px] text-[var(--ud-text-muted)]">No</button>
-          </div>
-        ) : (
-          <>
-            <p className="mt-0.5 text-sm leading-relaxed text-[var(--ud-text-secondary)]">{comment.body}</p>
-            {/* Comment image — thumbnail ~2"×3" (constrained via inline style for reliability) */}
-            {comment.imageUrl && (
-              <button
-                type="button"
-                onClick={() => onOpenViewer?.([comment.imageUrl!], 0, comment)}
-                className="mt-1.5 block overflow-hidden rounded-lg border border-[var(--ud-border-subtle)] transition hover:opacity-90"
-                style={{ width: 180, height: 120 }}
-              >
-                <img src={comment.imageUrl} alt="Comment image" style={{ width: 180, height: 120, objectFit: "cover" }} loading="lazy" />
-              </button>
-            )}
-            {/* Comment file attachment */}
-            {comment.attachmentUrl && (
-              <a
-                href={comment.attachmentUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] px-2.5 py-1.5 text-xs text-[var(--ud-brand-primary)] hover:bg-[var(--ud-bg-card)] transition"
-              >
-                <Paperclip className="h-3.5 w-3.5 stroke-[1.5]" />
-                <span className="max-w-[180px] truncate">{comment.attachmentName || "Attachment"}</span>
-              </a>
-            )}
-          </>
-        )}
-
-        {/* Actions row: timestamp · React · Reply */}
-        {!isEditing && !isConfirmingDelete && (
-          <div className="relative mt-1 flex items-center gap-2 text-[11px] text-[var(--ud-text-muted)]">
-            <span>{comment.createdAt ? commentTimeAgo(comment.createdAt) : ""}</span>
-            <span>·</span>
-            <button
-              type="button"
-              onClick={() => setShowReactPicker((v) => !v)}
-              className={cn("font-medium transition", reactedEmoji ? "text-[var(--ud-brand-primary)]" : "hover:text-[var(--ud-text-secondary)]")}
-            >
-              {reactedEmoji ? <span className="mr-0.5 text-sm">{reactedEmoji}</span> : <Smile className="mr-0.5 inline h-3 w-3 stroke-[1.5]" />}
-              {reactedEmoji ? (EMOJI_TEXT_MAP[reactedEmoji] ?? "Reacted") : "React"}
-            </button>
-            {/* Inline emoji picker for comment react */}
-            {showReactPicker && (
-              <div className="absolute bottom-full left-8 z-30 mb-1 flex items-center gap-0.5 rounded-full border border-[var(--ud-border)] bg-white px-1.5 py-1 shadow-lg">
-                {["👍", "❤️", "😂", "😮", "😢", "🙏"].map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    onClick={() => {
-                      // Tap same emoji = un-react; tap different = change reaction
-                      onSetReactedEmoji(comment.id, reactedEmoji === emoji ? null : emoji);
-                      setShowReactPicker(false);
-                    }}
-                    className={cn(
-                      "flex h-6 w-6 items-center justify-center rounded-full text-sm transition-transform hover:scale-125 active:scale-95",
-                      reactedEmoji === emoji && "bg-[var(--ud-brand-light)] ring-1 ring-[var(--ud-brand-primary)]",
-                    )}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-                {/* Explicit un-react button when already reacted */}
-                {reactedEmoji && (
-                  <button
-                    type="button"
-                    onClick={() => { onSetReactedEmoji(comment.id, null); setShowReactPicker(false); }}
-                    className="ml-0.5 flex h-6 w-6 items-center justify-center rounded-full text-xs text-[var(--ud-text-muted)] transition-transform hover:scale-110 hover:bg-red-50 hover:text-red-500 active:scale-95"
-                    title="Remove reaction"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
-            )}
-            {/* Reply only on top-level comments */}
-            {!isNested && onReply && (
-              <>
-                <span>·</span>
-                <button type="button" onClick={() => onReply(comment.id, comment.authorName ?? "User")} className="font-medium hover:text-[var(--ud-text-secondary)] transition">
-                  Reply
-                </button>
-              </>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function DeetCommentsSection({
-  deetId,
-  comments,
-  isLoading,
-  isSubmitting,
-  error,
-  currentUserId,
-  onSubmitComment,
-  onEditComment,
-  onDeleteComment,
-  onOpenViewer,
-  userAvatarSrc,
-  userName,
-}: {
-  deetId: string;
-  comments: DeetComment[];
-  isLoading: boolean;
-  isSubmitting: boolean;
-  error?: string | null;
-  currentUserId?: string;
-  onSubmitComment?: (deetId: string, body: string, parentId?: string, attachments?: { imageUrl?: string; attachmentUrl?: string; attachmentName?: string }) => Promise<{ success: boolean }> | void;
-  onEditComment?: (commentId: string, deetId: string, newBody: string) => Promise<{ success: boolean }> | void;
-  onDeleteComment?: (commentId: string, deetId: string) => Promise<{ success: boolean }> | void;
-  onOpenViewer?: (images: string[], index: number, comment?: DeetComment) => void;
-  userAvatarSrc?: string;
-  userName?: string;
-}) {
-  const [commentText, setCommentText] = useState("");
-  const [localError, setLocalError] = useState<string | null>(null);
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [editText, setEditText] = useState("");
-  const [menuOpenCommentId, setMenuOpenCommentId] = useState<string | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [replyToId, setReplyToId] = useState<string | null>(null);
-  const [replyToName, setReplyToName] = useState<string>("");
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-
-  // Comment-level reactions — persisted to DB via comment_reactions table
-  const [commentReactions, setCommentReactions] = useState<Record<string, string | null>>({});
-
-  // Load existing reactions from DB whenever comments change
-  useEffect(() => {
-    const allIds = comments.flatMap((c) => [c.id, ...(c.replies ?? []).map((r) => r.id)]);
-    if (!allIds.length || !currentUserId) return;
-    let cancelled = false;
-    import("@/lib/services/deets/deet-interactions").then(({ getCommentReactions }) => {
-      getCommentReactions(allIds).then((map) => {
-        if (cancelled) return;
-        setCommentReactions((prev) => {
-          const next = { ...prev };
-          for (const id of allIds) {
-            // Only overwrite if we haven't set a local optimistic value OR
-            // if the key doesn't exist in prev (first load)
-            if (!(id in prev)) {
-              next[id] = map[id] ?? null;
-            }
-          }
-          return next;
-        });
-      }).catch(() => {});
-    }).catch(() => {});
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [comments.length, currentUserId]);
-
-  const handleSetCommentReaction = useCallback((commentId: string, emoji: string | null) => {
-    // Capture the previous emoji BEFORE updating state (needed for un-react DB call)
-    const prevEmoji = commentReactions[commentId] ?? null;
-
-    // Optimistic local update
-    setCommentReactions((prev) => ({ ...prev, [commentId]: emoji }));
-
-    // Persist to DB (non-blocking)
-    const emojiToSend = emoji ?? prevEmoji; // for un-react, send the old emoji to toggle it off
-    if (emojiToSend) {
-      import("@/lib/services/deets/deet-interactions").then(({ toggleCommentReaction }) => {
-        toggleCommentReaction(commentId, emojiToSend).then((result) => {
-          // Reconcile with server state
-          setCommentReactions((prev) => ({ ...prev, [commentId]: result.emoji }));
-        }).catch(() => {});
-      }).catch(() => {});
-    }
-  }, [commentReactions]);
-
-  // Attachment state
-  const [pendingImage, setPendingImage] = useState<{ file: File; preview: string } | null>(null);
-  const [pendingFile, setPendingFile] = useState<{ file: File; name: string } | null>(null);
-  const [uploadingMedia, setUploadingMedia] = useState(false);
-
-  const inputRef = useRef<HTMLInputElement>(null);
-  const editInputRef = useRef<HTMLInputElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const photoInputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Close menu on outside click
-  useEffect(() => {
-    if (!menuOpenCommentId) return;
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpenCommentId(null);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [menuOpenCommentId]);
-
-  useEffect(() => { if (editingCommentId) editInputRef.current?.focus(); }, [editingCommentId]);
-
-  const handleSubmit = async () => {
-    const trimmed = commentText.trim();
-    if ((!trimmed && !pendingImage && !pendingFile) || isSubmitting || uploadingMedia) return;
-    setLocalError(null);
-
-    // Upload pending media first
-    let attachments: { imageUrl?: string; attachmentUrl?: string; attachmentName?: string } | undefined;
-    if (pendingImage || pendingFile) {
-      setUploadingMedia(true);
-      try {
-        const { uploadCommentImage, uploadCommentFile } = await import("@/lib/services/deets/upload-comment-media");
-        if (pendingImage) {
-          const uploaded = await uploadCommentImage(pendingImage.file);
-          attachments = { ...attachments, imageUrl: uploaded.url };
-        }
-        if (pendingFile) {
-          const uploaded = await uploadCommentFile(pendingFile.file);
-          attachments = { ...attachments, attachmentUrl: uploaded.url, attachmentName: uploaded.name };
-        }
-      } catch (err) {
-        setLocalError(err instanceof Error ? err.message : "Failed to upload. Try again.");
-        setUploadingMedia(false);
-        return;
-      }
-      setUploadingMedia(false);
-    }
-
-    const bodyText = trimmed || (pendingImage ? "📷" : pendingFile ? "📎" : "");
-    const result = await onSubmitComment?.(deetId, bodyText, replyToId ?? undefined, attachments);
-    if (result && result.success) {
-      setCommentText("");
-      setReplyToId(null);
-      setReplyToName("");
-      setPendingImage(null);
-      setPendingFile(null);
-    } else if (result && !result.success) {
-      setLocalError("Couldn't post. Tap send to retry.");
-    }
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingCommentId) return;
-    const trimmed = editText.trim();
-    if (!trimmed) return;
-    const result = await onEditComment?.(editingCommentId, deetId, trimmed);
-    if (result && result.success) { setEditingCommentId(null); setEditText(""); }
-    else if (result && !result.success) setLocalError("Couldn't save edit. Try again.");
-  };
-
-  const handleDelete = async (commentId: string) => {
-    const result = await onDeleteComment?.(commentId, deetId);
-    if (result && result.success) setConfirmDeleteId(null);
-    else if (result && !result.success) setLocalError("Couldn't delete. Try again.");
-  };
-
-  const startReply = (commentId: string, authorName: string) => {
-    setReplyToId(commentId);
-    setReplyToName(authorName);
-    inputRef.current?.focus();
-  };
-
-  const cancelReply = () => { setReplyToId(null); setReplyToName(""); };
-
-  const startEdit = (comment: DeetComment) => { setEditingCommentId(comment.id); setEditText(comment.body); setMenuOpenCommentId(null); };
-  const startDelete = (commentId: string) => { setConfirmDeleteId(commentId); setMenuOpenCommentId(null); };
-  const cancelEdit = () => { setEditingCommentId(null); setEditText(""); };
-
-  const displayError = localError || error;
-
-  const commonRowProps = {
-    deetId,
-    editingCommentId,
-    editText,
-    confirmDeleteId,
-    menuOpenCommentId,
-    onSetReactedEmoji: handleSetCommentReaction,
-    onSetEditText: setEditText,
-    onStartEdit: startEdit,
-    onSaveEdit: handleSaveEdit,
-    onStartDelete: startDelete,
-    onConfirmDelete: handleDelete,
-    onCancelDelete: () => setConfirmDeleteId(null),
-    onCancelEdit: cancelEdit,
-    onToggleMenu: (id: string) => setMenuOpenCommentId((prev) => (prev === id ? null : id)),
-    onOpenViewer: onOpenViewer
-      ? (images: string[], index: number, comment?: DeetComment) => {
-          if (comment) {
-            // Enrich the comment with the current reaction before passing up
-            const enrichedComment = Object.assign({}, comment, { _clientReaction: commentReactions[comment.id] ?? null });
-            onOpenViewer(images, index, enrichedComment);
-          } else {
-            onOpenViewer(images, index);
-          }
-        }
-      : undefined,
-    menuRef,
-    editInputRef,
-  };
-
-  const addEmoji = (emoji: string) => {
-    setCommentText((prev) => prev + emoji);
-    setShowEmojiPicker(false);
-    inputRef.current?.focus();
-  };
-
-  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) { setLocalError("Please select an image file."); return; }
-    if (file.size > 5 * 1024 * 1024) { setLocalError("Image must be 5 MB or smaller."); return; }
-    const preview = URL.createObjectURL(file);
-    setPendingImage({ file, preview });
-    setPendingFile(null); // Only one attachment at a time
-    e.target.value = "";
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { setLocalError("File must be 10 MB or smaller."); return; }
-    setPendingFile({ file, name: file.name });
-    setPendingImage(null); // Only one attachment at a time
-    e.target.value = "";
-  };
-
-  return (
-    <div className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)]/50">
-      {/* Comments list */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-4">
-          <Loader2 className="h-4 w-4 animate-spin text-[var(--ud-text-muted)]" />
-        </div>
-      ) : comments.length > 0 ? (
-        <div className="px-4">
-          {comments.map((comment, idx) => (
-            <div key={comment.id}>
-              {/* Separator line between top-level comments */}
-              {idx > 0 && <div className="border-t border-[var(--ud-border-subtle)]" />}
-              {/* Top-level comment */}
-              <CommentRow
-                comment={comment}
-                isOwn={!!(currentUserId && comment.userId === currentUserId)}
-                isNested={false}
-                reactedEmoji={commentReactions[comment.id] ?? null}
-                onReply={startReply}
-                {...commonRowProps}
-              />
-              {/* Nested replies (one level) — indented to align with parent text start */}
-              {comment.replies && comment.replies.length > 0 && (
-                <div className="ml-[46px]">
-                  {comment.replies.map((reply) => (
-                    <CommentRow
-                      key={reply.id}
-                      comment={reply}
-                      isOwn={!!(currentUserId && reply.userId === currentUserId)}
-                      isNested={true}
-                      reactedEmoji={commentReactions[reply.id] ?? null}
-                      {...commonRowProps}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="px-4 py-3 text-center text-xs text-[var(--ud-text-muted)]">No comments yet</p>
-      )}
-
-      {/* Error banner */}
-      {displayError && (
-        <p className="px-4 py-2 text-center text-xs font-medium text-red-500">{displayError}</p>
-      )}
-
-      {/* Reply-to indicator */}
-      {replyToId && (
-        <div className="flex items-center gap-2 border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] px-4 py-1.5">
-          <Reply className="h-3.5 w-3.5 text-[var(--ud-text-muted)]" />
-          <span className="text-xs text-[var(--ud-text-muted)]">Replying to <strong className="text-[var(--ud-text-secondary)]">{replyToName}</strong></span>
-          <button type="button" onClick={cancelReply} className="ml-auto text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]">
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
-
-      {/* Comment input with emoji, photo, attachment */}
-      <div className="relative border-t border-[var(--ud-border-subtle)] px-4 py-2.5">
-        {/* Hidden file inputs */}
-        <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoSelect} />
-        <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
-
-        {/* Attachment preview strip */}
-        {(pendingImage || pendingFile) && (
-          <div className="mb-2 flex items-center gap-2">
-            {pendingImage && (
-              <div className="relative inline-flex overflow-hidden rounded-lg border border-[var(--ud-border-subtle)]">
-                <img src={pendingImage.preview} alt="Preview" className="h-16 w-auto object-cover" />
-                <button
-                  type="button"
-                  onClick={() => { URL.revokeObjectURL(pendingImage.preview); setPendingImage(null); }}
-                  className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            )}
-            {pendingFile && (
-              <div className="relative inline-flex items-center gap-1.5 rounded-lg border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] px-2.5 py-2 text-xs text-[var(--ud-text-secondary)]">
-                <Paperclip className="h-3.5 w-3.5 stroke-[1.5]" />
-                <span className="max-w-[150px] truncate">{pendingFile.name}</span>
-                <button
-                  type="button"
-                  onClick={() => setPendingFile(null)}
-                  className="ml-1 text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="flex items-center gap-2">
-          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)]">
-            <ImageWithFallback
-              src={userAvatarSrc || ""}
-              sources={userAvatarSrc ? [userAvatarSrc] : []}
-              alt={userName || "You"}
-              className="h-full w-full object-cover"
-              fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-[10px] font-bold text-[var(--ud-brand-primary)]"
-              fallback={initials(userName || "You")}
-            />
-          </div>
-          <div className="relative flex flex-1 items-center gap-1 rounded-full border border-[var(--ud-border)] bg-[var(--ud-bg-card)] pl-3.5 pr-1">
-            <input
-              ref={inputRef}
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); }
-                if (e.key === "Escape" && replyToId) cancelReply();
-              }}
-              placeholder={replyToId ? `Reply to ${replyToName}...` : "Write a comment..."}
-              className="h-9 flex-1 bg-transparent text-sm text-[var(--ud-text-primary)] outline-none placeholder:text-[var(--ud-text-muted)]"
-            />
-            {/* Inline action icons — wired to file inputs */}
-            <button type="button" title="Add photo" onClick={() => photoInputRef.current?.click()} className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-secondary)] transition">
-              <ImageIcon className="h-4 w-4 stroke-[1.5]" />
-            </button>
-            <button type="button" title="Attach file" onClick={() => fileInputRef.current?.click()} className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-secondary)] transition">
-              <Paperclip className="h-4 w-4 stroke-[1.5]" />
-            </button>
-            <button
-              type="button"
-              title="Add emoji"
-              onClick={() => setShowEmojiPicker((v) => !v)}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-secondary)] transition"
-            >
-              <Smile className="h-4 w-4 stroke-[1.5]" />
-            </button>
-          </div>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={(isSubmitting || uploadingMedia) || (!commentText.trim() && !pendingImage && !pendingFile)}
-            title="Send comment"
-            className={cn(
-              "inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors",
-              (commentText.trim() || pendingImage || pendingFile)
-                ? "bg-[var(--ud-brand-primary)] text-white hover:opacity-90"
-                : "bg-[var(--ud-bg-subtle)] text-[var(--ud-text-muted)]"
-            )}
-          >
-            {(isSubmitting || uploadingMedia) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          </button>
-        </div>
-
-        {/* Quick emoji picker for comment */}
-        {showEmojiPicker && (
-          <div className="absolute bottom-full left-12 z-30 mb-1 flex items-center gap-1 rounded-full border border-[var(--ud-border)] bg-white px-2 py-1.5 shadow-lg">
-            {["👍", "❤️", "😂", "😮", "😢", "🙏", "🔥", "👏"].map((emoji) => (
-              <button
-                key={emoji}
-                type="button"
-                onClick={() => addEmoji(emoji)}
-                className="flex h-7 w-7 items-center justify-center rounded-full text-lg transition-transform hover:scale-125 active:scale-95"
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
   );
 }

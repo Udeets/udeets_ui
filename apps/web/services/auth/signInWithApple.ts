@@ -16,7 +16,7 @@ import { createClient } from "@/lib/supabase/client";
 export async function signInWithApple() {
   const supabase = createClient();
 
-  const { error } = await supabase.auth.signInWithOAuth({
+  const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "apple",
     options: {
       redirectTo: `${window.location.origin}/auth/callback`,
@@ -26,4 +26,13 @@ export async function signInWithApple() {
   if (error) {
     throw error;
   }
+
+  if (data?.url) {
+    window.location.assign(data.url);
+    return;
+  }
+
+  throw new Error(
+    "Apple sign-in did not return a redirect URL. Confirm Supabase URL settings and Apple provider configuration.",
+  );
 }

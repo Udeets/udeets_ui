@@ -2,15 +2,12 @@
 
 import { cn } from "../hubUtils";
 import type { ComposerChildFlow } from "./deetTypes";
+import type { OpenComposerArg } from "../../hooks/useDeetComposer";
 import {
-  ComposerPhotoIcon,
-  ComposerEmojiIcon,
   ComposerAnnouncementIcon,
   ComposerPollIcon,
   ComposerJobsIcon,
-  ComposerAttachIcon,
   ComposerCalendarIcon,
-  ComposerLocationIcon,
   ComposerAlertIcon,
   ComposerSurveyIcon,
   ComposerPaymentIcon,
@@ -19,7 +16,7 @@ import {
 const ACTION_BTN =
   "inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-[var(--ud-bg-subtle)] text-[var(--ud-text-muted)] hover:text-[var(--ud-brand-primary)]";
 
-type ComposerIcon = typeof ComposerPhotoIcon;
+type ComposerIcon = typeof ComposerAnnouncementIcon;
 
 export function DeetComposerCard({
   isDemoPreview,
@@ -28,29 +25,24 @@ export function DeetComposerCard({
 }: {
   isDemoPreview: boolean;
   isCreatorAdmin: boolean;
-  onOpenComposer: (child?: ComposerChildFlow | null) => void;
+  onOpenComposer: (arg?: OpenComposerArg) => void;
 }) {
   const actionButtons: Array<{
-    key: Exclude<ComposerChildFlow, "quit_confirm" | "settings" | "notice" | "money">;
+    key: Exclude<ComposerChildFlow, "quit_confirm">;
     icon: ComposerIcon;
     label: string;
   }> = [
-    { key: "photo", icon: ComposerPhotoIcon, label: "Photo" },
-    { key: "emoji", icon: ComposerEmojiIcon, label: "Emoji" },
     { key: "announcement", icon: ComposerAnnouncementIcon, label: "Announcement" },
     { key: "poll", icon: ComposerPollIcon, label: "Poll" },
     { key: "jobs", icon: ComposerJobsIcon, label: "Jobs" },
-    { key: "photo", icon: ComposerAttachIcon, label: "Attach File" },
     { key: "event", icon: ComposerCalendarIcon, label: "Event" },
-    { key: "checkin", icon: ComposerLocationIcon, label: "Check-in" },
     { key: "alert", icon: ComposerAlertIcon, label: "Alert" },
     { key: "survey", icon: ComposerSurveyIcon, label: "Survey" },
-    { key: "payment", icon: ComposerPaymentIcon, label: "Payment" },
+    { key: "payment", icon: ComposerPaymentIcon, label: "Fundraiser" },
   ];
 
   return (
     <div className="w-full overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-sm">
-      {/* Compose input row */}
       <div
         data-demo-target={isDemoPreview ? "hub-composer-section" : undefined}
         className="px-4 py-3"
@@ -71,11 +63,10 @@ export function DeetComposerCard({
         </button>
       </div>
 
-      {/* Quick-action icon row — Phosphor rounded icons */}
       <div className="flex items-center justify-start border-t border-[var(--ud-border-subtle)] px-1 py-1.5 overflow-x-auto">
-        {actionButtons.map(({ key, icon: Icon, label }, idx) => (
+        {actionButtons.map(({ key, icon: Icon, label }) => (
           <button
-            key={`${key}-${idx}`}
+            key={key}
             type="button"
             disabled={!isCreatorAdmin}
             onClick={() => {

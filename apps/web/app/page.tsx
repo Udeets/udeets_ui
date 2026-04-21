@@ -29,6 +29,7 @@ import { useEffect, useRef, useState } from "react";
 import { UdeetsBrandLockup, UdeetsLogoIcon } from "@/components/brand-logo";
 
 import { listHubs } from "@/lib/services/hubs/list-hubs";
+import { useAuthSession } from "@/services/auth/useAuthSession";
 import type { Hub as SupabaseHub } from "@/types/hub";
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -468,6 +469,7 @@ const TEMPLATES = [
 ];
 
 export default function Page() {
+  const { isAuthenticated } = useAuthSession();
   const hubsRowRef = useRef<HTMLDivElement | null>(null);
   const [pauseAutoScroll, setPauseAutoScroll] = useState(false);
   const [topHubs, setTopHubs] = useState<TopHub[]>([]);
@@ -515,7 +517,7 @@ export default function Page() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
           {/* Left: Logo + nav links */}
           <div className="flex items-center gap-1 sm:gap-2">
-            <Link href="/" className="flex items-center gap-2 mr-2 sm:mr-4">
+            <Link href={isAuthenticated ? "/dashboard" : "/"} className="flex items-center gap-2 mr-2 sm:mr-4">
               <UdeetsBrandLockup textClassName="text-xl sm:text-2xl" priority />
             </Link>
 

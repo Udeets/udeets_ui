@@ -1,5 +1,21 @@
+import type { DeetVisibility } from "@/lib/services/deets/deet-types";
+
 export type DeetFontSize = "small" | "medium" | "large";
-export type ComposerChildFlow = "photo" | "emoji" | "settings" | "quit_confirm" | "event" | "checkin" | "announcement" | "notice" | "poll" | "money" | "alert" | "survey" | "payment" | "jobs";
+export type ComposerChildFlow =
+  | "photo"
+  | "post"
+  | "emoji"
+  | "settings"
+  | "quit_confirm"
+  | "event"
+  | "announcement"
+  | "notice"
+  | "poll"
+  | "money"
+  | "alert"
+  | "survey"
+  | "payment"
+  | "jobs";
 
 export type PollSettings = {
   allowAnyoneToAdd?: boolean;
@@ -40,10 +56,22 @@ export type DeetFormattingState = {
   textColor: string;
 };
 
-export type DeetPostType = "post" | "notice" | "news" | "deal" | "hazard" | "alert" | "jobs";
-
+/** Composer-side defaults for how a deet behaves (stored on submit in a `deet_options` attachment). */
 export type DeetSettingsState = {
-  noticeEnabled: boolean;
   commentsEnabled: boolean;
-  postType: DeetPostType;
+  reactionsEnabled: boolean;
+  pinToTop: boolean;
+  publishTiming: "now" | "scheduled";
+  /** `datetime-local` value or ISO string when `publishTiming` is `scheduled` */
+  scheduledAt: string;
+  audience: DeetVisibility;
+};
+
+export const INITIAL_DEET_SETTINGS: DeetSettingsState = {
+  commentsEnabled: true,
+  reactionsEnabled: true,
+  pinToTop: false,
+  publishTiming: "now",
+  scheduledAt: "",
+  audience: "hub_default",
 };

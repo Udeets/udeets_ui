@@ -1,6 +1,20 @@
 import type { HubCategorySlug } from "@/lib/hubs";
 
-export type HubFeedItemKind = "announcement" | "photo" | "notice" | "event" | "poll" | "file" | "news" | "deal" | "hazard" | "alert" | "jobs" | "post";
+export type HubFeedItemKind =
+  | "announcement"
+  | "photo"
+  | "notice"
+  | "event"
+  | "poll"
+  | "file"
+  | "news"
+  | "deal"
+  | "hazard"
+  | "alert"
+  | "jobs"
+  | "survey"
+  | "payment"
+  | "post";
 export type HubEventTheme =
   | "Pooja"
   | "Temple"
@@ -15,6 +29,27 @@ export type HubEventTheme =
   | "Sports"
   | "Community";
 
+/** Persisted with poll attachments — voting UI / composer hydrate. */
+export type HubPollSettingsPersisted = {
+  allowAnyoneToAdd?: boolean;
+  allowMultiSelect?: boolean;
+  multiSelectLimit?: number | null;
+  allowSecretVoting?: boolean;
+  deadline?: string | null;
+  showResults?: string;
+  sortBy?: string;
+};
+
+/** Persisted with job attachments — composer hydrate. */
+export type HubJobDataPersisted = {
+  jobTitle?: string;
+  rolesAndResponsibilities?: string;
+  pay?: string;
+  kind?: string;
+  timings?: string;
+  daysPerWeek?: string;
+};
+
 export type HubFeedItemAttachment = {
   type: string;
   title?: string;
@@ -22,6 +57,12 @@ export type HubFeedItemAttachment = {
   meta?: string;
   options?: string[];
   previews?: string[];
+  /** Present on `event` attachments when stored on the deet record */
+  eventData?: { date?: string | null; time?: string | null; location?: string | null };
+  /** Present on `poll` attachments when stored on the deet record */
+  pollSettings?: HubPollSettingsPersisted;
+  /** Present on `jobs` attachments when stored on the deet record */
+  jobData?: HubJobDataPersisted;
 };
 
 export type HubFeedItem = {
@@ -31,6 +72,8 @@ export type HubFeedItem = {
   authorId: string;
   authorAvatar?: string;
   role?: "creator" | "admin" | "member";
+  /** UTC ms from `created_at` — used to sort Newest vs Oldest in the hub feed. */
+  createdAtMs?: number;
   time: string;
   title: string;
   body: string;

@@ -35,7 +35,7 @@ export interface DashboardDeetCard {
   id: string;
   hubId: string;
   authorId?: string | null;
-  type: DeetKind | "Posts";
+  type: DeetKind;
   sourceType: DeetType;
   title?: string | null;
   body?: string | null;
@@ -112,7 +112,12 @@ export function mapDeetToDashboardCard(deet: DashboardDeetCardSource): Dashboard
     body: asNonEmptyString(deet.body),
     previewImageUrl: previewImageUrls[0] ?? null,
     previewImageUrls,
-    attachmentCount: Array.isArray(deet.attachments) ? deet.attachments.length : 0,
+    attachmentCount: Array.isArray(deet.attachments)
+      ? deet.attachments.filter((a) => {
+          const t = a && typeof a === "object" ? (a as { type?: string }).type : undefined;
+          return t && t !== "deet_options";
+        }).length
+      : 0,
     createdAt: asNonEmptyString(deet.createdAt) ?? asNonEmptyString(deet.created_at),
     isNoticeLike: sourceType === "announcement" || sourceType === "alert",
     isMediaLike: sourceType === "media",

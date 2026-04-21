@@ -4,15 +4,13 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { UdeetsBrandLockup } from "@/components/brand-logo";
+import { UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
 
 import { isUdeetsLogoSrc } from "@/lib/branding";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import type { Hub as SupabaseHub } from "@/types/hub";
 
-const HEADER_BG = "bg-[var(--ud-bg-card)] border-b border-[var(--ud-border-subtle)]";
 const PAGE_BG = "bg-[var(--ud-bg-page)]";
-const BRAND_TEXT_STYLE = "text-xl sm:text-2xl";
 
 const ROUTE_AUTH = "/auth";
 
@@ -318,10 +316,11 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
           try {
             const { createClient } = await import("@/lib/supabase/client");
             const supabase = createClient();
+            // Same scope as public discover: include hubs you created (do not exclude `created_by`).
+            // A previous `.neq(created_by, user)` caused SSR to show your hub then client refresh hid it.
             const { data, error } = await supabase
               .from("hubs")
               .select("*")
-              .neq("created_by", session.user.id)
               .order("created_at", { ascending: false });
             if (!cancelled && data && !error) {
               // Fetch active member counts for all discovered hubs
@@ -380,26 +379,10 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
       : ROUTE_AUTH;
 
   return (
-    <div className={cn("min-h-screen", PAGE_BG)}>
-      {/* ── Header ───────────────────────────────────────────────── */}
-      <header className={cn("sticky top-0 z-50", HEADER_BG)}>
-        <div className="flex min-h-14 w-full items-center justify-between px-4 py-2 sm:px-6 lg:px-10">
-          <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <UdeetsBrandLockup textClassName={BRAND_TEXT_STYLE} priority />
-          </Link>
+    <div className={cn("flex min-h-screen flex-col", PAGE_BG)}>
+      <UdeetsHeader />
 
-          <div className="flex items-center gap-1.5">
-            <Link
-              href={isAuthenticated ? "/dashboard" : "/"}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
-              aria-label="Home"
-            >
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
-            </Link>
-          </div>
-        </div>
-      </header>
-
+      <div className="flex flex-1 flex-col">
       {/* ── Centered title + search ─────────────────────────────── */}
       <section className="bg-[var(--ud-bg-card)] px-4 pb-4 pt-6 sm:px-6 lg:px-10">
         <div className="mx-auto max-w-4xl">
@@ -544,12 +527,9 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: any
 
         <HubListSection hubs={allFilteredHubs} />
       </main>
+      </div>
 
-      <footer className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] py-6">
-        <div className="mx-auto max-w-4xl px-4 text-xs text-[var(--ud-text-muted)] sm:px-6 lg:px-10">
-          uDeets © {new Date().getFullYear()}
-        </div>
-      </footer>
+      <UdeetsFooter />
     </div>
   );
 }

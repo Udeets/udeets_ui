@@ -154,3 +154,9 @@ body {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
+
+/* Native date/time widgets match dark surfaces when `.dark` is on the root */
+.dark input[type="date"],
+.dark input[type="time"] {
+  color-scheme: dark;
+}

@@ -62,9 +62,21 @@ export function useHubLiveFeed(hubId: string, hubCreatorId?: string) {
     });
   }, []);
 
+  const replaceFeedDeet = useCallback(
+    (deet: DeetRecord) => {
+      startTransition(() => {
+        setLiveFeedItems((current) =>
+          current.map((item) => (item.id === deet.id ? mapDeetToHubFeedItem(deet, hubCreatorId) : item)),
+        );
+      });
+    },
+    [hubCreatorId],
+  );
+
   return {
     liveFeedItems,
     prependCreatedDeet,
     removeDeet,
+    replaceFeedDeet,
   };
 }

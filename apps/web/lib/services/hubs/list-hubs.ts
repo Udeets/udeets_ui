@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { getSupabasePublishableOrAnonKey, getSupabaseUrl } from "@/lib/supabase/env";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import {
   HUB_COLUMNS_WITHOUT_PHONE,
@@ -21,9 +22,7 @@ export interface ListHubsOptions {
 
 // One-shot client with auth disabled — never holds an auth lock.
 function createAnonClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
-  return createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+  return createSupabaseClient(getSupabaseUrl(), getSupabasePublishableOrAnonKey(), {
     auth: {
       persistSession: false,
       autoRefreshToken: false,

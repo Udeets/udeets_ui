@@ -32,6 +32,8 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 
 export function useDeetInteractions(feedItems: HubContent["feed"]) {
   const [likedDeetIds, setLikedDeetIds] = useState<Set<string>>(new Set());
+  /** Canonical emoji per deet for the signed-in user (only keys where the user has reacted). */
+  const [myReactionsByDeetId, setMyReactionsByDeetId] = useState<Record<string, string>>({});
   const [likingDeetIds, setLikingDeetIds] = useState<Set<string>>(new Set());
   const [likeCountOverrides, setLikeCountOverrides] = useState<Record<string, number>>({});
   const viewedDeetIds = useRef<Set<string>>(new Set());
@@ -58,6 +60,8 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
   const submittingRef = useRef(false);
   const commentCountsSynced = useRef(false);
   const viewCountsSynced = useRef(false);
+  /** Bumps when the like-status effect re-runs so in-flight fetches cannot apply stale snapshots. */
+  const likeStatusFetchGen = useRef(0);
 
   // ── Sync view counts on first load ────────────────────────────────
   // The denormalized view_count on deets may be stale. Heal by reading
@@ -116,6 +120,7 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
     const deetIds = feedItems.map((item) => item.id).filter(Boolean);
     if (!deetIds.length) return;
 
+    const myGen = ++likeStatusFetchGen.current;
     let cancelled = false;
 
     async function fetchLikeStatus() {
@@ -124,14 +129,19 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
           getDeetLikeStatus(deetIds),
           getDeetReactorPreviews(deetIds),
         ]);
-        if (!cancelled) {
+        if (!cancelled && myGen === likeStatusFetchGen.current) {
           const liked = new Set<string>();
           const counts: Record<string, number> = {};
+          const reactions: Record<string, string> = {};
           for (const [id, status] of statusMap) {
-            if (status.liked) liked.add(id);
+            if (status.liked) {
+              liked.add(id);
+              if (status.myReactionType) reactions[id] = status.myReactionType;
+            }
             counts[id] = status.count;
           }
           setLikedDeetIds(liked);
+          setMyReactionsByDeetId(reactions);
           setLikeCountOverrides(counts);
           setReactorsByDeetId(reactorPreviews);
         }
@@ -163,6 +173,12 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
         else next.delete(deetId);
         return next;
       });
+      setMyReactionsByDeetId((prev) => {
+        const next = { ...prev };
+        if (result.liked && result.myReactionType) next[deetId] = result.myReactionType;
+        else delete next[deetId];
+        return next;
+      });
       setLikeCountOverrides((prev) => ({ ...prev, [deetId]: result.likeCount }));
       // Refresh reactor previews for this deet
       void getDeetReactorPreviews([deetId]).then((previews) => {
@@ -179,20 +195,14 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
     }
   }, []);
 
-  // ── Comments: Toggle panel + load ──────────────────────────────────
+  // ── Comments: load (shared by toggle, deep-link, image viewer) ─────
 
-  const handleToggleComments = useCallback(async (deetId: string) => {
-    setCommentError(null);
-
-    // Toggle panel open/close
-    setExpandedCommentDeetId((prev) => (prev === deetId ? null : deetId));
-
-    // If already loaded or currently loading, skip fetch
+  const loadCommentsForDeetIfNeeded = useCallback(async (deetId: string) => {
     if (loadedCommentDeetIds.current.has(deetId) || loadingCommentDeetIds.current.has(deetId)) {
       return;
     }
 
-    // Mark as loading (ref for sync checks, state for UI)
+    setCommentError(null);
     loadingCommentDeetIds.current.add(deetId);
     setCommentLoadingDeetIds((prev) => new Set(prev).add(deetId));
 
@@ -213,6 +223,29 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
       });
     }
   }, []);
+
+  /** Open the inline comments panel for this deet (no toggle). Used for ?comments=1 deep links. */
+  const openCommentsPanelForDeet = useCallback(
+    async (deetId: string) => {
+      setCommentError(null);
+      setExpandedCommentDeetId(deetId);
+      await loadCommentsForDeetIfNeeded(deetId);
+    },
+    [loadCommentsForDeetIfNeeded],
+  );
+
+  const handleToggleComments = useCallback(
+    async (deetId: string) => {
+      setCommentError(null);
+      let opening = false;
+      setExpandedCommentDeetId((prev) => {
+        opening = prev !== deetId;
+        return prev === deetId ? null : deetId;
+      });
+      if (opening) await loadCommentsForDeetIfNeeded(deetId);
+    },
+    [loadCommentsForDeetIfNeeded],
+  );
 
   // ── Comments: Submit ───────────────────────────────────────────────
 
@@ -387,8 +420,23 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
     }
   }, [viewersDeetId, viewersByDeetId]);
 
+  /** Load viewers into cache without opening the feed card dropdown (e.g. hub image viewer overlay). */
+  const prefetchViewersForDeet = useCallback(async (deetId: string) => {
+    if (viewersByDeetId[deetId]) return;
+    setViewersLoading(true);
+    try {
+      const viewers = await withTimeout(listDeetViewers(deetId), 10_000, "Load viewers");
+      setViewersByDeetId((prev) => ({ ...prev, [deetId]: viewers }));
+    } catch {
+      setViewersByDeetId((prev) => ({ ...prev, [deetId]: [] }));
+    } finally {
+      setViewersLoading(false);
+    }
+  }, [viewersByDeetId]);
+
   return {
     likedDeetIds,
+    myReactionsByDeetId,
     likingDeetIds,
     likeCountOverrides,
     viewCountOverrides,
@@ -409,6 +457,8 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
     commentCountOverrides,
     commentError,
     handleToggleComments,
+    openCommentsPanelForDeet,
+    loadCommentsForDeetIfNeeded,
     handleSubmitComment,
     handleEditComment,
     handleDeleteComment,
@@ -417,5 +467,6 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
     viewersByDeetId,
     viewersLoading,
     handleToggleViewers,
+    prefetchViewersForDeet,
   };
 }

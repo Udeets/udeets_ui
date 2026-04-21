@@ -15,10 +15,29 @@ function updateDenormalizedCount(table: "deets", id: string, column: string, val
 
 // ── Likes ──────────────────────────────────────────────────────────
 
-export async function toggleDeetLike(deetId: string, reactionType = "like"): Promise<{ liked: boolean; likeCount: number }> {
+/** Normalize legacy `"like"` and empty/null to 👍 for UI and equality checks. */
+export function canonicalDeetReactionType(stored: string | null | undefined): string {
+  if (stored == null || stored === "") return "👍";
+  if (stored === "like") return "👍";
+  return stored;
+}
+
+export type DeetLikeStatusEntry = {
+  liked: boolean;
+  count: number;
+  /** Canonical emoji for the signed-in user's reaction, or null if they have not reacted. */
+  myReactionType: string | null;
+};
+
+export async function toggleDeetLike(
+  deetId: string,
+  reactionType = "like",
+): Promise<{ liked: boolean; likeCount: number; myReactionType: string | null }> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("You must be signed in to like a deet.");
+
+  const incoming = canonicalDeetReactionType(reactionType);
 
   // Check if already liked — try with reaction_type, fall back without
   let existing: { id: string; reaction_type?: string } | null = null;
@@ -34,21 +53,28 @@ export async function toggleDeetLike(deetId: string, reactionType = "like"): Pro
   }
 
   if (existing) {
-    if (hasReactionColumn && existing.reaction_type === reactionType) {
-      // Same reaction — toggle off (unlike)
-      await supabase.from("deet_likes").delete().eq("id", existing.id);
-    } else if (hasReactionColumn && existing.reaction_type !== reactionType) {
-      // Different reaction — update the emoji type
-      await supabase.from("deet_likes").update({ reaction_type: reactionType }).eq("id", existing.id);
+    if (hasReactionColumn) {
+      const storedCanon = canonicalDeetReactionType(existing.reaction_type);
+      if (storedCanon === incoming) {
+        const { error: delErr } = await supabase.from("deet_likes").delete().eq("id", existing.id);
+        if (delErr) throw new Error(`Failed to remove reaction: ${delErr.message}`);
+      } else {
+        const { error: updErr } = await supabase
+          .from("deet_likes")
+          .update({ reaction_type: incoming })
+          .eq("id", existing.id)
+          .eq("user_id", user.id);
+        if (updErr) throw new Error(`Failed to update reaction: ${updErr.message}`);
+      }
     } else {
-      // No reaction_type column — just toggle off
-      await supabase.from("deet_likes").delete().eq("id", existing.id);
+      const { error: delErr } = await supabase.from("deet_likes").delete().eq("id", existing.id);
+      if (delErr) throw new Error(`Failed to remove reaction: ${delErr.message}`);
     }
   } else {
-    // New reaction
     const insertPayload: Record<string, unknown> = { deet_id: deetId, user_id: user.id };
-    if (hasReactionColumn) insertPayload.reaction_type = reactionType;
-    await supabase.from("deet_likes").insert(insertPayload);
+    if (hasReactionColumn) insertPayload.reaction_type = incoming;
+    const { error: insErr } = await supabase.from("deet_likes").insert(insertPayload);
+    if (insErr) throw new Error(`Failed to add reaction: ${insErr.message}`);
   }
 
   // Fetch updated count
@@ -62,23 +88,24 @@ export async function toggleDeetLike(deetId: string, reactionType = "like"): Pro
   // Update denormalized count (non-blocking — must not break the like toggle)
   updateDenormalizedCount("deets", deetId, "like_count", likeCount);
 
-  // Determine new liked state
-  const nowLiked = existing
-    ? (hasReactionColumn ? existing.reaction_type !== reactionType : false) // changed emoji = still liked; same or no column = unliked
-    : true; // new reaction = liked
+  const nowLiked = existing ? (hasReactionColumn ? canonicalDeetReactionType(existing.reaction_type) !== incoming : false) : true;
 
-  return { liked: nowLiked, likeCount };
+  return {
+    liked: nowLiked,
+    likeCount,
+    myReactionType: nowLiked ? incoming : null,
+  };
 }
 
-export async function getDeetLikeStatus(deetIds: string[]): Promise<Map<string, { liked: boolean; count: number }>> {
+export async function getDeetLikeStatus(deetIds: string[]): Promise<Map<string, DeetLikeStatusEntry>> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const result = new Map<string, { liked: boolean; count: number }>();
+  const result = new Map<string, DeetLikeStatusEntry>();
   if (!deetIds.length) return result;
 
   // Initialize all deets with 0
   for (const id of deetIds) {
-    result.set(id, { liked: false, count: 0 });
+    result.set(id, { liked: false, count: 0, myReactionType: null });
   }
 
   // Count actual likes from deet_likes table (not stale denormalized count)
@@ -97,17 +124,36 @@ export async function getDeetLikeStatus(deetIds: string[]): Promise<Map<string, 
     updateDenormalizedCount("deets", id, "like_count", entry.count);
   }
 
-  // Get user's likes
+  // Get user's likes (with reaction emoji when the column exists)
   if (user) {
-    const { data: userLikes } = await supabase
+    let userLikes: Array<{ deet_id: string; reaction_type?: string }> = [];
+    const resLikes = await supabase
       .from("deet_likes")
-      .select("deet_id")
+      .select("deet_id, reaction_type")
       .eq("user_id", user.id)
       .in("deet_id", deetIds);
 
-    for (const like of userLikes ?? []) {
-      const existing = result.get(like.deet_id);
-      if (existing) existing.liked = true;
+    if (resLikes.error) {
+      if (resLikes.error.message.includes("reaction_type")) {
+        const res2 = await supabase
+          .from("deet_likes")
+          .select("deet_id")
+          .eq("user_id", user.id)
+          .in("deet_id", deetIds);
+        userLikes = (res2.data ?? []).map((l) => ({ deet_id: l.deet_id }));
+      } else {
+        userLikes = [];
+      }
+    } else {
+      userLikes = (resLikes.data ?? []) as typeof userLikes;
+    }
+
+    for (const like of userLikes) {
+      const entry = result.get(like.deet_id);
+      if (entry) {
+        entry.liked = true;
+        entry.myReactionType = canonicalDeetReactionType(like.reaction_type);
+      }
     }
   }
 
