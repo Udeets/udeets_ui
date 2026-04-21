@@ -8,10 +8,17 @@ type UseHubSectionStateArgs = {
   requestedTab: string | null;
   canAccessAdmins: boolean;
   isDirty: boolean;
+  /**
+   * When present (from ?focus= in the URL) we default to the Posts tab so the
+   * deet feed is rendered and the caller's scroll-to-deet effect can find
+   * the element. Without this, notification clicks that only specify focus
+   * would land on About and silently miss the deet.
+   */
+  hasFocusTarget?: boolean;
 };
 
-function normalizeRequestedTab(requestedTab: string | null): HubTab {
-  if (!requestedTab) return "About";
+function normalizeRequestedTab(requestedTab: string | null, hasFocusTarget = false): HubTab {
+  if (!requestedTab) return hasFocusTarget ? "Posts" : "About";
   if (requestedTab === "Photos" || requestedTab === "Files") return "Attachments";
   if (requestedTab === "Admins") return "Members";
   if (requestedTab === "Events") return "Posts";
@@ -22,16 +29,17 @@ export function useHubSectionState({
   requestedTab,
   canAccessAdmins,
   isDirty,
+  hasFocusTarget = false,
 }: UseHubSectionStateArgs) {
-  const initialActiveSection = normalizeRequestedTab(requestedTab);
+  const initialActiveSection = normalizeRequestedTab(requestedTab, hasFocusTarget);
 
   const [activeSection, setActiveSection] = useState<HubTab>(initialActiveSection);
   const [activePanel, setActivePanel] = useState<HubPanel>("posts");
 
   // Reset tab when URL search params change (e.g. after settings save redirect)
   useEffect(() => {
-    setActiveSection(normalizeRequestedTab(requestedTab));
-  }, [requestedTab]);
+    setActiveSection(normalizeRequestedTab(requestedTab, hasFocusTarget));
+  }, [requestedTab, hasFocusTarget]);
   const [membersPanelMode, setMembersPanelMode] = useState<"list" | "invite">("list");
   const [activePeopleView, setActivePeopleView] = useState<"members" | "admins">(
     requestedTab === "Admins" && canAccessAdmins ? "admins" : "members"
