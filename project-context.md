@@ -2,7 +2,7 @@
 
 > The living state of the project. Updated at the end of every substantial session.
 > Owner: udeets (udeetsdev1@gmail.com)
-> Last updated: April 24, 2026
+> Last updated: April 24, 2026 (eod — Phase 1.5 roadmap locked, see § 7.5)
 
 ---
 
@@ -142,29 +142,203 @@ Full architecture tree in `architecture.md` § 6. Summary:
 
 ---
 
+## 7.5 Phase 1.5 Roadmap — locked April 24, 2026
+
+> Multi-phase product plan locked end-of-day April 24, 2026. Next session resumes from here. Phase 6 (template editor) decisions are still open for debate — recommendations captured below.
+
+### Locked decisions
+
+**DO:**
+
+- 6 super-categories (Local Business, Residential Community, Faith & Spirit, Education, Clubs & Interest, Civic & Nonprofit) with sub-category variants under each. One template file per super-category.
+- Model Broadcast vs Engage as a hub-level setting, not a separate hub type. Default from super-category template; creator override at hub creation.
+- Local v1 sources from uDeets public hubs only. Tabs: News / Deals / Events / Jobs.
+- Bottom nav (logged-in): Home / Hubs / Notifications / Local. Hubs gets its own dedicated page.
+- Template editor = palette-constrained: 6 preset color themes, 3 curated font pairings, drag-reorder sections within fixed list, ≤4 CTAs, 1 custom section block.
+- Live-save with undo for low-stakes edits; draft-preview-publish for content-bearing edits.
+- "System hubs" concept for seeding Local content is parked — revisit at GTM.
+
+**DON'T:**
+
+- Don't proliferate top-level categories beyond 6.
+- Don't split hubs into separate Broadcast vs Engage models.
+- Don't pull external feeds (Flipp, paid news APIs) before Phase 3+. Gate on a clear business case.
+- Don't build a freeform page-builder. Ever.
+- Don't let creators add About sections — only reorder and toggle visibility.
+- Don't put Events in the bottom nav.
+- Don't allow custom hex colors, custom fonts, raw HTML/CSS, or arbitrary embeds.
+
+### Phases (sequenced)
+
+#### Phase 1 — Taxonomy & foundation
+
+**Currently:** 10 peer templates in `lib/hub-templates/`, flat category list, single-step Create Hub picker.
+
+**New approach:** 6 super-categories with ~25 sub-category variants. One template file per super-category exposing `variants[]`. Two-step Create Hub picker (super-category → sub-category).
+
+**Why:** Flat list works at 10, breaks at 25. Grouping is explorable, scalable, and cheaper to maintain. Discover becomes 6 browsable tiles instead of 25 chips.
+
+**Tasks:**
+- [ ] Finalize the canonical 6 super-category + sub-category list (write inline in this section once locked)
+- [ ] Audit `hubs` table and `lib/hub-templates/` for what exists vs what's missing
+- [ ] Migration: add `hub_mode`, `sub_category`, `broadcasts_to_local`, `lat`, `lng`, `address`
+- [ ] Refactor `lib/hub-templates/` into 6 super-category files with `variants[]`
+- [ ] Update `CATEGORY_TO_TEMPLATE` map (or replace with sub-category → super+variant lookup)
+- [ ] Update Create Hub wizard to 2-step picker
+
+#### Phase 2 — Navigation & app IA
+
+**Currently:** Bottom nav (logged-in mobile) is Home / Events / Notifications / Local. `/dashboard` doubles as both the home feed and the hub-roster manager — top of page has tabs for My Hubs / Joined / Requested, then the hubs feed below.
+
+**New approach:** Bottom nav becomes Home / Hubs / Notifications / Local. New `/hubs` page absorbs the roster tabs (My Hubs / Joined / Requested / Invitations) plus browse + filter controls. `/dashboard` becomes pure aggregate feed (Home).
+
+**Why:** Bottom nav slots should map to four distinct mental models — feed, my communities, what changed, what's nearby. Events is not one of those: it's hub-contextual or part of Local discovery. Hubs is the heart of the app and deserves first-class prominence; today it's buried as a tab. Splitting Dashboard into Home + Hubs cleans up the IA. Mirrors mature social apps (Instagram, Twitter, Band).
+
+**Tasks:**
+- [ ] Replace Events slot with Hubs in mobile bottom nav
+- [ ] Create `/hubs` page; move roster tabs from `/dashboard` top
+- [ ] Trim `/dashboard` to feed-only
+- [ ] Mirror nav items in web top header for parity
+
+#### Phase 3 — Broadcast vs Engage hubs
+
+**Currently:** Every hub posts the same way — creator, admins, and members can all post (RLS-constrained). No distinction between brand-page hubs and group-conversation hubs.
+
+**New approach:** Add `hub_mode: 'broadcast' | 'engage'` per hub. Default from super-category template (Retail → Broadcast, HOA → Engage, etc.); creator can override at creation or in Settings. Broadcast: members can like/comment/share but not post. Engage: members can post (configurable).
+
+**Why:** No competitor handles both modes — Nextdoor is broadcast-only (dead for book clubs), WhatsApp is engage-only (noisy for restaurants). One platform serving both = the category-defining bet. Also kills a real SMB objection: "I don't want members posting on my brand page."
+
+**Tasks:**
+- [ ] Default `hub_mode` from super-category template at creation
+- [ ] RLS update on `deets` insert/update/delete based on role × mode
+- [ ] Composer hides "create post" for non-admins in Broadcast mode
+- [ ] Hub Settings: mode toggle (creator only)
+
+#### Phase 4 — Local page v2
+
+**Currently:** `/local` exists with filter chips All / Deals / News / Jobs, sourced from public hub deets. Events folded into "All." No radius filter, no interest sub-filters, no explicit hub opt-in.
+
+**New approach:** First-class tabs News / Deals / Events / Jobs (Events promoted to peer). Radius filter (3 / 5 / 10 mi / county) using `hubs.lat`/`hubs.lng` + browser geolocation. Per-tab interest chips (real estate, weather, traffic, burglary, politics, etc.). Hubs opt in via `broadcasts_to_local`. Source: uDeets public hubs only. Parked: a few "system hubs" to seed content in new cities — revisit at GTM.
+
+**Why:** Local is the acquisition page that brings non-members to uDeets. Unifies four categories that currently live in four apps (Nextdoor / Flipp / Eventbrite / Indeed) onto one surface, filtered by distance. Internal-only sourcing makes public hubs valuable to SMBs (post deal → reach neighborhood) which creates the growth flywheel: SMB posts → Local shows it → user joins SMB hub → SMB gains follower. Zero API cost, zero licensing risk.
+
+**Tasks:**
+- [ ] Apply geo migration (from Phase 1)
+- [ ] Geocode hub address on create/edit (use existing `/api/geo` proxy)
+- [ ] Map deet kinds to local tabs; promote Events to first-class tab
+- [ ] Rebuild `/local` with News / Deals / Events / Jobs tabs
+- [ ] Radius filter UI
+- [ ] Per-tab interest chip filters
+- [ ] Haversine geo query: hubs in radius → fetch their deets
+
+#### Phase 5 — Super-category template palettes
+
+**Currently:** 10 peer templates of varying completeness; quality varies by template.
+
+**New approach:** Six purpose-built super-category templates. Each defines About page structure, default CTAs, category-specific fields, default `hub_mode`, post types, and variant-level overrides (e.g., Coffee Shop variant of Local Business adds Menu section). End-to-end design per template.
+
+**Why:** Generic templates produce generic hubs. Depth is what makes uDeets better than Facebook Groups or Circle — and what makes the "replace your website" pitch credible for SMBs. Hard to copy: one feature isn't a moat, but six thoughtful product surfaces are.
+
+**Tasks:**
+- [ ] Local Business super-template (Food, Retail, Health, Home Services, Pro Services, Auto, Salons)
+- [ ] Residential Community super-template (HOA, Apartment, Neighborhood)
+- [ ] Faith & Spirit super-template
+- [ ] Education super-template (PTA, Schools, Tutoring, Daycare)
+- [ ] Clubs & Interest super-template (Sports, Pet, Hobby, Book, Music)
+- [ ] Civic & Nonprofit super-template
+
+#### Phase 6 — Template editor (palette-constrained, debate open)
+
+**Currently:** Creators can edit hub name, description, DP, cover, CTAs (modal), and theme color (6 presets). Section order is fixed. No font choice. No custom section. Changes save on explicit action.
+
+**New approach:** Palette-constrained editor — lots of choice within curated options, nothing freeform.
+
+**Editable surface:**
+- Color theme: 6 presets on Free; +3 premium themes on Pro; custom accent on Business
+- Font pairing: 3 curated pairings (Classic = Playfair + Inter, Modern = Geist + Inter, Editorial = Merriweather + Source Serif)
+- Section order: drag to reorder within the optional zone (hero pinned at top)
+- Section visibility: show/hide optional sections (don't delete — data preserved)
+- CTAs: ≤4 on Free, 6 on Business, fixed action types
+- Custom section: 1 on Free, 2 on Pro, 3 on Business — rich text + 1 image, no embeds
+- Hub metadata: name, description, hero tagline, contact links, hours
+
+**NOT editable:** layout, tab list, post kinds, color hex values, custom fonts/sizes, raw CSS / HTML / iframe / embeds.
+
+**Open debates with my recommendations:**
+
+1. **Live-save vs draft-preview-publish.** *Recommendation: hybrid.* Live-save + undo toast for low-stakes edits (color, font, section order, show/hide). Draft-preview-publish for content-bearing edits (description, custom section text, CTA targets) — typos shouldn't ship to members instantly.
+
+2. **Version history.** *Recommendation: undo toast for v1; 7-day revert (last 5 changes) for v2.* Full history is enterprise territory — probably never.
+
+3. **Template evolution.** *Recommendation: opt-in upgrade only.* When we ship a template v2, existing hubs keep their look. Surface a "Refresh to latest design" button in Settings.
+
+4. **Editor on mobile.** *Recommendation: mobile-first.* Long-press drag with clear drop indicator at 375px. Don't ship desktop-first.
+
+5. **Edit permissions.** *Recommendation: creator-only by default.* Toggle in Hub Settings to delegate template-edit rights to admins.
+
+6. **Paywall split (proposed):**
+
+   | Feature | Free | Pro $9.99 | Business $19.99 |
+   |---|---|---|---|
+   | Color themes | 6 | 9 | 9 + custom accent |
+   | Font pairings | 3 | 3 | 5 |
+   | CTAs | 4 | 4 | 6 |
+   | Custom sections | 1 | 2 | 3 |
+   | uDeets branding | Shown | Hidden | Hidden |
+   | Analytics | — | Basic | Full |
+   | Priority Discover | — | — | Yes |
+
+**Why:** Zero customization = creators feel constrained. Too much customization = ugly hubs that embarrass the platform. Palette gives ownership without chaos. Hard rule: every editable element must be something we pre-designed. If a creator can choose it, we shipped it. Constraint is the feature.
+
+**Tasks:**
+- [ ] Drag-reorder About sections (mobile-first)
+- [ ] Section show/hide toggles
+- [ ] Font pairing picker (3 curated pairings)
+- [ ] Unify theme picker UI with the rest of the editor
+- [ ] Custom section block (rich text + 1 image)
+- [ ] Undo toast for low-stakes edits
+- [ ] Draft-preview-publish flow for content-bearing edits
+- [ ] Settings: admin delegation toggle for template edits
+
+#### Phase 7 — Polish / front door
+
+Three unrelated cleanups, grouped only by "do before GTM."
+
+**7a. Landing page redesign**
+- *Currently:* `/` covers value prop but visually basic; not at Resend / Linear quality bar.
+- *New approach:* Resend / Linear aesthetic — cleaner type, gradient accents, "why uDeets" three-pillar section, super-category case-study tiles, strong CTA above fold.
+- *Why:* First impression matters. Pre-GTM front door must look premium.
+
+**7b. Profile dropdown polish** (this is the "profile dropdown" item)
+- *Currently:* Top-right web dropdown shows Profile / Settings / Sign out. Mobile differs — avatar tap from nav drawer.
+- *New approach:* Add quick-access My Hubs, notification badge, plan-tier badge, expanded account info. Mobile/web parity.
+- *Why:* Most-frequently-used UI for returning users; small tweaks pay back every session. Plan-tier badge becomes important when paid tiers ship.
+
+**7c. Theme-token migration sweep**
+- *Currently:* Some components still use hardcoded hex values (`#0C5C57`, `#E3F1EF`, `#A9D1CA`) instead of CSS variables.
+- *New approach:* Audit all components, replace with `var(--ud-*)` tokens or `theme.ts` constants. Target: zero raw hex in component code.
+- *Why:* Future rebrands, dark-mode polish, and paid-tier custom accent colors all become one-file changes instead of manual sweeps.
+
+**Tasks:**
+- [ ] 7a — Landing page redesign
+- [ ] 7b — Profile dropdown polish (mobile + web parity)
+- [ ] 7c — Theme-token sweep (audit + replace)
+
+### Tomorrow's first task
+
+Phase 1, step 1: write the canonical 6 super-category + sub-category list. Lock the names, lock the variants. Everything downstream flows from this.
+
+---
+
 ## 8. Known Issues / Open Items
 
-### Operational — migrations to apply to live Supabase
+### Operational — migrations
 
-All migrations below are committed to `supabase/migrations/`. Apply via `supabase db push` or the SQL Editor in the Supabase dashboard, in chronological order:
+All April 18 migrations have been applied to the live Supabase project. No pending DB operations.
 
-1. `20260404_create_avatars_bucket.sql` — confirm applied
-2. `20260418_add_deets_allow_comments.sql` — adds `deets.allow_comments bool default true`
-3. `20260418_add_hub_cover_position.sql` — adds `hubs.cover_image_offset_y numeric`
-4. `20260418_add_hub_members_last_seen.sql` — `hub_members.last_seen_at` + `user_hubs_with_unread()` + `mark_hub_seen()`
-5. `20260418_backfill_profile_names.sql` — one-shot profile backfill
-6. `20260418_create_hub_attachments.sql` — creates `public.attachments` + backfills DP/cover/gallery
-7. `20260418_create_hub_invitations.sql` — creates `public.hub_invitations` + RLS
-8. `20260418_expand_deet_media_mime_types.sql` — expands `deet-media` MIME allowlist to include PDF/Office/text/CSV/zip, 15 MB cap
+### April 18 user-testing list — cleared
 
-### Open from April 18 user testing (6 remaining)
-
-- **#5** Ad positioning / privacy-by-default copy on `/about` — needs a product decision before writing copy
-- **#13** Members section rebuild — invite flow is done, but the member-list view itself needs a dedicated design
-- **#14** Custom section area — needs product discussion (scope and authoring model)
-- **#18** Like / Share re-test after deploy — Comment is fixed this session; Like and Share were reported as "implemented?" and need verification after deploy
-- **#24** Move post-type picker (Announcement, Poll, etc.) above the editor — composer reflow; not yet started
-- **#28** File attachment re-test — code shipped; works once branch deploys and `20260418_expand_deet_media_mime_types.sql` is applied
+All 30 bugs/items from the April 18 user-testing pass are addressed. No items remain from that list.
 
 ### Outstanding from earlier sessions
 
