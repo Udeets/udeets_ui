@@ -11,6 +11,7 @@ const HUB_COLUMNS_BASE = `
   cover_image_url,
   cover_image_offset_y,
   dp_image_url,
+  dp_image_offset_y,
   gallery_image_urls,
   website_url,
   facebook_url,

@@ -86,6 +86,7 @@ export interface UpdateHubInput {
   coverImageUrl?: string | null;
   coverImageOffsetY?: number;
   dpImageUrl?: string | null;
+  dpImageOffsetY?: number;
   galleryImageUrls?: string[] | null;
   accentColor?: string | null;
 }
@@ -103,6 +104,7 @@ export interface HubRecord {
   cover_image_url: string | null;
   cover_image_offset_y?: number | null;
   dp_image_url: string | null;
+  dp_image_offset_y?: number | null;
   gallery_image_urls: string[] | null;
   website_url: string | null;
   facebook_url: string | null;

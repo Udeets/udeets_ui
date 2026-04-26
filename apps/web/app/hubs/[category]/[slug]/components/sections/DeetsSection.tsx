@@ -1620,30 +1620,22 @@ export function DeetsSection({
                     onToggleLike={onToggleLike}
                   />
 
-                  {/* Comment button — hidden when author disabled comments on this deet */}
-                  {item.allowComments === false ? (
-                    <div
-                      className="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm text-[var(--ud-text-muted)] opacity-60"
-                      title="The author has turned off comments on this post"
-                    >
-                      <MessageSquare className={POST_ICON} />
-                      <span>Comments off</span>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => onToggleComments?.(item.id)}
-                      className={cn(
-                        "flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]",
-                        expandedCommentDeetId === item.id
-                          ? "text-[var(--ud-brand-primary)] font-medium"
-                          : "text-[var(--ud-text-muted)]"
-                      )}
-                    >
-                      <MessageSquare className={POST_ICON} />
-                      <span>Comment</span>
-                    </button>
-                  )}
+                  {/* Comment button — always expandable so existing comments stay viewable. */}
+                  {/* When the author disabled new comments, the input form below is hidden. */}
+                  <button
+                    type="button"
+                    onClick={() => onToggleComments?.(item.id)}
+                    title={item.allowComments === false ? "Comments are turned off — existing comments are still visible" : undefined}
+                    className={cn(
+                      "flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm transition-colors hover:bg-[var(--ud-bg-subtle)]",
+                      expandedCommentDeetId === item.id
+                        ? "text-[var(--ud-brand-primary)] font-medium"
+                        : "text-[var(--ud-text-muted)]"
+                    )}
+                  >
+                    <MessageSquare className={POST_ICON} />
+                    <span>{item.allowComments === false ? "Comments (off)" : "Comment"}</span>
+                  </button>
 
                   {/* Share button */}
                   <button
@@ -1706,6 +1698,7 @@ export function DeetsSection({
                     isSubmitting={commentSubmittingDeetId === item.id}
                     error={commentError}
                     currentUserId={currentUserId}
+                    allowComments={item.allowComments !== false}
                     onSubmitComment={onSubmitComment}
                     onEditComment={onEditComment}
                     onDeleteComment={onDeleteComment}
@@ -2038,6 +2031,7 @@ function DeetCommentsSection({
   isSubmitting,
   error,
   currentUserId,
+  allowComments = true,
   onSubmitComment,
   onEditComment,
   onDeleteComment,
@@ -2051,6 +2045,7 @@ function DeetCommentsSection({
   isSubmitting: boolean;
   error?: string | null;
   currentUserId?: string;
+  allowComments?: boolean;
   onSubmitComment?: (deetId: string, body: string, parentId?: string, attachments?: { imageUrl?: string; attachmentUrl?: string; attachmentName?: string }) => Promise<{ success: boolean }> | void;
   onEditComment?: (commentId: string, deetId: string, newBody: string) => Promise<{ success: boolean }> | void;
   onDeleteComment?: (commentId: string, deetId: string) => Promise<{ success: boolean }> | void;
@@ -2060,6 +2055,8 @@ function DeetCommentsSection({
 }) {
   const [commentText, setCommentText] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
+  // "Less mode" by default — show first 2 comments. Toggle to view all.
+  const [showAllComments, setShowAllComments] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [menuOpenCommentId, setMenuOpenCommentId] = useState<string | null>(null);
@@ -2272,7 +2269,8 @@ function DeetCommentsSection({
         </div>
       ) : comments.length > 0 ? (
         <div className="px-4">
-          {comments.map((comment, idx) => (
+          {/* Less mode by default — show first 2 comments. Click "Show all" to expand. */}
+          {(showAllComments ? comments : comments.slice(0, 2)).map((comment, idx) => (
             <div key={comment.id}>
               {/* Separator line between top-level comments */}
               {idx > 0 && <div className="border-t border-[var(--ud-border-subtle)]" />}
@@ -2302,6 +2300,15 @@ function DeetCommentsSection({
               )}
             </div>
           ))}
+          {comments.length > 2 && !showAllComments ? (
+            <button
+              type="button"
+              onClick={() => setShowAllComments(true)}
+              className="w-full border-t border-[var(--ud-border-subtle)] py-2 text-center text-xs font-medium text-[var(--ud-brand-primary)] transition hover:bg-[var(--ud-bg-subtle)]"
+            >
+              Show all {comments.length} comments
+            </button>
+          ) : null}
         </div>
       ) : (
         <p className="px-4 py-3 text-center text-xs text-[var(--ud-text-muted)]">No comments yet</p>
@@ -2323,7 +2330,12 @@ function DeetCommentsSection({
         </div>
       )}
 
-      {/* Comment input with emoji, photo, attachment */}
+      {/* Comment input — hidden when author has disabled new comments. Existing comments remain visible above. */}
+      {!allowComments ? (
+        <div className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] px-4 py-3 text-center text-xs text-[var(--ud-text-muted)]">
+          Comments are turned off for this post. Existing comments stay visible.
+        </div>
+      ) : (
       <div className="relative border-t border-[var(--ud-border-subtle)] px-4 py-2.5">
         {/* Hidden file inputs */}
         <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoSelect} />
@@ -2431,6 +2443,7 @@ function DeetCommentsSection({
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

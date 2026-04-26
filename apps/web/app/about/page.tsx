@@ -177,7 +177,7 @@ export default function AboutPage() {
         </section>
 
         {/* The problem → solution — visual cards, not paragraphs */}
-        <section className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] py-12 sm:py-16">
+        <section className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] pt-6 pb-12 sm:pt-8 sm:pb-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
             <AnimateOnScroll className="mx-auto max-w-2xl text-center">
               <h2 className="text-3xl font-semibold tracking-tight text-[var(--ud-text-primary)] sm:text-4xl">
@@ -239,7 +239,7 @@ export default function AboutPage() {
         </section>
 
         {/* Values — icon grid with staggered animation */}
-        <section className="py-12 sm:py-16">
+        <section className="pt-6 pb-12 sm:pt-8 sm:pb-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10">
             <AnimateOnScroll className="mx-auto max-w-2xl text-center">
               <h2 className="text-3xl font-semibold tracking-tight text-[var(--ud-text-primary)] sm:text-4xl">
@@ -250,7 +250,7 @@ export default function AboutPage() {
             <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {[
                 { icon: Target, title: "Simplicity first", description: "No bloat, no learning curve. If it takes more than a minute to understand, we haven't done our job." },
-                { icon: Shield, title: "Privacy by default", description: "We don't sell data, run ads, or monetize your members' attention. Your data stays yours." },
+                { icon: Shield, title: "Privacy by default", description: "Free for everyone. No profile tracking, no data sales — your members and your content stay yours." },
                 { icon: Users, title: "Built for local connection", description: "Feel connected at home in a global world — designed for the small business owner, the HOA board member, the church volunteer." },
                 { icon: Zap, title: "Speed matters", description: "Fast load times, instant updates. Members find what they need in seconds." },
                 { icon: Globe, title: "Free & accessible", description: "Free to start, mobile-friendly, works for communities of all sizes." },

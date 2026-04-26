@@ -100,6 +100,16 @@ export function CreateDeetModal({
     if (editorRef.current) onDraftTextChange(editorRef.current.innerHTML);
   };
 
+  // Paste as plain text. Pasting rich HTML (especially trailing list items)
+  // produces uneditable structures inside contentEditable. Plain text keeps
+  // bullet characters as text and stays fully editable.
+  const handleEditorPaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const text = e.clipboardData.getData("text/plain");
+    if (!text) return;
+    document.execCommand("insertText", false, text);
+  };
+
   useEffect(() => {
     if (editorRef.current && editorRef.current.innerHTML !== draftText) {
       editorRef.current.innerHTML = draftText;
@@ -145,8 +155,16 @@ export function CreateDeetModal({
             <button type="button" onClick={applyBold} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--ud-border)] text-sm font-semibold text-[var(--ud-text-secondary)] transition hover:border-[var(--ud-border)]">B</button>
             <button type="button" onClick={applyItalic} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--ud-border)] text-sm italic text-[var(--ud-text-secondary)] transition hover:border-[var(--ud-border)]">I</button>
             <button type="button" onClick={applyUnderline} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--ud-border)] text-sm underline text-[var(--ud-text-secondary)] transition hover:border-[var(--ud-border)]">U</button>
-            <label className="relative inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-[var(--ud-border)] transition hover:border-[var(--ud-border)]">
-              <span className="text-[var(--ud-brand-primary)]">A</span>
+            <label
+              className="relative inline-flex h-9 w-9 cursor-pointer flex-col items-center justify-center rounded-xl border border-[var(--ud-border)] transition hover:border-[var(--ud-brand-primary)]"
+              title="Text color (applied on selection)"
+            >
+              <span className="text-sm font-semibold leading-none" style={{ color: formatting.textColor }}>A</span>
+              <span
+                className="mt-0.5 block h-[3px] w-4 rounded-sm"
+                style={{ backgroundColor: formatting.textColor }}
+                aria-hidden="true"
+              />
               <input type="color" value={formatting.textColor} onChange={(event) => applyTextColor(event.target.value)} aria-label="Choose text color" className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
             </label>
           </div>
@@ -200,6 +218,7 @@ export function CreateDeetModal({
               contentEditable
               suppressContentEditableWarning
               onInput={handleEditorInput}
+              onPaste={handleEditorPaste}
               data-placeholder="Write something..."
               className="min-h-[150px] w-full outline-none text-base text-[var(--ud-text-primary)] whitespace-pre-wrap [&:empty:before]:content-[attr(data-placeholder)] [&:empty:before]:text-[var(--ud-text-muted)]"
             />

@@ -31,6 +31,8 @@ export function HubHeroHeader({
   onOpenAlerts,
   coverImageOffsetY = 50,
   onSaveCoverOffsetY,
+  dpImageOffsetY = 50,
+  onSaveDpOffsetY,
 }: {
   dpInputRef: React.RefObject<HTMLInputElement | null>;
   coverInputRef: React.RefObject<HTMLInputElement | null>;
@@ -56,6 +58,8 @@ export function HubHeroHeader({
   onOpenAlerts?: () => void;
   coverImageOffsetY?: number;
   onSaveCoverOffsetY?: (percent: number) => Promise<void> | void;
+  dpImageOffsetY?: number;
+  onSaveDpOffsetY?: (percent: number) => Promise<void> | void;
 }) {
   const VisibilityIcon = visibilityLabel === "Public" ? Globe : Lock;
   const [isAdjustingCover, setIsAdjustingCover] = useState(false);
@@ -76,6 +80,27 @@ export function HubHeroHeader({
       setIsAdjustingCover(false);
     } finally {
       setIsSavingOffset(false);
+    }
+  };
+
+  // ── DP (logo) offset adjuster — mirrors cover behavior ──
+  const [isAdjustingDp, setIsAdjustingDp] = useState(false);
+  const [draftDpOffset, setDraftDpOffset] = useState<number>(dpImageOffsetY);
+  const [isSavingDpOffset, setIsSavingDpOffset] = useState(false);
+  const activeDpOffset = isAdjustingDp ? draftDpOffset : dpImageOffsetY;
+  const dpStyle = { objectPosition: `50% ${activeDpOffset}%` } as React.CSSProperties;
+
+  const handleSaveDpOffset = async () => {
+    if (!onSaveDpOffsetY) {
+      setIsAdjustingDp(false);
+      return;
+    }
+    try {
+      setIsSavingDpOffset(true);
+      await onSaveDpOffsetY(draftDpOffset);
+      setIsAdjustingDp(false);
+    } finally {
+      setIsSavingDpOffset(false);
     }
   };
 
@@ -192,6 +217,7 @@ export function HubHeroHeader({
                     sources={[dpImageSrc]}
                     alt={`${headerHubName} display`}
                     className="h-full w-full object-cover"
+                    style={dpStyle}
                     fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-2xl font-semibold text-[var(--ud-brand-primary)]"
                     fallback={headerHubName.charAt(0).toUpperCase()}
                   />
@@ -202,18 +228,71 @@ export function HubHeroHeader({
                 )}
               </button>
               {isCreatorAdmin ? (
-                <button
-                  type="button"
-                  onClick={onOpenDpChooser}
-                  disabled={isUploadingDp}
-                  aria-label="Edit profile photo"
-                  title="Change profile photo"
-                  className="absolute -bottom-0.5 -right-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-[var(--ud-brand-primary)] text-white shadow-md transition hover:brightness-110 disabled:opacity-50"
-                >
-                  <Pencil className="h-3.5 w-3.5 stroke-[2]" />
-                </button>
+                <>
+                  {dpImageSrc ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDraftDpOffset(dpImageOffsetY);
+                        setIsAdjustingDp((v) => !v);
+                      }}
+                      aria-label="Reposition profile photo"
+                      title="Reposition profile photo"
+                      className={cn(
+                        "absolute -top-0.5 -right-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-white text-white shadow-md transition",
+                        isAdjustingDp ? "bg-[var(--ud-brand-primary)]" : "bg-black/55 hover:bg-black/70"
+                      )}
+                    >
+                      <Move className="h-3 w-3 stroke-[1.8]" />
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={onOpenDpChooser}
+                    disabled={isUploadingDp}
+                    aria-label="Edit profile photo"
+                    title="Change profile photo"
+                    className="absolute -bottom-0.5 -right-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-[var(--ud-brand-primary)] text-white shadow-md transition hover:brightness-110 disabled:opacity-50"
+                  >
+                    <Pencil className="h-3.5 w-3.5 stroke-[2]" />
+                  </button>
+                </>
               ) : null}
             </div>
+            {isCreatorAdmin && isAdjustingDp ? (
+              <div className="absolute left-0 top-28 z-20 w-[260px] -translate-x-2 rounded-2xl bg-black/75 px-3 py-2.5 text-xs text-white shadow-xl backdrop-blur-sm">
+                <div className="flex items-center gap-2">
+                  <span className="shrink-0 font-medium">Position</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={draftDpOffset}
+                    onChange={(e) => setDraftDpOffset(Number(e.target.value))}
+                    className="h-1 flex-1 accent-white"
+                    aria-label="Vertical position"
+                  />
+                </div>
+                <div className="mt-2 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsAdjustingDp(false)}
+                    className="rounded-full px-2 py-1 text-[11px] font-semibold transition hover:bg-white/10"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveDpOffset}
+                    disabled={isSavingDpOffset}
+                    className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-black transition hover:bg-white/90 disabled:opacity-60"
+                  >
+                    {isSavingDpOffset ? "Saving" : "Save"}
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -301,6 +380,7 @@ export function HubHeroHeader({
                   sources={[dpImageSrc]}
                   alt={`${headerHubName} display`}
                   className="h-full w-full object-cover"
+                  style={dpStyle}
                   fallbackClassName="grid h-full w-full place-items-center text-6xl font-semibold"
                   fallbackStyle={{ backgroundColor: accentTheme?.wash, color: accentTheme?.primary }}
                   fallback={headerHubName.charAt(0).toUpperCase()}
@@ -312,16 +392,69 @@ export function HubHeroHeader({
               )}
             </button>
             {isCreatorAdmin ? (
-              <button
-                type="button"
-                onClick={onOpenDpChooser}
-                disabled={isUploadingDp}
-                aria-label="Edit profile photo"
-                title="Change profile photo"
-                className="absolute bottom-1 right-1 inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-[var(--ud-brand-primary)] text-white shadow-md transition hover:brightness-110 disabled:opacity-50"
-              >
-                <Pencil className="h-4 w-4 stroke-[1.8]" />
-              </button>
+              <>
+                {dpImageSrc ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraftDpOffset(dpImageOffsetY);
+                      setIsAdjustingDp((v) => !v);
+                    }}
+                    aria-label="Reposition profile photo"
+                    title="Reposition profile photo"
+                    className={cn(
+                      "absolute right-1 top-1 inline-flex h-9 w-9 items-center justify-center rounded-full border-2 border-white text-white shadow-md transition",
+                      isAdjustingDp ? "bg-[var(--ud-brand-primary)]" : "bg-black/55 hover:bg-black/70"
+                    )}
+                  >
+                    <Move className="h-4 w-4 stroke-[1.6]" />
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={onOpenDpChooser}
+                  disabled={isUploadingDp}
+                  aria-label="Edit profile photo"
+                  title="Change profile photo"
+                  className="absolute bottom-1 right-1 inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-[var(--ud-brand-primary)] text-white shadow-md transition hover:brightness-110 disabled:opacity-50"
+                >
+                  <Pencil className="h-4 w-4 stroke-[1.8]" />
+                </button>
+              </>
+            ) : null}
+            {isCreatorAdmin && isAdjustingDp ? (
+              <div className="absolute left-1/2 top-full z-20 mt-3 w-[260px] -translate-x-1/2 rounded-2xl bg-black/75 px-3 py-2.5 text-xs text-white shadow-xl backdrop-blur-sm">
+                <div className="flex items-center gap-2">
+                  <span className="shrink-0 font-medium">Position</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={draftDpOffset}
+                    onChange={(e) => setDraftDpOffset(Number(e.target.value))}
+                    className="h-1 flex-1 accent-white"
+                    aria-label="Vertical position"
+                  />
+                </div>
+                <div className="mt-2 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsAdjustingDp(false)}
+                    className="rounded-full px-2 py-1 text-[11px] font-semibold transition hover:bg-white/10"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveDpOffset}
+                    disabled={isSavingDpOffset}
+                    className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-black transition hover:bg-white/90 disabled:opacity-60"
+                  >
+                    {isSavingDpOffset ? "Saving" : "Save"}
+                  </button>
+                </div>
+              </div>
             ) : null}
           </div>
 

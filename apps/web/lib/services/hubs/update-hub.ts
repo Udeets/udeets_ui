@@ -93,6 +93,12 @@ export async function updateHub(hubId: string, input: UpdateHubInput): Promise<H
     payload.dp_image_url = normalizeText(input.dpImageUrl);
   }
 
+  if (input.dpImageOffsetY !== undefined) {
+    // Clamp 0–100 so the DB check-constraint can't reject it.
+    const clamped = Math.min(100, Math.max(0, input.dpImageOffsetY));
+    payload.dp_image_offset_y = clamped;
+  }
+
   if (input.galleryImageUrls !== undefined) {
     payload.gallery_image_urls = input.galleryImageUrls;
   }

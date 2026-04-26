@@ -24,6 +24,7 @@ export type HubRecord = {
   heroImage?: string;
   coverImageOffsetY?: number;
   dpImage?: string;
+  dpImageOffsetY?: number;
   createdBy?: string;
   galleryImages?: string[];
   feedImages?: string[];
@@ -100,6 +101,7 @@ export function toHubRecord(hub: DbHubRecord): HubRecord {
     heroImage,
     coverImageOffsetY: typeof hub.cover_image_offset_y === "number" ? hub.cover_image_offset_y : 50,
     dpImage,
+    dpImageOffsetY: typeof hub.dp_image_offset_y === "number" ? hub.dp_image_offset_y : 50,
     createdBy: hub.created_by,
     galleryImages,
     feedImages: [],

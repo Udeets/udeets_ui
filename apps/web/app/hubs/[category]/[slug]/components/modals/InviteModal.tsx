@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Loader2, QrCode, Search, UserPlus, X } from "lucide-react";
+import { Check, Copy, Loader2, Printer, QrCode, Search, UserPlus, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { cn } from "../hubUtils";
@@ -45,6 +45,24 @@ export function InviteModal({
   }, [hubCategory, hubSlug]);
 
   const [copiedLink, setCopiedLink] = useState(false);
+  const qrCardRef = useRef<HTMLDivElement>(null);
+
+  const handlePrintQr = useCallback(() => {
+    if (typeof window === "undefined" || !qrCardRef.current) return;
+    const svgEl = qrCardRef.current.querySelector("svg");
+    if (!svgEl) return;
+    const svgString = new XMLSerializer().serializeToString(svgEl);
+    const popup = window.open("", "_blank", "width=480,height=640");
+    if (!popup) return;
+    const safeName = hubName.replace(/[<&>]/g, (c) => ({ "<": "&lt;", "&": "&amp;", ">": "&gt;" }[c] || c));
+    const safeUrl = joinUrl.replace(/[<&>]/g, (c) => ({ "<": "&lt;", "&": "&amp;", ">": "&gt;" }[c] || c));
+    popup.document.write(`<!doctype html><html><head><title>Join ${safeName} — uDeets</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center;padding:40px 20px;color:#111;margin:0}h1{font-size:22px;font-weight:600;margin:0 0 8px}p{color:#555;font-size:13px;margin:0 0 24px;line-height:1.5}.qr{display:inline-block;padding:16px;background:#fff;border-radius:12px;border:1px solid #e5e7eb}.url{margin-top:24px;word-break:break-all;font-size:11px;color:#666}.brand{margin-top:32px;font-size:11px;color:#999;letter-spacing:0.05em;text-transform:uppercase}@media print{@page{margin:0.5in}}</style></head><body><h1>Join ${safeName}</h1><p>Scan the QR code or visit the link below to request joining this hub.</p><div class="qr">${svgString}</div><p class="url">${safeUrl}</p><p class="brand">Powered by uDeets</p></body></html>`);
+    popup.document.close();
+    popup.focus();
+    setTimeout(() => {
+      popup.print();
+    }, 300);
+  }, [hubName, joinUrl]);
 
   // Show a short-lived toast
   const showToast = useCallback((msg: string) => {
@@ -304,7 +322,7 @@ export function InviteModal({
                   Anyone who scans this code lands on the hub with a prompt to request joining.
                   You still approve each request in Members.
                 </p>
-                <div className="rounded-2xl border border-[var(--ud-border-subtle)] bg-white p-4 shadow-sm">
+                <div ref={qrCardRef} className="rounded-2xl border border-[var(--ud-border-subtle)] bg-white p-4 shadow-sm">
                   <QRCodeSVG
                     value={joinUrl}
                     size={220}
@@ -314,7 +332,7 @@ export function InviteModal({
                     fgColor="#0C5C57"
                   />
                 </div>
-                <div className="w-full">
+                <div className="w-full space-y-2">
                   <div className="flex items-center gap-2 rounded-lg border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] px-3 py-2">
                     <input
                       type="text"
@@ -332,6 +350,14 @@ export function InviteModal({
                       {copiedLink ? "Copied" : "Copy"}
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={handlePrintQr}
+                    className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-[var(--ud-border)] bg-white px-3 py-2 text-xs font-medium text-[var(--ud-text-primary)] transition hover:bg-[var(--ud-bg-subtle)]"
+                  >
+                    <Printer className="h-3.5 w-3.5" />
+                    Print QR code
+                  </button>
                 </div>
               </div>
             )}

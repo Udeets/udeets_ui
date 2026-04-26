@@ -116,6 +116,10 @@ export default function HubClient({
   const [coverImageOffsetY, setCoverImageOffsetY] = useState<number>(
     typeof hub.coverImageOffsetY === "number" ? hub.coverImageOffsetY : 50
   );
+  // DP/logo image vertical offset (0–100). Defaults to 50 (center).
+  const [dpImageOffsetY, setDpImageOffsetY] = useState<number>(
+    typeof hub.dpImageOffsetY === "number" ? hub.dpImageOffsetY : 50
+  );
   const [isAdminsEditorOpen, setIsAdminsEditorOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isDeleteHubModalOpen, setIsDeleteHubModalOpen] = useState(false);
@@ -569,7 +573,22 @@ export default function HubClient({
     }
 
     init();
-    return () => { ignore = true; };
+
+    // Re-pull pending requests when the tab regains focus. Catches the case
+    // where the realtime channel didn't fire (e.g., publication not enabled
+    // for hub_members in the project) so admins still see new requests after
+    // switching back to the tab.
+    const onVisibilityChange = () => {
+      if (!ignore && document.visibilityState === "visible" && isCreatorAdmin) {
+        loadPendingRequests();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      ignore = true;
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, [hub.id, isCreatorAdmin]);
 
   // Real-time: listen for new join requests so the creator gets a toast notification
@@ -1096,6 +1115,7 @@ export default function HubClient({
           hubId={hub.id}
           userId={user?.id ?? null}
           isCreatorAdmin={isCreatorAdmin}
+          onInviteMembers={() => setIsInviteModalOpen(true)}
         />
       );
     }
@@ -1222,6 +1242,16 @@ export default function HubClient({
             } catch (err) {
               console.error("[hub] save cover offset failed:", err);
               // Best-effort: surface nothing. Next page load will re-read the DB value.
+            }
+          }}
+          dpImageOffsetY={dpImageOffsetY}
+          onSaveDpOffsetY={async (percent) => {
+            setDpImageOffsetY(percent);
+            try {
+              const { updateHub } = await import("@/lib/services/hubs/update-hub");
+              await updateHub(hub.id, { dpImageOffsetY: percent });
+            } catch (err) {
+              console.error("[hub] save dp offset failed:", err);
             }
           }}
         />

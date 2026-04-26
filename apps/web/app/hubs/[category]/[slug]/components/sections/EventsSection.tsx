@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Clock, MapPin, X } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, MapPin, UserPlus, X } from "lucide-react";
 import { cn } from "../hubUtils";
 import { listHubEvents } from "@/lib/services/events/list-events";
 import { createEvent, deleteEvent } from "@/lib/services/events/create-event";
@@ -58,10 +58,12 @@ export function EventsSection({
   hubId,
   userId,
   isCreatorAdmin,
+  onInviteMembers,
 }: {
   hubId: string;
   userId: string | null;
   isCreatorAdmin: boolean;
+  onInviteMembers?: () => void;
 }) {
   const today = useMemo(() => new Date(), []);
   const [viewYear, setViewYear] = useState(today.getFullYear());
@@ -491,16 +493,31 @@ export function EventsSection({
                 )}
               </div>
 
-              {/* Delete for creator */}
-              {isCreatorAdmin && userId === popupEvent.createdBy && (
+              {/* Invite + Delete actions for creator */}
+              {isCreatorAdmin && (
                 <div className="mt-5 flex gap-2 border-t border-[var(--ud-border)] pt-4">
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteEvent(popupEvent.id)}
-                    className="flex-1 rounded-lg border border-red-200 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-50"
-                  >
-                    Delete
-                  </button>
+                  {onInviteMembers ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPopupEvent(null);
+                        onInviteMembers();
+                      }}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[var(--ud-brand-primary)] py-2 text-xs font-semibold text-[var(--ud-brand-primary)] transition hover:bg-[var(--ud-brand-light)]"
+                    >
+                      <UserPlus className="h-3.5 w-3.5 stroke-[1.8]" />
+                      Invite members
+                    </button>
+                  ) : null}
+                  {userId === popupEvent.createdBy ? (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteEvent(popupEvent.id)}
+                      className="flex-1 rounded-lg border border-red-200 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-50"
+                    >
+                      Delete
+                    </button>
+                  ) : null}
                 </div>
               )}
             </div>

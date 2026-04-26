@@ -181,9 +181,32 @@ export default function ResourcesPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-[var(--ud-border-subtle)] bg-[var(--ud-bg-page)]/80 backdrop-blur-lg">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
-          <Link href="/" className="flex items-center gap-2">
-            <UdeetsBrandLockup textClassName="text-xl sm:text-2xl" priority />
-          </Link>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Link href="/" className="flex items-center gap-2 mr-2 sm:mr-4">
+              <UdeetsBrandLockup textClassName="text-xl sm:text-2xl" priority />
+            </Link>
+            <nav className="hidden items-center gap-0.5 md:flex">
+              <Link
+                href="/about"
+                className="rounded-full px-3 py-2 text-sm font-medium text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
+              >
+                About
+              </Link>
+              <Link
+                href="/use-cases"
+                className="rounded-full px-3 py-2 text-sm font-medium text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
+              >
+                Use Cases
+              </Link>
+              <Link
+                href="/resources"
+                aria-current="page"
+                className="rounded-full bg-[var(--ud-brand-light)] px-3 py-2 text-sm font-semibold text-[var(--ud-brand-primary)]"
+              >
+                Resources
+              </Link>
+            </nav>
+          </div>
           <nav className="flex items-center gap-2 sm:gap-3">
             <Link href="/discover" className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]" aria-label="Discover">
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 21l-4.3-4.3" /><circle cx="11" cy="11" r="7" /></svg>
