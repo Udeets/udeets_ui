@@ -439,7 +439,7 @@ export function HubFeedCard({
         </div>
       </div>
 
-      <CollapsibleEngagementPanel open={commentsEnabled && expandedComments && Boolean(commentsSlot)}>
+      <CollapsibleEngagementPanel open={expandedComments && Boolean(commentsSlot)}>
         {commentsSlot}
       </CollapsibleEngagementPanel>
     </article>

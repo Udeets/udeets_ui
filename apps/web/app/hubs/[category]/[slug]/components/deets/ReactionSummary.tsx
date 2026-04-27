@@ -11,7 +11,7 @@ export type ReactionSummaryProps = {
   currentUserId?: string;
   onOpenReactionsModal?: () => void;
   onToggleComments: () => void;
-  /** When false, comment count is display-only (comments disabled on the post). */
+  /** When false, new comments are disabled (existing thread may still be viewable). */
   commentsInteractive?: boolean;
 };
 
@@ -57,21 +57,17 @@ export function ReactionSummary({
       ) : null}
 
       {showComments ? (
-        commentsInteractive ? (
-          <button
-            type="button"
-            onClick={onToggleComments}
-            className="rounded-md py-0.5 text-[var(--ud-text-secondary)] transition hover:text-[var(--ud-text-primary)] motion-reduce:transition-none"
-          >
-            <span className="font-semibold tabular-nums text-[var(--ud-text-primary)]">{commentCount}</span>
-            <span> {commentsLabel}</span>
-          </button>
-        ) : (
-          <span className="rounded-md py-0.5 text-[var(--ud-text-muted)]">
-            <span className="font-semibold tabular-nums text-[var(--ud-text-primary)]">{commentCount}</span>
-            <span> {commentsLabel}</span>
-          </span>
-        )
+        <button
+          type="button"
+          onClick={onToggleComments}
+          title={!commentsInteractive ? "Comments are disabled for this post" : undefined}
+          className={commentsInteractive
+            ? "rounded-md py-0.5 text-[var(--ud-text-secondary)] transition hover:text-[var(--ud-text-primary)] motion-reduce:transition-none"
+            : "rounded-md py-0.5 text-[var(--ud-text-muted)] transition hover:text-[var(--ud-text-secondary)] motion-reduce:transition-none"}
+        >
+          <span className="font-semibold tabular-nums text-[var(--ud-text-primary)]">{commentCount}</span>
+          <span> {commentsLabel}</span>
+        </button>
       ) : null}
     </div>
   );

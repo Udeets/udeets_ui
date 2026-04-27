@@ -495,7 +495,7 @@ export function DeetCommentsSection({
       >
         {!allowNewComments ? (
           <p className="border-b border-[var(--ud-border-subtle)] px-4 py-2.5 text-center text-xs text-[var(--ud-text-muted)]">
-            Comments are turned off for this post.
+            Comments are disabled for this post.
           </p>
         ) : null}
         {isLoading ? (
@@ -559,7 +559,7 @@ export function DeetCommentsSection({
             <p className="text-sm text-[var(--ud-text-muted)]">
               {allowNewComments
                 ? "Be the first to comment and join the discussion."
-                : "Comments are turned off for this post."}
+                : "Comments are disabled for this post."}
             </p>
           </div>
         )}
