@@ -257,16 +257,25 @@ export default function HubClient({
         .maybeSingle();
 
       if (ignore) return;
-      if (data) {
-        if (data.status === "active") {
-          setIsMember(true);
-          setIsJoined(true);
-          setIsPending(false);
-        } else if (data.status === "pending") {
-          setIsMember(false);
-          setIsJoined(false);
-          setIsPending(true);
-        }
+      if (!data) {
+        // No row: user is not in this hub (also covers navigating from another hub
+        // where React kept prior isMember state — we must clear stale membership).
+        setIsMember(false);
+        setIsJoined(false);
+        setIsPending(false);
+      } else if (data.status === "active") {
+        setIsMember(true);
+        setIsJoined(true);
+        setIsPending(false);
+      } else if (data.status === "pending") {
+        setIsMember(false);
+        setIsJoined(false);
+        setIsPending(true);
+      } else {
+        // invited or any future status: treat as not an active member for gating.
+        setIsMember(false);
+        setIsJoined(false);
+        setIsPending(false);
       }
       setMembershipLoaded(true);
     }

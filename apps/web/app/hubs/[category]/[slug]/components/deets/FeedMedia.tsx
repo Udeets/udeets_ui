@@ -121,7 +121,13 @@ export function FeedMedia({
   const urls = dedupeImageUrls(imageUrls);
   if (!urls.length) return null;
 
-  const isPhotoKind = feedKind === "photo";
+  // Single-image hero: use portrait-friendly framing for photo posts and for
+  // typical text/image deets ("post", etc.). A 16:9 box + object-contain made
+  // portrait shots look letterboxed and narrower than the hub card width.
+  // Polls keep the wider frame when a single asset is passed through.
+  const isSingleImage = urls.length === 1;
+  const isPhotoKind =
+    feedKind === "photo" || (isSingleImage && feedKind !== "poll");
   const shell = cn("mt-3 px-3 sm:px-4", className);
 
   const heroSizes = "(max-width: 640px) 92vw, (max-width: 1024px) 640px, 720px";

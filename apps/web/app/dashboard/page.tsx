@@ -236,11 +236,6 @@ function dashboardDeetGalleryUrls(item: FeedItem): string[] {
   return out;
 }
 
-function dashboardMediaFeedKind(feedKind: HubFeedItemKind): HubFeedItemKind | undefined {
-  if (feedKind === "photo") return "photo";
-  return undefined;
-}
-
 function feedAttachmentsToHubShape(att: FeedAttachment[]): HubFeedItemAttachment[] {
   return att
     .filter((a) => a && typeof a.type === "string" && a.type && a.type !== "deet_options")
@@ -1566,7 +1561,7 @@ function DashboardPageContent() {
                       return (
                         <article
                           key={item.id}
-                          className="w-full overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-sm transition-colors duration-150 hover:border-[var(--ud-border)]"
+                          className="w-full overflow-visible rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-sm transition-colors duration-150 hover:border-[var(--ud-border)]"
                         >
                           {item.href ? (
                             <Link href={item.href} className="block">
@@ -1624,7 +1619,7 @@ function DashboardPageContent() {
                               <FeedMedia
                                 imageUrls={urls}
                                 alt={item.title}
-                                feedKind={dashboardMediaFeedKind(item.feedKind)}
+                                feedKind={item.feedKind}
                                 sizesVariant={urls.length > 1 ? "mosaic" : "hero"}
                                 onOpen={(index) =>
                                   setFeedGallery({

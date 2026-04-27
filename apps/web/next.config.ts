@@ -54,6 +54,20 @@ const nextConfig: NextConfig = {
         hostname: "*.supabase.co",
         pathname: "/**",
       },
+      // Local Supabase CLI (storage public URLs use the API port, default 54321).
+      // Without these, next/image in the header rejects avatar URLs on localhost.
+      {
+        protocol: "http",
+        hostname: "127.0.0.1",
+        port: "54321",
+        pathname: "/**",
+      },
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "54321",
+        pathname: "/**",
+      },
     ],
   },
 };
