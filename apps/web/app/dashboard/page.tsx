@@ -34,7 +34,9 @@ import { isGenericDeetTitle } from "@/lib/deets/deet-title";
 import { DeetSharePopover } from "@/components/deets/DeetSharePopover";
 import { FeedPostBody } from "@/components/deets/FeedPostBody";
 import { FeedMedia } from "@/app/hubs/[category]/[slug]/components/deets/FeedMedia";
+import { CollapsibleEngagementPanel } from "@/app/hubs/[category]/[slug]/components/deets/CollapsibleEngagementPanel";
 import type {
+  HubFeedDeetOptions,
   HubFeedItemAttachment,
   HubFeedItemKind,
   HubJobDataPersisted,
@@ -89,6 +91,7 @@ type FeedItem = {
   previewImages: string[];
   href?: string;
   attachments: FeedAttachment[];
+  deetOptions?: HubFeedDeetOptions;
   /** Total comments from `deets.comment_count` (accurate before the thread is fetched). */
   commentCount: number;
 };
@@ -176,6 +179,8 @@ function deetRecordToDashboardItem(item: DeetRecord): FeedItem {
     return row;
   });
 
+  const deetOptions = parseDashboardDeetOptionsMeta(item.attachments);
+
   return {
     id: card.id,
     title: card.title ?? "",
@@ -192,8 +197,27 @@ function deetRecordToDashboardItem(item: DeetRecord): FeedItem {
     previewImages: card.previewImageUrls,
     href: undefined,
     attachments,
+    deetOptions,
     commentCount: item.comment_count ?? 0,
   };
+}
+
+function parseDashboardDeetOptionsMeta(
+  attachments: DeetRecord["attachments"] | undefined,
+): HubFeedDeetOptions | undefined {
+  if (!Array.isArray(attachments)) return undefined;
+  const raw = attachments.find((a) => a?.type === "deet_options");
+  const metaStr = typeof raw?.meta === "string" ? raw.meta.trim() : "";
+  if (!metaStr) return undefined;
+  try {
+    const parsed = JSON.parse(metaStr) as Record<string, unknown>;
+    const out: HubFeedDeetOptions = {};
+    if (typeof parsed.commentsEnabled === "boolean") out.commentsEnabled = parsed.commentsEnabled;
+    if (typeof parsed.reactionsEnabled === "boolean") out.reactionsEnabled = parsed.reactionsEnabled;
+    return Object.keys(out).length ? out : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function dashboardDeetGalleryUrls(item: FeedItem): string[] {
@@ -388,9 +412,20 @@ function ReactorsPopup({
   deetId: string;
   onClose: () => void;
 }) {
+  const { openProfileModal } = useUserProfileModal();
   const [reactors, setReactors] = useState<DeetReactor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<string>("all");
   const popupRef = useRef<HTMLDivElement | null>(null);
+  const emojiLabelMap: Record<string, string> = {
+    like: "👍",
+    "👍": "👍",
+    "❤️": "❤️",
+    "😂": "😂",
+    "😮": "😮",
+    "😢": "😢",
+    "🙏": "🙏",
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -418,42 +453,122 @@ function ReactorsPopup({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [onClose]);
 
+  const grouped = new Map<string, DeetReactor[]>();
+  for (const r of reactors) {
+    const key = r.reactionType || "like";
+    const existing = grouped.get(key) ?? [];
+    existing.push(r);
+    grouped.set(key, existing);
+  }
+  const filteredReactors = activeTab === "all" ? reactors : (grouped.get(activeTab) ?? []);
+
   return (
-    <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div
         ref={popupRef}
-        className="mx-4 w-full max-w-sm rounded-2xl bg-white p-4 shadow-xl"
+        className="mx-4 w-full max-w-sm rounded-2xl border border-[var(--ud-border)] bg-[var(--ud-bg-card)] shadow-xl"
       >
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-[var(--ud-text-primary)]">Reactions</h3>
-          <button type="button" onClick={onClose} className="rounded-full p-1 hover:bg-gray-100">
-            <X className="h-4 w-4 text-gray-500" />
+        <div className="flex items-center justify-between border-b border-[var(--ud-border-subtle)] px-5 py-3.5">
+          <h3 className="text-base font-semibold text-[var(--ud-text-primary)]">
+            {reactors.length} reaction{reactors.length !== 1 ? "s" : ""}
+          </h3>
+          <button type="button" onClick={onClose} className="text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]">
+            <X className="h-4.5 w-4.5" />
           </button>
+        </div>
+
+        <div className="flex items-center gap-1 border-b border-[var(--ud-border-subtle)] px-4 py-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab("all")}
+            className={cn(
+              "rounded-full px-3 py-1 text-xs font-medium transition",
+              activeTab === "all"
+                ? "bg-[var(--ud-brand-primary)]/10 text-[var(--ud-brand-primary)]"
+                : "text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)]",
+            )}
+          >
+            Total {reactors.length}
+          </button>
+          {[...grouped.entries()].map(([emoji, list]) => (
+            <button
+              key={emoji}
+              type="button"
+              onClick={() => setActiveTab(emoji)}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition",
+                activeTab === emoji
+                  ? "bg-[var(--ud-brand-primary)]/10 text-[var(--ud-brand-primary)]"
+                  : "text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)]",
+              )}
+            >
+              <span>{emojiLabelMap[emoji] ?? emoji}</span>
+              <span>{list.length}</span>
+            </button>
+          ))}
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-6">
             <Loader2 className="h-5 w-5 animate-spin text-[var(--ud-brand-primary)]" />
           </div>
-        ) : reactors.length === 0 ? (
+        ) : filteredReactors.length === 0 ? (
           <p className="py-4 text-center text-sm text-gray-400">No reactions yet</p>
         ) : (
-          <div className="max-h-64 space-y-2 overflow-y-auto">
-            {reactors.map((r) => (
-              <div key={r.userId} className="flex items-center gap-3 rounded-xl px-2 py-1.5">
-                {r.avatar ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={r.avatar} alt={r.name} className="h-8 w-8 rounded-full object-cover" />
-                ) : (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--ud-brand-light)] text-sm font-semibold text-[var(--ud-brand-primary)]">
-                    {r.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <span className="text-sm font-medium text-[var(--ud-text-primary)]">{r.name}</span>
+          <div className="max-h-[300px] overflow-y-auto">
+            {filteredReactors.map((reactor) => (
+              <div key={reactor.userId} className="flex items-center gap-3 px-5 py-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    openProfileModal(reactor.userId);
+                  }}
+                  aria-label={`Open ${reactor.name}'s profile`}
+                  className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[var(--ud-brand-light)] transition hover:ring-2 hover:ring-[var(--ud-brand-primary)]/40"
+                >
+                  <ImageWithFallback
+                    src={reactor.avatar || ""}
+                    sources={reactor.avatar ? [reactor.avatar] : []}
+                    alt={reactor.name}
+                    className="h-full w-full object-cover"
+                    fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-xs font-bold text-[var(--ud-brand-primary)]"
+                    fallback={initials(reactor.name)}
+                  />
+                </button>
+                <div className="min-w-0 flex-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      openProfileModal(reactor.userId);
+                    }}
+                    className="text-sm font-medium text-[var(--ud-text-primary)] transition hover:underline"
+                  >
+                    {reactor.name}
+                  </button>
+                </div>
+                <span
+                  className="inline-flex items-center gap-1 rounded-full bg-[var(--ud-bg-subtle)] px-2 py-0.5 text-sm font-semibold text-[var(--ud-text-primary)]"
+                  title={`${reactor.name} reacted with ${emojiLabelMap[reactor.reactionType] ?? reactor.reactionType}`}
+                  aria-label={`${reactor.name} reaction`}
+                >
+                  {emojiLabelMap[reactor.reactionType] ?? reactor.reactionType}
+                </span>
               </div>
             ))}
           </div>
         )}
+
+        <div className="border-t border-[var(--ud-border-subtle)] px-5 py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-xl bg-[var(--ud-bg-subtle)] py-2.5 text-sm font-medium text-[var(--ud-text-primary)] transition hover:bg-[var(--ud-border-subtle)]"
+          >
+            OK
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1170,6 +1285,12 @@ function DashboardPageContent() {
     });
   }, [myDeetsItems, searchQuery, selectedFeedFilter]);
 
+  const viewerFeedItem = feedGallery
+    ? myDeetsItems.find((i) => i.id === feedGallery.deetId) ?? null
+    : null;
+  const viewerCommentsEnabled = viewerFeedItem?.deetOptions?.commentsEnabled !== false;
+  const viewerReactionsEnabled = viewerFeedItem?.deetOptions?.reactionsEnabled !== false;
+
 
   if (authStatus === "checking" && searchParams.get("demo_preview") !== "1") {
     return (
@@ -1344,6 +1465,8 @@ function DashboardPageContent() {
                       const isLiked = likedDeets.has(item.id);
                       const isLiking = likingDeets.has(item.id);
                       const likeCount = likeCounts[item.id] ?? 0;
+                      const commentsEnabled = item.deetOptions?.commentsEnabled !== false;
+                      const reactionsEnabled = item.deetOptions?.reactionsEnabled !== false;
                       const commentCount = Math.max(
                         item.commentCount,
                         healedCommentCounts[item.id] ?? 0,
@@ -1525,6 +1648,7 @@ function DashboardPageContent() {
                                     currentUserId={currentUserId ?? undefined}
                                     onOpenReactionsModal={() => setReactorsDeetId(item.id)}
                                     onToggleComments={() => void handleToggleComments(item.id)}
+                                    commentsInteractive={commentsEnabled}
                                   />
                                 ) : null}
                                 <div
@@ -1540,19 +1664,27 @@ function DashboardPageContent() {
                                       isLiking={isLiking}
                                       onToggleLike={toggleLike}
                                       syncedReaction={myDeetReactions[item.id] ?? null}
+                                      interactionsEnabled={reactionsEnabled}
                                       triggerClassName="max-sm:min-h-[44px] rounded-lg active:scale-[0.98] motion-reduce:active:scale-100"
                                     />
                                   </div>
                                   <button
                                     type="button"
-                                    onClick={() => void handleToggleComments(item.id)}
+                                    onClick={() => {
+                                      if (!commentsEnabled) return;
+                                      void handleToggleComments(item.id);
+                                    }}
+                                    disabled={!commentsEnabled}
+                                    title={!commentsEnabled ? "Comments are turned off for this post" : undefined}
                                     aria-expanded={isCommentsOpen}
                                     className={cn(
-                                      "flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg text-sm transition-colors hover:bg-[var(--ud-bg-subtle)] motion-reduce:transition-none sm:min-h-0 sm:py-2.5",
+                                      "flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg text-sm transition-colors motion-reduce:transition-none sm:min-h-0 sm:py-2.5",
                                       isCommentsOpen
                                         ? "font-semibold text-[var(--ud-brand-primary)]"
                                         : "text-[var(--ud-text-muted)]",
-                                      "active:scale-[0.98] motion-reduce:active:scale-100",
+                                      commentsEnabled
+                                        ? "hover:bg-[var(--ud-bg-subtle)] active:scale-[0.98] motion-reduce:active:scale-100"
+                                        : "cursor-not-allowed opacity-50",
                                     )}
                                   >
                                     <MessageSquare className={POST_ICON} />
@@ -1571,8 +1703,8 @@ function DashboardPageContent() {
                             );
                           })()}
 
-                          {/* Inline comments — same component as hub feed */}
-                          {isCommentsOpen ? (
+                          {/* Inline comments — same component and collapse behavior as hub feed */}
+                          <CollapsibleEngagementPanel open={isCommentsOpen}>
                             <DeetCommentsSection
                               layout="inline"
                               deetId={item.id}
@@ -1584,6 +1716,7 @@ function DashboardPageContent() {
                               onSubmitComment={handleSubmitComment}
                               onEditComment={handleEditComment}
                               onDeleteComment={handleDeleteComment}
+                              allowNewComments={commentsEnabled}
                               onOpenViewer={(images, index) => {
                                 if (!images.length) return;
                                 setFeedGallery({
@@ -1598,7 +1731,7 @@ function DashboardPageContent() {
                               userAvatarSrc={currentUserAvatarUrl || undefined}
                               userName={currentUserDisplayName || "You"}
                             />
-                          ) : null}
+                          </CollapsibleEngagementPanel>
                         </article>
                       );
                     })}
@@ -1719,7 +1852,7 @@ function DashboardPageContent() {
           >
             <div className="flex min-h-0 min-w-0 flex-1 flex-col">
               {(() => {
-                const fi = myDeetsItems.find((i) => i.id === feedGallery.deetId) ?? null;
+                const fi = viewerFeedItem;
                 if (!fi) {
                   return (
                     <>
@@ -1829,18 +1962,25 @@ function DashboardPageContent() {
                     isLiking={likingDeets.has(feedGallery.deetId)}
                     onToggleLike={toggleLike}
                     syncedReaction={myDeetReactions[feedGallery.deetId] ?? null}
+                    interactionsEnabled={viewerReactionsEnabled}
                     triggerClassName="max-sm:min-h-[44px] w-full rounded-lg active:scale-[0.98] motion-reduce:active:scale-100"
                   />
                 </div>
                 <button
                   type="button"
+                  disabled={!viewerCommentsEnabled}
+                  title={!viewerCommentsEnabled ? "Comments are turned off for this post" : undefined}
                   aria-expanded={imageViewerComposerFooterVisible}
-                  onClick={() => setImageViewerComposerFooterVisible((open) => !open)}
+                  onClick={() => {
+                    if (!viewerCommentsEnabled) return;
+                    setImageViewerComposerFooterVisible((open) => !open);
+                  }}
                   className={cn(
                     "flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg text-sm transition-colors motion-reduce:transition-none sm:min-h-0 sm:py-2.5 active:scale-[0.98] motion-reduce:active:scale-100",
                     imageViewerComposerFooterVisible
                       ? "font-semibold text-[var(--ud-brand-primary)]"
                       : "text-[var(--ud-text-muted)] hover:bg-[var(--ud-bg-subtle)]",
+                    !viewerCommentsEnabled && "cursor-not-allowed opacity-50 hover:bg-transparent",
                   )}
                 >
                   <MessageSquare className={POST_ICON} />
@@ -1895,6 +2035,7 @@ function DashboardPageContent() {
                   onRequestComposerFooter={() => setImageViewerComposerFooterVisible(true)}
                   onDismissComposerFooter={() => setImageViewerComposerFooterVisible(false)}
                   autoFocusComposer={imageViewerComposerFooterVisible}
+                  allowNewComments={viewerCommentsEnabled}
                   onOpenViewer={(images, index) => {
                     setFeedGallery((g) =>
                       g

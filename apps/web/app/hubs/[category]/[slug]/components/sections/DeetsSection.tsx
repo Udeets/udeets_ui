@@ -75,6 +75,10 @@ function ReactionsModal({
     existing.push(r);
     grouped.set(key, existing);
   }
+  const groupedSummary = [...grouped.entries()]
+    .map(([emoji, list]) => ({ emoji, count: list.length }))
+    .filter((entry) => entry.count > 0)
+    .sort((a, b) => b.count - a.count);
 
   const filteredReactors = activeTab === "all" ? reactors : (grouped.get(activeTab) ?? []);
 
@@ -86,9 +90,11 @@ function ReactionsModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--ud-border-subtle)] px-5 py-3.5">
-          <h3 className="text-base font-semibold text-[var(--ud-text-primary)]">
-            {reactors.length} reaction{reactors.length !== 1 ? "s" : ""}
-          </h3>
+          <div>
+            <h3 className="text-base font-semibold text-[var(--ud-text-primary)]">
+              {reactors.length} reaction{reactors.length !== 1 ? "s" : ""}
+            </h3>
+          </div>
           <button type="button" onClick={onClose} className="text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]">
             <X className="h-4.5 w-4.5" />
           </button>
@@ -173,7 +179,13 @@ function ReactionsModal({
                       )}
                     </div>
                   </div>
-                  <span className="text-lg">{EMOJI_LABEL_MAP[reactor.reactionType] ?? reactor.reactionType}</span>
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full bg-[var(--ud-bg-subtle)] px-2 py-0.5 text-sm font-semibold text-[var(--ud-text-primary)]"
+                    title={`${reactor.name} reacted with ${EMOJI_LABEL_MAP[reactor.reactionType] ?? reactor.reactionType}`}
+                    aria-label={`${reactor.name} reaction`}
+                  >
+                    {EMOJI_LABEL_MAP[reactor.reactionType] ?? reactor.reactionType}
+                  </span>
                 </div>
               ))}
             </div>
@@ -216,6 +228,7 @@ export function DeetsSection({
   highlightedItemId,
   isDemoPreview,
   isCreatorAdmin,
+  canCreateDeets,
   dpImageSrc,
   coverImageSrc,
   recentPhotos,
@@ -272,6 +285,7 @@ export function DeetsSection({
   highlightedItemId: string | null;
   isDemoPreview: boolean;
   isCreatorAdmin: boolean;
+  canCreateDeets: boolean;
   dpImageSrc: string;
   coverImageSrc: string;
   recentPhotos: string[];
@@ -373,7 +387,7 @@ export function DeetsSection({
     <div className="hidden lg:block">
       <DeetComposerCard
         isDemoPreview={isDemoPreview}
-        isCreatorAdmin={isCreatorAdmin}
+        canCreateDeets={canCreateDeets}
         onOpenComposer={onOpenComposer}
       />
     </div>
@@ -684,14 +698,14 @@ export function DeetsSection({
                     {normalizedPostSearch
                       ? "Try another keyword or filter."
                       : feedFilter === "Events"
-                        ? isCreatorAdmin ? "Create your first event to get things started." : "Check back soon for upcoming events."
+                        ? canCreateDeets ? "Create your first event to get things started." : "Check back soon for upcoming events."
                         : feedFilter === "Photos"
-                          ? isCreatorAdmin ? "Share your first photo with the community." : "Check back soon for shared photos."
+                          ? canCreateDeets ? "Share your first photo with the community." : "Check back soon for shared photos."
                           : feedFilter === "Polls"
-                            ? isCreatorAdmin ? "Create a poll to gather community feedback." : "Check back soon for new polls."
+                            ? canCreateDeets ? "Create a poll to gather community feedback." : "Check back soon for new polls."
                             : feedFilter === "Announcements"
-                              ? isCreatorAdmin ? "Post an announcement to keep everyone in the loop." : "Check back soon for announcements."
-                              : isCreatorAdmin
+                              ? canCreateDeets ? "Post an announcement to keep everyone in the loop." : "Check back soon for announcements."
+                              : canCreateDeets
                                 ? "Kick things off with a welcome note, event reminder, or a first shared photo."
                                 : "Check back soon for updates and conversations."}
                   </p>
@@ -795,7 +809,7 @@ export function DeetsSection({
     </SectionShell>
 
     {/* ── Mobile FAB — opens composer (inline) ── */}
-    {isCreatorAdmin && (
+    {canCreateDeets && (
       <button
         type="button"
         onClick={() => onOpenComposer()}
