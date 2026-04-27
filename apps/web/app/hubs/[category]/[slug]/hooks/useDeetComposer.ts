@@ -54,7 +54,7 @@ type UseDeetComposerArgs = {
   hubId: string;
   hubSlug: string;
   demoComposerText: string;
-  isCreatorAdmin: boolean;
+  canCreateDeets: boolean;
   authorName: string;
   authorAvatarSrc?: string;
   userId: string | null;
@@ -93,7 +93,7 @@ export function useDeetComposer({
   hubId,
   hubSlug,
   demoComposerText,
-  isCreatorAdmin,
+  canCreateDeets,
   authorName,
   authorAvatarSrc,
   userId,
@@ -218,7 +218,8 @@ export function useDeetComposer({
   };
 
   const openDeetComposer = (arg?: OpenComposerArg) => {
-    if (!isCreatorAdmin) return;
+    const isEditRequest = Boolean(arg && typeof arg === "object" && "editFeedItem" in arg && arg.editFeedItem);
+    if (!canCreateDeets && !isEditRequest) return;
 
     setSubmitError(null);
 

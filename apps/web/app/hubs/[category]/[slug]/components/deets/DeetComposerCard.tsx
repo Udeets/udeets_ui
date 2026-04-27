@@ -20,11 +20,11 @@ type ComposerIcon = typeof ComposerAnnouncementIcon;
 
 export function DeetComposerCard({
   isDemoPreview,
-  isCreatorAdmin,
+  canCreateDeets,
   onOpenComposer,
 }: {
   isDemoPreview: boolean;
-  isCreatorAdmin: boolean;
+  canCreateDeets: boolean;
   onOpenComposer: (arg?: OpenComposerArg) => void;
 }) {
   const actionButtons: Array<{
@@ -50,11 +50,11 @@ export function DeetComposerCard({
         <button
           type="button"
           data-demo-target={isDemoPreview ? "hub-composer-input" : undefined}
-          disabled={!isCreatorAdmin}
+          disabled={!canCreateDeets}
           onClick={() => onOpenComposer()}
           className={cn(
             "h-10 w-full rounded-full border border-[var(--ud-border)] bg-[var(--ud-bg-subtle)] px-4 text-left text-sm text-[var(--ud-text-muted)] transition",
-            isCreatorAdmin
+            canCreateDeets
               ? "hover:border-[var(--ud-border-focus)] hover:bg-[var(--ud-bg-input)]"
               : "cursor-not-allowed opacity-60"
           )}
@@ -68,16 +68,16 @@ export function DeetComposerCard({
           <button
             key={key}
             type="button"
-            disabled={!isCreatorAdmin}
+            disabled={!canCreateDeets}
             onClick={() => {
-              if (!isCreatorAdmin) return;
+              if (!canCreateDeets) return;
               onOpenComposer(key);
             }}
             aria-label={label}
             title={label}
             className={cn(
               ACTION_BTN,
-              !isCreatorAdmin && "cursor-not-allowed opacity-40"
+              !canCreateDeets && "cursor-not-allowed opacity-40"
             )}
           >
             <Icon className="h-[22px] w-[22px]" />

@@ -357,6 +357,9 @@ export default function HubClient({
   const hubName = savedHubName;
   const hubBaseHref = `/hubs/${savedHubCategory || hub.category}/${hub.slug}`;
   const isPublicHub = settingsVisibility === "Public";
+  const canCreateDeets =
+    Boolean(user?.id) &&
+    (isCreatorAdmin || (whoCanPost !== "Admins only" && (isPublicHub || isMember)));
 
   const {
     isConnectEditorOpen,
@@ -842,7 +845,7 @@ export default function HubClient({
     hubId: hub.id,
     hubSlug: hub.slug,
     demoComposerText,
-    isCreatorAdmin,
+    canCreateDeets,
     authorName: deetAuthorName,
     authorAvatarSrc: creatorAvatarSrc,
     userId: user?.id ?? null,
@@ -1174,6 +1177,7 @@ export default function HubClient({
         highlightedItemId={highlightedItemId}
         isDemoPreview={isDemoPreview}
         isCreatorAdmin={isCreatorAdmin}
+        canCreateDeets={canCreateDeets}
         dpImageSrc={dpImageSrc}
         coverImageSrc={coverImageSrc}
         recentPhotos={recentPhotos}
