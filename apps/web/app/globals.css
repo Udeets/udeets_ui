@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* ThemeProvider toggles `.dark` on `<html>`. Tailwind v4’s default `dark:` variant
+   follows `prefers-color-scheme`, so those utilities ignored the in-app toggle and
+   left light-only text/backgrounds while CSS variables were already dark — unreadable UI. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ─── uDeets Design Tokens (Light) ─── */
 :root {
   --background: #ffffff;
@@ -74,6 +79,35 @@
   --ud-danger: #f87171;
   --ud-warning: #fbbf24;
   --ud-success: #4ade80;
+}
+
+/* Rich deet bodies keep composer inline `color` / <font color>. Inline styles beat normal
+   cascade rules, so we use !important only under `.dark` to keep text readable on dark surfaces. */
+.dark .deet-rich-body {
+  color: var(--ud-text-primary);
+}
+.dark .deet-rich-body a {
+  color: var(--ud-brand-primary) !important;
+}
+.dark .deet-rich-body blockquote,
+.dark .deet-rich-body blockquote p,
+.dark .deet-rich-body blockquote span,
+.dark .deet-rich-body blockquote div {
+  color: var(--ud-text-secondary) !important;
+}
+.dark .deet-rich-body p,
+.dark .deet-rich-body span,
+.dark .deet-rich-body div,
+.dark .deet-rich-body li,
+.dark .deet-rich-body font,
+.dark .deet-rich-body b,
+.dark .deet-rich-body strong,
+.dark .deet-rich-body i,
+.dark .deet-rich-body em,
+.dark .deet-rich-body u,
+.dark .deet-rich-body s,
+.dark .deet-rich-body strike {
+  color: var(--ud-text-primary) !important;
 }
 
 @theme inline {

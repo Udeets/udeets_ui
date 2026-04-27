@@ -94,7 +94,7 @@ export function SafeDeetBody({
   if (hasRichMarkup) {
     return (
       <div
-        className={[RICH_BODY_DECORATION, className].filter(Boolean).join(" ")}
+        className={["deet-rich-body", RICH_BODY_DECORATION, className].filter(Boolean).join(" ")}
         style={{ wordBreak: "break-word" }}
         // eslint-disable-next-line react/no-danger -- sanitized with allowlist (same pipeline as persistence)
         dangerouslySetInnerHTML={{ __html: sanitized }}
