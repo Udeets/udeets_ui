@@ -553,8 +553,15 @@ export default function HubClient({
         .eq("hub_id", hub.id)
         .eq("status", "active");
 
-      if (membersError) { console.error("[members]", membersError); return; }
-      if (!members || members.length === 0) return;
+      if (membersError) {
+        console.error("[members]", membersError);
+        if (!ignore) setMemberItems([]);
+        return;
+      }
+      if (!members || members.length === 0) {
+        if (!ignore) setMemberItems([]);
+        return;
+      }
 
       // Step 2: get profiles for those user_ids
       const userIds = members.map((m) => m.user_id);
@@ -577,7 +584,7 @@ export default function HubClient({
             userId: m.user_id,
             role: roleLabel,
             fullName: profile?.full_name ?? m.user_id.slice(0, 8),
-            avatarUrl: profile?.avatar_url ?? null,
+            avatarUrl: profile?.avatar_url ? normalizePublicSrc(profile.avatar_url) : null,
             email: profile?.email ?? null,
             joinedAt: m.joined_at ?? null,
           };
@@ -610,13 +617,11 @@ export default function HubClient({
     async function init() {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
+      // Load active members for About / counts whenever possible (RLS may still gate results).
+      void loadMembers();
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.access_token && !ignore) {
-        loadMembers();
-        // Only load pending requests if the current user is the hub creator
-        if (isCreatorAdmin) {
-          loadPendingRequests();
-        }
+      if (session?.access_token && !ignore && isCreatorAdmin) {
+        void loadPendingRequests();
       }
     }
 
@@ -1123,6 +1128,7 @@ export default function HubClient({
           hubTagline={hub.tagline ?? ""}
           settingsVisibility={settingsVisibility}
           memberCount={memberCount}
+          hubMemberRoster={memberItems}
           settingsLocation={settingsLocation}
           hubLocationLabel={hub.locationLabel}
           connectLinks={connectLinks}

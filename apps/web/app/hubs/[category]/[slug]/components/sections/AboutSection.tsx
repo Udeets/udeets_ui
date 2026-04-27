@@ -67,6 +67,7 @@ export function AboutSection({
   hubTagline,
   settingsVisibility,
   memberCount,
+  hubMemberRoster,
   settingsLocation,
   hubLocationLabel,
   connectLinks,
@@ -107,6 +108,14 @@ export function AboutSection({
   hubTagline: string;
   settingsVisibility: "Public" | "Private";
   memberCount: number;
+  hubMemberRoster?: Array<{
+    userId: string;
+    role: string;
+    fullName: string;
+    avatarUrl: string | null;
+    email: string | null;
+    joinedAt: string | null;
+  }>;
   settingsLocation: string;
   hubLocationLabel: string;
   connectLinks: { website: string; facebook: string; instagram: string; youtube: string; phone: string };
@@ -183,6 +192,9 @@ export function AboutSection({
 
   const locationValue = settingsLocation || hubLocationLabel;
   const photoStack = recentPhotos.slice(0, 6);
+
+  const roster = hubMemberRoster ?? [];
+  const membersSummaryCount = roster.length > 0 ? roster.length : memberCount;
 
   const showConnectCard = connectItems.length > 0 || isCreatorAdmin;
   const showPhotosCard = recentPhotos.length > 0 || isCreatorAdmin;
@@ -404,7 +416,11 @@ export function AboutSection({
               {[
                 { icon: CategoryIcon, label: "Category",   value: categoryLabel },
                 { icon: Globe,        label: "Visibility", value: settingsVisibility },
-                { icon: UsersRound,   label: "Members",    value: `${memberCount} ${memberCount === 1 ? "member" : "members"}` },
+                {
+                  icon: UsersRound,
+                  label: "Members",
+                  value: `${membersSummaryCount} ${membersSummaryCount === 1 ? "member" : "members"}`,
+                },
                 ...(locationValue ? [{ icon: MapPin, label: "Location", value: locationValue }] : []),
               ].map(({ icon: FactIcon, label, value }) => (
                 <div key={label} className="flex items-center gap-2 rounded-xl px-2 py-1.5">
@@ -434,25 +450,56 @@ export function AboutSection({
               ) : undefined
             }
           >
-            <div className="flex items-center gap-3 rounded-xl bg-[var(--ud-bg-subtle)] px-3 py-3">
-              <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-[var(--ud-border)] bg-[var(--ud-brand-primary)]">
-                <ImageWithFallback
-                  src={creatorAvatarSrc}
-                  sources={[creatorAvatarSrc, ...adminImages, dpImageSrc, coverImageSrc, ...recentPhotos]}
-                  alt={creatorDisplayName}
-                  className="h-full w-full object-cover"
-                  fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-primary)] text-xs font-semibold text-[var(--ud-text-primary)]"
-                  fallback={initials(creatorDisplayName)}
-                />
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-[var(--ud-text-primary)]">{creatorDisplayName}</p>
-                <p className="text-xs text-[var(--ud-text-muted)]">{creatorDetail}</p>
-              </div>
-            </div>
-            {status === "loading" ? (
-              <p className="mt-2 text-xs text-[var(--ud-text-muted)]">Loading details...</p>
-            ) : null}
+            {roster.length > 0 ? (
+              <ul className="space-y-2">
+                {roster.map((m) => {
+                  const avatar = m.avatarUrl?.trim() || "";
+                  return (
+                    <li
+                      key={m.userId}
+                      className="flex items-center gap-3 rounded-xl bg-[var(--ud-bg-subtle)] px-3 py-2.5"
+                    >
+                      <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-[var(--ud-border)] bg-[var(--ud-brand-light)]">
+                        <ImageWithFallback
+                          src={avatar}
+                          sources={avatar ? [avatar] : []}
+                          alt=""
+                          className="h-full w-full object-cover"
+                          fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-light)] text-xs font-bold text-[var(--ud-brand-primary)]"
+                          fallback={initials(m.fullName)}
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-[var(--ud-text-primary)]">{m.fullName}</p>
+                        <p className="text-xs text-[var(--ud-text-muted)]">{m.role}</p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 rounded-xl bg-[var(--ud-bg-subtle)] px-3 py-3">
+                  <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-[var(--ud-border)] bg-[var(--ud-brand-primary)]">
+                    <ImageWithFallback
+                      src={creatorAvatarSrc}
+                      sources={creatorAvatarSrc ? [creatorAvatarSrc, ...adminImages.filter(Boolean)] : []}
+                      alt={creatorDisplayName}
+                      className="h-full w-full object-cover"
+                      fallbackClassName="grid h-full w-full place-items-center bg-[var(--ud-brand-primary)] text-xs font-semibold text-[var(--ud-text-primary)]"
+                      fallback={initials(creatorDisplayName)}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[var(--ud-text-primary)]">{creatorDisplayName}</p>
+                    <p className="text-xs text-[var(--ud-text-muted)]">{creatorDetail}</p>
+                  </div>
+                </div>
+                {status === "loading" ? (
+                  <p className="mt-2 text-xs text-[var(--ud-text-muted)]">Loading details...</p>
+                ) : null}
+              </>
+            )}
           </CollapsibleCard>
         </div>
 
