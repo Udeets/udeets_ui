@@ -130,6 +130,9 @@ export default function HubClient({
   const [coverImageOffsetY, setCoverImageOffsetY] = useState<number>(
     typeof hub.coverImageOffsetY === "number" ? hub.coverImageOffsetY : 50
   );
+  const [dpImageOffsetY, setDpImageOffsetY] = useState<number>(
+    typeof hub.dpImageOffsetY === "number" ? hub.dpImageOffsetY : 50
+  );
   const [isAdminsEditorOpen, setIsAdminsEditorOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isDeleteHubModalOpen, setIsDeleteHubModalOpen] = useState(false);
@@ -192,6 +195,25 @@ export default function HubClient({
     })();
     return () => { ignore = true; };
   }, [user?.id, hub.createdBy]);
+
+  // Mark this hub as seen for the current user so dashboard unread can clear (best-effort RPC).
+  useEffect(() => {
+    if (!user?.id || !hub.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        if (cancelled) return;
+        await supabase.rpc("mark_hub_seen", { p_hub_id: hub.id });
+      } catch (err) {
+        console.warn("[hub] mark_hub_seen failed:", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, hub.id]);
 
   // Prefer profile DB values over auth metadata (user may have customised them)
   const creatorDisplayName =
@@ -590,7 +612,18 @@ export default function HubClient({
     }
 
     init();
-    return () => { ignore = true; };
+
+    const onVisibilityChange = () => {
+      if (!ignore && document.visibilityState === "visible" && isCreatorAdmin) {
+        void loadPendingRequests();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      ignore = true;
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, [hub.id, isCreatorAdmin]);
 
   // Real-time: listen for new join requests so the creator gets a toast notification
@@ -1272,6 +1305,16 @@ export default function HubClient({
             } catch (err) {
               console.error("[hub] save cover offset failed:", err);
               // Best-effort: surface nothing. Next page load will re-read the DB value.
+            }
+          }}
+          dpImageOffsetY={dpImageOffsetY}
+          onSaveDpOffsetY={async (percent) => {
+            setDpImageOffsetY(percent);
+            try {
+              const { updateHub } = await import("@/lib/services/hubs/update-hub");
+              await updateHub(hub.id, { dpImageOffsetY: percent });
+            } catch (err) {
+              console.error("[hub] save dp offset failed:", err);
             }
           }}
         />

@@ -25,7 +25,7 @@ export type ProfileLiker = {
  *
  * Self-likes are allowed (per the April 19 product call — a user's own like
  * counts toward their profile total). The original DB-level check constraint
- * `profile_id <> liker_id` is dropped by migration 20260419100003_allow_self_profile_like.
+ * `profile_id <> liker_id` is dropped by migration `20260419_allow_self_profile_like`.
  *
  * Returns null when no user is signed in or the insert/delete failed. If the
  * write fails with an RLS error we refresh the session once and retry, same

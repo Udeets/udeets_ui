@@ -113,7 +113,23 @@ export default function HubJoinPage({
           .from("hub_members")
           .insert({ hub_id: hub.id, user_id: user.id, role: "member", status: desiredStatus });
         if (insertError) {
+          console.error("[join] hub_members insert failed:", insertError);
           setErrorMessage(insertError.message);
+          setJoinStatus("error");
+          return;
+        }
+
+        // Verify the row landed. RLS or other silent failures have caused
+        // requests to "send" without ever being visible to the admin.
+        const { data: verifyRow, error: verifyError } = await supabase
+          .from("hub_members")
+          .select("status")
+          .eq("hub_id", hub.id)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (verifyError || !verifyRow) {
+          console.error("[join] hub_members verify failed:", { verifyError, verifyRow });
+          setErrorMessage("Request didn't save. Please try again.");
           setJoinStatus("error");
           return;
         }

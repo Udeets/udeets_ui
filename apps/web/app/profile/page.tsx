@@ -49,6 +49,27 @@ type UserDeet = {
   createdAt: string;
 };
 
+type PendingRequest = {
+  membershipId: string;
+  hubId: string;
+  hubName: string;
+  hubCategory: string;
+  hubSlug: string;
+  dpImage: string;
+  requestedAt: string;
+};
+
+type PendingInvitation = {
+  invitationId: string;
+  hubId: string;
+  hubName: string;
+  hubCategory: string;
+  hubSlug: string;
+  dpImage: string;
+  invitedAt: string;
+  invitedByName: string;
+};
+
 function formatTimeAgo(dateStr: string) {
   const diff = Math.max(0, Math.round((Date.now() - new Date(dateStr).getTime()) / 60000));
   if (diff < 1) return "Just now";
@@ -78,6 +99,14 @@ export default function ProfilePage() {
   const [isLoadingHubs, setIsLoadingHubs] = useState(false);
   const [userDeets, setUserDeets] = useState<UserDeet[]>([]);
   const [isLoadingDeets, setIsLoadingDeets] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(false);
+  const [cancellingRequestId, setCancellingRequestId] = useState<string | null>(null);
+  const [requestsLoaded, setRequestsLoaded] = useState(false);
+  const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([]);
+  const [isLoadingInvitations, setIsLoadingInvitations] = useState(false);
+  const [respondingInvitationId, setRespondingInvitationId] = useState<string | null>(null);
+  const [invitationsLoaded, setInvitationsLoaded] = useState(false);
 
   // Load profile from DB
   useEffect(() => {
@@ -207,6 +236,239 @@ export default function ProfilePage() {
     loadDeets();
     return () => { cancelled = true; };
   }, [activeTab, status, user?.id, userDeets.length]);
+
+  // Load pending hub-join requests
+  useEffect(() => {
+    if (activeTab !== "Requests" || status !== "authenticated" || !user?.id) return;
+    if (requestsLoaded) return;
+    let cancelled = false;
+
+    async function loadRequests() {
+      setIsLoadingRequests(true);
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+
+      const { data: memberships } = await supabase
+        .from("hub_members")
+        .select("id, hub_id, created_at")
+        .eq("user_id", user!.id)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+
+      if (cancelled) return;
+
+      if (!memberships || memberships.length === 0) {
+        setPendingRequests([]);
+        setIsLoadingRequests(false);
+        setRequestsLoaded(true);
+        return;
+      }
+
+      const hubIds = memberships.map((m) => m.hub_id);
+      const { data: hubs } = await supabase
+        .from("hubs")
+        .select("id, name, category, slug, dp_image_url")
+        .in("id", hubIds);
+
+      if (cancelled) return;
+
+      const hubMap = new Map((hubs ?? []).map((h) => [h.id, h]));
+      const rows: PendingRequest[] = memberships
+        .map((m) => {
+          const hub = hubMap.get(m.hub_id);
+          if (!hub) return null;
+          return {
+            membershipId: m.id,
+            hubId: hub.id,
+            hubName: hub.name,
+            hubCategory: hub.category,
+            hubSlug: hub.slug,
+            dpImage: hub.dp_image_url || "",
+            requestedAt: m.created_at,
+          } as PendingRequest;
+        })
+        .filter((r): r is PendingRequest => r !== null);
+
+      setPendingRequests(rows);
+      setIsLoadingRequests(false);
+      setRequestsLoaded(true);
+    }
+
+    loadRequests();
+    return () => { cancelled = true; };
+  }, [activeTab, status, user?.id, requestsLoaded]);
+
+  // Load pending hub invitations
+  useEffect(() => {
+    if (activeTab !== "Invitations" || status !== "authenticated" || !user?.id) return;
+    if (invitationsLoaded) return;
+    let cancelled = false;
+
+    async function loadInvitations() {
+      setIsLoadingInvitations(true);
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+
+      const { data: invitations, error } = await supabase
+        .from("hub_invitations")
+        .select("id, hub_id, invited_by, created_at")
+        .eq("invited_user_id", user!.id)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+
+      if (cancelled) return;
+
+      // If the table doesn't exist yet (migration not applied), fail gracefully.
+      if (error) {
+        console.warn("[profile] invitations query failed:", error.message);
+        setPendingInvitations([]);
+        setIsLoadingInvitations(false);
+        setInvitationsLoaded(true);
+        return;
+      }
+
+      if (!invitations || invitations.length === 0) {
+        setPendingInvitations([]);
+        setIsLoadingInvitations(false);
+        setInvitationsLoaded(true);
+        return;
+      }
+
+      const hubIds = [...new Set(invitations.map((i) => i.hub_id))];
+      const inviterIds = [...new Set(invitations.map((i) => i.invited_by).filter(Boolean) as string[])];
+
+      const [{ data: hubs }, { data: inviters }] = await Promise.all([
+        supabase.from("hubs").select("id, name, category, slug, dp_image_url").in("id", hubIds),
+        inviterIds.length > 0
+          ? supabase.from("profiles").select("id, full_name, email").in("id", inviterIds)
+          : Promise.resolve({ data: [] as Array<{ id: string; full_name: string | null; email: string | null }> }),
+      ]);
+
+      if (cancelled) return;
+
+      const hubMap = new Map((hubs ?? []).map((h) => [h.id, h]));
+      const inviterMap = new Map(
+        (inviters ?? []).map((p) => {
+          const name = p.full_name || (p.email ? p.email.split("@")[0] : "Someone");
+          return [p.id, name];
+        })
+      );
+
+      const rows: PendingInvitation[] = invitations
+        .map((inv) => {
+          const hub = hubMap.get(inv.hub_id);
+          if (!hub) return null;
+          return {
+            invitationId: inv.id,
+            hubId: hub.id,
+            hubName: hub.name,
+            hubCategory: hub.category,
+            hubSlug: hub.slug,
+            dpImage: hub.dp_image_url || "",
+            invitedAt: inv.created_at,
+            invitedByName: inv.invited_by ? (inviterMap.get(inv.invited_by) || "Someone") : "Someone",
+          } as PendingInvitation;
+        })
+        .filter((r): r is PendingInvitation => r !== null);
+
+      setPendingInvitations(rows);
+      setIsLoadingInvitations(false);
+      setInvitationsLoaded(true);
+    }
+
+    loadInvitations();
+    return () => { cancelled = true; };
+  }, [activeTab, status, user?.id, invitationsLoaded]);
+
+  const cancelRequest = async (membershipId: string) => {
+    if (!user?.id || cancellingRequestId) return;
+    setCancellingRequestId(membershipId);
+    const previous = pendingRequests;
+    setPendingRequests((prev) => prev.filter((r) => r.membershipId !== membershipId));
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("hub_members")
+        .delete()
+        .eq("id", membershipId)
+        .eq("user_id", user.id);
+      if (error) {
+        console.error("[profile] cancel request error:", error);
+        setPendingRequests(previous); // restore on failure
+      }
+    } catch (err) {
+      console.error("[profile] cancel request failed:", err);
+      setPendingRequests(previous);
+    } finally {
+      setCancellingRequestId(null);
+    }
+  };
+
+  const acceptInvitation = async (invitation: PendingInvitation) => {
+    if (!user?.id || respondingInvitationId) return;
+    setRespondingInvitationId(invitation.invitationId);
+    const previous = pendingInvitations;
+    setPendingInvitations((prev) => prev.filter((i) => i.invitationId !== invitation.invitationId));
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+
+      // Upsert hub_members first so failures don't leave invitation marked accepted
+      const { error: memberError } = await supabase
+        .from("hub_members")
+        .upsert({ hub_id: invitation.hubId, user_id: user.id, status: "active", role: "member" }, { onConflict: "hub_id,user_id" });
+      if (memberError) {
+        console.error("[profile] accept invitation membership error:", memberError);
+        setPendingInvitations(previous);
+        return;
+      }
+
+      const { error: invError } = await supabase
+        .from("hub_invitations")
+        .update({ status: "accepted", responded_at: new Date().toISOString() })
+        .eq("id", invitation.invitationId)
+        .eq("invited_user_id", user.id);
+      if (invError) {
+        console.warn("[profile] accept invitation update warning:", invError);
+        // Membership already in place; not critical to restore UI.
+      }
+
+      // Bump joined hub stat + invalidate My Hubs cache so next visit refetches.
+      setHubStats((prev) => ({ ...prev, joined: prev.joined + 1 }));
+      setUserHubs([]);
+    } catch (err) {
+      console.error("[profile] accept invitation failed:", err);
+      setPendingInvitations(previous);
+    } finally {
+      setRespondingInvitationId(null);
+    }
+  };
+
+  const declineInvitation = async (invitation: PendingInvitation) => {
+    if (!user?.id || respondingInvitationId) return;
+    setRespondingInvitationId(invitation.invitationId);
+    const previous = pendingInvitations;
+    setPendingInvitations((prev) => prev.filter((i) => i.invitationId !== invitation.invitationId));
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("hub_invitations")
+        .update({ status: "declined", responded_at: new Date().toISOString() })
+        .eq("id", invitation.invitationId)
+        .eq("invited_user_id", user.id);
+      if (error) {
+        console.error("[profile] decline invitation error:", error);
+        setPendingInvitations(previous);
+      }
+    } catch (err) {
+      console.error("[profile] decline invitation failed:", err);
+      setPendingInvitations(previous);
+    } finally {
+      setRespondingInvitationId(null);
+    }
+  };
 
   const displayName = profile?.full_name || (user?.user_metadata?.full_name as string) || user?.email || "uDeets User";
   const displayEmail = user?.email || profile?.email || "";
@@ -558,10 +820,55 @@ export default function ProfilePage() {
           {activeTab === "Requests" ? (
             <section className={cardClass("p-6 sm:p-8")}>
               <h2 className={sectionTitleClass()}>Requests</h2>
-              <div className="mt-5 rounded-xl border border-[var(--ud-border-subtle)] px-6 py-10 text-center">
-                <p className="text-sm text-slate-500">Coming soon</p>
-                <p className="mt-1 text-xs text-slate-400">Membership requests will appear here.</p>
-              </div>
+              <p className="mt-1 mb-5 text-sm text-slate-500">Hubs you've asked to join, pending approval.</p>
+              {isLoadingRequests ? (
+                <div className="flex items-center gap-2 py-8 text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Loading requests...</div>
+              ) : pendingRequests.length === 0 ? (
+                <div className="rounded-xl border border-[var(--ud-border-subtle)] px-6 py-10 text-center">
+                  <p className="text-sm text-slate-500">No pending requests.</p>
+                  <Link href="/discover" className="mt-3 inline-block text-sm font-medium text-[var(--ud-brand-primary)] hover:underline">
+                    Discover hubs →
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {pendingRequests.map((req) => (
+                    <div
+                      key={req.membershipId}
+                      className="flex items-center gap-3 rounded-xl border border-[var(--ud-border-subtle)] p-4"
+                    >
+                      <Link
+                        href={`/hubs/${req.hubCategory}/${req.hubSlug}`}
+                        className="flex min-w-0 flex-1 items-center gap-3"
+                      >
+                        {req.dpImage ? (
+                          <img src={req.dpImage} alt="" className="h-10 w-10 rounded-full object-cover" />
+                        ) : (
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)]">
+                            <span className="text-sm font-semibold text-white/80">{req.hubName.charAt(0).toUpperCase()}</span>
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-[var(--ud-text-primary)]">{req.hubName}</p>
+                          <p className="text-xs text-slate-500">Requested {formatTimeAgo(req.requestedAt)}</p>
+                        </div>
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => cancelRequest(req.membershipId)}
+                        disabled={cancellingRequestId === req.membershipId}
+                        className="shrink-0 rounded-full border border-slate-300 px-4 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
+                      >
+                        {cancellingRequestId === req.membershipId ? (
+                          <span className="flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin" /> Cancelling</span>
+                        ) : (
+                          "Cancel"
+                        )}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
           ) : null}
 
@@ -569,10 +876,62 @@ export default function ProfilePage() {
           {activeTab === "Invitations" ? (
             <section className={cardClass("p-6 sm:p-8")}>
               <h2 className={sectionTitleClass()}>Invitations</h2>
-              <div className="mt-5 rounded-xl border border-[var(--ud-border-subtle)] px-6 py-10 text-center">
-                <p className="text-sm text-slate-500">Coming soon</p>
-                <p className="mt-1 text-xs text-slate-400">Hub invitations will appear here.</p>
-              </div>
+              <p className="mt-1 mb-5 text-sm text-slate-500">Hubs that have invited you to join.</p>
+              {isLoadingInvitations ? (
+                <div className="flex items-center gap-2 py-8 text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Loading invitations...</div>
+              ) : pendingInvitations.length === 0 ? (
+                <div className="rounded-xl border border-[var(--ud-border-subtle)] px-6 py-10 text-center">
+                  <p className="text-sm text-slate-500">No pending invitations.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {pendingInvitations.map((inv) => (
+                    <div
+                      key={inv.invitationId}
+                      className="flex flex-col gap-3 rounded-xl border border-[var(--ud-border-subtle)] p-4 sm:flex-row sm:items-center"
+                    >
+                      <Link
+                        href={`/hubs/${inv.hubCategory}/${inv.hubSlug}`}
+                        className="flex min-w-0 flex-1 items-center gap-3"
+                      >
+                        {inv.dpImage ? (
+                          <img src={inv.dpImage} alt="" className="h-10 w-10 rounded-full object-cover" />
+                        ) : (
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)]">
+                            <span className="text-sm font-semibold text-white/80">{inv.hubName.charAt(0).toUpperCase()}</span>
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-[var(--ud-text-primary)]">{inv.hubName}</p>
+                          <p className="text-xs text-slate-500">Invited by {inv.invitedByName} · {formatTimeAgo(inv.invitedAt)}</p>
+                        </div>
+                      </Link>
+                      <div className="flex shrink-0 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => acceptInvitation(inv)}
+                          disabled={respondingInvitationId === inv.invitationId}
+                          className="rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-4 py-1.5 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                        >
+                          {respondingInvitationId === inv.invitationId ? (
+                            <span className="flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin" /> Working</span>
+                          ) : (
+                            "Accept"
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => declineInvitation(inv)}
+                          disabled={respondingInvitationId === inv.invitationId}
+                          className="rounded-full border border-slate-300 px-4 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
           ) : null}
 

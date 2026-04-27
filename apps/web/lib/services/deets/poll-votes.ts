@@ -52,7 +52,12 @@ export async function getMyPollVotes(deetIds: string[]): Promise<PollVote[]> {
   }));
 }
 
-/** Cast a vote (single-select: removes existing votes first) */
+/**
+ * Cast a vote on a single-select poll. Deletes ALL of the user's existing
+ * votes for this deet, then inserts the new one. Runs the delete and insert
+ * sequentially so we never end up with two rows for the same user on the
+ * same poll (which is what caused the "both options stay selected" bug).
+ */
 export async function castPollVote(deetId: string, optionIndex: number): Promise<boolean> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -65,7 +70,9 @@ export async function castPollVote(deetId: string, optionIndex: number): Promise
     .eq("user_id", user.id);
 
   if (deleteError) {
-    console.error("[poll-votes] delete before cast error:", deleteError);
+    console.error("[poll-votes] clear-before-cast error:", deleteError);
+    // Don't insert a new row if the cleanup failed — duplicate rows caused
+    // "both options stay selected" in the UI.
     return false;
   }
 

@@ -14,6 +14,7 @@ import {
   Home,
   MapPin,
   Megaphone,
+  Menu,
   MessageSquare,
   PawPrint,
   Shield,
@@ -475,6 +476,27 @@ export default function Page() {
   const [topHubs, setTopHubs] = useState<TopHub[]>([]);
   const [showAppComingSoon, setShowAppComingSoon] = useState(false);
   const [showDownloadPopup, setShowDownloadPopup] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement | null>(null);
+
+  // Close mobile menu on outside click or Escape
+  useEffect(() => {
+    if (!showMobileMenu) return;
+    const handleClick = (e: MouseEvent) => {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
+        setShowMobileMenu(false);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowMobileMenu(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [showMobileMenu]);
 
   useEffect(() => {
     const el = hubsRowRef.current;
@@ -562,7 +584,7 @@ export default function Page() {
             </nav>
           </div>
 
-          {/* Right: Search + Download (mobile) + Sign in */}
+          {/* Right: Search + Download (mobile) + Sign in + Hamburger (mobile) */}
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Mobile download icon — small filled teal circle */}
             <button
@@ -591,8 +613,73 @@ export default function Page() {
             >
               Sign in
             </Link>
+            {/* Mobile hamburger — reveals nav links that are hidden on mobile */}
+            <button
+              type="button"
+              onClick={() => setShowMobileMenu((prev) => !prev)}
+              className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
+              aria-label="Menu"
+              aria-expanded={showMobileMenu}
+              title="Menu"
+            >
+              {showMobileMenu ? <X className="h-5 w-5 stroke-[1.5]" /> : <Menu className="h-5 w-5 stroke-[1.5]" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile menu dropdown — md:hidden, anchored below header */}
+        {showMobileMenu ? (
+          <div
+            ref={mobileMenuRef}
+            className="md:hidden absolute right-4 top-16 z-50 w-[calc(100vw-2rem)] max-w-[360px] overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-lg"
+          >
+            <nav className="flex flex-col p-2">
+              <Link
+                href="/about"
+                onClick={() => setShowMobileMenu(false)}
+                className="rounded-lg px-4 py-3 text-sm font-medium text-[var(--ud-text-primary)] transition hover:bg-[var(--ud-bg-subtle)]"
+              >
+                About
+              </Link>
+              <Link
+                href="/use-cases"
+                onClick={() => setShowMobileMenu(false)}
+                className="rounded-lg px-4 py-3 text-sm font-medium text-[var(--ud-text-primary)] transition hover:bg-[var(--ud-bg-subtle)]"
+              >
+                Use Cases
+              </Link>
+              <Link
+                href="/resources"
+                onClick={() => setShowMobileMenu(false)}
+                className="rounded-lg px-4 py-3 text-sm font-medium text-[var(--ud-text-primary)] transition hover:bg-[var(--ud-bg-subtle)]"
+              >
+                Resources
+              </Link>
+              <Link
+                href="/discover"
+                onClick={() => setShowMobileMenu(false)}
+                className="rounded-lg px-4 py-3 text-sm font-medium text-[var(--ud-text-primary)] transition hover:bg-[var(--ud-bg-subtle)]"
+              >
+                Discover Hubs
+              </Link>
+              <div className="my-1 border-t border-[var(--ud-border-subtle)]" />
+              <Link
+                href="/terms"
+                onClick={() => setShowMobileMenu(false)}
+                className="rounded-lg px-4 py-2 text-xs font-medium text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)]"
+              >
+                Terms
+              </Link>
+              <Link
+                href="/privacy"
+                onClick={() => setShowMobileMenu(false)}
+                className="rounded-lg px-4 py-2 text-xs font-medium text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)]"
+              >
+                Privacy
+              </Link>
+            </nav>
+          </div>
+        ) : null}
       </header>
 
       <main>

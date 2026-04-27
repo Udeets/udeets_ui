@@ -97,6 +97,8 @@ export type HubFeedItem = {
   deetAttachments?: HubFeedItemAttachment[];
   /** Hub behavior flags from `deet_options` when the composer saved them. */
   deetOptions?: HubFeedDeetOptions;
+  /** When false, thread UI stays closed; still used by simpler composer flows. */
+  allowComments?: boolean;
 };
 
 export type HubEventItem = {

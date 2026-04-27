@@ -335,7 +335,9 @@ export function useDeetInteractions(feedItems: HubContent["feed"]) {
       return { success: true };
     } catch (error) {
       console.error("Failed to submit comment:", error);
-      setCommentError("Couldn't post comment. Please try again.");
+      const msg = error instanceof Error ? error.message : "Couldn't post comment. Please try again.";
+      // Surface the specific message (e.g. "Your session expired...") so the user can act on it.
+      setCommentError(msg);
       return { success: false };
     } finally {
       submittingRef.current = false;

@@ -11,6 +11,7 @@ export interface UpdateDeetInput {
   previewImageUrl?: string | null;
   previewImageUrls?: string[];
   attachments?: DeetAttachment[];
+  allowComments?: boolean;
 }
 
 function isPersistableMediaRef(value?: string | null) {
@@ -67,12 +68,31 @@ export async function updateDeet(input: UpdateDeetInput): Promise<DeetRecord> {
     );
   }
 
-  const { data, error } = await supabase
+  if (typeof input.allowComments === "boolean") {
+    payload.allow_comments = input.allowComments;
+  }
+
+  let { data, error } = await supabase
     .from("deets")
     .update(payload)
     .eq("id", input.id)
     .select(DEET_COLUMNS)
     .single();
+
+  // Retry without allow_comments if the column isn't migrated yet.
+  if (error && error.message.includes("allow_comments")) {
+    const { allow_comments: _unused, ...payloadWithout } = payload as Record<string, unknown> & { allow_comments?: boolean };
+    void _unused;
+    const fallbackSelect = DEET_COLUMNS.split(",").map((c) => c.trim()).filter((c) => c !== "allow_comments").join(", ");
+    const retry = await supabase
+      .from("deets")
+      .update(payloadWithout)
+      .eq("id", input.id)
+      .select(fallbackSelect)
+      .single();
+    data = retry.data as typeof data;
+    error = retry.error;
+  }
 
   if (error) {
     throw new Error(`Failed to update post: ${error.message}`);
