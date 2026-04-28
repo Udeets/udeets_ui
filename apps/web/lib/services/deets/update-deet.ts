@@ -94,6 +94,19 @@ export async function updateDeet(input: UpdateDeetInput): Promise<DeetRecord> {
     error = retry.error;
   }
 
+  if (error && payload.kind === "Jobs" && error.message.includes("deets_kind_check")) {
+    const compatPayload = { ...payload, kind: "Posts" };
+    let r2 = await supabase.from("deets").update(compatPayload).eq("id", input.id).select(DEET_COLUMNS).single();
+    if (r2.error?.message.includes("allow_comments")) {
+      const { allow_comments: _a, ...withoutAc } = compatPayload as Record<string, unknown> & { allow_comments?: boolean };
+      void _a;
+      const fallbackSelect = DEET_COLUMNS.split(",").map((c) => c.trim()).filter((c) => c !== "allow_comments").join(", ");
+      r2 = await supabase.from("deets").update(withoutAc).eq("id", input.id).select(fallbackSelect).single();
+    }
+    data = r2.data as typeof data;
+    error = r2.error;
+  }
+
   if (error) {
     throw new Error(`Failed to update post: ${error.message}`);
   }

@@ -59,6 +59,8 @@ export type HubFeedCardProps = {
   onOpenReactionsSummary?: () => void;
   /** Recent reactors for the summary row (avatars + emoji mix). */
   reactors?: DeetReactor[];
+  /** Instagram-style inline preview (shown when comments are not fully expanded). */
+  commentsPreviewSlot?: ReactNode | null;
   commentsSlot?: ReactNode | null;
 };
 
@@ -91,6 +93,7 @@ export function HubFeedCard({
   isLiking,
   onOpenReactionsSummary,
   reactors = [],
+  commentsPreviewSlot,
   commentsSlot,
 }: HubFeedCardProps) {
   const { openProfileModal } = useUserProfileModal();
@@ -438,6 +441,12 @@ export function HubFeedCard({
           />
         </div>
       </div>
+
+      {!expandedComments && commentsPreviewSlot ? (
+        <div className="border-t border-[var(--ud-border-subtle)] bg-gradient-to-b from-[var(--ud-bg-subtle)]/20 to-[var(--ud-bg-subtle)]/55">
+          {commentsPreviewSlot}
+        </div>
+      ) : null}
 
       <CollapsibleEngagementPanel open={expandedComments && Boolean(commentsSlot)}>
         {commentsSlot}

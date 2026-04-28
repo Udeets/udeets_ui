@@ -53,6 +53,18 @@ export function normalizePublicSrc(src?: string) {
   return `/${src}`;
 }
 
+/** Human-readable file label from stored public URL (strips `timestamp-shortid-` prefix used for hub uploads). */
+export function displayNameFromHubStoredFileUrl(url: string): string {
+  try {
+    const seg = decodeURIComponent(new URL(url).pathname.split("/").pop() || "");
+    if (!seg) return "File";
+    const stripped = seg.replace(/^\d+-[a-f0-9]{8}-/i, "");
+    return stripped || seg;
+  } catch {
+    return "File";
+  }
+}
+
 export function initials(name: string) {
   return name
     .split(" ")

@@ -5,6 +5,7 @@ import type {
   ComposerTypePayload,
   SerializedComposerAttachment,
 } from "./composerTypes";
+import { clampPollMultiSelectLimit } from "@/lib/deets/poll-multi-select-limit";
 import { format24hAs12hLabel, normalizeEventTimeTo24h } from "./composerTimeFormat";
 
 export type ComposerMapperInput = {
@@ -110,10 +111,13 @@ function buildStructuredAttachment(input: ComposerMapperInput): SerializedCompos
       const p = input.typePayload as import("./composerTypes").ComposerPollExtension;
       const validOptions = p.options.map((o) => o.trim()).filter(Boolean);
       if (!title || validOptions.length < 2) return null;
+      const multiSelectLimit = p.pollSettings.allowMultiSelect
+        ? clampPollMultiSelectLimit(p.pollSettings.multiSelectLimit, validOptions.length)
+        : null;
       const pollSettings = {
         ...p.pollSettings,
         deadline: p.deadlineEnabled && p.deadlineInput ? p.deadlineInput : null,
-        multiSelectLimit: p.pollSettings.allowMultiSelect ? p.pollSettings.multiSelectLimit : null,
+        multiSelectLimit,
       };
       return {
         type: "poll",

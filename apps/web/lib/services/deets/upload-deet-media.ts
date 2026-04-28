@@ -98,7 +98,16 @@ export async function uploadDeetMedia({
 
   const extension = fileExtensionFor(file);
   const folder = kind === "image" ? "deets" : "files";
-  const filePath = `${user.id}/${sanitizeFileName(hubSlug || hubId)}/${folder}/${Date.now()}-${crypto.randomUUID()}.${extension}`;
+  const hubFolder = sanitizeFileName(hubSlug || hubId);
+  const filePath =
+    kind === "image"
+      ? `${user.id}/${hubFolder}/${folder}/${Date.now()}-${crypto.randomUUID()}.${extension}`
+      : (() => {
+          const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+          const safeStem = sanitizeFileName(nameWithoutExt).slice(0, 48) || "file";
+          const unique = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+          return `${user.id}/${hubFolder}/${folder}/${unique}-${safeStem}.${extension}`;
+        })();
 
   const { error: uploadError } = await supabase.storage
     .from(DEET_MEDIA_BUCKET)

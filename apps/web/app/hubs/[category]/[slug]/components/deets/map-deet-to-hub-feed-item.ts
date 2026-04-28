@@ -7,6 +7,7 @@ import type {
   HubPollSettingsPersisted,
 } from "@/lib/hub-content";
 import { mapDeetToDashboardCard } from "@/lib/mappers/deets/map-deet-to-dashboard-card";
+import { normalizePollSettings } from "@/lib/deets/normalize-poll-settings";
 import type { DeetAttachment, DeetRecord } from "@/lib/services/deets/deet-types";
 
 function formatDeetTime(createdAt?: string | null) {
@@ -93,7 +94,7 @@ export function mapDeetToHubFeedItem(item: Partial<DeetRecord>, hubCreatorId?: s
                 : undefined,
           };
           if (a.type === "poll" && raw.pollSettings && typeof raw.pollSettings === "object") {
-            base.pollSettings = raw.pollSettings as HubPollSettingsPersisted;
+            base.pollSettings = normalizePollSettings(raw.pollSettings) ?? (raw.pollSettings as HubPollSettingsPersisted);
           }
           if (a.type === "jobs" && raw.jobData && typeof raw.jobData === "object") {
             base.jobData = raw.jobData as HubJobDataPersisted;

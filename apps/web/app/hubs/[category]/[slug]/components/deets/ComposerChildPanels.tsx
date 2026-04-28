@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { DollarSign, Loader2, MapPin, Plus, Trash2 } from "lucide-react";
+import { clampPollMultiSelectLimit, maxPollMultiSelectAnswers } from "@/lib/deets/poll-multi-select-limit";
+import { ComposerMenuSelect, type ComposerMenuSelectOption } from "./composer/ComposerMenuSelect";
 
 const BTN_PRIMARY =
   "rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90";
@@ -157,6 +159,20 @@ export function PollChildContent({
 
   const validOptions = options.filter((o) => o.trim());
   const canSubmit = question.trim() && validOptions.length >= 2;
+  const filledForLimit = validOptions.length;
+  const maxMulti = maxPollMultiSelectAnswers(filledForLimit);
+  const pollMultiLimitMenuOptions: ComposerMenuSelectOption[] = [
+    { value: "", label: "Unlimited" },
+    ...Array.from({ length: Math.max(0, maxMulti - 1) }, (_, i) => {
+      const k = i + 2;
+      return { value: String(k), label: String(k) };
+    }),
+  ];
+
+  useEffect(() => {
+    const capped = clampPollMultiSelectLimit(multiSelectLimit, filledForLimit);
+    if (capped !== multiSelectLimit) setMultiSelectLimit(capped);
+  }, [filledForLimit, multiSelectLimit]);
 
   return (
     <div className="space-y-4">
@@ -216,31 +232,35 @@ export function PollChildContent({
         </div>
 
         {/* Allow multi-select */}
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-sm text-[var(--ud-text-primary)]">Allow multi-select</span>
-          <div className="flex items-center gap-2">
-            {allowMultiSelect && (
+          <div className="flex shrink-0 items-center gap-2">
+            {allowMultiSelect ? (
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-[var(--ud-text-muted)]">Limit</span>
-                <select
-                  value={multiSelectLimit ?? ""}
-                  onChange={(e) => setMultiSelectLimit(e.target.value ? Number(e.target.value) : null)}
-                  className={`${SELECT} min-w-[100px]`}
-                >
-                  <option value="">Unlimited</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
-                  <option value="5">5</option>
-                </select>
+                <span className="whitespace-nowrap text-xs text-[var(--ud-text-muted)]">Max</span>
+                <ComposerMenuSelect
+                  variant="inline"
+                  alignMenu="right"
+                  menuMinWidthPx={148}
+                  placeholder="Max"
+                  value={
+                    multiSelectLimit != null &&
+                    multiSelectLimit >= 2 &&
+                    multiSelectLimit <= maxMulti
+                      ? String(multiSelectLimit)
+                      : ""
+                  }
+                  options={pollMultiLimitMenuOptions}
+                  onChange={(v) => setMultiSelectLimit(v ? Number(v) : null)}
+                />
               </div>
-            )}
+            ) : null}
             <button
               type="button"
               role="switch"
               aria-checked={allowMultiSelect}
               onClick={() => setAllowMultiSelect(!allowMultiSelect)}
-              className={`${TOGGLE} ${allowMultiSelect ? "bg-[var(--ud-brand-primary)]" : "bg-gray-300"}`}
+              className={`${TOGGLE} shrink-0 ${allowMultiSelect ? "bg-[var(--ud-brand-primary)]" : "bg-gray-300"}`}
             >
               <span className={`${TOGGLE_KNOB} ${allowMultiSelect ? "translate-x-4" : "translate-x-0.5"}`} />
             </button>
@@ -327,7 +347,9 @@ export function PollChildContent({
             onAttach(question.trim(), validOptions, {
               allowAnyoneToAdd,
               allowMultiSelect,
-              multiSelectLimit: allowMultiSelect ? multiSelectLimit : null,
+              multiSelectLimit: allowMultiSelect
+                ? clampPollMultiSelectLimit(multiSelectLimit, validOptions.length)
+                : null,
               allowSecretVoting,
               deadline: deadlineEnabled && deadline ? deadline : null,
               showResults,

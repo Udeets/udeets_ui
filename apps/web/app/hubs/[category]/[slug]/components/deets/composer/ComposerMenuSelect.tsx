@@ -22,6 +22,8 @@ export function ComposerMenuSelect({
   className,
   alignMenu = "left",
   menuMinWidthPx = 160,
+  /** Compact trigger for toolbars / inline rows (same pill + menu as full-width). */
+  variant = "full",
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -31,6 +33,7 @@ export function ComposerMenuSelect({
   className?: string;
   alignMenu?: "left" | "right";
   menuMinWidthPx?: number;
+  variant?: "full" | "inline";
 }) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -78,7 +81,7 @@ export function ComposerMenuSelect({
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [open, alignMenu, menuMinWidthPx]);
+  }, [open, alignMenu, menuMinWidthPx, variant]);
 
   useEffect(() => {
     if (!open) return;
@@ -117,7 +120,7 @@ export function ComposerMenuSelect({
       >
         {options.map((opt) => (
           <button
-            key={opt.value}
+            key={opt.value === "" ? "__empty" : opt.value}
             type="button"
             role="option"
             aria-selected={value === opt.value}
@@ -138,8 +141,10 @@ export function ComposerMenuSelect({
       </div>
     ) : null;
 
+  const inline = variant === "inline";
+
   return (
-    <div className={cn("relative min-w-0", className)}>
+    <div className={cn("relative min-w-0", inline && "w-auto shrink-0", className)}>
       <button
         ref={triggerRef}
         type="button"
@@ -149,7 +154,8 @@ export function ComposerMenuSelect({
         aria-controls={open ? listId : undefined}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "inline-flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-full border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-3.5 text-left text-sm font-medium text-[var(--ud-text-primary)] shadow-sm transition hover:border-[var(--ud-border-focus)]",
+          "inline-flex h-10 items-center justify-between gap-2 rounded-full border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-3.5 text-left text-sm font-medium text-[var(--ud-text-primary)] shadow-sm transition hover:border-[var(--ud-border-focus)]",
+          inline ? "w-auto min-w-[5.75rem] max-w-[11rem] shrink-0" : "w-full min-w-0",
           disabled && "pointer-events-none opacity-50"
         )}
       >

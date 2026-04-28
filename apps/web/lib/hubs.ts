@@ -78,6 +78,7 @@ export function toHubRecord(hub: DbHubRecord): HubRecord {
   const heroImage = normalizePublicSrc(hub.cover_image_url);
   const dpImage = normalizePublicSrc(hub.dp_image_url);
   const galleryImages = (hub.gallery_image_urls ?? []).map(normalizePublicSrc).filter(Boolean);
+  // DB hub row has no member aggregate; hub UI uses live hub_members. Cards use this label as a floor.
   const membersCount = 1;
 
   return {

@@ -24,6 +24,7 @@ import {
   type DeetReactor,
 } from "@/lib/services/deets/deet-interactions";
 import { SafeDeetBody } from "@/components/deets/SafeDeetBody";
+import { DeetCommentsPreviewStrip } from "@/app/hubs/[category]/[slug]/components/deets/DeetCommentsPreviewStrip";
 import { DeetCommentsSection } from "@/app/hubs/[category]/[slug]/components/deets/DeetCommentsSection";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import { listHubs } from "@/lib/services/hubs/list-hubs";
@@ -31,6 +32,7 @@ import { listMyMemberships, type MyMembership } from "@/lib/services/members/lis
 import type { Hub as SupabaseHub } from "@/types/hub";
 import { DashboardHubCard, type DashboardHubCardData } from "./components/DashboardHubCard";
 import { isGenericDeetTitle } from "@/lib/deets/deet-title";
+import { normalizePollSettings } from "@/lib/deets/normalize-poll-settings";
 import { DeetSharePopover } from "@/components/deets/DeetSharePopover";
 import { FeedPostBody } from "@/components/deets/FeedPostBody";
 import { FeedMedia } from "@/app/hubs/[category]/[slug]/components/deets/FeedMedia";
@@ -171,7 +173,7 @@ function deetRecordToDashboardItem(item: DeetRecord): FeedItem {
           : undefined,
     };
     if (a.type === "poll" && raw.pollSettings && typeof raw.pollSettings === "object") {
-      row.pollSettings = raw.pollSettings as HubPollSettingsPersisted;
+      row.pollSettings = normalizePollSettings(raw.pollSettings) ?? (raw.pollSettings as HubPollSettingsPersisted);
     }
     if (a.type === "jobs" && raw.jobData && typeof raw.jobData === "object") {
       row.jobData = raw.jobData as HubJobDataPersisted;
@@ -247,7 +249,10 @@ function feedAttachmentsToHubShape(att: FeedAttachment[]): HubFeedItemAttachment
       previews: a.previews,
       meta: a.meta,
       eventData: a.eventData,
-      pollSettings: a.pollSettings,
+      pollSettings:
+        a.type === "poll" && a.pollSettings
+          ? normalizePollSettings(a.pollSettings) ?? a.pollSettings
+          : undefined,
       jobData: a.jobData,
     }));
 }
@@ -809,6 +814,27 @@ function DashboardPageContent() {
     }
   }, [expandedCommentDeetId, commentsByDeetId, commentLoadingDeetIds]);
 
+  const prefetchHomeFeedComments = useCallback(
+    async (deetId: string) => {
+      if (commentsByDeetId[deetId] !== undefined) return;
+      if (commentLoadingDeetIds.has(deetId)) return;
+      setCommentLoadingDeetIds((prev) => new Set(prev).add(deetId));
+      try {
+        const comments = await listDeetComments(deetId);
+        setCommentsByDeetId((prev) => ({ ...prev, [deetId]: comments }));
+      } catch (error) {
+        console.error("Failed to prefetch comments:", error);
+      } finally {
+        setCommentLoadingDeetIds((prev) => {
+          const next = new Set(prev);
+          next.delete(deetId);
+          return next;
+        });
+      }
+    },
+    [commentsByDeetId, commentLoadingDeetIds],
+  );
+
   const handleSubmitComment = useCallback(
     async (
       deetId: string,
@@ -1295,6 +1321,22 @@ function DashboardPageContent() {
     });
   }, [myDeetsItems, searchQuery, selectedFeedFilter]);
 
+  useEffect(() => {
+    const maxPrefetch = 20;
+    let n = 0;
+    for (const item of filteredDeetsItems) {
+      if (n >= maxPrefetch) break;
+      const cc = Math.max(
+        item.commentCount,
+        healedCommentCounts[item.id] ?? 0,
+        totalCommentsInTree(commentsByDeetId[item.id]),
+      );
+      if (cc <= 0) continue;
+      void prefetchHomeFeedComments(item.id);
+      n++;
+    }
+  }, [filteredDeetsItems, healedCommentCounts, prefetchHomeFeedComments, commentsByDeetId]);
+
   const viewerFeedItem = feedGallery
     ? myDeetsItems.find((i) => i.id === feedGallery.deetId) ?? null
     : null;
@@ -1713,6 +1755,19 @@ function DashboardPageContent() {
                               </div>
                             );
                           })()}
+
+                          {!isCommentsOpen ? (
+                            <div className="border-t border-[var(--ud-border-subtle)] bg-gradient-to-b from-[var(--ud-bg-subtle)]/20 to-[var(--ud-bg-subtle)]/55">
+                              <DeetCommentsPreviewStrip
+                                comments={commentsByDeetId[item.id] ?? []}
+                                isLoading={commentLoadingDeetIds.has(item.id)}
+                                totalCount={commentCount}
+                                onViewAll={() => void handleToggleComments(item.id)}
+                                onAddComment={() => void handleToggleComments(item.id)}
+                                canAddNewComments={commentsEnabled}
+                              />
+                            </div>
+                          ) : null}
 
                           {/* Inline comments — same component and collapse behavior as hub feed */}
                           <CollapsibleEngagementPanel open={isCommentsOpen}>
