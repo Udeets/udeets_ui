@@ -15,6 +15,28 @@ function sanitizePersistableMediaRefs(values?: string[]) {
   return (values ?? []).map((value) => value.trim()).filter((value, index, array) => isPersistableMediaRef(value) && array.indexOf(value) === index);
 }
 
+const DEET_COLUMNS_WITHOUT_ALLOW_COMMENTS = DEET_COLUMNS.split(",")
+  .map((c) => c.trim())
+  .filter((c) => c !== "allow_comments")
+  .join(", ");
+
+async function insertDeetPayload(
+  supabase: ReturnType<typeof createClient>,
+  payload: Record<string, unknown>,
+): Promise<{ data: DeetRecord | null; error: { message: string } | null }> {
+  let { data, error } = await supabase.from("deets").insert(payload).select(DEET_COLUMNS).single();
+
+  if (error?.message.includes("allow_comments")) {
+    const { allow_comments: _unused, ...payloadWithout } = payload as Record<string, unknown> & { allow_comments?: boolean };
+    void _unused;
+    const retry = await supabase.from("deets").insert(payloadWithout).select(DEET_COLUMNS_WITHOUT_ALLOW_COMMENTS).single();
+    data = retry.data as typeof data;
+    error = retry.error;
+  }
+
+  return { data: data as DeetRecord | null, error };
+}
+
 export async function createDeet(input: CreateDeetInput): Promise<DeetRecord> {
   const supabase = createClient();
   const previewImageUrl = isPersistableMediaRef(input.previewImageUrl) ? input.previewImageUrl!.trim() : null;
@@ -56,16 +78,15 @@ export async function createDeet(input: CreateDeetInput): Promise<DeetRecord> {
     basePayload.allow_comments = input.allowComments;
   }
 
-  let { data, error } = await supabase.from("deets").insert(basePayload).select(DEET_COLUMNS).single();
+  let { data, error } = await insertDeetPayload(supabase, basePayload);
 
-  // Fallback: if the column doesn't exist yet, retry without it and with a
-  // narrower select so we don't error on the unknown column.
-  if (error && error.message.includes("allow_comments")) {
-    const { allow_comments: _unused, ...payloadWithout } = basePayload as Record<string, unknown> & { allow_comments?: boolean };
-    void _unused;
-    const fallbackSelect = DEET_COLUMNS.split(",").map((c) => c.trim()).filter((c) => c !== "allow_comments").join(", ");
-    const retry = await supabase.from("deets").insert(payloadWithout).select(fallbackSelect).single();
-    data = retry.data as typeof data;
+  // Older DBs without 'Jobs' in deets_kind_check (apply migration
+  // 20260421100009_expand_deets_kind_check_jobs): store bucket as Posts; the
+  // structured `jobs` attachment still drives hub feed kind.
+  if (error && basePayload.kind === "Jobs" && error.message.includes("deets_kind_check")) {
+    const compat = { ...basePayload, kind: "Posts" };
+    const retry = await insertDeetPayload(supabase, compat);
+    data = retry.data;
     error = retry.error;
   }
 

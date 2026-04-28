@@ -1,5 +1,7 @@
 import type { HubContent, HubFeedItemKind } from "@/lib/hub-content";
 import { isGenericDeetTitle } from "@/lib/deets/deet-title";
+import { clampPollMultiSelectLimit } from "@/lib/deets/poll-multi-select-limit";
+import { normalizePollSettings } from "@/lib/deets/normalize-poll-settings";
 import { INITIAL_DEET_SETTINGS, type DeetSettingsState } from "../deetTypes";
 import type {
   ComposerAlertExtension,
@@ -152,9 +154,11 @@ export function hydrateComposerFromHubFeedItem(item: HubContent["feed"][number])
       const base = defaultTypePayload("poll") as ComposerPollExtension;
       const padded = [...opts];
       while (padded.length < 3) padded.push("");
-      const ps = poll?.pollSettings;
+      const ps = normalizePollSettings(poll?.pollSettings) ?? poll?.pollSettings;
       const deadlineStr =
         typeof ps?.deadline === "string" && ps.deadline.trim() ? ps.deadline.trim() : "";
+      const rawMultiLimit =
+        ps?.multiSelectLimit !== undefined ? ps.multiSelectLimit : base.pollSettings.multiSelectLimit;
       composerTypePayload = {
         ...base,
         options: padded,
@@ -164,8 +168,7 @@ export function hydrateComposerFromHubFeedItem(item: HubContent["feed"][number])
           ...base.pollSettings,
           allowAnyoneToAdd: ps?.allowAnyoneToAdd ?? base.pollSettings.allowAnyoneToAdd,
           allowMultiSelect: ps?.allowMultiSelect ?? base.pollSettings.allowMultiSelect,
-          multiSelectLimit:
-            ps?.multiSelectLimit !== undefined ? ps.multiSelectLimit : base.pollSettings.multiSelectLimit,
+          multiSelectLimit: clampPollMultiSelectLimit(rawMultiLimit, opts.length),
           allowSecretVoting: ps?.allowSecretVoting ?? base.pollSettings.allowSecretVoting,
           deadline: deadlineStr || null,
           showResults:

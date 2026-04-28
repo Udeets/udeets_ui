@@ -7,6 +7,7 @@ import type { ComposerContentKind, ComposerTypePayload } from "./composerTypes";
 import { cn } from "../../hubUtils";
 import { COMPOSER_INPUT, COMPOSER_TOGGLE, COMPOSER_TOGGLE_KNOB } from "./composerFieldClasses";
 import { buildLocalDateTime, localYmd, parseLocalDateTime } from "./composerDatetime";
+import { clampPollMultiSelectLimit, maxPollMultiSelectAnswers } from "@/lib/deets/poll-multi-select-limit";
 import { ComposerMenuSelect, type ComposerMenuSelectOption } from "./ComposerMenuSelect";
 import { ComposerTime12hRow } from "./ComposerTime12hRow";
 
@@ -21,14 +22,6 @@ const SORT_OPTIONS = [
   { value: "option_no", label: "By option no." },
   { value: "votes", label: "By votes" },
 ] as const;
-
-const POLL_MULTI_LIMIT_OPTIONS: ComposerMenuSelectOption[] = [
-  { value: "", label: "Unlimited" },
-  { value: "2", label: "2 choices" },
-  { value: "3", label: "3 choices" },
-  { value: "4", label: "4 choices" },
-  { value: "5", label: "5 choices" },
-];
 
 const ALERT_LEVELS = [
   { value: "info", label: "Info", color: "bg-blue-100 text-blue-700" },
@@ -287,21 +280,39 @@ export function ComposerInlineExtensions({
 
   if (kind === "poll") {
     const p = payload as import("./composerTypes").ComposerPollExtension;
-    const setOptions = (options: string[]) => onPayloadChange({ ...p, options });
     const setPoll = (patch: Partial<PollSettings>) =>
       onPayloadChange({ ...p, pollSettings: { ...p.pollSettings, ...patch } });
 
+    const syncOptions = (nextOptions: string[]) => {
+      const filled = nextOptions.filter((o) => o.trim()).length;
+      const nextLimit = clampPollMultiSelectLimit(p.pollSettings.multiSelectLimit, filled);
+      onPayloadChange({
+        ...p,
+        options: nextOptions,
+        pollSettings: { ...p.pollSettings, multiSelectLimit: nextLimit },
+      });
+    };
+
     const addOption = () => {
-      if (p.options.length < 10) setOptions([...p.options, ""]);
+      if (p.options.length < 10) syncOptions([...p.options, ""]);
     };
     const removeOption = (index: number) => {
-      if (p.options.length > 2) setOptions(p.options.filter((_, i) => i !== index));
+      if (p.options.length > 2) syncOptions(p.options.filter((_, i) => i !== index));
     };
     const updateOption = (index: number, value: string) => {
-      setOptions(p.options.map((o, i) => (i === index ? value : o)));
+      syncOptions(p.options.map((o, i) => (i === index ? value : o)));
     };
 
     const ps = p.pollSettings;
+    const filledOptionCount = p.options.filter((o) => o.trim()).length;
+    const maxMulti = maxPollMultiSelectAnswers(filledOptionCount);
+    const pollMultiLimitMenuOptions: ComposerMenuSelectOption[] = [
+      { value: "", label: "Unlimited" },
+      ...Array.from({ length: Math.max(0, maxMulti - 1) }, (_, i) => {
+        const k = i + 2;
+        return { value: String(k), label: String(k) };
+      }),
+    ];
     const { date: deadlineDate, time: deadlineTime } = parseLocalDateTime(p.deadlineInput);
     return (
       <div className="space-y-4">
@@ -362,17 +373,26 @@ export function ComposerInlineExtensions({
                 <span className={`${COMPOSER_TOGGLE_KNOB} ${ps.allowAnyoneToAdd ? "translate-x-4" : "translate-x-0.5"}`} />
               </button>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-sm font-medium text-[var(--ud-text-primary)]">Allow multi-select</span>
-              <div className="flex flex-wrap items-center justify-end gap-2">
+              <div className="flex shrink-0 items-center gap-2">
                 {ps.allowMultiSelect ? (
-                  <div className="flex w-full min-w-0 flex-col gap-1 sm:w-auto sm:max-w-[11rem]">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Limit</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="whitespace-nowrap text-xs text-[var(--ud-text-muted)]">Max</span>
                     <ComposerMenuSelect
-                      value={ps.multiSelectLimit != null ? String(ps.multiSelectLimit) : ""}
+                      variant="inline"
+                      alignMenu="right"
+                      menuMinWidthPx={148}
+                      placeholder="Max"
+                      value={
+                        ps.multiSelectLimit != null &&
+                        ps.multiSelectLimit >= 2 &&
+                        ps.multiSelectLimit <= maxMulti
+                          ? String(ps.multiSelectLimit)
+                          : ""
+                      }
                       disabled={disabled}
-                      placeholder="Limit"
-                      options={POLL_MULTI_LIMIT_OPTIONS}
+                      options={pollMultiLimitMenuOptions}
                       onChange={(v) => setPoll({ multiSelectLimit: v ? Number(v) : null })}
                     />
                   </div>

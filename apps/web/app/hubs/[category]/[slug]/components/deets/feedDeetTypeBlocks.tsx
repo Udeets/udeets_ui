@@ -15,6 +15,8 @@ import {
 import type { HubFeedItemAttachment } from "@/lib/hub-content";
 import { FeedPostBody } from "@/components/deets/FeedPostBody";
 import { isGenericDeetTitle } from "@/lib/deets/deet-title";
+import { clampPollMultiSelectLimit } from "@/lib/deets/poll-multi-select-limit";
+import { isPollDeadlinePassed, normalizePollSettings } from "@/lib/deets/normalize-poll-settings";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "../hubUtils";
 import { SurveyContent } from "./SurveyContent";
@@ -479,15 +481,18 @@ export function PollContent({
   className?: string;
 }) {
   const matchingAtt = attachments?.find((a) => a.type === "poll");
+  const pollSettingsNorm = normalizePollSettings(matchingAtt?.pollSettings) ?? matchingAtt?.pollSettings;
   const options = matchingAtt?.options ?? [];
   const parsedOptions =
     options.length > 0 ? options : (matchingAtt?.detail?.split(" · ").filter(Boolean) ?? []);
   const parsedOptionsKey = parsedOptions.join("\u0001");
-  const allowMultiSelect = Boolean(matchingAtt?.pollSettings?.allowMultiSelect);
-  const multiSelectLimit =
-    matchingAtt?.pollSettings?.multiSelectLimit === undefined || matchingAtt?.pollSettings?.multiSelectLimit === null
+  const allowMultiSelect = Boolean(pollSettingsNorm?.allowMultiSelect);
+  const multiSelectLimitRaw =
+    pollSettingsNorm?.multiSelectLimit === undefined || pollSettingsNorm?.multiSelectLimit === null
       ? null
-      : matchingAtt.pollSettings.multiSelectLimit;
+      : pollSettingsNorm.multiSelectLimit;
+  const multiSelectLimit = clampPollMultiSelectLimit(multiSelectLimitRaw, parsedOptions.length);
+  const pollClosed = isPollDeadlinePassed(pollSettingsNorm?.deadline);
 
   const parsedOptionsRef = useRef(parsedOptions);
   parsedOptionsRef.current = parsedOptions;
@@ -496,18 +501,51 @@ export function PollContent({
   const limitRef = useRef(multiSelectLimit);
   limitRef.current = multiSelectLimit;
 
+  const deadlineRef = useRef<string | null>(null);
+  deadlineRef.current =
+    typeof pollSettingsNorm?.deadline === "string" && pollSettingsNorm.deadline.trim()
+      ? pollSettingsNorm.deadline.trim()
+      : null;
+
+  /** After first successful fetch, block further remote syncs once the poll is closed (deadline passed). */
+  const pollRemoteUpdatesBlockedRef = useRef(false);
+  const pollInitialFetchDoneRef = useRef(false);
+
   /** Indices the current user selected (0-based). */
   const [mySelected, setMySelected] = useState<number[]>([]);
   const [isVoting, setIsVoting] = useState(false);
   const [totalVotes, setTotalVotes] = useState(0);
   const [voteCounts, setVoteCounts] = useState<number[]>(() => parsedOptions.map(() => 0));
 
+  useEffect(() => {
+    pollRemoteUpdatesBlockedRef.current = false;
+    pollInitialFetchDoneRef.current = false;
+  }, [deetId]);
+
+  /** When closed after first fetch, freeze remote tallies; when reopened (e.g. deadline edit), allow sync again. */
+  useEffect(() => {
+    if (!pollClosed) {
+      pollRemoteUpdatesBlockedRef.current = false;
+      return;
+    }
+    if (pollInitialFetchDoneRef.current) {
+      pollRemoteUpdatesBlockedRef.current = true;
+    }
+  }, [pollClosed]);
+
   const loadPollState = useCallback(async () => {
     if (!deetId) return;
+    if (pollRemoteUpdatesBlockedRef.current && pollInitialFetchDoneRef.current) {
+      return;
+    }
     const parsed = parsedOptionsRef.current;
     try {
       const { getPollVotes, getMyPollVotes } = await import("@/lib/services/deets/poll-votes");
       const [allVotes, myVotes] = await Promise.all([getPollVotes([deetId]), getMyPollVotes([deetId])]);
+
+      if (pollRemoteUpdatesBlockedRef.current && pollInitialFetchDoneRef.current) {
+        return;
+      }
 
       const counts = parsed.map(() => 0);
       const deetVotes = allVotes.filter((v) => v.deetId === deetId);
@@ -524,6 +562,11 @@ export function PollContent({
       const myDeetVotes = myVotes.filter((v) => v.deetId === deetId);
       const mine = [...new Set(myDeetVotes.map((v) => v.optionIndex))].sort((a, b) => a - b);
       setMySelected(mine);
+
+      pollInitialFetchDoneRef.current = true;
+      if (isPollDeadlinePassed(deadlineRef.current)) {
+        pollRemoteUpdatesBlockedRef.current = true;
+      }
     } catch {
       // Table might not exist yet
     }
@@ -531,6 +574,9 @@ export function PollContent({
 
   useEffect(() => {
     if (!deetId) return;
+    if (pollRemoteUpdatesBlockedRef.current && pollInitialFetchDoneRef.current) {
+      return;
+    }
     let cancelled = false;
     void (async () => {
       await loadPollState();
@@ -546,6 +592,9 @@ export function PollContent({
     const onSync = (ev: Event) => {
       const detail = (ev as CustomEvent<{ deetId: string }>).detail;
       if (detail?.deetId !== deetId) return;
+      if (pollRemoteUpdatesBlockedRef.current && pollInitialFetchDoneRef.current) {
+        return;
+      }
       void loadPollState();
     };
     window.addEventListener(UDEETS_POLL_VOTE_UPDATED_EVENT, onSync);
@@ -553,7 +602,7 @@ export function PollContent({
   }, [deetId, loadPollState]);
 
   const handleVoteSingle = async (index: number) => {
-    if (isVoting) return;
+    if (pollClosed || isVoting) return;
     setIsVoting(true);
     const prevMine = [...mySelected];
     const prevSingle = prevMine[0] ?? null;
@@ -596,7 +645,7 @@ export function PollContent({
   };
 
   const handleVoteMulti = async (index: number) => {
-    if (isVoting) return;
+    if (pollClosed || isVoting) return;
     setIsVoting(true);
     try {
       const { togglePollMultiVote } = await import("@/lib/services/deets/poll-votes");
@@ -613,6 +662,7 @@ export function PollContent({
   };
 
   const handleVote = (index: number) => {
+    if (pollClosed) return;
     if (allowMultiRef.current) void handleVoteMulti(index);
     else void handleVoteSingle(index);
   };
@@ -630,8 +680,8 @@ export function PollContent({
       )}
     >
       <div className="flex gap-3 px-4 pb-2 pt-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
-          <BarChart3 className="h-5 w-5 stroke-[1.5] text-emerald-600" />
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-950/50">
+          <BarChart3 className="h-5 w-5 stroke-[1.5] text-emerald-600 dark:text-emerald-400" />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--ud-text-muted)]">Poll</p>
@@ -647,7 +697,17 @@ export function PollContent({
                 · Multi-select
               </span>
             ) : null}
+            {pollClosed ? (
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                · Ended
+              </span>
+            ) : null}
           </div>
+          {pollClosed ? (
+            <p className="mt-2 rounded-lg border border-amber-200/80 bg-amber-50/90 px-3 py-2 text-xs font-medium text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
+              This poll has ended. Voting is closed.
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -661,11 +721,13 @@ export function PollContent({
             <button
               key={i}
               type="button"
-              disabled={isVoting}
+              disabled={isVoting || pollClosed}
               onClick={() => handleVote(i)}
               className={cn(
                 "relative flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-sm transition",
-                isSelected ? "text-emerald-700" : "text-[var(--ud-text-primary)] hover:bg-[var(--ud-bg-subtle)]",
+                isSelected
+                  ? "text-emerald-800 dark:text-emerald-200"
+                  : "text-[var(--ud-text-primary)] hover:bg-[var(--ud-bg-subtle)]",
               )}
             >
               {hasAnyMine && totalVotes > 0 && (
@@ -673,14 +735,19 @@ export function PollContent({
                   className="pointer-events-none absolute inset-y-0 left-0 overflow-hidden rounded-l-lg transition-[width]"
                   style={{ width: `${pct}%` }}
                 >
-                  <div className={cn("h-full w-full", isSelected ? "bg-emerald-100" : "bg-gray-100")} />
+                  <div
+                    className={cn(
+                      "h-full w-full",
+                      isSelected ? "bg-emerald-100 dark:bg-emerald-900/45" : "bg-gray-100 dark:bg-zinc-700/90",
+                    )}
+                  />
                 </div>
               )}
               <span
                 className={cn(
                   "relative z-10 flex h-4 w-4 shrink-0 items-center justify-center border-2 transition",
                   allowMultiSelect ? "rounded-sm" : "rounded-full",
-                  isSelected ? "border-emerald-500 bg-emerald-500" : "border-gray-300",
+                  isSelected ? "border-emerald-500 bg-emerald-500" : "border-[var(--ud-border)] dark:border-zinc-500",
                 )}
               >
                 {isSelected ? (

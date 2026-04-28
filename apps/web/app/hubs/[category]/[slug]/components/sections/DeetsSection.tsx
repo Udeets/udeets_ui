@@ -23,6 +23,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DeetComposerCard } from "../deets/DeetComposerCard";
 import { resolveDeetType } from "../deets/feedDeetTypeBlocks";
 import { POST_ICON } from "../deets/feedEmojiReact";
+import { DeetCommentsPreviewStrip } from "../deets/DeetCommentsPreviewStrip";
 import { DeetCommentsSection } from "../deets/DeetCommentsSection";
 import { HubFeedCard } from "../deets/HubFeedCard";
 import { CommentThreadSheet } from "../deets/CommentThreadSheet";
@@ -266,6 +267,7 @@ export function DeetsSection({
   viewersByDeetId,
   viewersLoading,
   onToggleViewers,
+  onPrefetchCommentsPreview,
 }: {
   normalizedPostSearch: string;
   postSearchQuery: string;
@@ -323,6 +325,8 @@ export function DeetsSection({
   viewersByDeetId?: Record<string, DeetViewer[]>;
   viewersLoading?: boolean;
   onToggleViewers?: (deetId: string) => void;
+  /** Warm comment cache for inline preview (hub home-style); no-op if omitted. */
+  onPrefetchCommentsPreview?: (deetId: string) => void;
 }) {
   const [sortOption, setSortOption] = useState<SortOption>("Newest");
   const [isSortOpen, setIsSortOpen] = useState(false);
@@ -417,6 +421,20 @@ export function DeetsSection({
     if (!expandedCommentDeetId) setFocusComposerDeetId(null);
   }, [expandedCommentDeetId]);
 
+  /** Prefetch comments for the first posts so the Instagram-style preview can render without an extra tap. */
+  useEffect(() => {
+    if (!onPrefetchCommentsPreview || isDemoPreview) return;
+    const maxPrefetch = 20;
+    let n = 0;
+    for (const item of filteredFeedItems) {
+      if (n >= maxPrefetch) break;
+      const cc = item.comments + (commentCountOverrides?.[item.id] ?? 0);
+      if (cc <= 0) continue;
+      void onPrefetchCommentsPreview(item.id);
+      n++;
+    }
+  }, [filteredFeedItems, commentCountOverrides, onPrefetchCommentsPreview, isDemoPreview]);
+
   const handleToggleCommentsFor = (itemId: string) => {
     const willOpen = expandedCommentDeetId !== itemId;
     onToggleComments?.(itemId);
@@ -470,6 +488,22 @@ export function DeetsSection({
       userName={userName}
     />
   );
+
+  const buildCommentsPreview = (item: HubContent["feed"][number]) => {
+    const deetId = item.id;
+    const total = item.comments + (commentCountOverrides?.[deetId] ?? 0);
+    const canAdd = item.deetOptions?.commentsEnabled !== false;
+    return (
+      <DeetCommentsPreviewStrip
+        comments={commentsByDeetId?.[deetId] ?? []}
+        isLoading={commentLoadingDeetIds?.has(deetId) ?? false}
+        totalCount={total}
+        onViewAll={() => handleToggleCommentsFor(deetId)}
+        onAddComment={() => handleToggleCommentsFor(deetId)}
+        canAddNewComments={canAdd}
+      />
+    );
+  };
 
   return (
     <>
@@ -759,6 +793,9 @@ export function DeetsSection({
                     isLiking={likingDeetIds?.has(item.id) ?? false}
                     onOpenReactionsSummary={() => onOpenReactionsModal?.(item.id)}
                     reactors={reactorsByDeetId?.[item.id] ?? []}
+                    commentsPreviewSlot={
+                      expandedCommentDeetId !== item.id ? buildCommentsPreview(item) : null
+                    }
                     commentsSlot={
                       expandedCommentDeetId === item.id && !useCommentSheet
                         ? buildCommentsSection(item.id, "inline", {

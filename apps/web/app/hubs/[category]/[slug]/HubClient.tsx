@@ -70,6 +70,7 @@ import {
   SettingField,
   categoryMetaFor,
   cn,
+  displayNameFromHubStoredFileUrl,
   initials,
   normalizePublicSrc,
 } from "./components/hubUtils";
@@ -317,32 +318,59 @@ export default function HubClient({
     return () => { ignore = true; };
   }, [hub.id]);
 
-  // Load all photos from attachments table (includes DP, cover, and gallery)
+  // Load hub photos and file rows from attachments (DP/cover/gallery + admin file uploads)
   const [allAttachmentPhotos, setAllAttachmentPhotos] = useState<string[]>([]);
-  const loadAttachmentPhotos = async () => {
+  const [hubFileRows, setHubFileRows] = useState<Array<{ id: string; url: string; name: string }>>([]);
+
+  const loadHubAttachments = useCallback(async () => {
     try {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("attachments")
-        .select("file_url")
+        .select("id, file_url, file_type")
         .eq("hub_id", hub.id)
-        .eq("file_type", "image")
+        .in("file_type", ["image", "file"])
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(200);
 
-      if (data) {
-        const photoUrls = data.map((row: { file_url: string }) => normalizePublicSrc(row.file_url)).filter(Boolean);
-        setAllAttachmentPhotos(photoUrls);
+      if (error) {
+        console.error("[load-hub-attachments]", error);
+        return;
       }
+
+      if (!data?.length) {
+        setAllAttachmentPhotos([]);
+        setHubFileRows([]);
+        return;
+      }
+
+      const imageRows = data.filter((r: { file_type: string }) => r.file_type === "image");
+      const fileRows = data.filter((r: { file_type: string }) => r.file_type === "file");
+
+      const photoUrls = imageRows
+        .map((row: { file_url: string }) => normalizePublicSrc(row.file_url))
+        .filter(Boolean);
+      setAllAttachmentPhotos(photoUrls);
+
+      setHubFileRows(
+        fileRows.map((row: { id: string; file_url: string }) => {
+          const url = normalizePublicSrc(row.file_url);
+          return {
+            id: row.id,
+            url,
+            name: displayNameFromHubStoredFileUrl(url),
+          };
+        }),
+      );
     } catch (err) {
-      console.error("[load-attachment-photos]", err);
+      console.error("[load-hub-attachments]", err);
     }
-  };
+  }, [hub.id]);
 
   useEffect(() => {
-    loadAttachmentPhotos();
-  }, [hub.id]);
+    void loadHubAttachments();
+  }, [loadHubAttachments]);
 
   const { liveFeedItems, prependCreatedDeet, removeDeet, replaceFeedDeet } = useHubLiveFeed(hub.id, hub.createdBy);
   const {
@@ -433,10 +461,10 @@ export default function HubClient({
   useEffect(() => {
     if (mediaSuccess || (!isUploadingDp && !isUploadingCover && !isUploadingGallery)) {
       // Small delay to ensure DB insert is complete
-      const timer = setTimeout(() => loadAttachmentPhotos(), 500);
+      const timer = setTimeout(() => void loadHubAttachments(), 500);
       return () => clearTimeout(timer);
     }
-  }, [mediaSuccess, isUploadingDp, isUploadingCover, isUploadingGallery]);
+  }, [mediaSuccess, isUploadingDp, isUploadingCover, isUploadingGallery, loadHubAttachments]);
 
   // Merge gallery images with attachment photos, preferring attachments (which include DP/cover uploads)
   const allPhotos = allAttachmentPhotos.length > 0 ? allAttachmentPhotos : galleryImages;
@@ -447,7 +475,6 @@ export default function HubClient({
   const categoryMeta = categoryMetaFor(savedHubCategory);
   const CategoryIcon = categoryMeta.icon;
   const hubTemplateConfig = useMemo(() => getHubConfigByCategory(savedHubCategory), [savedHubCategory]);
-  const memberCount = Math.max(1, Number.parseInt(hub.membersLabel, 10) || 0);
   const headerHubName = hubName || hub.name?.trim() || "Hub";
   const visibilityLabel: "Public" | "Private" = settingsVisibility;
   const accentTheme = getHubColorTheme(hub.accentColor || "teal");
@@ -533,8 +560,12 @@ export default function HubClient({
   const photoDeetCount = allFeedItems.filter((item) => item.kind === "photo").length;
   const activeAdminCount = 1;
   const knownActivityCount = feedItemCount + hubContent.events.length + recentPhotos.length;
-  const fileItems: string[] = [];
   const [memberItems, setMemberItems] = useState<Array<{ userId: string; role: string; fullName: string; avatarUrl: string | null; email: string | null; joinedAt: string | null }>>([]);
+  /** Match AboutSection: prefer live `hub_members` roster over SSR `membersLabel` (often placeholder `1` from `toHubRecord`). */
+  const memberCount = useMemo(() => {
+    const fromLabel = Math.max(1, Number.parseInt(hub.membersLabel, 10) || 0);
+    return Math.max(fromLabel, memberItems.length);
+  }, [hub.membersLabel, memberItems.length]);
   const [pendingRequests, setPendingRequests] = useState<Array<{ userId: string; fullName: string; avatarUrl: string | null; email: string | null; requestedAt?: string | null }>>([]);
   const [processingUserIds, setProcessingUserIds] = useState<Set<string>>(new Set());
   const [joinRequestToast, setJoinRequestToast] = useState<{ name: string; avatarUrl: string | null } | null>(null);
@@ -933,12 +964,27 @@ export default function HubClient({
     if (!files?.length) return;
     setIsUploadingFile(true);
     try {
+      const { uploadDeetMedia } = await import("@/lib/services/deets/upload-deet-media");
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
       for (const file of Array.from(files)) {
-        const filePath = `${hub.id}/${Date.now()}-${file.name}`;
-        await supabase.storage.from("deet-media").upload(filePath, file);
+        const uploaded = await uploadDeetMedia({
+          file,
+          hubId: hub.id,
+          hubSlug: hub.slug,
+          kind: "file",
+        });
+        const { error: insertError } = await supabase.from("attachments").insert({
+          hub_id: hub.id,
+          file_url: uploaded.publicUrl,
+          file_type: "file",
+          source: "admin_upload",
+        });
+        if (insertError) {
+          console.error("[file-upload] attachment insert:", insertError);
+        }
       }
+      await loadHubAttachments();
     } catch (error) {
       console.error("[file-upload]", error);
     } finally {
@@ -1173,7 +1219,7 @@ export default function HubClient({
         <AttachmentsSection
           activeAttachmentView={activeAttachmentView}
           recentPhotos={recentPhotos}
-          fileItems={fileItems}
+          fileItems={hubFileRows}
           hubName={hubName}
           onOpenViewer={openViewer}
           isCreatorAdmin={isCreatorAdmin}
@@ -1263,6 +1309,7 @@ export default function HubClient({
         viewersByDeetId={viewersByDeetId}
         viewersLoading={viewersLoading}
         onToggleViewers={handleToggleViewers}
+        onPrefetchCommentsPreview={loadCommentsForDeetIfNeeded}
       />
     );
   };

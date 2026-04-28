@@ -22,7 +22,7 @@ export function AttachmentsSection({
 }: {
   activeAttachmentView: "photos" | "files";
   recentPhotos: string[];
-  fileItems: string[];
+  fileItems: Array<{ id: string; url: string; name: string }>;
   hubName: string;
   onOpenViewer: (images: string[], index: number, title: string, body: string) => void;
   isCreatorAdmin?: boolean;
@@ -117,12 +117,18 @@ export function AttachmentsSection({
           {fileItems.length > 0 ? (
             <div className="space-y-2">
               {fileItems.map((file) => (
-                <div key={file} className="flex items-center gap-3 rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-subtle)] px-3 py-2.5">
+                <a
+                  key={file.id}
+                  href={file.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-subtle)] px-3 py-2.5 transition hover:border-[var(--ud-brand-primary)]/40 hover:bg-[var(--ud-bg-card)]"
+                >
                   <Paperclip className="h-4 w-4 shrink-0 text-[var(--ud-text-muted)]" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-[var(--ud-text-primary)]">{file}</p>
+                    <p className="truncate text-sm font-medium text-[var(--ud-text-primary)]">{file.name}</p>
                   </div>
-                </div>
+                </a>
               ))}
             </div>
           ) : (
