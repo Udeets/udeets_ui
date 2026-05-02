@@ -36,7 +36,6 @@ export function useHubFilters({
       if (feedFilter === "Announcements") {
         return (
           item.kind === "announcement" ||
-          item.kind === "notice" ||
           item.kind === "survey" ||
           item.kind === "payment" ||
           item.kind === "alert"
@@ -49,7 +48,14 @@ export function useHubFilters({
     });
 
     const oldestFirst = feedFilter === "Oldest";
+    const isPinnedAnnouncement = (item: HubContent["feed"][number]) =>
+      item.kind === "announcement" && item.deetOptions?.pinToTop === true;
+
     return [...filtered].sort((a, b) => {
+      const pa = isPinnedAnnouncement(a);
+      const pb = isPinnedAnnouncement(b);
+      if (pa !== pb) return pa ? -1 : 1;
+
       const ta = a.createdAtMs ?? 0;
       const tb = b.createdAtMs ?? 0;
       if (ta !== tb) return oldestFirst ? ta - tb : tb - ta;

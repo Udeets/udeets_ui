@@ -37,6 +37,7 @@ export default function MyPostsPage() {
         .from("deets")
         .select("id, hub_id, title, body, kind, created_at, like_count, comment_count, view_count")
         .eq("created_by", user.id)
+        .eq("is_published", true)
         .order("created_at", { ascending: false });
 
       if (error || cancelled) {

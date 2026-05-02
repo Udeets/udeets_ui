@@ -12,6 +12,8 @@ export interface UpdateDeetInput {
   previewImageUrls?: string[];
   attachments?: DeetAttachment[];
   allowComments?: boolean;
+  /** Set true to publish a draft; false to save as draft. */
+  isPublished?: boolean;
 }
 
 function isPersistableMediaRef(value?: string | null) {
@@ -72,6 +74,10 @@ export async function updateDeet(input: UpdateDeetInput): Promise<DeetRecord> {
     payload.allow_comments = input.allowComments;
   }
 
+  if (typeof input.isPublished === "boolean") {
+    payload.is_published = input.isPublished;
+  }
+
   let { data, error } = await supabase
     .from("deets")
     .update(payload)
@@ -90,6 +96,15 @@ export async function updateDeet(input: UpdateDeetInput): Promise<DeetRecord> {
       .eq("id", input.id)
       .select(fallbackSelect)
       .single();
+    data = retry.data as typeof data;
+    error = retry.error;
+  }
+
+  if (error?.message.includes("is_published")) {
+    const { is_published: _ip, ...payloadWithout } = payload as Record<string, unknown> & { is_published?: boolean };
+    void _ip;
+    const fallbackSelect = DEET_COLUMNS.split(",").map((c) => c.trim()).filter((c) => c !== "is_published").join(", ");
+    const retry = await supabase.from("deets").update(payloadWithout).eq("id", input.id).select(fallbackSelect).single();
     data = retry.data as typeof data;
     error = retry.error;
   }

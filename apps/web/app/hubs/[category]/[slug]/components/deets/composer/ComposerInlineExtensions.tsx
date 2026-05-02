@@ -6,7 +6,7 @@ import type { PollSettings } from "../deetTypes";
 import type { ComposerContentKind, ComposerTypePayload } from "./composerTypes";
 import { cn } from "../../hubUtils";
 import { COMPOSER_INPUT, COMPOSER_TOGGLE, COMPOSER_TOGGLE_KNOB } from "./composerFieldClasses";
-import { buildLocalDateTime, localYmd, parseLocalDateTime } from "./composerDatetime";
+import { buildLocalDateTime, defaultPollStartsAtInput, localYmd, parseLocalDateTime } from "./composerDatetime";
 import { clampPollMultiSelectLimit, maxPollMultiSelectAnswers } from "@/lib/deets/poll-multi-select-limit";
 import { ComposerMenuSelect, type ComposerMenuSelectOption } from "./ComposerMenuSelect";
 import { ComposerTime12hRow } from "./ComposerTime12hRow";
@@ -263,18 +263,11 @@ export function ComposerInlineExtensions({
     return (
       <div className="mt-4 space-y-3 border-t border-[var(--ud-border-subtle)] pt-4">
         <p className="text-sm text-[var(--ud-text-secondary)]">
-          Announcements are highlighted for hub members. Use the title and body above for your message. To pin to the top or change audience, open{" "}
+          Announcements are highlighted for hub members. Use the title and body above for your message. To pin so it
+          sorts first in the feed, or to change audience, open{" "}
           <strong className="font-semibold text-[var(--ud-text-primary)]">Deet settings</strong> from the toolbar below.
         </p>
       </div>
-    );
-  }
-
-  if (kind === "notice") {
-    return (
-      <p className="mt-4 border-t border-[var(--ud-border-subtle)] pt-4 text-sm text-[var(--ud-text-secondary)]">
-        Use the title and body above for your notice.
-      </p>
     );
   }
 
@@ -313,6 +306,7 @@ export function ComposerInlineExtensions({
         return { value: String(k), label: String(k) };
       }),
     ];
+    const { date: startsAtDate, time: startsAtTime } = parseLocalDateTime(p.startsAtInput);
     const { date: deadlineDate, time: deadlineTime } = parseLocalDateTime(p.deadlineInput);
     return (
       <div className="space-y-4">
@@ -421,6 +415,61 @@ export function ComposerInlineExtensions({
               >
                 <span className={`${COMPOSER_TOGGLE_KNOB} ${ps.allowSecretVoting ? "translate-x-4" : "translate-x-0.5"}`} />
               </button>
+            </div>
+            <div className="rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)]/50 p-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <span className="text-sm font-medium text-[var(--ud-text-primary)]">Voting opens</span>
+                  <p className="mt-0.5 text-xs text-[var(--ud-text-muted)]">Optional - delay when members can vote.</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  disabled={disabled}
+                  aria-checked={p.startsAtEnabled}
+                  onClick={() => {
+                    const on = !p.startsAtEnabled;
+                    if (on && !p.startsAtInput.trim()) {
+                      onPayloadChange({ ...p, startsAtEnabled: true, startsAtInput: defaultPollStartsAtInput() });
+                    } else {
+                      onPayloadChange({ ...p, startsAtEnabled: on });
+                    }
+                  }}
+                  className={`${COMPOSER_TOGGLE} shrink-0 self-end sm:self-center ${p.startsAtEnabled ? "bg-[var(--ud-brand-primary)]" : "bg-gray-300"}`}
+                >
+                  <span className={`${COMPOSER_TOGGLE_KNOB} ${p.startsAtEnabled ? "translate-x-4" : "translate-x-0.5"}`} />
+                </button>
+              </div>
+              {p.startsAtEnabled ? (
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">
+                      <Calendar className="h-3.5 w-3.5 text-[var(--ud-brand-primary)]" aria-hidden />
+                      Date
+                    </label>
+                    <input
+                      type="date"
+                      value={startsAtDate}
+                      disabled={disabled}
+                      onChange={(e) =>
+                        onPayloadChange({ ...p, startsAtInput: buildLocalDateTime(e.target.value, startsAtTime) })
+                      }
+                      className={COMPOSER_INPUT}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">
+                      <Clock className="h-3.5 w-3.5 text-[var(--ud-brand-primary)]" aria-hidden />
+                      Time
+                    </label>
+                    <ComposerTime12hRow
+                      disabled={disabled}
+                      value24={startsAtTime}
+                      onChange24={(t24) => onPayloadChange({ ...p, startsAtInput: buildLocalDateTime(startsAtDate, t24) })}
+                    />
+                  </div>
+                </div>
+              ) : null}
             </div>
             <div className="rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)]/50 p-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

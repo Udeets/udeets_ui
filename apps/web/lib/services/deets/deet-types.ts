@@ -118,6 +118,8 @@ export interface DeetRecord {
   view_count?: number;
   share_count?: number;
   allow_comments?: boolean;
+  /** When false, the deet is a draft (author-only until published). */
+  is_published?: boolean;
 }
 
 export interface CreateDeetInput {
@@ -130,4 +132,6 @@ export interface CreateDeetInput {
   previewImageUrls?: string[];
   attachments?: DeetAttachment[];
   allowComments?: boolean;
+  /** Default true. Set false to save as draft. */
+  isPublished?: boolean;
 }

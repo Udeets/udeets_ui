@@ -29,7 +29,7 @@ export async function getProfileSummary(userId: string): Promise<ProfileSummary 
     supabase.from("profiles").select("id, full_name, avatar_url, email, created_at").eq("id", userId).maybeSingle(),
     supabase.from("profile_likes").select("*", { count: "exact", head: true }).eq("profile_id", userId),
     supabase.from("profile_comments").select("*", { count: "exact", head: true }).eq("profile_id", userId),
-    supabase.from("deets").select("*", { count: "exact", head: true }).eq("created_by", userId),
+    supabase.from("deets").select("*", { count: "exact", head: true }).eq("created_by", userId).eq("is_published", true),
     viewerId
       ? supabase.from("profile_likes").select("id").eq("profile_id", userId).eq("liker_id", viewerId).maybeSingle()
       : Promise.resolve({ data: null, error: null }),

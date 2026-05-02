@@ -4,7 +4,6 @@ import type { AttachedDeetItem, PollSettings } from "../deetTypes";
 export type ComposerContentKind =
   | "post"
   | "announcement"
-  | "notice"
   | "poll"
   | "event"
   | "alert"
@@ -19,6 +18,9 @@ export type ComposerSurveyQuestion = {
 
 export type ComposerPollExtension = {
   options: string[];
+  /** UI toggle; mapped to `pollSettings.startsAt` on submit */
+  startsAtEnabled: boolean;
+  startsAtInput: string;
   /** UI toggle; mapped to `pollSettings.deadline` on submit */
   deadlineEnabled: boolean;
   deadlineInput: string;
@@ -64,7 +66,6 @@ export type ComposerTypeExtensions = {
   /** Optional place tag (same shape as legacy check-in; serialized as a location attachment). */
   post: ComposerCheckinExtension;
   announcement: ComposerAnnouncementExtension;
-  notice: Record<string, never>;
   poll: ComposerPollExtension;
   event: ComposerEventExtension;
   alert: ComposerAlertExtension;
@@ -83,11 +84,11 @@ export function defaultTypePayload(kind: ComposerContentKind): ComposerTypePaylo
       return { placeName: "", address: "" };
     case "announcement":
       return {} as ComposerTypePayload;
-    case "notice":
-      return {};
     case "poll":
       return {
         options: [...DEFAULT_POLL_OPTIONS],
+        startsAtEnabled: false,
+        startsAtInput: "",
         deadlineEnabled: false,
         deadlineInput: "",
         pollSettings: {
@@ -95,6 +96,7 @@ export function defaultTypePayload(kind: ComposerContentKind): ComposerTypePaylo
           allowMultiSelect: false,
           multiSelectLimit: null,
           allowSecretVoting: false,
+          startsAt: null,
           deadline: null,
           showResults: "always",
           sortBy: "option_no",

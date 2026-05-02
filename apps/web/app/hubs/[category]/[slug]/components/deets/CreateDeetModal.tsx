@@ -3,8 +3,8 @@
 
 import type { Dispatch, FormEvent, RefObject, SetStateAction } from "react";
 import { useEffect, useRef } from "react";
-import { ChevronDown, ChevronLeft, Settings, X } from "lucide-react";
-import { BUTTON_PRIMARY, cn } from "../hubUtils";
+import { ChevronDown, ChevronLeft, Palette, Settings, X } from "lucide-react";
+import { BUTTON_PRIMARY, BUTTON_SECONDARY, cn } from "../hubUtils";
 import type { DeetFormattingState, DeetSettingsState } from "./deetTypes";
 import { ComposerEmojiPicker } from "./ComposerEmojiPicker";
 import { DeetSettingsFields } from "./DeetSettingsModal";
@@ -21,6 +21,7 @@ import {
   ComposerSurveyIcon,
   ComposerPaymentIcon,
 } from "./ComposerIcons";
+import { RICH_BODY_DECORATION } from "@/components/deets/SafeDeetBody";
 
 const ACTION_BTN =
   "inline-flex h-10 w-10 items-center justify-center rounded-full transition duration-150 hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-brand-primary)] active:scale-[0.96]";
@@ -37,8 +38,12 @@ const KIND_GROUPS: Array<{ heading: string; hint?: string; items: KindOption[] }
     hint: "A deet is anything you share here—these are common ways to shape it in the feed.",
     items: [
       { value: "post", label: "General update", short: "Update", blurb: "Everyday share: text, photos, optional place on a map" },
-      { value: "announcement", label: "Announcement", short: "Announce", blurb: "Something you want the whole hub to notice" },
-      { value: "notice", label: "Notice", short: "Notice", blurb: "Formal or official note for the record" },
+      {
+        value: "announcement",
+        label: "Announcement",
+        short: "Announce",
+        blurb: "Official updates, rules, reminders — pin important ones for everyone",
+      },
     ],
   },
   {
@@ -78,7 +83,6 @@ function headerTitle(kind: ComposerContentKind): string {
   const labels: Record<ComposerContentKind, string> = {
     post: "Write Your Deet",
     announcement: "New Announcement",
-    notice: "New Notice",
     poll: "New Poll",
     event: "New Event",
     alert: "New Alert",
@@ -107,11 +111,38 @@ function titleFieldMeta(kind: ComposerContentKind): { label: string; placeholder
       return { label: "Alert title", placeholder: "e.g. Road closure", optional: false };
     case "announcement":
       return { label: "Headline", placeholder: "e.g. Important update", optional: false };
-    case "notice":
-      return { label: "Notice title", placeholder: "e.g. Parking reminder", optional: false };
     default:
       return { label: "Title", placeholder: "", optional: true };
   }
+}
+
+/**
+ * If true, skip a single-span wrap — crossing real block nodes makes one span invalid HTML.
+ * Omit `div` here: contenteditable bodies are often `<div>…</div>` and `cloneContents()` can include a `div`
+ * even for a simple in-line selection, which incorrectly skipped coloring before.
+ */
+function rangeFragmentHasBlockStructure(range: Range): boolean {
+  const frag = range.cloneContents();
+  return Boolean(
+    frag.querySelector(
+      "p, ul, ol, li, blockquote, h1, h2, h3, h4, h5, h6, article, section, aside, pre, table, thead, tbody, tr, td, th"
+    )
+  );
+}
+
+/** Some browsers mis-report `element.contains(textNode)` for contenteditable; walk ancestors as a fallback. */
+function rangeIsInsideEditor(editor: HTMLElement, range: Range): boolean {
+  try {
+    if (editor.contains(range.commonAncestorContainer)) return true;
+  } catch {
+    /* ignore */
+  }
+  let n: Node | null = range.commonAncestorContainer;
+  while (n) {
+    if (n === editor) return true;
+    n = n.parentNode;
+  }
+  return false;
 }
 
 function ComposerFormattingToolbar({
@@ -124,6 +155,8 @@ function ComposerFormattingToolbar({
   onBold,
   onItalic,
   onUnderline,
+  onColorPickerGestureStart,
+  onColorPickerLiveValue,
 }: {
   fontMenuRef: RefObject<HTMLDivElement | null>;
   isFontSizeMenuOpen: boolean;
@@ -134,12 +167,17 @@ function ComposerFormattingToolbar({
   onBold: () => void;
   onItalic: () => void;
   onUnderline: () => void;
+  onColorPickerGestureStart: () => void;
+  /** Keeps controlled `value` in sync while the OS color UI (eyedropper / tint) updates — avoids Edge fighting React. */
+  onColorPickerLiveValue?: (hex: string) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap items-center gap-2">
       <div ref={fontMenuRef} className="relative">
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={onToggleFontSizeMenu}
           className="inline-flex h-9 min-w-[44px] items-center justify-center rounded-xl border border-[var(--ud-border)] px-3 text-sm font-medium text-[var(--ud-text-secondary)] transition duration-150 active:scale-[0.96] hover:border-[var(--ud-border)]"
         >
@@ -151,6 +189,7 @@ function ComposerFormattingToolbar({
               <button
                 key={size}
                 type="button"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => onFontSizePick(size)}
                 className={cn(
                   "block w-full rounded-xl px-3 py-2 text-left text-sm transition duration-150",
@@ -165,25 +204,63 @@ function ComposerFormattingToolbar({
           </div>
         ) : null}
       </div>
-      <button type="button" onClick={onBold} className={cn(FORMAT_BAR_BTN, "text-sm font-semibold")}>
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={onBold}
+        className={cn(FORMAT_BAR_BTN, "text-sm font-semibold")}
+      >
         B
       </button>
-      <button type="button" onClick={onItalic} className={cn(FORMAT_BAR_BTN, "text-sm italic")}>
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={onItalic}
+        className={cn(FORMAT_BAR_BTN, "text-sm italic")}
+      >
         I
       </button>
-      <button type="button" onClick={onUnderline} className={cn(FORMAT_BAR_BTN, "text-sm underline")}>
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={onUnderline}
+        className={cn(FORMAT_BAR_BTN, "text-sm underline")}
+      >
         U
       </button>
-      <label className={cn(FORMAT_BAR_BTN, "relative inline-flex w-9 cursor-pointer")}>
-        <span className="text-[var(--ud-brand-primary)]">A</span>
+      <label
+        title="Select words in the body first, then open the palette and choose a color."
+        onPointerDownCapture={(e) => {
+          if (e.button === 0) onColorPickerGestureStart();
+        }}
+        onMouseDown={(e) => e.preventDefault()}
+        className={cn(FORMAT_BAR_BTN, "relative inline-flex w-9 cursor-pointer")}
+      >
+        <Palette
+          className="pointer-events-none h-[18px] w-[18px] shrink-0"
+          strokeWidth={2}
+          aria-hidden
+          style={{ color: formatting.textColor }}
+        />
         <input
           type="color"
           value={formatting.textColor}
-          onChange={(event) => onTextColorChange(event.target.value)}
-          aria-label="Choose text color"
+          onChange={(event) => {
+            const v = event.target.value;
+            onColorPickerLiveValue?.(v);
+            onTextColorChange(v);
+          }}
+          onInput={(event) => {
+            onColorPickerLiveValue?.(event.currentTarget.value);
+          }}
+          aria-label="Text color — select body text first, then choose a color"
           className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
         />
       </label>
+    </div>
+      <p className="text-[11px] leading-snug text-[var(--ud-text-muted)]">
+        Select text in the body, then open the palette and pick a color.
+      </p>
     </div>
   );
 }
@@ -208,6 +285,8 @@ export function CreateDeetModal({
   onRemovePhoto,
   onClose,
   onSubmit,
+  onSaveDraft,
+  allowSaveDraft = false,
   isSubmitting,
   onCloseFontSizeMenu,
   deetPhotoInputRef,
@@ -245,6 +324,9 @@ export function CreateDeetModal({
   onRemovePhoto?: (index: number) => void;
   onClose: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onSaveDraft?: () => void | Promise<void>;
+  /** Show Save draft when creating or when editing an existing draft. */
+  allowSaveDraft?: boolean;
   isSubmitting: boolean;
   onCloseFontSizeMenu: () => void;
   deetPhotoInputRef: RefObject<HTMLInputElement | null>;
@@ -271,7 +353,23 @@ export function CreateDeetModal({
   const fontMenuMobileRef = useRef<HTMLDivElement | null>(null);
   const fontMenuDesktopRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<HTMLDivElement | null>(null);
+  /** Saved when opening the color picker so `foreColor` still runs on the intended selection. */
+  const colorSelectionRangeRef = useRef<Range | null>(null);
+  /** `<input type="color">` value when the picker gesture started — skip no-op applies. */
+  const colorHexWhenPickerOpenedRef = useRef<string>(formatting.textColor);
+  /** Dedupe `change` + `blur` applying the same hex in one gesture. */
+  const lastColorCommitRef = useRef<{ hex: string; at: number } | null>(null);
+  const swatchSyncRafRef = useRef<number | null>(null);
   const accessoryShellRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (swatchSyncRafRef.current != null) {
+        cancelAnimationFrame(swatchSyncRafRef.current);
+        swatchSyncRafRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!isFontSizeMenuOpen) return;
@@ -334,10 +432,143 @@ export function CreateDeetModal({
     editorRef.current?.focus();
   };
 
+  const captureSelectionForColor = () => {
+    const editor = editorRef.current;
+    const sel = window.getSelection();
+    if (!editor || !sel || sel.rangeCount === 0) {
+      colorSelectionRangeRef.current = null;
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    if (!rangeIsInsideEditor(editor, range)) {
+      colorSelectionRangeRef.current = null;
+      return;
+    }
+    colorSelectionRangeRef.current = range.cloneRange();
+  };
+
+  const beginColorPickerSession = () => {
+    lastColorCommitRef.current = null;
+    colorHexWhenPickerOpenedRef.current = formatting.textColor;
+    captureSelectionForColor();
+  };
+
+  /** Batch swatch updates to one frame per paint — fewer React commits while dragging the OS color control. */
+  const syncColorPickerSwatch = (hex: string) => {
+    if (hex.toLowerCase() === formatting.textColor.toLowerCase()) return;
+    if (swatchSyncRafRef.current != null) cancelAnimationFrame(swatchSyncRafRef.current);
+    swatchSyncRafRef.current = requestAnimationFrame(() => {
+      swatchSyncRafRef.current = null;
+      if (hex.toLowerCase() === formatting.textColor.toLowerCase()) return;
+      onFormattingChange({ ...formatting, textColor: hex });
+    });
+  };
+
+  const colorCommitShouldApply = (hex: string): boolean => {
+    const opened = colorHexWhenPickerOpenedRef.current.toLowerCase();
+    const same = hex.toLowerCase() === opened;
+    const saved = colorSelectionRangeRef.current;
+    const hasNonCollapsedSaved = Boolean(saved && !saved.collapsed);
+    return !same || hasNonCollapsedSaved;
+  };
+
+  const commitColorPickerChange = (hex: string) => {
+    if (!colorCommitShouldApply(hex)) return;
+    const now = Date.now();
+    const last = lastColorCommitRef.current;
+    if (last && last.hex === hex.toLowerCase() && now - last.at < 280) return;
+    lastColorCommitRef.current = { hex: hex.toLowerCase(), at: now };
+    applyTextColor(hex);
+  };
+
   const applyTextColor = (color: string) => {
-    document.execCommand("foreColor", false, color);
-    onFormattingChange({ ...formatting, textColor: color });
-    editorRef.current?.focus();
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    let rawSaved = colorSelectionRangeRef.current;
+    if (!rawSaved) {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const live = sel.getRangeAt(0);
+        try {
+          if (rangeIsInsideEditor(editor, live) && !live.collapsed) {
+            rawSaved = live.cloneRange();
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    const saved = rawSaved ? rawSaved.cloneRange() : null;
+
+    try {
+      editor.focus();
+
+      const tryManualSpanWrap = (): boolean => {
+        if (!saved || saved.collapsed) return false;
+        try {
+          if (!rangeIsInsideEditor(editor, saved)) return false;
+          if (rangeFragmentHasBlockStructure(saved)) return false;
+
+          const sel = window.getSelection();
+          if (!sel) return false;
+          sel.removeAllRanges();
+          sel.addRange(saved.cloneRange());
+          const liveRange = sel.getRangeAt(0);
+
+          const span = document.createElement("span");
+          span.style.color = color;
+          const extracted = liveRange.extractContents();
+          span.appendChild(extracted);
+          liveRange.insertNode(span);
+
+          sel.removeAllRanges();
+          const after = document.createRange();
+          after.selectNodeContents(span);
+          after.collapse(false);
+          sel.addRange(after);
+
+          onFormattingChange({ ...formatting, textColor: color });
+          handleEditorInput();
+          return true;
+        } catch {
+          return false;
+        }
+      };
+
+      if (tryManualSpanWrap()) {
+        editor.focus();
+        return;
+      }
+
+      if (saved) {
+        const sel = window.getSelection();
+        if (sel) {
+          sel.removeAllRanges();
+          try {
+            sel.addRange(saved.cloneRange());
+          } catch {
+            /* range may no longer be valid */
+          }
+        }
+      }
+
+      try {
+        document.execCommand("styleWithCSS", false, "true");
+      } catch {
+        /* optional */
+      }
+      try {
+        document.execCommand("foreColor", false, color);
+      } catch {
+        /* optional */
+      }
+      onFormattingChange({ ...formatting, textColor: color });
+      editor.focus();
+      handleEditorInput();
+    } finally {
+      colorSelectionRangeRef.current = null;
+    }
   };
 
   const handleEditorInput = () => {
@@ -357,7 +588,6 @@ export function CreateDeetModal({
       case "post":
         return null;
       case "announcement":
-      case "notice":
         return <ComposerAnnouncementIcon className={cls} />;
       case "poll":
         return <ComposerPollIcon className={cls} />;
@@ -549,10 +779,12 @@ export function CreateDeetModal({
                   onToggleFontSizeMenu={onToggleFontSizeMenu}
                   formatting={formatting}
                   onFontSizePick={applyFontSize}
-                  onTextColorChange={applyTextColor}
+                  onTextColorChange={commitColorPickerChange}
                   onBold={applyBold}
                   onItalic={applyItalic}
                   onUnderline={applyUnderline}
+                  onColorPickerGestureStart={beginColorPickerSession}
+                  onColorPickerLiveValue={syncColorPickerSwatch}
                 />
               </div>
             </details>
@@ -564,10 +796,12 @@ export function CreateDeetModal({
                 onToggleFontSizeMenu={onToggleFontSizeMenu}
                 formatting={formatting}
                 onFontSizePick={applyFontSize}
-                onTextColorChange={applyTextColor}
+                onTextColorChange={commitColorPickerChange}
                 onBold={applyBold}
                 onItalic={applyItalic}
                 onUnderline={applyUnderline}
+                onColorPickerGestureStart={beginColorPickerSession}
+                onColorPickerLiveValue={syncColorPickerSwatch}
               />
             </div>
 
@@ -582,7 +816,7 @@ export function CreateDeetModal({
                     ? "Write something… Add photos from the bar below, or tag an optional place."
                     : "Add details, context, or instructions…"
                 }
-                className="min-h-[120px] w-full text-base leading-relaxed text-[var(--ud-text-primary)] outline-none transition-[min-height] duration-200 sm:min-h-[160px] sm:text-[17px] whitespace-pre-wrap [&:empty:before]:content-[attr(data-placeholder)] [&:empty:before]:text-[var(--ud-text-muted)]"
+                className={`deet-rich-body min-h-[120px] w-full text-base leading-relaxed text-[var(--ud-text-primary)] outline-none transition-[min-height] duration-200 sm:min-h-[160px] sm:text-[17px] whitespace-pre-wrap [&:empty:before]:content-[attr(data-placeholder)] [&:empty:before]:text-[var(--ud-text-muted)] ${RICH_BODY_DECORATION}`}
               />
 
               <input ref={deetPhotoInputRef} type="file" accept="image/*" multiple onChange={onPhotoFilesChange} className="hidden" />
@@ -677,14 +911,26 @@ export function CreateDeetModal({
                   <Settings className="h-[22px] w-[22px] stroke-[1.5]" />
                 </button>
               </div>
-              <button
-                type="submit"
-                form="deet-form"
-                disabled={isSubmitting}
-                className={cn(BUTTON_PRIMARY, "shrink-0 px-4 py-2 text-sm", isSubmitting && "cursor-not-allowed opacity-60")}
-              >
-                {isSubmitting ? (isEditMode ? "Saving…" : "Publishing…") : isEditMode ? "Save changes" : "Publish"}
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                {allowSaveDraft ? (
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => void onSaveDraft?.()}
+                    className={cn(BUTTON_SECONDARY, "px-3 py-2 text-sm", isSubmitting && "cursor-not-allowed opacity-60")}
+                  >
+                    {isSubmitting ? "…" : "Save draft"}
+                  </button>
+                ) : null}
+                <button
+                  type="submit"
+                  form="deet-form"
+                  disabled={isSubmitting}
+                  className={cn(BUTTON_PRIMARY, "shrink-0 px-4 py-2 text-sm", isSubmitting && "cursor-not-allowed opacity-60")}
+                >
+                  {isSubmitting ? (isEditMode ? "Saving…" : "Publishing…") : isEditMode ? "Save changes" : "Publish"}
+                </button>
+              </div>
             </div>
 
             {composerAccessoryPanel === "emoji" ? (

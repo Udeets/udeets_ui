@@ -86,13 +86,5 @@ export function migrateComposerTypePayload(
     } as ComposerTypePayload;
   }
 
-  if (fromKind === "announcement" && toKind === "notice") {
-    return base;
-  }
-
-  if (fromKind === "notice" && toKind === "announcement") {
-    return base;
-  }
-
   return base;
 }

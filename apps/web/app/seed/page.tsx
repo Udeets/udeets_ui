@@ -163,6 +163,7 @@ export default function SeedPage() {
           kind: "Deals",
           created_by: user.id,
           attachments: [],
+          is_published: true,
         });
 
         if (deetError) {
@@ -225,6 +226,7 @@ export default function SeedPage() {
           kind: post.kind,
           created_by: user.id,
           attachments: [],
+          is_published: true,
         });
 
         if (deetError) {

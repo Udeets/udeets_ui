@@ -71,7 +71,8 @@ function LinkifiedPlain({ text, className }: { text: string; className?: string 
   );
 }
 
-const RICH_BODY_DECORATION =
+/** Shared with the deet composer contentEditable so pasted lists match feed styling (Tailwind preflight removes list markers by default). */
+export const RICH_BODY_DECORATION =
   "[&_a]:text-[var(--ud-brand-primary)] [&_a]:underline [&_a]:underline-offset-2 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--ud-border)] [&_blockquote]:pl-3 [&_blockquote]:text-[var(--ud-text-secondary)]";
 
 /**

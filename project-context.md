@@ -2,7 +2,7 @@
 
 > The living state of the project. Updated at the end of every substantial session.
 > Owner: udeets (udeetsdev1@gmail.com)
-> Last updated: April 26, 2026 (test-pass sweep: 19 of 26 open items closed including the 3 decision items, 6 deferred to roadmap, 1 verify-only; see § 7 Session Log + § 8)
+> Last updated: May 2, 2026 (deet drafts: DB column + RLS + hub Posts / My drafts + composer Save draft; see § 7 Session Log)
 
 ---
 
@@ -27,7 +27,7 @@ uDeets is a Next.js + Supabase community hub platform inspired by the Band app. 
 
 - Tech stack, services, DB schema, component tree — see `architecture.md`
 - Frontend deployed on Vercel, backend is Supabase (auth + Postgres + storage + realtime)
-- 36 migrations in `supabase/migrations/`
+- 49 migration files in `supabase/migrations/`
 - All DB calls go through `apps/web/lib/services/*`
 - 10 hub templates built, 5 completed end-to-end, 5 with configs created
 - Auth: Google OAuth, Apple OAuth (pending dev account setup), email/password
@@ -108,6 +108,12 @@ Full architecture tree in `architecture.md` § 6. Summary:
 ---
 
 ## 7. Completed Work — Session Log
+
+### Session (May 2, 2026) — Deet drafts (save before publish)
+
+- **DB:** `deets.is_published` (default true, backfill true). RLS: authenticated users read published rows or their own drafts; hub admin/creator update only on published rows; authors update own rows (including drafts). Child tables (`deet_likes`, `deet_comments`, `deet_views`, `deet_shares`, `poll_votes`, `survey_responses`) gated so inserts/reads apply only to published parent deets. `apply_deet_denormalized_count` SECURITY DEFINER RPC replaces the overly broad authenticated UPDATE on `deets` for count columns. `user_hubs_with_unread()` updated to ignore unpublished deets.
+- **Services:** `createDeet` / `updateDeet` accept publish vs draft; `listDeets` supports `publishedOnly` / `draftsOnly` with retry when `is_published` is missing; `DEET_COLUMNS` includes `is_published`; `deet-interactions` count bumps call the RPC.
+- **Hub UI:** `useHubLiveFeed` loads published and drafts in parallel; Posts vs **My drafts** segmented control in `DeetsSection`; composer **Save draft** + publish; draft cards show a Draft badge and disable reactions, comments, and share until published. Profile / My Posts / nav deet queries / post count use published-only where appropriate.
 
 ### Session (April 26, 2026) — 41-item test-pass sweep
 

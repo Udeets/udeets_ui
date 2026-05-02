@@ -35,3 +35,14 @@ export function buildLocalDateTime(date: string, time: string): string {
   if (!/^\d{2}:\d{2}$/.test(t)) t = "23:59";
   return `${d}T${t}`;
 }
+
+/** Default poll “voting opens” = one hour from now (local), for datetime-local style payloads. */
+export function defaultPollStartsAtInput(d = new Date()): string {
+  const x = new Date(d.getTime() + 60 * 60 * 1000);
+  const y = x.getFullYear();
+  const m = String(x.getMonth() + 1).padStart(2, "0");
+  const day = String(x.getDate()).padStart(2, "0");
+  const hh = String(x.getHours()).padStart(2, "0");
+  const mm = String(x.getMinutes()).padStart(2, "0");
+  return `${y}-${m}-${day}T${hh}:${mm}`;
+}

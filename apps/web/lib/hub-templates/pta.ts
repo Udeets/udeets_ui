@@ -13,7 +13,7 @@ export const ptaConfig: HubTemplateConfig = {
   },
   tabs: ["About", "Posts", "Attachments", "Events", "Members"],
   postTypes: [
-    { type: "notice", icon: "📢", description: "Official PTA announcement" },
+    { type: "announcement", icon: "📢", description: "Official PTA announcement" },
     { type: "event", icon: "📅", description: "School event or meeting" },
     { type: "volunteer", icon: "🤝", description: "Volunteer call" },
     { type: "fundraiser", icon: "💰", description: "Fundraising campaign" },
