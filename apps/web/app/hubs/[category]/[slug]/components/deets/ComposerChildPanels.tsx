@@ -27,7 +27,7 @@ export function AnnouncementChildContent({
   return (
     <div className="space-y-4">
       <p className="text-sm text-[var(--ud-text-secondary)]">
-        Create an announcement that will be pinned and highlighted for all hub members.
+        Create an announcement for all hub members. Optional pin sorts it to the top of the feed.
       </p>
       <div>
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Title</label>
@@ -52,52 +52,6 @@ export function AnnouncementChildContent({
           className={`${BTN_PRIMARY} disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           Add Announcement
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* ── Notice ───────────────────────────────────────────────────── */
-
-export function NoticeChildContent({
-  onAttach,
-  onCancel,
-}: {
-  onAttach: (title: string, body: string) => void;
-  onCancel: () => void;
-}) {
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
-
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-[var(--ud-text-secondary)]">
-        Post a notice to inform members about rules, reminders, or updates.
-      </p>
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Notice Title</label>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Parking Reminder" className={INPUT} />
-      </div>
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--ud-text-muted)]">Description</label>
-        <textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder="Provide details about this notice..."
-          rows={3}
-          className={`${INPUT} resize-none`}
-        />
-      </div>
-      <div className="flex justify-end gap-3 pt-2">
-        <button type="button" onClick={onCancel} className={BTN_SECONDARY}>Cancel</button>
-        <button
-          type="button"
-          disabled={!title.trim()}
-          onClick={() => onAttach(title.trim(), body.trim())}
-          className={`${BTN_PRIMARY} disabled:opacity-50 disabled:cursor-not-allowed`}
-        >
-          Add Notice
         </button>
       </div>
     </div>

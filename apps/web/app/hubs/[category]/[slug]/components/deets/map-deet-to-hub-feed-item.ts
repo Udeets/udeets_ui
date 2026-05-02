@@ -125,6 +125,7 @@ export function mapDeetToHubFeedItem(item: Partial<DeetRecord>, hubCreatorId?: s
     shares: item.share_count ?? 0,
     deetAttachments: deetAttachments.length > 0 ? deetAttachments : undefined,
     deetOptions,
+    isDraft: item.is_published === false,
   };
 }
 
@@ -145,18 +146,18 @@ export function resolveHubFeedItemKind(
     if (attTypes.includes("jobs")) return "jobs";
     if (attTypes.includes("poll")) return "poll";
     // Structured hub post types (stored on legacy "Posts" rows) — must win over bucket heuristics.
-    if (attTypes.includes("announcement")) return "announcement";
-    if (attTypes.includes("notice")) return "notice";
+    if (attTypes.includes("announcement") || attTypes.includes("notice")) return "announcement";
     if (attTypes.includes("event")) return "event";
     if (attTypes.includes("survey")) return "survey";
     if (attTypes.includes("payment")) return "payment";
-    // Composer `alert` attachment (distinct from legacy sourceType === "alert" → notice below).
+    // Composer `alert` attachment (distinct from legacy sourceType === "alert" below).
     if (attTypes.includes("alert")) return "alert";
   }
 
-  // Notice: only alert sourceType or explicit "Notices" bucket
-  if (card.sourceType === "alert") return "notice";
-  if (card.type === "Notices") return "notice";
+  // Legacy rows without structured attachments: treat alert-like source as feed alert.
+  if (card.sourceType === "alert") return "alert";
+  // Legacy Notices bucket (or announcement mapped to Notices in dashboard card) → announcement feed kind
+  if (card.type === "Notices") return "announcement";
   // Announcement: explicit announcement sourceType
   if (card.sourceType === "announcement") return "announcement";
   if (card.sourceType === "event") return "event";
@@ -167,7 +168,6 @@ export function resolveHubFeedItemKind(
 }
 
 function defaultFeedLabel(kind: HubFeedItemKind) {
-  if (kind === "notice") return "Notice";
   if (kind === "photo") return "Photo";
   if (kind === "event") return "Event";
   if (kind === "poll") return "Poll";

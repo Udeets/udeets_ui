@@ -7,7 +7,8 @@ import type { DeetRecord } from "@/lib/services/deets/deet-types";
 import { mapDeetToHubFeedItem } from "../components/deets/map-deet-to-hub-feed-item";
 
 export function useHubLiveFeed(hubId: string, hubCreatorId?: string) {
-  const [liveFeedItems, setLiveFeedItems] = useState<HubContent["feed"]>([]);
+  const [livePublishedItems, setLivePublishedItems] = useState<HubContent["feed"]>([]);
+  const [liveDraftItems, setLiveDraftItems] = useState<HubContent["feed"]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -15,22 +16,28 @@ export function useHubLiveFeed(hubId: string, hubCreatorId?: string) {
     const syncFeed = async () => {
       if (!hubId) {
         if (!cancelled) {
-          setLiveFeedItems([]);
+          setLivePublishedItems([]);
+          setLiveDraftItems([]);
         }
         return;
       }
 
       try {
-        const items = await listDeets({ hubIds: [hubId] });
+        const [published, drafts] = await Promise.all([
+          listDeets({ hubIds: [hubId], publishedOnly: true }),
+          listDeets({ hubIds: [hubId], draftsOnly: true }),
+        ]);
         if (!cancelled) {
           startTransition(() => {
-            setLiveFeedItems(items.map((item) => mapDeetToHubFeedItem(item, hubCreatorId)));
+            setLivePublishedItems(published.map((item) => mapDeetToHubFeedItem(item, hubCreatorId)));
+            setLiveDraftItems(drafts.map((item) => mapDeetToHubFeedItem(item, hubCreatorId)));
           });
         }
       } catch {
         if (!cancelled) {
           startTransition(() => {
-            setLiveFeedItems([]);
+            setLivePublishedItems([]);
+            setLiveDraftItems([]);
           });
         }
       }
@@ -47,53 +54,75 @@ export function useHubLiveFeed(hubId: string, hubCreatorId?: string) {
     };
   }, [hubId, hubCreatorId]);
 
-  const prependCreatedDeet = useCallback((createdDeet: DeetRecord) => {
-    startTransition(() => {
-      setLiveFeedItems((current) => [
-        mapDeetToHubFeedItem(createdDeet, hubCreatorId),
-        ...current.filter((item) => item.id !== createdDeet.id),
-      ]);
-    });
-  }, [hubCreatorId]);
-
-  const replaceDeet = useCallback((updatedDeet: DeetRecord) => {
-    startTransition(() => {
-      setLiveFeedItems((current) => {
-        const mapped = mapDeetToHubFeedItem(updatedDeet, hubCreatorId);
-        // Update in place if it already exists so the user's scroll position holds;
-        // fall back to prepending so users always see their latest work.
-        let replaced = false;
-        const next = current.map((item) => {
-          if (item.id === updatedDeet.id) {
-            replaced = true;
-            return mapped;
-          }
-          return item;
-        });
-        return replaced ? next : [mapped, ...next];
-      });
-    });
-  }, [hubCreatorId]);
-
-  const removeDeet = useCallback((deetId: string) => {
-    startTransition(() => {
-      setLiveFeedItems((current) => current.filter((item) => item.id !== deetId));
-    });
-  }, []);
-
-  const replaceFeedDeet = useCallback(
-    (deet: DeetRecord) => {
+  const prependCreatedDeet = useCallback(
+    (createdDeet: DeetRecord) => {
+      const mapped = mapDeetToHubFeedItem(createdDeet, hubCreatorId);
+      const isDraft = createdDeet.is_published === false;
       startTransition(() => {
-        setLiveFeedItems((current) =>
-          current.map((item) => (item.id === deet.id ? mapDeetToHubFeedItem(deet, hubCreatorId) : item)),
-        );
+        if (isDraft) {
+          setLiveDraftItems((current) => [mapped, ...current.filter((item) => item.id !== createdDeet.id)]);
+        } else {
+          setLivePublishedItems((current) => [mapped, ...current.filter((item) => item.id !== createdDeet.id)]);
+        }
       });
     },
     [hubCreatorId],
   );
 
+  const replaceDeet = useCallback(
+    (updatedDeet: DeetRecord) => {
+      const mapped = mapDeetToHubFeedItem(updatedDeet, hubCreatorId);
+      const isDraft = updatedDeet.is_published === false;
+      startTransition(() => {
+        if (isDraft) {
+          setLiveDraftItems((current) => {
+            let replaced = false;
+            const next = current.map((item) => {
+              if (item.id === updatedDeet.id) {
+                replaced = true;
+                return mapped;
+              }
+              return item;
+            });
+            return replaced ? next : [mapped, ...next];
+          });
+          setLivePublishedItems((current) => current.filter((item) => item.id !== updatedDeet.id));
+        } else {
+          setLivePublishedItems((current) => {
+            let replaced = false;
+            const next = current.map((item) => {
+              if (item.id === updatedDeet.id) {
+                replaced = true;
+                return mapped;
+              }
+              return item;
+            });
+            return replaced ? next : [mapped, ...next];
+          });
+          setLiveDraftItems((current) => current.filter((item) => item.id !== updatedDeet.id));
+        }
+      });
+    },
+    [hubCreatorId],
+  );
+
+  const removeDeet = useCallback((deetId: string) => {
+    startTransition(() => {
+      setLivePublishedItems((current) => current.filter((item) => item.id !== deetId));
+      setLiveDraftItems((current) => current.filter((item) => item.id !== deetId));
+    });
+  }, []);
+
+  const replaceFeedDeet = useCallback(
+    (deet: DeetRecord) => {
+      replaceDeet(deet);
+    },
+    [replaceDeet],
+  );
+
   return {
-    liveFeedItems,
+    livePublishedItems,
+    liveDraftItems,
     prependCreatedDeet,
     replaceDeet,
     removeDeet,

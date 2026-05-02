@@ -2,7 +2,6 @@
 
 import type { HubContent } from "@/lib/hub-content";
 import {
-  AlertTriangle,
   BarChart3,
   Briefcase,
   Calendar,
@@ -21,7 +20,6 @@ import {
 import type { HubFeedItemAttachment } from "@/lib/hub-content";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DeetComposerCard } from "../deets/DeetComposerCard";
-import { resolveDeetType } from "../deets/feedDeetTypeBlocks";
 import { POST_ICON } from "../deets/feedEmojiReact";
 import { DeetCommentsPreviewStrip } from "../deets/DeetCommentsPreviewStrip";
 import { DeetCommentsSection } from "../deets/DeetCommentsSection";
@@ -221,6 +219,9 @@ export function DeetsSection({
   feedFilter,
   onSelectFeedFilter,
   filteredFeedItems,
+  postsListSource,
+  onPostsListSourceChange,
+  showPostsListToggle,
   showDemoPostedText,
   demoPostedText,
   showDemoPoll,
@@ -279,6 +280,9 @@ export function DeetsSection({
   feedFilter: "Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos";
   onSelectFeedFilter: (value: "Newest" | "Oldest" | "Announcements" | "Events" | "Polls" | "Photos") => void;
   filteredFeedItems: HubContent["feed"];
+  postsListSource: "published" | "drafts";
+  onPostsListSourceChange: (source: "published" | "drafts") => void;
+  showPostsListToggle: boolean;
   showDemoPostedText: boolean;
   demoPostedText: string;
   showDemoPoll: boolean;
@@ -333,7 +337,6 @@ export function DeetsSection({
   const [activeFilterPill, setActiveFilterPill] = useState<string>("All");
 
   const [openMenuDeetId, setOpenMenuDeetId] = useState<string | null>(null);
-  const [isNoticeExpanded, setIsNoticeExpanded] = useState(false);
   const [copiedDeetId, setCopiedDeetId] = useState<string | null>(null);
   const [deletingDeetId, setDeletingDeetId] = useState<string | null>(null);
   const [confirmDeleteDeetId, setConfirmDeleteDeetId] = useState<string | null>(null);
@@ -396,14 +399,6 @@ export function DeetsSection({
       />
     </div>
   );
-
-  /* ── Notice items (Displayed them in a separate strip above feed) ── */
-  const noticeItems = filteredFeedItems.filter((item) => {
-    if (item.kind !== "notice") return false;
-    // Exclude items that resolve to "announcement" display type
-    const resolved = resolveDeetType(item.kind, item.deetAttachments);
-    return resolved !== "announcement";
-  });
 
   const [commentSheetMobile, setCommentSheetMobile] = useState(false);
   const [focusComposerDeetId, setFocusComposerDeetId] = useState<string | null>(null);
@@ -545,54 +540,34 @@ export function DeetsSection({
         <div className="w-full space-y-3">
           {composerCard}
 
-          {/* ── Notice section (pinned notices above feed, collapsible) ── */}
-          {noticeItems.length > 0 && (
-            <div className="overflow-hidden rounded-xl border border-amber-200 bg-amber-50/50">
+          {showPostsListToggle ? (
+            <div className="flex rounded-full border border-[var(--ud-border)] bg-[var(--ud-bg-subtle)] p-1">
               <button
                 type="button"
-                onClick={() => setIsNoticeExpanded(!isNoticeExpanded)}
-                className="flex w-full items-center justify-between px-4 py-2.5 transition hover:bg-amber-100/50"
+                onClick={() => onPostsListSourceChange("published")}
+                className={cn(
+                  "min-h-[40px] flex-1 rounded-full px-3 py-2 text-sm font-semibold transition",
+                  postsListSource === "published"
+                    ? "bg-[var(--ud-bg-card)] text-[var(--ud-text-primary)] shadow-sm"
+                    : "text-[var(--ud-text-muted)] hover:text-[var(--ud-text-secondary)]",
+                )}
               >
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 stroke-[2] text-amber-600" />
-                  <span className="text-sm font-bold text-amber-800">Notices</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white">{noticeItems.length}</span>
-                  <ChevronDown className={cn("h-4 w-4 text-amber-500 transition-transform", isNoticeExpanded ? "rotate-0" : "-rotate-90")} />
-                </div>
+                Posts
               </button>
-              {isNoticeExpanded && (
-                <div className="border-t border-amber-200">
-                  {noticeItems.map((notice) => (
-                    <button
-                      key={notice.id}
-                      type="button"
-                      onClick={() => {
-                        const el = document.getElementById(notice.id);
-                        el?.scrollIntoView({ behavior: "smooth", block: "center" });
-                      }}
-                      className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm border-b border-amber-100 last:border-b-0 hover:bg-amber-100/60 transition text-left"
-                    >
-                      <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
-                      <span className="truncate flex-1 text-amber-900">
-                        {notice.title && notice.title !== "Notice" ? (
-                          notice.title
-                        ) : (
-                          (() => {
-                            const preview = plainTextFromHtml(notice.body);
-                            const short = preview.slice(0, 80);
-                            return short + (preview.length > 80 ? "…" : "");
-                          })()
-                        )}
-                      </span>
-                      <ChevronDown className="h-4 w-4 shrink-0 text-amber-400 -rotate-90" />
-                    </button>
-                  ))}
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={() => onPostsListSourceChange("drafts")}
+                className={cn(
+                  "min-h-[40px] flex-1 rounded-full px-3 py-2 text-sm font-semibold transition",
+                  postsListSource === "drafts"
+                    ? "bg-[var(--ud-bg-card)] text-[var(--ud-text-primary)] shadow-sm"
+                    : "text-[var(--ud-text-muted)] hover:text-[var(--ud-text-secondary)]",
+                )}
+              >
+                My drafts
+              </button>
             </div>
-          )}
+          ) : null}
 
           {/* ── Sort row + view toggles (styled) ── */}
           <div className="flex items-center justify-between py-1">
@@ -646,7 +621,7 @@ export function DeetsSection({
             ))}
           </div>
 
-          {showDemoPostedText ? (
+          {showDemoPostedText && postsListSource !== "drafts" ? (
             <article className="w-full overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-sm">
               <div className="px-4 pb-3 pt-4">
                 <div className="flex items-center gap-2 text-sm">
@@ -660,7 +635,7 @@ export function DeetsSection({
             </article>
           ) : null}
 
-          {showDemoPoll ? (
+          {showDemoPoll && postsListSource !== "drafts" ? (
             <article
               data-demo-target={isDemoPreview ? "hub-poll-section" : undefined}
               className="w-full overflow-hidden rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-sm"
@@ -716,17 +691,21 @@ export function DeetsSection({
                       : <Megaphone className="h-5 w-5 stroke-[1.5]" />}
                   </div>
                   <h3 className="mt-4 text-base font-semibold tracking-tight text-[var(--ud-text-primary)]">
-                    {normalizedPostSearch
-                      ? "No matching deets"
-                      : feedFilter === "Events"
-                        ? "No events created yet"
-                        : feedFilter === "Photos"
-                          ? "No photos updated yet"
-                          : feedFilter === "Polls"
-                            ? "No polls created yet"
-                            : feedFilter === "Announcements"
-                              ? "No announcements yet"
-                              : "This deets stream is ready"}
+                    {postsListSource === "drafts"
+                      ? normalizedPostSearch
+                        ? "No matching drafts"
+                        : "No drafts yet — save a post as draft from the composer."
+                      : normalizedPostSearch
+                        ? "No matching deets"
+                        : feedFilter === "Events"
+                          ? "No events created yet"
+                          : feedFilter === "Photos"
+                            ? "No photos updated yet"
+                            : feedFilter === "Polls"
+                              ? "No polls created yet"
+                              : feedFilter === "Announcements"
+                                ? "No announcements yet"
+                                : "This deets stream is ready"}
                   </h3>
                   <p className="mx-auto mt-1.5 max-w-xs text-sm leading-relaxed text-[var(--ud-text-muted)]">
                     {normalizedPostSearch

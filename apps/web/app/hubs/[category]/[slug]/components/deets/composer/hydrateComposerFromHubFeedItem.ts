@@ -49,8 +49,7 @@ function composerKindFromStructuredAttachments(item: HubContent["feed"][number])
   // Keep priority aligned with `resolveHubFeedItemKind` (jobs → poll → …).
   if (atts.some((a) => a.type === "jobs")) return "jobs";
   if (atts.some((a) => a.type === "poll")) return "poll";
-  if (atts.some((a) => a.type === "announcement")) return "announcement";
-  if (atts.some((a) => a.type === "notice")) return "notice";
+  if (atts.some((a) => a.type === "announcement" || a.type === "notice")) return "announcement";
   if (atts.some((a) => a.type === "event")) return "event";
   if (atts.some((a) => a.type === "survey")) return "survey";
   if (atts.some((a) => a.type === "payment")) return "payment";
@@ -94,8 +93,6 @@ export function hubFeedKindToComposerKind(kind: HubFeedItemKind): ComposerConten
   switch (kind) {
     case "announcement":
       return "announcement";
-    case "notice":
-      return "notice";
     case "poll":
       return "poll";
     case "event":
@@ -133,7 +130,6 @@ export function hydrateComposerFromHubFeedItem(item: HubContent["feed"][number])
 
   if (
     composerKind === "announcement" ||
-    composerKind === "notice" ||
     composerKind === "survey" ||
     composerKind === "payment" ||
     composerKind === "alert"
@@ -155,6 +151,8 @@ export function hydrateComposerFromHubFeedItem(item: HubContent["feed"][number])
       const padded = [...opts];
       while (padded.length < 3) padded.push("");
       const ps = normalizePollSettings(poll?.pollSettings) ?? poll?.pollSettings;
+      const startsAtStr =
+        typeof ps?.startsAt === "string" && ps.startsAt.trim() ? ps.startsAt.trim() : "";
       const deadlineStr =
         typeof ps?.deadline === "string" && ps.deadline.trim() ? ps.deadline.trim() : "";
       const rawMultiLimit =
@@ -162,6 +160,8 @@ export function hydrateComposerFromHubFeedItem(item: HubContent["feed"][number])
       composerTypePayload = {
         ...base,
         options: padded,
+        startsAtEnabled: Boolean(startsAtStr),
+        startsAtInput: startsAtStr,
         deadlineEnabled: Boolean(deadlineStr),
         deadlineInput: deadlineStr,
         pollSettings: {
@@ -170,6 +170,7 @@ export function hydrateComposerFromHubFeedItem(item: HubContent["feed"][number])
           allowMultiSelect: ps?.allowMultiSelect ?? base.pollSettings.allowMultiSelect,
           multiSelectLimit: clampPollMultiSelectLimit(rawMultiLimit, opts.length),
           allowSecretVoting: ps?.allowSecretVoting ?? base.pollSettings.allowSecretVoting,
+          startsAt: startsAtStr || null,
           deadline: deadlineStr || null,
           showResults:
             (ps?.showResults as ComposerPollExtension["pollSettings"]["showResults"]) ??
@@ -288,7 +289,6 @@ export function hydrateComposerFromHubFeedItem(item: HubContent["feed"][number])
     if (
       structured?.detail?.trim() &&
       (composerKind === "announcement" ||
-        composerKind === "notice" ||
         composerKind === "payment" ||
         composerKind === "alert")
     ) {

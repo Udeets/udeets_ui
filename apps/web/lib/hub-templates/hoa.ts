@@ -13,7 +13,7 @@ export const hoaConfig: HubTemplateConfig = {
   },
   tabs: ["About", "Posts", "Attachments", "Events", "Members"],
   postTypes: [
-    { type: "notice", icon: "📢", description: "Official board announcement" },
+    { type: "announcement", icon: "📢", description: "Official board announcement" },
     { type: "maintenance", icon: "🔧", description: "Scheduled work, outages" },
     { type: "event", icon: "📅", description: "Community events, meetings" },
     { type: "poll", icon: "🗳️", description: "Community voting" },

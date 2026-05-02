@@ -2,7 +2,6 @@
 
 import {
   AlignLeft,
-  AlertTriangle,
   BarChart3,
   Briefcase,
   Calendar,
@@ -16,8 +15,8 @@ import type { HubFeedItemAttachment } from "@/lib/hub-content";
 import { FeedPostBody } from "@/components/deets/FeedPostBody";
 import { isGenericDeetTitle } from "@/lib/deets/deet-title";
 import { clampPollMultiSelectLimit } from "@/lib/deets/poll-multi-select-limit";
-import { isPollDeadlinePassed, normalizePollSettings } from "@/lib/deets/normalize-poll-settings";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { isPollDeadlinePassed, isPollNotYetOpen, normalizePollSettings } from "@/lib/deets/normalize-poll-settings";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "../hubUtils";
 import { SurveyContent } from "./SurveyContent";
 
@@ -43,15 +42,6 @@ const DEET_TYPE_CONFIG: Record<
     border: "border-blue-200",
     accent: "bg-blue-100",
     rail: "border-l-blue-500",
-  },
-  notice: {
-    icon: AlertTriangle,
-    label: "Notice",
-    bg: "bg-amber-50",
-    text: "text-amber-700",
-    border: "border-amber-300",
-    accent: "bg-amber-100",
-    rail: "border-l-amber-500",
   },
   event: {
     icon: Calendar,
@@ -143,8 +133,7 @@ export function resolveDeetType(kind: string, attachments?: HubFeedItemAttachmen
     // Prefer explicit structured types (stable regardless of attachment array order).
     if (attachments.some((a) => a.type === "jobs")) return "jobs";
     if (attachments.some((a) => a.type === "poll")) return "poll";
-    if (attachments.some((a) => a.type === "announcement")) return "announcement";
-    if (attachments.some((a) => a.type === "notice")) return "notice";
+    if (attachments.some((a) => a.type === "announcement" || a.type === "notice")) return "announcement";
     if (attachments.some((a) => a.type === "event")) return "event";
     if (attachments.some((a) => a.type === "survey")) return "survey";
     if (attachments.some((a) => a.type === "payment")) return "payment";
@@ -155,7 +144,6 @@ export function resolveDeetType(kind: string, attachments?: HubFeedItemAttachmen
       }
     }
   }
-  if (kind === "notice") return "notice";
   if (kind === "announcement") return "announcement";
   if (kind === "event") return "event";
   if (kind === "poll") return "poll";
@@ -173,7 +161,9 @@ export function getStructuredHeadlineForFeed(
   feedTitleFallback: string | undefined,
 ): string | null {
   const config = DEET_TYPE_CONFIG[type];
-  const matchingAtt = attachments?.find((a) => a.type === type);
+  const matchingAtt =
+    attachments?.find((a) => a.type === type) ??
+    (type === "announcement" ? attachments?.find((a) => a.type === "notice") : undefined);
   const structuredTitle = matchingAtt?.title?.trim();
   const fromFallback = feedTitleFallback?.trim();
 
@@ -322,22 +312,11 @@ export function DeetTypeContent({
   const config = DEET_TYPE_CONFIG[type];
   if (!config) return null;
 
-  const matchingAtt = attachments?.find((a) => a.type === type);
+  const matchingAtt =
+    attachments?.find((a) => a.type === type) ??
+    (type === "announcement" ? attachments?.find((a) => a.type === "notice") : undefined);
   const bodyTone = "text-[15px] leading-relaxed text-[var(--ud-text-primary)]";
   const secondaryTone = "text-sm leading-relaxed text-[var(--ud-text-secondary)]";
-
-  if (type === "notice") {
-    const showRichBody = Boolean(bodyHtml?.trim());
-    return (
-      <StructuredDescriptionShell type={type}>
-        {showRichBody ? (
-          <FeedPostBody body={bodyHtml!} title="" dedupeBodyAgainstTitle={false} className={bodyTone} />
-        ) : matchingAtt?.detail ? (
-          <p className={secondaryTone}>{matchingAtt.detail}</p>
-        ) : null}
-      </StructuredDescriptionShell>
-    );
-  }
 
   if (type === "announcement") {
     const showRichBody = Boolean(bodyHtml?.trim());
@@ -470,6 +449,12 @@ export function DeetTypeContent({
 /** Fired on `window` after a poll vote is saved so every mounted {@link PollContent} for that deet refetches. */
 export const UDEETS_POLL_VOTE_UPDATED_EVENT = "udeets-poll-vote-updated";
 
+function formatPollLocalInstant(raw: string): string {
+  const t = new Date(raw.trim()).getTime();
+  if (Number.isNaN(t)) return raw.trim();
+  return new Date(t).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
 export function PollContent({
   deetId,
   attachments,
@@ -493,6 +478,28 @@ export function PollContent({
       : pollSettingsNorm.multiSelectLimit;
   const multiSelectLimit = clampPollMultiSelectLimit(multiSelectLimitRaw, parsedOptions.length);
   const pollClosed = isPollDeadlinePassed(pollSettingsNorm?.deadline);
+  const startsAtStr =
+    typeof pollSettingsNorm?.startsAt === "string" && pollSettingsNorm.startsAt.trim()
+      ? pollSettingsNorm.startsAt.trim()
+      : "";
+  const [pollScheduleTick, setPollScheduleTick] = useState(0);
+  const pollNotYetOpen = useMemo(() => {
+    void pollScheduleTick;
+    return isPollNotYetOpen(startsAtStr);
+  }, [startsAtStr, pollScheduleTick]);
+
+  useEffect(() => {
+    if (!startsAtStr) return;
+    const openMs = new Date(startsAtStr).getTime();
+    if (Number.isNaN(openMs) || openMs <= Date.now()) return;
+    const id = window.setInterval(() => {
+      setPollScheduleTick((x) => x + 1);
+      if (Date.now() >= openMs) {
+        clearInterval(id);
+      }
+    }, 15000);
+    return () => clearInterval(id);
+  }, [startsAtStr]);
 
   const parsedOptionsRef = useRef(parsedOptions);
   parsedOptionsRef.current = parsedOptions;
@@ -602,7 +609,7 @@ export function PollContent({
   }, [deetId, loadPollState]);
 
   const handleVoteSingle = async (index: number) => {
-    if (pollClosed || isVoting) return;
+    if (pollClosed || pollNotYetOpen || isVoting) return;
     setIsVoting(true);
     const prevMine = [...mySelected];
     const prevSingle = prevMine[0] ?? null;
@@ -645,7 +652,7 @@ export function PollContent({
   };
 
   const handleVoteMulti = async (index: number) => {
-    if (pollClosed || isVoting) return;
+    if (pollClosed || pollNotYetOpen || isVoting) return;
     setIsVoting(true);
     try {
       const { togglePollMultiVote } = await import("@/lib/services/deets/poll-votes");
@@ -662,7 +669,7 @@ export function PollContent({
   };
 
   const handleVote = (index: number) => {
-    if (pollClosed) return;
+    if (pollClosed || pollNotYetOpen) return;
     if (allowMultiRef.current) void handleVoteMulti(index);
     else void handleVoteSingle(index);
   };
@@ -697,12 +704,22 @@ export function PollContent({
                 · Multi-select
               </span>
             ) : null}
+            {pollNotYetOpen ? (
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-400">
+                · Opens later
+              </span>
+            ) : null}
             {pollClosed ? (
               <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
                 · Ended
               </span>
             ) : null}
           </div>
+          {pollNotYetOpen ? (
+            <p className="mt-2 rounded-lg border border-sky-200/80 bg-sky-50/90 px-3 py-2 text-xs font-medium text-sky-950 dark:border-sky-900/50 dark:bg-sky-950/40 dark:text-sky-100">
+              Voting opens {formatPollLocalInstant(startsAtStr)}.
+            </p>
+          ) : null}
           {pollClosed ? (
             <p className="mt-2 rounded-lg border border-amber-200/80 bg-amber-50/90 px-3 py-2 text-xs font-medium text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
               This poll has ended. Voting is closed.
@@ -721,7 +738,7 @@ export function PollContent({
             <button
               key={i}
               type="button"
-              disabled={isVoting || pollClosed}
+              disabled={isVoting || pollClosed || pollNotYetOpen}
               onClick={() => handleVote(i)}
               className={cn(
                 "relative flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-sm transition",

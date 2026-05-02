@@ -17,8 +17,15 @@ export const DEET_COLUMNS = `
   comment_count,
   view_count,
   share_count,
-  allow_comments
+  allow_comments,
+  is_published
 `;
+
+/** Select list when `is_published` column is not migrated yet. */
+export const DEET_COLUMNS_WITHOUT_IS_PUBLISHED = DEET_COLUMNS.split(",")
+  .map((c) => c.trim())
+  .filter((c) => c !== "is_published")
+  .join(", ");
 
 function asImageString(value: unknown) {
   return typeof value === "string" && value.trim() ? value : "";
@@ -69,10 +76,16 @@ export function normalizeDeetRecord(record: DeetRecord): DeetRecord {
     attachments,
   });
 
+  const isPublished =
+    typeof (record as DeetRecord & { is_published?: boolean }).is_published === "boolean"
+      ? (record as DeetRecord & { is_published: boolean }).is_published
+      : true;
+
   return {
     ...record,
     attachments,
     preview_image_url: previewImages[0] || null,
     preview_image_urls: previewImages,
+    is_published: isPublished,
   };
 }

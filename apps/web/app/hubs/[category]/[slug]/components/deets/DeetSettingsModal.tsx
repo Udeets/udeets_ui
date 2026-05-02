@@ -92,7 +92,8 @@ export function DeetSettingsFields({
       <section className="rounded-2xl border border-[var(--ud-border)] px-4 py-4">
         <h4 className="text-sm font-semibold text-[var(--ud-text-primary)]">Pin to top</h4>
         <p className="mt-1 text-xs leading-relaxed text-[var(--ud-text-muted)]">
-          Ask to keep this deet near the top of the hub feed. Final ordering may follow hub rules.
+          Pinned announcements sort to the top of the hub feed (ahead of unpinned posts). The setting is stored on this
+          deet either way.
         </p>
         <div className="mt-4 flex items-center justify-between gap-3">
           <span className="text-sm text-[var(--ud-text-primary)]">Pin this deet</span>

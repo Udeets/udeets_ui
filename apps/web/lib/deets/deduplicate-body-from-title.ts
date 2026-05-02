@@ -27,6 +27,10 @@ export function deduplicateBodyFromTitle(
 ): string {
   if (!body) return "";
   const sanitized = sanitizeDeetBodyHtml(body);
+  // Title/body dedupe uses plain text; converting remainder back to a single <p> drops list markup.
+  if (/<\s*(ul|ol)\b/i.test(sanitized)) {
+    return sanitized;
+  }
   const plainFull = plainTextFromHtml(sanitized).replace(/\s+/g, " ").trim();
   if (!title || isGenericDeetTitle(title)) {
     return sanitized;

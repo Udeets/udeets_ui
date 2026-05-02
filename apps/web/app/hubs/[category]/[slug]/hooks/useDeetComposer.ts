@@ -5,19 +5,22 @@ import { startTransition, useCallback, useEffect, useRef, useState } from "react
 import type { HubContent } from "@/lib/hub-content";
 import { createDeet } from "@/lib/services/deets/create-deet";
 import type { DeetRecord } from "@/lib/services/deets/deet-types";
-import { updateDeet } from "@/lib/services/deets/update-deet";
+import { updateDeet, type UpdateDeetInput } from "@/lib/services/deets/update-deet";
 import { createEvent } from "@/lib/services/events/create-event";
 import { uploadDeetMedia } from "@/lib/services/deets/upload-deet-media";
 import type { ComposerChildFlow, DeetFormattingState, DeetSettingsState } from "../components/deets/deetTypes";
 import { INITIAL_DEET_SETTINGS } from "../components/deets/deetTypes";
 import { mapComposerStateToSubmitParts } from "../components/deets/composer/composerMapper";
 import {
+  composerDraftValidationMessage,
+  composerHasDraftableContent,
   composerHasMinimumContent,
   composerPayloadDiffersFromDefault,
   composerValidationMessage,
   deetSettingsValidationMessage,
+  pollScheduleValidationMessage,
 } from "../components/deets/composer/composerValidation";
-import type { ComposerContentKind, ComposerTypePayload } from "../components/deets/composer/composerTypes";
+import type { ComposerContentKind, ComposerPollExtension, ComposerTypePayload } from "../components/deets/composer/composerTypes";
 import { migrateComposerTypePayload } from "../components/deets/composer/composerMigrate";
 import { defaultTypePayload } from "../components/deets/composer/composerTypes";
 import {
@@ -64,7 +67,6 @@ type UseDeetComposerArgs = {
 
 const FLOW_TO_KIND: Partial<Record<Exclude<ComposerChildFlow, "quit_confirm">, ComposerContentKind>> = {
   announcement: "announcement",
-  notice: "notice",
   poll: "poll",
   event: "event",
   post: "post",
@@ -119,6 +121,8 @@ export function useDeetComposer({
   const deetPhotoInputRef = useRef<HTMLInputElement | null>(null);
   const [editingDeetId, setEditingDeetId] = useState<string | null>(null);
   const [editPersistedGalleryUrls, setEditPersistedGalleryUrls] = useState<string[]>([]);
+  /** True when the opened edit target was an unpublished draft (allows Save draft in modal). */
+  const [editTargetWasDraft, setEditTargetWasDraft] = useState(false);
 
   const applyComposerKind = useCallback(
     (nextKind: ComposerContentKind) => {
@@ -211,6 +215,7 @@ export function useDeetComposer({
     setComposerPhase("pick");
     setEditingDeetId(null);
     setEditPersistedGalleryUrls([]);
+    setEditTargetWasDraft(false);
   };
 
   const removePersistedGalleryPhoto = (index: number) => {
@@ -227,6 +232,7 @@ export function useDeetComposer({
       const feedItem = arg.editFeedItem;
       const hydrated = hydrateComposerFromHubFeedItem(feedItem);
       setEditingDeetId(feedItem.id);
+      setEditTargetWasDraft(Boolean(feedItem.isDraft));
       setEditPersistedGalleryUrls(hydrated.editPersistedGalleryUrls);
       setComposerPhase("compose");
       setComposerKind(hydrated.composerKind);
@@ -247,6 +253,7 @@ export function useDeetComposer({
 
     setEditingDeetId(null);
     setEditPersistedGalleryUrls([]);
+    setEditTargetWasDraft(false);
 
     let initialKind: ComposerContentKind = "post";
     let sheet: ComposerChildFlow | null = null;
@@ -383,26 +390,41 @@ export function useDeetComposer({
     }
   };
 
-  const handleSubmitDeet = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const runDeetSubmit = async (asDraft: boolean) => {
     if (isSubmittingDeet) return;
     if (composerPhase === "pick") return;
 
     const persistedGallery = editingDeetId ? editPersistedGalleryUrls : [];
     const hasPhotos = selectedPhotoPreviews.length > 0 || persistedGallery.length > 0;
-    if (
-      !composerHasMinimumContent(composerKind, composerTitle, composerBodyHtml, hasPhotos, composerTypePayload)
-    ) {
-      setSubmitError(
-        composerValidationMessage(composerKind, composerTitle, composerBodyHtml, hasPhotos, composerTypePayload)
-      );
-      return;
-    }
 
-    const settingsErr = deetSettingsValidationMessage(deetSettings);
-    if (settingsErr) {
-      setSubmitError(settingsErr);
-      return;
+    if (asDraft) {
+      if (!composerHasDraftableContent(composerKind, composerTitle, composerBodyHtml, hasPhotos, composerTypePayload)) {
+        setSubmitError(
+          composerDraftValidationMessage(composerKind, composerTitle, composerBodyHtml, hasPhotos, composerTypePayload),
+        );
+        return;
+      }
+    } else {
+      if (!composerHasMinimumContent(composerKind, composerTitle, composerBodyHtml, hasPhotos, composerTypePayload)) {
+        setSubmitError(
+          composerValidationMessage(composerKind, composerTitle, composerBodyHtml, hasPhotos, composerTypePayload),
+        );
+        return;
+      }
+
+      const settingsErr = deetSettingsValidationMessage(deetSettings);
+      if (settingsErr) {
+        setSubmitError(settingsErr);
+        return;
+      }
+
+      if (composerKind === "poll") {
+        const pollErr = pollScheduleValidationMessage(composerTypePayload as ComposerPollExtension);
+        if (pollErr) {
+          setSubmitError(pollErr);
+          return;
+        }
+      }
     }
 
     setSubmitError(null);
@@ -476,6 +498,7 @@ export function useDeetComposer({
       }
 
       const sanitizedBody = sanitizeDeetBodyHtml(rawBody || "");
+      const resolvedTitle = (mapped.resolvedTitle || "").trim() || (asDraft ? "Untitled draft" : mapped.resolvedTitle);
 
       const attachmentPayload = structuredAndPhoto.map((item) => ({
         type: item.type,
@@ -491,15 +514,22 @@ export function useDeetComposer({
       }));
 
       if (editingDeetId) {
-        const updatedDeet = await updateDeet({
+        const updatePayload: UpdateDeetInput = {
           id: editingDeetId,
-          title: mapped.resolvedTitle,
+          title: resolvedTitle,
           body: sanitizedBody,
           kind: mapped.resolvedKind,
           previewImageUrl: primaryImage ?? null,
           previewImageUrls: galleryPreviewUrls,
           attachments: attachmentPayload,
-        });
+        };
+        if (asDraft) {
+          updatePayload.isPublished = false;
+        } else if (editTargetWasDraft) {
+          updatePayload.isPublished = true;
+        }
+
+        const updatedDeet = await updateDeet(updatePayload);
         resetDeetComposer();
         startTransition(() => {
           onDeetUpdated?.(updatedDeet);
@@ -508,15 +538,16 @@ export function useDeetComposer({
         const createdDeet = await createDeet({
           hubId,
           authorName,
-          title: mapped.resolvedTitle,
+          title: resolvedTitle,
           body: sanitizedBody,
           kind: mapped.resolvedKind,
           previewImageUrl: primaryImage,
           previewImageUrls: galleryPreviewUrls,
           attachments: attachmentPayload,
+          isPublished: !asDraft,
         });
 
-        if (mapped.eventBridge && userId) {
+        if (!asDraft && mapped.eventBridge && userId) {
           try {
             await createEvent(
               {
@@ -545,6 +576,15 @@ export function useDeetComposer({
     } finally {
       setIsSubmittingDeet(false);
     }
+  };
+
+  const handleSubmitDeet = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await runDeetSubmit(false);
+  };
+
+  const handleSaveDeetDraft = async () => {
+    await runDeetSubmit(true);
   };
 
   return {
@@ -586,6 +626,8 @@ export function useDeetComposer({
     removePhoto,
     handleDeetPhotoFiles,
     handleSubmitDeet,
+    handleSaveDeetDraft,
+    allowSaveDraft: !editingDeetId || editTargetWasDraft,
     isComposerDirty,
     editingDeetId,
     editPersistedGalleryUrls,

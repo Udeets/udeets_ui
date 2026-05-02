@@ -3,7 +3,6 @@ import type { HubCategorySlug } from "@/lib/hubs";
 export type HubFeedItemKind =
   | "announcement"
   | "photo"
-  | "notice"
   | "event"
   | "poll"
   | "file"
@@ -35,6 +34,7 @@ export type HubPollSettingsPersisted = {
   allowMultiSelect?: boolean;
   multiSelectLimit?: number | null;
   allowSecretVoting?: boolean;
+  startsAt?: string | null;
   deadline?: string | null;
   showResults?: string;
   sortBy?: string;
@@ -99,6 +99,8 @@ export type HubFeedItem = {
   deetOptions?: HubFeedDeetOptions;
   /** When false, thread UI stays closed; still used by simpler composer flows. */
   allowComments?: boolean;
+  /** Unpublished draft — only the author should see this in the hub drafts list. */
+  isDraft?: boolean;
 };
 
 export type HubEventItem = {

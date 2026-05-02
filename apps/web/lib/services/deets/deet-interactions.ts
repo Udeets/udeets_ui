@@ -3,11 +3,17 @@ import { createClient } from "@/lib/supabase/client";
 /**
  * Fire-and-forget helper for denormalized count updates.
  * These are nice-to-have but must NEVER break the primary operation.
+ * Uses SECURITY DEFINER RPC when available (deets RLS no longer allows arbitrary UPDATE).
  */
 function updateDenormalizedCount(table: "deets", id: string, column: string, value: number) {
+  if (table !== "deets") return;
   try {
     const supabase = createClient();
-    void supabase.from(table).update({ [column]: value }).eq("id", id);
+    void supabase.rpc("apply_deet_denormalized_count", {
+      p_deet_id: id,
+      p_column: column,
+      p_value: value,
+    });
   } catch {
     // Intentionally swallowed — count will self-heal on next full read
   }

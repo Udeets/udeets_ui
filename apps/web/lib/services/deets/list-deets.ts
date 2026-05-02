@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase/client";
 import type { DeetRecord } from "@/lib/services/deets/deet-types";
-import { DEET_COLUMNS, normalizeDeetRecord } from "@/lib/services/deets/query-utils";
+import { DEET_COLUMNS, DEET_COLUMNS_WITHOUT_IS_PUBLISHED, normalizeDeetRecord } from "@/lib/services/deets/query-utils";
 
-type ListDeetsOptions = {
+export type ListDeetsOptions = {
   hubIds?: string[];
   /**
    * Restrict to specific `kind` values (e.g. ["News", "Jobs", "Alerts"]).
@@ -12,11 +12,22 @@ type ListDeetsOptions = {
    */
   kinds?: string[];
   limit?: number;
+  /**
+   * When true, only `is_published` rows. Default true unless `draftsOnly` is set.
+   * Set explicit `false` to include both published and drafts visible under RLS (rare).
+   */
+  publishedOnly?: boolean;
+  /** Hub drafts for the current user only (RLS); implies `is_published = false`. */
+  draftsOnly?: boolean;
 };
 
-export async function listDeets(options?: ListDeetsOptions): Promise<DeetRecord[]> {
-  const supabase = createClient();
-  let query = supabase.from("deets").select(DEET_COLUMNS).order("created_at", { ascending: false });
+function buildDeetsQuery(
+  supabase: ReturnType<typeof createClient>,
+  options: ListDeetsOptions | undefined,
+  selectCols: string,
+  applyPublishedFilters: boolean,
+) {
+  let query = supabase.from("deets").select(selectCols).order("created_at", { ascending: false });
 
   if (options?.hubIds?.length) {
     query = query.in("hub_id", options.hubIds);
@@ -30,13 +41,35 @@ export async function listDeets(options?: ListDeetsOptions): Promise<DeetRecord[
     query = query.limit(options.limit);
   }
 
-  const { data, error } = await query;
+  if (applyPublishedFilters) {
+    const draftsOnly = Boolean(options?.draftsOnly);
+    const publishedOnly = !draftsOnly && options?.publishedOnly !== false;
+    if (draftsOnly) {
+      query = query.eq("is_published", false);
+    } else if (publishedOnly) {
+      query = query.eq("is_published", true);
+    }
+  }
+
+  return query;
+}
+
+export async function listDeets(options?: ListDeetsOptions): Promise<DeetRecord[]> {
+  const supabase = createClient();
+
+  let { data, error } = await buildDeetsQuery(supabase, options, DEET_COLUMNS, true);
+
+  if (error?.message.includes("is_published")) {
+    const retry = await buildDeetsQuery(supabase, options, DEET_COLUMNS_WITHOUT_IS_PUBLISHED, false);
+    data = retry.data;
+    error = retry.error;
+  }
 
   if (error) {
     throw new Error(`Failed to load deets: ${error.message}`);
   }
 
-  return ((data ?? []) as DeetRecord[]).map((record) => normalizeDeetRecord(record));
+  return ((data ?? []) as unknown as DeetRecord[]).map((record) => normalizeDeetRecord(record));
 }
 
 export function subscribeToDeets(

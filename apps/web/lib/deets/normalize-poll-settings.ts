@@ -12,6 +12,10 @@ export function normalizePollSettings(raw: unknown): HubPollSettingsPersisted | 
   if (!raw || typeof raw !== "object") return undefined;
   const r = raw as Record<string, unknown>;
 
+  const startsAtRaw = r.startsAt ?? r.starts_at ?? r.opensAt ?? r.opens_at;
+  const startsAt =
+    typeof startsAtRaw === "string" && startsAtRaw.trim() ? startsAtRaw.trim() : null;
+
   const deadlineRaw = r.deadline ?? r.deadline_at;
   const deadline =
     typeof deadlineRaw === "string" && deadlineRaw.trim() ? deadlineRaw.trim() : null;
@@ -30,6 +34,7 @@ export function normalizePollSettings(raw: unknown): HubPollSettingsPersisted | 
     allowMultiSelect: coerceBool(r.allowMultiSelect ?? r.allow_multi_select),
     multiSelectLimit,
     allowSecretVoting: coerceBool(r.allowSecretVoting ?? r.allow_secret_voting),
+    startsAt,
     deadline,
     showResults:
       typeof r.showResults === "string"
@@ -52,4 +57,12 @@ export function isPollDeadlinePassed(deadline: string | null | undefined): boole
   const t = new Date(deadline.trim()).getTime();
   if (Number.isNaN(t)) return false;
   return t <= Date.now();
+}
+
+/** True when `startsAt` is set and still in the future (voting not open yet). */
+export function isPollNotYetOpen(startsAt: string | null | undefined): boolean {
+  if (!startsAt || typeof startsAt !== "string" || !startsAt.trim()) return false;
+  const t = new Date(startsAt.trim()).getTime();
+  if (Number.isNaN(t)) return false;
+  return t > Date.now();
 }

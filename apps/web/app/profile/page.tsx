@@ -210,6 +210,7 @@ export default function ProfilePage() {
         .from("deets")
         .select("id, title, body, hub_id, created_at")
         .eq("created_by", user!.id)
+        .eq("is_published", true)
         .order("created_at", { ascending: false })
         .limit(50);
 

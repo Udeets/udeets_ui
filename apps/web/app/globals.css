@@ -81,8 +81,8 @@
   --ud-success: #4ade80;
 }
 
-/* Rich deet bodies keep composer inline `color` / <font color>. Inline styles beat normal
-   cascade rules, so we use !important only under `.dark` to keep text readable on dark surfaces. */
+/* Rich deet bodies: default text color on the root; do not force `!important` on `span`/`div` or
+   composer `foreColor` inline styles cannot win in dark mode. Blockquotes stay muted. */
 .dark .deet-rich-body {
   color: var(--ud-text-primary);
 }
@@ -94,20 +94,6 @@
 .dark .deet-rich-body blockquote span,
 .dark .deet-rich-body blockquote div {
   color: var(--ud-text-secondary) !important;
-}
-.dark .deet-rich-body p,
-.dark .deet-rich-body span,
-.dark .deet-rich-body div,
-.dark .deet-rich-body li,
-.dark .deet-rich-body font,
-.dark .deet-rich-body b,
-.dark .deet-rich-body strong,
-.dark .deet-rich-body i,
-.dark .deet-rich-body em,
-.dark .deet-rich-body u,
-.dark .deet-rich-body s,
-.dark .deet-rich-body strike {
-  color: var(--ud-text-primary) !important;
 }
 
 @theme inline {

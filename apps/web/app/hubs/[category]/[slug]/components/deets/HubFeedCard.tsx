@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
-import { Eye, Flag, Loader2, MessageSquare, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Eye, Flag, Loader2, MessageSquare, MoreVertical, Pencil, Pin, Trash2 } from "lucide-react";
 import { DeetSharePopover } from "@/components/deets/DeetSharePopover";
 import { useUserProfileModal } from "@/components/UserProfileModalProvider";
 import type { HubContent } from "@/lib/hub-content";
@@ -99,6 +99,7 @@ export function HubFeedCard({
   const { openProfileModal } = useUserProfileModal();
   const commentsEnabled = item.deetOptions?.commentsEnabled !== false;
   const reactionsEnabled = item.deetOptions?.reactionsEnabled !== false;
+  const interactionsLocked = Boolean(item.isDraft);
   const deetType = resolveDeetType(item.kind, item.deetAttachments);
   const hasRichSection = Boolean(deetType && item.deetAttachments?.some((a) => a.type === deetType));
   const showStructuredRichBody = Boolean(hasRichSection && deetType && deetType !== "poll");
@@ -115,6 +116,7 @@ export function HubFeedCard({
   const showPollDescriptionBody = Boolean(deetType === "poll" && item.body?.trim());
   const showBodyBlock = Boolean(item.body?.trim() && (!hasRichSection || showPollDescriptionBody));
   const kindMeta = feedKindMeta(item.kind);
+  const isPinnedAnnouncement = item.kind === "announcement" && item.deetOptions?.pinToTop === true;
   const showEngagementSummary = likeCount > 0 || commentCount > 0;
 
   const postMenuRef = useRef<HTMLDivElement | null>(null);
@@ -138,7 +140,10 @@ export function HubFeedCard({
     <article
       id={item.id}
       className={cn(
-        "w-full overflow-visible rounded-xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-sm transition",
+        "w-full overflow-visible rounded-xl border bg-[var(--ud-bg-card)] shadow-sm transition",
+        isPinnedAnnouncement
+          ? "border-[var(--ud-brand-primary)]/35 ring-1 ring-[var(--ud-brand-primary)]/20"
+          : "border-[var(--ud-border-subtle)]",
         highlighted && "ring-2 ring-[var(--ud-brand-primary)] ring-offset-2",
       )}
     >
@@ -172,6 +177,11 @@ export function HubFeedCard({
                 {item.role === "creator" ? "Creator" : item.role === "admin" ? "Admin" : ""}
               </span>
             ) : null}
+            {item.isDraft ? (
+              <span className="rounded-full border border-[var(--ud-border)] bg-[var(--ud-bg-subtle)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--ud-text-secondary)]">
+                Draft
+              </span>
+            ) : null}
           </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1">
             <span className="text-xs text-[var(--ud-text-muted)]">{item.time}</span>
@@ -185,6 +195,12 @@ export function HubFeedCard({
                 {kindMeta.label}
               </span>
             )}
+            {isPinnedAnnouncement ? (
+              <span className="inline-flex items-center gap-0.5 rounded-full border border-[var(--ud-brand-primary)]/30 bg-[var(--ud-brand-light)]/40 px-2 py-0.5 text-[10px] font-semibold text-[var(--ud-brand-primary)]">
+                <Pin className="h-3 w-3" aria-hidden />
+                Pinned
+              </span>
+            ) : null}
           </div>
         </div>
         <div className="relative shrink-0">
@@ -404,25 +420,31 @@ export function HubFeedCard({
               isLiking={isLiking}
               onToggleLike={onToggleLike}
               syncedReaction={myReactionType ?? null}
-              interactionsEnabled={reactionsEnabled}
+              interactionsEnabled={reactionsEnabled && !interactionsLocked}
               triggerClassName="max-sm:min-h-[44px] rounded-lg active:scale-[0.98] motion-reduce:active:scale-100"
             />
           </div>
           <button
             type="button"
             onClick={() => {
-              if (!commentsEnabled) return;
+              if (!commentsEnabled || interactionsLocked) return;
               onToggleComments();
             }}
-            disabled={!commentsEnabled}
-            title={!commentsEnabled ? "Comments are turned off for this post" : undefined}
+            disabled={!commentsEnabled || interactionsLocked}
+            title={
+              interactionsLocked
+                ? "Comments are available after you publish"
+                : !commentsEnabled
+                  ? "Comments are turned off for this post"
+                  : undefined
+            }
             aria-expanded={expandedComments}
             className={cn(
               "flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg text-sm transition-colors motion-reduce:transition-none sm:min-h-0 sm:py-2.5",
               expandedComments
                 ? "font-semibold text-[var(--ud-brand-primary)]"
                 : "text-[var(--ud-text-muted)]",
-              commentsEnabled
+              commentsEnabled && !interactionsLocked
                 ? "hover:bg-[var(--ud-bg-subtle)] active:scale-[0.98] motion-reduce:active:scale-100"
                 : "cursor-not-allowed opacity-50",
             )}
@@ -430,15 +452,26 @@ export function HubFeedCard({
             <MessageSquare className={POST_ICON} />
             <span>Comment</span>
           </button>
-          <DeetSharePopover
-            shareUrl={shareUrl}
-            title={item.title}
-            deetId={item.id}
-            onRecordShare={onRecordShare}
-            onCopySuccess={onCopied}
-            copied={copied}
-            triggerClassName="max-sm:min-h-[44px] rounded-lg active:scale-[0.98] motion-reduce:active:scale-100"
-          />
+          {interactionsLocked ? (
+            <button
+              type="button"
+              disabled
+              title="Share is available after you publish"
+              className="max-sm:min-h-[44px] flex min-h-[44px] min-w-0 flex-1 cursor-not-allowed items-center justify-center gap-1.5 rounded-lg text-sm text-[var(--ud-text-muted)] opacity-50 sm:min-h-0 sm:py-2.5"
+            >
+              Share
+            </button>
+          ) : (
+            <DeetSharePopover
+              shareUrl={shareUrl}
+              title={item.title}
+              deetId={item.id}
+              onRecordShare={onRecordShare}
+              onCopySuccess={onCopied}
+              copied={copied}
+              triggerClassName="max-sm:min-h-[44px] rounded-lg active:scale-[0.98] motion-reduce:active:scale-100"
+            />
+          )}
         </div>
       </div>
 

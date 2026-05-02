@@ -556,8 +556,9 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
         // 3. Fetch recent deets for notifications
         const { data: recentDeets } = await supabase
           .from("deets")
-          .select("id, hub_id, author_name, title, body, kind, created_at")
+          .select("id, hub_id, author_name, title, body, kind, created_at, is_published")
           .in("hub_id", activeHubIds)
+          .eq("is_published", true)
           .order("created_at", { ascending: false })
           .limit(30);
 
@@ -721,8 +722,9 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
         // Also check deets with event kind for events added via deet composer
         const { data: eventDeets } = await supabase
           .from("deets")
-          .select("id, hub_id, author_name, title, body, kind, attachments, created_at")
+          .select("id, hub_id, author_name, title, body, kind, attachments, created_at, is_published")
           .in("hub_id", activeHubIds)
+          .eq("is_published", true)
           .or("kind.eq.Hazards,kind.eq.Alerts")
           .order("created_at", { ascending: false })
           .limit(20);

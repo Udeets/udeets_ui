@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   AlertTriangle,
-  Bell,
   Briefcase,
   Building2,
   CalendarDays,
@@ -152,7 +151,6 @@ export function ImageWithFallback({
 export function FeedItemIcon({ kind }: { kind: HubFeedItemKind }) {
   if (kind === "announcement") return <Megaphone className={ICON} />;
   if (kind === "photo") return <Images className={ICON} />;
-  if (kind === "notice") return <Bell className={ICON} />;
   if (kind === "event") return <CalendarDays className={ICON} />;
   if (kind === "news") return <Newspaper className={ICON} />;
   if (kind === "deal") return <DollarSign className={ICON} />;
@@ -169,8 +167,6 @@ export function feedKindMeta(kind: HubFeedItemKind): { label: string; badgeClass
   switch (kind) {
     case "announcement":
       return { label: "Announcement", badgeClass: "bg-orange-50 text-orange-600 border-orange-200" };
-    case "notice":
-      return { label: "Notice", badgeClass: "bg-blue-50 text-blue-600 border-blue-200" };
     case "photo":
       return { label: "Photo", badgeClass: "bg-emerald-50 text-emerald-600 border-emerald-200" };
     case "event":

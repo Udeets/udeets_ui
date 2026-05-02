@@ -1,6 +1,18 @@
-import type { ComposerContentKind, ComposerTypePayload } from "./composerTypes";
+import type { ComposerContentKind, ComposerPollExtension, ComposerTypePayload } from "./composerTypes";
 import { defaultTypePayload } from "./composerTypes";
 import type { DeetSettingsState } from "../deetTypes";
+
+/** Poll open time vs deadline ordering (both optional). */
+export function pollScheduleValidationMessage(payload: ComposerPollExtension): string | null {
+  const startRaw = payload.startsAtEnabled && payload.startsAtInput.trim() ? payload.startsAtInput.trim() : null;
+  const endRaw = payload.deadlineEnabled && payload.deadlineInput.trim() ? payload.deadlineInput.trim() : null;
+  if (!startRaw || !endRaw) return null;
+  const a = new Date(startRaw).getTime();
+  const b = new Date(endRaw).getTime();
+  if (Number.isNaN(a) || Number.isNaN(b)) return "Check the voting opens and deadline times.";
+  if (a >= b) return "Voting opens must be earlier than the deadline.";
+  return null;
+}
 
 export function deetSettingsValidationMessage(settings: DeetSettingsState): string | null {
   if (settings.publishTiming !== "scheduled") return null;
@@ -28,7 +40,6 @@ export function composerHasMinimumContent(
       return Boolean(body || hasPhotos || place.placeName.trim());
     }
     case "announcement":
-    case "notice":
       return Boolean(t || body);
     case "poll": {
       const p = typePayload as import("./composerTypes").ComposerPollExtension;
@@ -78,7 +89,6 @@ export function composerValidationMessage(
     case "post":
       return "Add something to share — text, a photo, or an optional place.";
     case "announcement":
-    case "notice":
       return "Add a title or some body text for this update.";
     case "poll": {
       const p = typePayload as import("./composerTypes").ComposerPollExtension;
@@ -117,4 +127,30 @@ export function composerPayloadDiffersFromDefault(kind: ComposerContentKind, pay
   } catch {
     return true;
   }
+}
+
+/** Looser check for saving a draft (meets publish bar, or any title/body/photo, or structured fields started). */
+export function composerHasDraftableContent(
+  kind: ComposerContentKind,
+  title: string,
+  bodyHtml: string,
+  hasPhotos: boolean,
+  typePayload: ComposerTypePayload,
+): boolean {
+  if (composerHasMinimumContent(kind, title, bodyHtml, hasPhotos, typePayload)) return true;
+  const t = title.trim();
+  const body = bodyHtml.trim();
+  if (t || body || hasPhotos) return true;
+  return composerPayloadDiffersFromDefault(kind, typePayload);
+}
+
+export function composerDraftValidationMessage(
+  kind: ComposerContentKind,
+  title: string,
+  bodyHtml: string,
+  hasPhotos: boolean,
+  typePayload: ComposerTypePayload,
+): string {
+  if (composerHasDraftableContent(kind, title, bodyHtml, hasPhotos, typePayload)) return "";
+  return "Add a title, some text, a photo, or start the form to save a draft.";
 }

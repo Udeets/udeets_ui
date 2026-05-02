@@ -191,7 +191,7 @@ page.tsx (Server Component)
           │
           │  MODALS:
           ├── CreateDeetModal           — Rich text composer with formatting
-          │   ├── ComposerChildPanels   — Specialized UIs (poll, event, announcement, notice, checkin)
+          │   ├── ComposerChildPanels   — Specialized UIs (poll, event, announcement, checkin)
           │   └── ComposerIcons         — Phosphor icon buttons
           ├── DeetChildModal / DeetSettingsModal
           ├── InviteModal (Search + QR) / DeleteHubModal
@@ -207,6 +207,7 @@ DeetsSection (exported function, ~30 props)
 ├── Local state: sortOption, copiedDeetId, shareCountOverrides, sharedDeetIds, etc.
 ├── handleShareDeet()   — copies link + persists to deet_shares (idempotent)
 ├── handleDeleteDeet()  — with confirmation flow
+├── Pinned announcements (`deet_options.pinToTop` + announcement) sort to the top of the feed (no separate strip)
 ├── Renders each HubFeedItem as a card with:
 │   ├── Author row (avatar, name, role badge, time, 3-dot menu)
 │   ├── Body content (HTML sanitized, image gallery, attachments, polls)
@@ -255,7 +256,7 @@ DeetsSection (exported function, ~30 props)
 |------|------------|
 | `deet-types.ts` | `DeetType`, `DeetKind`, `DeetRecord`, `CreateDeetInput`, `DeetAttachment` |
 | `deet-interactions.ts` | See function table below |
-| `list-deets.ts` | `listDeets(options?)`, `subscribeToDeets(onChange)` |
+| `list-deets.ts` | `listDeets({ hubIds?, kinds?, limit?, publishedOnly?, draftsOnly? })`, `subscribeToDeets(onChange)` |
 | `create-deet.ts` | `createDeet(input)` |
 | `update-deet.ts` | `updateDeet(input)` |
 | `delete-deet.ts` | `deleteDeet(deetId)` |
@@ -331,7 +332,7 @@ DeetsSection (exported function, ~30 props)
 | Table | Key Columns | Constraints |
 |---|---|---|
 | `hubs` | id, name, slug, category, description, dp_image_url, cover_image_url, visibility, accent_color, cover_image_offset_y, created_by | — |
-| `deets` | id, hub_id (FK→hubs), author_name, title, body, kind, preview_image_url, preview_image_urls[], attachments (jsonb), created_by (FK→auth.users), like_count, comment_count, view_count, share_count, allow_comments | kind CHECK |
+| `deets` | id, hub_id (FK→hubs), author_name, title, body, kind, preview_image_url, preview_image_urls[], attachments (jsonb), created_by (FK→auth.users), like_count, comment_count, view_count, share_count, allow_comments, is_published (default true) | kind CHECK |
 | `profiles` | id (FK→auth.users), full_name, avatar_url, email, app_role, notification_preferences (jsonb), privacy_settings (jsonb) | — |
 | `hub_members` | id, hub_id (FK→hubs), user_id (FK→auth.users), role, status, last_seen_at, joined_at | UNIQUE(hub_id, user_id) |
 | `hub_invitations` | id, hub_id, invitee_user_id, inviter_user_id, status | UNIQUE pending |
@@ -421,8 +422,9 @@ type HubFeedItem = {
   deetAttachments?: HubFeedItemAttachment[];
 }
 
-type HubFeedItemKind = "announcement" | "photo" | "notice" | "event" | "poll"
-  | "file" | "news" | "deal" | "hazard" | "alert" | "jobs" | "post"
+type HubFeedItemKind =
+  | "announcement" | "photo" | "event" | "poll" | "file" | "news" | "deal" | "hazard"
+  | "alert" | "jobs" | "survey" | "payment" | "post"
 
 // Database record for a deet
 interface DeetRecord {
@@ -561,6 +563,8 @@ Chronological — apply in this order:
 20260418_create_hub_attachments.sql
 20260418_create_hub_invitations.sql
 20260418_expand_deet_media_mime_types.sql
+20260502100000_deets_drafts_and_rls.sql
+20260502100001_deets_notice_to_announcement.sql   — migrates legacy `notice` attachments + `Notices` rows to announcements (`Posts` + `announcement` attachment)
 ```
 
 See `project-context.md` § Known Issues for the subset that still needs to be applied to the live Supabase instance.
@@ -575,6 +579,7 @@ File: `components/deets/map-deet-to-hub-feed-item.ts`
 DeetRecord.kind ("Posts")      → HubFeedItem.kind ("post")
 DeetRecord.author_name         → HubFeedItem.author
 DeetRecord.created_by          → HubFeedItem.authorId
+DeetRecord.is_published false  → HubFeedItem.isDraft
 DeetRecord.preview_image_urls  → HubFeedItem.images
 DeetRecord.like_count          → HubFeedItem.likes
 DeetRecord.comment_count       → HubFeedItem.comments
@@ -582,6 +587,8 @@ DeetRecord.view_count          → HubFeedItem.views
 DeetRecord.share_count         → HubFeedItem.shares
 DeetRecord.attachments (jsonb) → HubFeedItem.deetAttachments
 ```
+
+Structured `notice` attachments (pre-migration) still resolve to feed kind `announcement` in the UI. Run `20260502100001_deets_notice_to_announcement.sql` to normalize stored rows.
 
 Legacy kind-to-type mapping in `lib/mappers/deets/map-legacy-deet-kind.ts`:
 

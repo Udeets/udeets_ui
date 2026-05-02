@@ -24,14 +24,31 @@ async function insertDeetPayload(
   supabase: ReturnType<typeof createClient>,
   payload: Record<string, unknown>,
 ): Promise<{ data: DeetRecord | null; error: { message: string } | null }> {
-  let { data, error } = await supabase.from("deets").insert(payload).select(DEET_COLUMNS).single();
+  let working: Record<string, unknown> = { ...payload };
+  let selectCols = DEET_COLUMNS;
+
+  const attempt = () => supabase.from("deets").insert(working).select(selectCols).single();
+
+  let { data, error } = await attempt();
 
   if (error?.message.includes("allow_comments")) {
-    const { allow_comments: _unused, ...payloadWithout } = payload as Record<string, unknown> & { allow_comments?: boolean };
+    const { allow_comments: _unused, ...rest } = working as Record<string, unknown> & { allow_comments?: boolean };
     void _unused;
-    const retry = await supabase.from("deets").insert(payloadWithout).select(DEET_COLUMNS_WITHOUT_ALLOW_COMMENTS).single();
-    data = retry.data as typeof data;
-    error = retry.error;
+    working = rest;
+    selectCols = DEET_COLUMNS_WITHOUT_ALLOW_COMMENTS;
+    ({ data, error } = await attempt());
+  }
+
+  if (error?.message.includes("is_published")) {
+    const { is_published: _ip, ...rest } = working as Record<string, unknown> & { is_published?: boolean };
+    void _ip;
+    working = rest;
+    selectCols = selectCols
+      .split(",")
+      .map((c) => c.trim())
+      .filter((c) => c !== "is_published")
+      .join(", ");
+    ({ data, error } = await attempt());
   }
 
   return { data: data as DeetRecord | null, error };
@@ -69,6 +86,7 @@ export async function createDeet(input: CreateDeetInput): Promise<DeetRecord> {
       })
     ),
     created_by: user.id,
+    is_published: input.isPublished === false ? false : true,
   };
 
   // Only include allow_comments when it was explicitly set. This lets the

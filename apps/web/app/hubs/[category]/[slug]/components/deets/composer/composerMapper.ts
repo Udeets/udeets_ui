@@ -39,8 +39,6 @@ function stripHtmlToPlain(html: string, maxLen: number): string {
 
 function resolvedKindFromComposer(kind: ComposerContentKind, hasPhotos: boolean): DeetKind {
   switch (kind) {
-    case "notice":
-      return "Notices";
     case "post":
       return hasPhotos ? "Photos" : "Posts";
     case "alert":
@@ -60,8 +58,6 @@ function resolvedKindFromComposer(kind: ComposerContentKind, hasPhotos: boolean)
 
 function fallbackTitleFromComposer(kind: ComposerContentKind, hasPhotos: boolean): string {
   switch (kind) {
-    case "notice":
-      return "Notice";
     case "post":
       return hasPhotos ? "Photo" : "Deet";
     case "alert":
@@ -104,9 +100,6 @@ function buildStructuredAttachment(input: ComposerMapperInput): SerializedCompos
     case "announcement":
       if (!title && !bodyPlain) return null;
       return { type: "announcement", title: title || "Announcement", detail: bodyPlain || undefined };
-    case "notice":
-      if (!title && !bodyPlain) return null;
-      return { type: "notice", title: title || "Notice", detail: bodyPlain || undefined };
     case "poll": {
       const p = input.typePayload as import("./composerTypes").ComposerPollExtension;
       const validOptions = p.options.map((o) => o.trim()).filter(Boolean);
@@ -116,6 +109,7 @@ function buildStructuredAttachment(input: ComposerMapperInput): SerializedCompos
         : null;
       const pollSettings = {
         ...p.pollSettings,
+        startsAt: p.startsAtEnabled && p.startsAtInput.trim() ? p.startsAtInput.trim() : null,
         deadline: p.deadlineEnabled && p.deadlineInput ? p.deadlineInput : null,
         multiSelectLimit,
       };

@@ -39,12 +39,13 @@ function formatAlertTime(dateStr: string): string {
 function resolveAlertKind(deet: DeetRecord): string {
   const kind = deet.kind?.toLowerCase() || "";
   if (kind === "alerts") return "alert";
-  if (kind === "notices") return "notice";
+  if (kind === "notices") return "announcement";
   if (kind === "hazards") return "hazard";
   // Check attachments for type hints
   if (deet.attachments?.length) {
     for (const att of deet.attachments) {
-      if (att.type === "notice" || att.type === "alert" || att.type === "hazard") return att.type;
+      if (att.type === "notice" || att.type === "announcement") return "announcement";
+      if (att.type === "alert" || att.type === "hazard") return att.type;
     }
   }
   return "announcement";
@@ -53,7 +54,6 @@ function resolveAlertKind(deet: DeetRecord): string {
 const ALERT_BADGE_STYLES: Record<string, { bg: string; text: string; label: string }> = {
   alert: { bg: "bg-red-100", text: "text-red-700", label: "Alert" },
   hazard: { bg: "bg-orange-100", text: "text-orange-700", label: "Hazard" },
-  notice: { bg: "bg-amber-100", text: "text-amber-700", label: "Notice" },
   announcement: { bg: "bg-blue-100", text: "text-blue-700", label: "Announcement" },
 };
 
@@ -112,7 +112,12 @@ export default function AlertsPageClient() {
           const alertKinds = new Set(["Alerts", "Notices", "Hazards"]);
           alertDeets = allDeets.filter((d) => {
             if (alertKinds.has(d.kind)) return true;
-            if (d.attachments?.some((a) => a.type === "notice" || a.type === "alert" || a.type === "hazard")) return true;
+            if (
+              d.attachments?.some(
+                (a) => a.type === "announcement" || a.type === "notice" || a.type === "alert" || a.type === "hazard",
+              )
+            )
+              return true;
             return false;
           });
         }
@@ -224,7 +229,7 @@ export default function AlertsPageClient() {
             </div>
             <h2 className="mt-3 text-xl font-semibold text-[var(--ud-text-primary)]">No alerts yet</h2>
             <p className="mt-3 text-sm leading-relaxed text-[var(--ud-text-secondary)]">
-              Hub alerts, notices, and hazard warnings will appear here when your hubs publish them.
+              Hub alerts, announcements, and hazard warnings will appear here when your hubs publish them.
             </p>
           </article>
         )}

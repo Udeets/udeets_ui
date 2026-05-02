@@ -9,7 +9,6 @@ export type ComposerChildFlow =
   | "quit_confirm"
   | "event"
   | "announcement"
-  | "notice"
   | "poll"
   | "money"
   | "alert"
@@ -22,6 +21,8 @@ export type PollSettings = {
   allowMultiSelect?: boolean;
   multiSelectLimit?: number | null;
   allowSecretVoting?: boolean;
+  /** When voting opens (local `YYYY-MM-DDTHH:mm` or ISO). Omitted/null = open immediately. */
+  startsAt?: string | null;
   deadline?: string | null;
   showResults?: "always" | "after_voting" | "after_closed" | "private";
   sortBy?: "option_no" | "votes";

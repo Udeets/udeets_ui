@@ -372,7 +372,11 @@ export default function HubClient({
     void loadHubAttachments();
   }, [loadHubAttachments]);
 
-  const { liveFeedItems, prependCreatedDeet, removeDeet, replaceFeedDeet } = useHubLiveFeed(hub.id, hub.createdBy);
+  const { livePublishedItems, liveDraftItems, prependCreatedDeet, removeDeet, replaceFeedDeet } = useHubLiveFeed(
+    hub.id,
+    hub.createdBy,
+  );
+  const [postsListSource, setPostsListSource] = useState<"published" | "drafts">("published");
   const {
     savedHubName,
     savedHubCategory,
@@ -484,8 +488,9 @@ export default function HubClient({
   // Prefer the live Supabase-backed list once it has loaded. Concatenating SSR `hubContent.feed`
   // with `liveFeedItems` duplicated every deet, so a client-side remove left the SSR copy visible
   // (and looked like delete failed after refresh if the DB was fine).
+  const liveFeedForPostsTab = postsListSource === "drafts" ? liveDraftItems : livePublishedItems;
   const allFeedItems = useMemo(() => {
-    const source = liveFeedItems.length > 0 ? liveFeedItems : hubContent.feed;
+    const source = liveFeedForPostsTab.length > 0 ? liveFeedForPostsTab : hubContent.feed;
     return source.map((item) => ({
       ...item,
       authorAvatar:
@@ -493,7 +498,7 @@ export default function HubClient({
         (item.authorId && item.authorId === hub.createdBy ? creatorAvatarSrc : undefined) ||
         undefined,
     }));
-  }, [liveFeedItems, hubContent.feed, creatorAvatarSrc, hub.createdBy]);
+  }, [liveFeedForPostsTab, hubContent.feed, creatorAvatarSrc, hub.createdBy]);
   const {
     likedDeetIds,
     myReactionsByDeetId,
@@ -552,7 +557,6 @@ export default function HubClient({
   const announcementCount = allFeedItems.filter(
     (item) =>
       item.kind === "announcement" ||
-      item.kind === "notice" ||
       item.kind === "survey" ||
       item.kind === "payment" ||
       item.kind === "alert",
@@ -916,6 +920,8 @@ export default function HubClient({
     removePhoto,
     handleDeetPhotoFiles,
     handleSubmitDeet,
+    handleSaveDeetDraft,
+    allowSaveDraft,
     editingDeetId,
     editPersistedGalleryUrls,
     removePersistedGalleryPhoto,
@@ -1263,6 +1269,9 @@ export default function HubClient({
         feedFilter={feedFilter}
         onSelectFeedFilter={selectFeedFilter}
         filteredFeedItems={filteredFeedItems}
+        postsListSource={postsListSource}
+        onPostsListSourceChange={setPostsListSource}
+        showPostsListToggle={Boolean(canCreateDeets && user?.id)}
         showDemoPostedText={showDemoPostedText}
         demoPostedText={demoPostedText}
         showDemoPoll={showDemoPoll}
@@ -1690,6 +1699,8 @@ export default function HubClient({
               onRemovePhoto={removePhoto}
               onClose={closeDeetComposer}
               onSubmit={handleSubmitDeet}
+              onSaveDraft={handleSaveDeetDraft}
+              allowSaveDraft={allowSaveDraft}
               isSubmitting={isSubmittingDeet}
               deetPhotoInputRef={deetPhotoInputRef}
               onPhotoFilesChange={handleDeetPhotoFiles}

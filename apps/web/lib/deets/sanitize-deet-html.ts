@@ -47,7 +47,13 @@ const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
   // Inline styles from the composer: color / size / weight / decoration only (no url(), expression, etc.).
   allowedStyles: {
     "*": {
-      color: [/^#[0-9a-f]{3,8}$/i, /^rgb\(\s*\d+/, /^rgba\(\s*\d+/],
+      color: [
+        /^#[0-9a-f]{3,8}$/i,
+        /^rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)$/i,
+        /^rgba\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*(?:0?\.\d+|\d+(?:\.\d+)?)\s*\)$/i,
+        /^hsl\(\s*\d{1,3}\s*,\s*\d{1,3}%?\s*,\s*\d{1,3}%?\s*\)$/i,
+        /^hsla\(\s*\d{1,3}\s*,\s*\d{1,3}%?\s*,\s*\d{1,3}%?\s*,\s*(?:0?\.\d+|\d+(?:\.\d+)?)\s*\)$/i,
+      ],
       "font-size": [/^\d+(?:px|pt|em|%)$/i, /^(?:xx-small|x-small|small|medium|large|x-large|xx-large)$/i],
       "font-weight": [/^(?:bold|normal|\d{3})$/i],
       "font-style": [/^(?:italic|normal)$/i],
