@@ -1,5 +1,10 @@
 import type { DeetAttachment, DeetRecord } from "@/lib/services/deets/deet-types";
 
+/** PostgREST / Postgres when `deets.is_published` has not been migrated yet. */
+export function isDeetIsPublishedColumnUnavailable(err: { message?: string } | null | undefined): boolean {
+  return Boolean(err?.message?.includes("is_published"));
+}
+
 export const DEET_COLUMNS = `
   id,
   hub_id,

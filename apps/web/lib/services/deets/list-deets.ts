@@ -1,6 +1,11 @@
 import { createClient } from "@/lib/supabase/client";
 import type { DeetRecord } from "@/lib/services/deets/deet-types";
-import { DEET_COLUMNS, DEET_COLUMNS_WITHOUT_IS_PUBLISHED, normalizeDeetRecord } from "@/lib/services/deets/query-utils";
+import {
+  DEET_COLUMNS,
+  DEET_COLUMNS_WITHOUT_IS_PUBLISHED,
+  isDeetIsPublishedColumnUnavailable,
+  normalizeDeetRecord,
+} from "@/lib/services/deets/query-utils";
 
 export type ListDeetsOptions = {
   hubIds?: string[];
@@ -59,7 +64,7 @@ export async function listDeets(options?: ListDeetsOptions): Promise<DeetRecord[
 
   let { data, error } = await buildDeetsQuery(supabase, options, DEET_COLUMNS, true);
 
-  if (error?.message.includes("is_published")) {
+  if (isDeetIsPublishedColumnUnavailable(error)) {
     const retry = await buildDeetsQuery(supabase, options, DEET_COLUMNS_WITHOUT_IS_PUBLISHED, false);
     data = retry.data;
     error = retry.error;

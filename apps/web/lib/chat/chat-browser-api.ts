@@ -5,6 +5,7 @@ import type { ChatRoomMemberDto } from "@/lib/services/chat/list-chat-room-membe
 import type { ChatMessageListItem, ListChatMessagesResult } from "@/lib/services/chat/list-chat-messages";
 import type { ChatMessageReportRow } from "@/lib/services/chat/list-chat-reports";
 import type { ChatInviteCandidateDto } from "@/lib/services/chat/list-chat-invite-candidates";
+import { uuidSchema } from "@/lib/services/chat/chat-schemas";
 
 export type {
   ChatMessageListItem,
@@ -49,17 +50,33 @@ async function j<T>(res: Response): Promise<T> {
   return (await res.json()) as T;
 }
 
+/** Reject missing/placeholder hub ids before fetch (avoids `hubId=undefined` or JSON keys dropped by stringify). */
+function requireChatHubId(hubId: unknown): string {
+  const candidate = typeof hubId === "string" ? hubId.trim() : hubId;
+  const parsed = uuidSchema.safeParse(candidate);
+  if (!parsed.success) {
+    throw new Error("Chat hub is unavailable (invalid hub id).");
+  }
+  return parsed.data;
+}
+
 export async function chatApiListRooms(hubId: string): Promise<{ rooms: ChatRoomListItem[] }> {
-  const res = await fetch(`/api/chat/rooms?hubId=${encodeURIComponent(hubId)}`, { credentials: "include" });
+  const id = requireChatHubId(hubId);
+  const res = await fetch(`/api/chat/rooms?hubId=${encodeURIComponent(id)}`, { credentials: "include" });
   return j(res);
 }
 
 export async function chatApiCreateRoom(body: { hubId: string; name: string; description?: string | null }): Promise<{ roomId: string }> {
+  const hubId = requireChatHubId(body.hubId);
   const res = await fetch("/api/chat/rooms", {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      hubId,
+      name: body.name,
+      description: body.description ?? null,
+    }),
   });
   return j(res);
 }
