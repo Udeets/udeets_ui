@@ -10,7 +10,11 @@ import { listChatRoomsForHub } from "@/lib/services/chat/list-chat-rooms";
 export async function GET(request: Request) {
   try {
     const userId = await requireChatUserId();
-    const q = parseSearchParams(new URL(request.url).searchParams, listRoomsQuerySchema);
+    const searchParams = new URL(request.url).searchParams;
+    if (!searchParams.get("hubId")?.trim()) {
+      return chatBadRequest("Missing hubId query parameter.");
+    }
+    const q = parseSearchParams(searchParams, listRoomsQuerySchema);
     if (!q.ok) return chatBadRequest(q.error);
     const rooms = await listChatRoomsForHub(userId, q.data.hubId);
     return NextResponse.json({ rooms });

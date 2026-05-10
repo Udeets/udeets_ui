@@ -24,6 +24,7 @@ import { can } from "@/lib/roles";
 import { usePlatformRole } from "@/hooks/useUserRole";
 import { signOut } from "@/services/auth/signOut";
 import { useAuthSession } from "@/services/auth/useAuthSession";
+import { isDeetIsPublishedColumnUnavailable } from "@/lib/services/deets/query-utils";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -553,14 +554,24 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
           ])
         );
 
-        // 3. Fetch recent deets for notifications
-        const { data: recentDeets } = await supabase
+        // 3. Fetch recent deets for notifications (retry without is_published if column not migrated)
+        const recentDeetsPrimary = await supabase
           .from("deets")
           .select("id, hub_id, author_name, title, body, kind, created_at, is_published")
           .in("hub_id", activeHubIds)
           .eq("is_published", true)
           .order("created_at", { ascending: false })
           .limit(30);
+        const recentDeets = isDeetIsPublishedColumnUnavailable(recentDeetsPrimary.error)
+          ? (
+              await supabase
+                .from("deets")
+                .select("id, hub_id, author_name, title, body, kind, created_at")
+                .in("hub_id", activeHubIds)
+                .order("created_at", { ascending: false })
+                .limit(30)
+            ).data ?? []
+          : (recentDeetsPrimary.data ?? []);
 
         if (ignore) return;
 
@@ -720,7 +731,7 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
         if (ignore) return;
 
         // Also check deets with event kind for events added via deet composer
-        const { data: eventDeets } = await supabase
+        const eventDeetsPrimary = await supabase
           .from("deets")
           .select("id, hub_id, author_name, title, body, kind, attachments, created_at, is_published")
           .in("hub_id", activeHubIds)
@@ -728,6 +739,17 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
           .or("kind.eq.Hazards,kind.eq.Alerts")
           .order("created_at", { ascending: false })
           .limit(20);
+        const eventDeets = isDeetIsPublishedColumnUnavailable(eventDeetsPrimary.error)
+          ? (
+              await supabase
+                .from("deets")
+                .select("id, hub_id, author_name, title, body, kind, attachments, created_at")
+                .in("hub_id", activeHubIds)
+                .or("kind.eq.Hazards,kind.eq.Alerts")
+                .order("created_at", { ascending: false })
+                .limit(20)
+            ).data ?? []
+          : (eventDeetsPrimary.data ?? []);
 
         const eventItems: HubEventItem[] = [];
 
