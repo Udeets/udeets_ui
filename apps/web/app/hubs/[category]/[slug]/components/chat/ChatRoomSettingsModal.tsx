@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-import { chatApiPatchRoom } from "@/lib/chat/chat-browser-api";
+import { chatApiDeleteRoom, chatApiPatchRoom } from "@/lib/chat/chat-browser-api";
 import type { ChatRoomDetail } from "@/lib/services/chat/get-chat-room";
 import { isAllowedChatRetentionDays, type ChatRetentionDays } from "@/lib/services/chat/chat-retention";
 import { ComposerMenuSelect, type ComposerMenuSelectOption } from "../deets/composer/ComposerMenuSelect";
@@ -33,6 +33,7 @@ export function ChatRoomSettingsModal({
   room,
   onClose,
   onSaved,
+  onDeleted,
   onError,
 }: {
   open: boolean;
@@ -40,6 +41,8 @@ export function ChatRoomSettingsModal({
   room: ChatRoomDetail | null;
   onClose: () => void;
   onSaved: (room: ChatRoomDetail) => void | Promise<void>;
+  /** When the room row is removed (DELETE); caller should clear selection and reload room list. */
+  onDeleted?: () => void | Promise<void>;
   onError: (msg: string) => void;
 }) {
   const [name, setName] = useState("");
@@ -52,6 +55,7 @@ export function ChatRoomSettingsModal({
   >("room_admin_and_moderator");
   const [retentionDays, setRetentionDays] = useState<ChatRetentionDays>(null);
   const [busy, setBusy] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   useEffect(() => {
     if (!open || !room) return;
@@ -91,6 +95,23 @@ export function ChatRoomSettingsModal({
       onError(e instanceof Error ? e.message : "Could not update room.");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    const ok = window.confirm(
+      "Delete this chat room permanently? All messages, polls, and attachments in this room will be removed. This cannot be undone.",
+    );
+    if (!ok) return;
+    setDeleteBusy(true);
+    try {
+      await chatApiDeleteRoom(roomId);
+      await onDeleted?.();
+      onClose();
+    } catch (e) {
+      onError(e instanceof Error ? e.message : "Could not delete room.");
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -166,6 +187,20 @@ export function ChatRoomSettingsModal({
           options={POLL_CREATOR_OPTIONS}
           menuMinWidthPx={280}
         />
+        <div className="mt-6 rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-subtle)] p-3">
+          <p className="text-sm font-medium text-[var(--ud-danger)]">Delete room</p>
+          <p className="mt-1 text-xs text-[var(--ud-text-secondary)]">
+            Permanently removes this room and all of its chat history for everyone. Hub staff or room admins only.
+          </p>
+          <button
+            type="button"
+            className="mt-2 w-full rounded-lg border border-[var(--ud-border)] bg-[var(--ud-bg-card)] px-3 py-2 text-sm font-medium text-[var(--ud-danger)] hover:bg-[var(--ud-bg-subtle)] disabled:opacity-50"
+            disabled={deleteBusy || !room}
+            onClick={() => void confirmDelete()}
+          >
+            {deleteBusy ? "Deleting…" : "Delete room permanently"}
+          </button>
+        </div>
         <div className="mt-4 flex justify-end gap-2">
           <button type="button" className={BUTTON_SECONDARY} onClick={onClose}>
             Cancel

@@ -140,6 +140,14 @@ export async function chatApiPatchRoom(roomId: string, body: ChatPatchRoomBody):
   return j(res);
 }
 
+export async function chatApiDeleteRoom(roomId: string): Promise<void> {
+  const res = await fetch(`/api/chat/rooms/${encodeURIComponent(roomId)}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error(await parseErr(res));
+}
+
 export async function chatApiListReports(
   roomId: string,
   opts?: { status?: "pending" | "resolved" | "dismissed" | "all" },

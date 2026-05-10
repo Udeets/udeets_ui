@@ -100,7 +100,17 @@ Content-Type: application/json
 
 ---
 
-### 5. Archive room
+### 5. Delete room permanently
+
+`DELETE /api/chat/rooms/:roomId`
+
+**204** — empty body. Deletes the `chat_rooms` row; dependent rows (messages, memberships, invites, etc.) cascade in Postgres.
+
+**Auth:** hub staff (hub creator/admin) or room owner/room admin — not moderator-only.
+
+---
+
+### 6. Archive room
 
 Same as **PATCH** with `{ "archived": true }`.
 
@@ -108,7 +118,7 @@ Same as **PATCH** with `{ "archived": true }`.
 
 ## Members
 
-### 6. Add / invite room member
+### 7. Add / invite room member
 
 **Direct add (admin flow):**  
 `POST /api/chat/rooms/:roomId/members`
@@ -132,7 +142,7 @@ Same as **PATCH** with `{ "archived": true }`.
 
 ---
 
-### 7. Remove room member
+### 8. Remove room member
 
 `DELETE /api/chat/rooms/:roomId/members/:memberUserId`
 
@@ -140,7 +150,7 @@ Same as **PATCH** with `{ "archived": true }`.
 
 ---
 
-### 8. List room members
+### 9. List room members
 
 `GET /api/chat/rooms/:roomId/members`
 
@@ -154,7 +164,7 @@ Same as **PATCH** with `{ "archived": true }`.
 
 ## Messages
 
-### 9. Send message
+### 10. Send message
 
 `POST /api/chat/rooms/:roomId/messages`
 
@@ -172,7 +182,7 @@ Same as **PATCH** with `{ "archived": true }`.
 
 ---
 
-### 10. Paginated message history
+### 11. Paginated message history
 
 `GET /api/chat/rooms/:roomId/messages?limit=30&cursor=<messageId>`
 
@@ -210,7 +220,7 @@ Same as **PATCH** with `{ "archived": true }`.
 
 ---
 
-### 11. Edit message
+### 12. Edit message
 
 `PATCH /api/chat/rooms/:roomId/messages/:messageId`
 
@@ -222,7 +232,7 @@ Same as **PATCH** with `{ "archived": true }`.
 
 ---
 
-### 12. Soft-delete message
+### 13. Soft-delete message
 
 `DELETE /api/chat/rooms/:roomId/messages/:messageId`
 
@@ -234,7 +244,7 @@ Optional JSON body: `{ "moderationReason": "..." }` when used in moderation cont
 
 ## Reactions
 
-### 13. Add / remove reaction
+### 14. Add / remove reaction
 
 **Add:** `POST /api/chat/rooms/:roomId/messages/:messageId/reactions`
 
@@ -252,7 +262,7 @@ Optional JSON body: `{ "moderationReason": "..." }` when used in moderation cont
 
 ## Polls
 
-### 14. Create poll
+### 15. Create poll
 
 `POST /api/chat/rooms/:roomId/polls`
 
@@ -271,7 +281,7 @@ Optional JSON body: `{ "moderationReason": "..." }` when used in moderation cont
 
 ---
 
-### 15. Vote in poll
+### 16. Vote in poll
 
 `POST /api/chat/rooms/:roomId/polls/:pollId/vote`
 
@@ -285,7 +295,7 @@ Optional JSON body: `{ "moderationReason": "..." }` when used in moderation cont
 
 ## Attachments
 
-### 16. Prepare upload / complete metadata
+### 17. Prepare upload / complete metadata
 
 **Prepare signed upload**
 
@@ -355,7 +365,7 @@ Every **`POST /moderation`** action and every **report resolve/dismiss** writes 
 
 ---
 
-### 17. Report message (or user)
+### 18. Report message (or user)
 
 `POST /api/chat/rooms/:roomId/reports`
 
@@ -378,7 +388,7 @@ Reports are stored on **`chat_message_reports`** with `hub_id`, `room_id`, `repo
 
 ---
 
-### 17b. List reports (moderators)
+### 18b. List reports (moderators)
 
 `GET /api/chat/rooms/:roomId/reports?status=pending|resolved|dismissed|all`
 
@@ -413,7 +423,7 @@ Reports are stored on **`chat_message_reports`** with `hub_id`, `room_id`, `repo
 
 ---
 
-### 18. Resolve / dismiss report
+### 19. Resolve / dismiss report
 
 `PATCH /api/chat/rooms/:roomId/reports/:reportId`
 
@@ -433,7 +443,7 @@ Also inserts **`chat_moderation_actions`** with `action_type` **`report_resolved
 
 ---
 
-### 19. Moderation actions (hide / mute / ban)
+### 20. Moderation actions (hide / mute / ban)
 
 `POST /api/chat/rooms/:roomId/moderation`
 
@@ -470,7 +480,7 @@ Each call records **`chat_moderation_actions`** after the underlying mutation. A
 
 ## User data (GDPR-style)
 
-### 20. Export current user’s chat data
+### 21. Export current user’s chat data
 
 `GET /api/chat/me/export`
 
@@ -478,7 +488,7 @@ Each call records **`chat_moderation_actions`** after the underlying mutation. A
 
 ---
 
-### 21. Delete / anonymize current user’s chat data
+### 22. Delete / anonymize current user’s chat data
 
 `POST /api/chat/me/anonymize`
 

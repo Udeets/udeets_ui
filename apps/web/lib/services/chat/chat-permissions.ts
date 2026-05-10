@@ -35,6 +35,7 @@ export type ChatPermissionVerb =
   | "VIEW_MODERATION_LOGS"
   | "UPDATE_ROOM_SETTINGS"
   | "ARCHIVE_ROOM"
+  | "DELETE_ROOM"
   | "LIST_ROOM_MEMBERS"
   | "REACT_TO_MESSAGE"
   | "CREATE_REPORT"
@@ -208,6 +209,11 @@ export function evaluateChatPermission(
       if (isHubStaff(ctx.hubMembership) || isRoomAdminPlus(ctx.roomMembership)) return { ok: true };
       return { ok: false, reason: "Only hub staff or room owners/admins can update this room." };
     }
+    case "DELETE_ROOM": {
+      if (!canViewRoomCore(ctx)) return { ok: false, reason: "You do not have access to this chat room." };
+      if (isHubStaff(ctx.hubMembership) || isRoomAdminPlus(ctx.roomMembership)) return { ok: true };
+      return { ok: false, reason: "Only hub staff or room owners/admins can delete this room." };
+    }
     case "LIST_ROOM_MEMBERS": {
       return evaluateChatPermission(ctx, "VIEW_ROOM");
     }
@@ -261,6 +267,7 @@ export const CHAT_PERMISSION_MATRIX: ReadonlyArray<{
   { verb: "UPDATE_REPORT_STATUS", rule: "Same as VIEW_REPORTS (resolve/dismiss)." },
   { verb: "UPDATE_ROOM_SETTINGS", rule: "Hub staff OR room owner/admin." },
   { verb: "ARCHIVE_ROOM", rule: "Hub staff OR room owner/admin." },
+  { verb: "DELETE_ROOM", rule: "Hub staff OR room owner/admin; permanently removes room and messages (DB cascade)." },
   { verb: "LIST_ROOM_MEMBERS", rule: "Same as VIEW_ROOM." },
   { verb: "REACT_TO_MESSAGE", rule: "Same as SEND_MESSAGE." },
   {

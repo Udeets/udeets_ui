@@ -570,6 +570,7 @@ Chronological — apply in this order:
 20260515140000_chat_rooms_insert_rls_inline.sql   — insert RLS inline (hub_members OR `hubs.created_by`); drops `chat_rls_may_insert_chat_room`
 20260516100000_create_chat_room_rpc.sql   — `create_chat_room_for_hub` RPC (SECURITY DEFINER) for room + owner membership
 20260516120000_chat_message_reports_realtime.sql   — add `chat_message_reports` to `supabase_realtime` publication for moderator push alerts
+20260517100000_chat_rooms_delete_rls.sql   — RLS `DELETE` on `chat_rooms` for hub staff or room owner/admin (hard delete room)
 ```
 
 See `project-context.md` § Known Issues for the subset that still needs to be applied to the live Supabase instance.

@@ -177,7 +177,11 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
   const archivedRooms = useMemo(() => rooms.filter((r) => r.archivedAt), [rooms]);
 
   useEffect(() => {
-    if (roomsLoading || rooms.length === 0) return;
+    if (roomsLoading) return;
+    if (rooms.length === 0) {
+      setSelectedRoomId(null);
+      return;
+    }
     const active = rooms.filter((r) => !r.archivedAt);
     if (!selectedRoomId) {
       setSelectedRoomId(active[0]?.id ?? rooms[0]!.id);
@@ -1006,7 +1010,12 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
               if (pick) setSelectedRoomId(pick.id);
             }
           }}
-          onError={(msg) => thread.setError(friendlyChatUserMessage(new Error(msg), "Could not save room settings. Please try again."))}
+          onDeleted={async () => {
+            await loadRooms();
+          }}
+          onError={(msg) =>
+            thread.setError(friendlyChatUserMessage(new Error(msg), "Could not update room settings. Please try again."))
+          }
         />
       ) : null}
       {selectedRoomId ? (

@@ -4,6 +4,7 @@ import { chatBadRequest } from "@/app/api/chat/_lib/chat-bad-request";
 import { requireChatUserId } from "@/app/api/chat/_lib/chat-route-auth";
 import { chatRouteError } from "@/app/api/chat/_lib/chat-route-error";
 import { parseJsonBody, updateRoomBodySchema } from "@/lib/services/chat/chat-schemas";
+import { deleteChatRoom } from "@/lib/services/chat/delete-chat-room";
 import { getChatRoomForUser } from "@/lib/services/chat/get-chat-room";
 import { updateChatRoom } from "@/lib/services/chat/update-chat-room";
 
@@ -15,6 +16,17 @@ export async function GET(_request: Request, context: RouteCtx) {
     const { roomId } = await context.params;
     const room = await getChatRoomForUser(userId, roomId);
     return NextResponse.json({ room });
+  } catch (err) {
+    return chatRouteError(err);
+  }
+}
+
+export async function DELETE(_request: Request, context: RouteCtx) {
+  try {
+    const userId = await requireChatUserId();
+    const { roomId } = await context.params;
+    await deleteChatRoom({ userId, roomId });
+    return new NextResponse(null, { status: 204 });
   } catch (err) {
     return chatRouteError(err);
   }

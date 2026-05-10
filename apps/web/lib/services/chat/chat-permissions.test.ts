@@ -335,6 +335,30 @@ describe("evaluateChatPermission MUTE_MEMBER and BAN_MEMBER", () => {
   });
 });
 
+describe("evaluateChatPermission DELETE_ROOM", () => {
+  it("allows hub admin without room membership", () => {
+    expect(evaluateChatPermission(ctx({ hubMembership: { role: "admin", status: "active" } }), "DELETE_ROOM").ok).toBe(
+      true,
+    );
+  });
+
+  it("allows room owner", () => {
+    expect(evaluateChatPermission(ctx({ roomMembership: { role: "owner", status: "active" } }), "DELETE_ROOM").ok).toBe(
+      true,
+    );
+  });
+
+  it("denies room moderator", () => {
+    const r = evaluateChatPermission(ctx({ roomMembership: { role: "moderator", status: "active" } }), "DELETE_ROOM");
+    expect(r.ok).toBe(false);
+  });
+
+  it("denies plain member", () => {
+    const r = evaluateChatPermission(ctx({ roomMembership: { role: "member", status: "active" } }), "DELETE_ROOM");
+    expect(r.ok).toBe(false);
+  });
+});
+
 describe("CHAT_PERMISSION_MATRIX", () => {
   it("documents each verb", () => {
     expect(CHAT_PERMISSION_MATRIX.length).toBeGreaterThanOrEqual(10);
