@@ -39,7 +39,7 @@ export const PREMIUM_ICON_WRAPPER =
 export const INPUT_CLASS = "w-full rounded-xl border border-[var(--ud-border)] bg-[var(--ud-bg-input)] px-4 py-2.5 text-sm text-[var(--ud-text-primary)] outline-none transition-colors focus:border-[var(--ud-border-focus)]";
 export const LABEL_CLASS = "text-xs font-semibold uppercase tracking-[0.18em] text-[var(--ud-text-muted)]";
 export const SECTION_TITLE = "text-lg font-semibold text-[var(--ud-text-primary)]";
-export const HUB_TABS: HubTab[] = ["About", "Posts", "Attachments", "Members"];
+export const HUB_TABS: HubTab[] = ["About", "Posts", "Attachments", "Members", "Chat"];
 
 export function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");

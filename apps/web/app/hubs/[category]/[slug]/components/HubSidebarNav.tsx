@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, MessageSquare, Paperclip, Settings, Users, Calendar, Star, FileText, BarChart3 } from "lucide-react";
+import { Home, MessageSquare, MessagesSquare, Paperclip, Settings, Users, Calendar, Star, FileText, BarChart3 } from "lucide-react";
 import type { HubTab } from "./hubTypes";
 import type { PendingNavigation } from "./hubTypes";
 import type { HubTemplateConfig } from "@/lib/hub-templates";
@@ -15,6 +15,7 @@ const TAB_ICON_MAP: Record<string, typeof Home> = {
   Documents: FileText,
   Polls: BarChart3,
   Notices: MessageSquare,
+  Chat: MessagesSquare,
   Settings: Settings,
 };
 
@@ -67,7 +68,10 @@ export function HubSidebarNav({
   return (
     <nav className="flex flex-col py-2">
       {visibleItems.map(({ tab, label, icon: Icon }) => {
-        const isActive = activeSection === tab && activePanel !== "settings";
+        const isActive =
+          activeSection === tab &&
+          activePanel !== "settings" &&
+          (tab !== "Chat" || activePanel === "chat");
         return (
           <button
             key={tab}
@@ -77,6 +81,8 @@ export function HubSidebarNav({
                 onNavigate({ tab, panel: "members", membersMode: "list", membersView: "members" });
               } else if (tab === "Attachments") {
                 onNavigate({ tab, panel: "posts", attachmentsView: "photos" });
+              } else if (tab === "Chat") {
+                onNavigate({ tab, panel: "chat" });
               } else {
                 onNavigate({ tab, panel: "posts" });
               }

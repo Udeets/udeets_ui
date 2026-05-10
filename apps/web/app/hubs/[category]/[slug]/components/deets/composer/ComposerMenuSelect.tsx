@@ -24,6 +24,7 @@ export function ComposerMenuSelect({
   menuMinWidthPx = 160,
   /** Compact trigger for toolbars / inline rows (same pill + menu as full-width). */
   variant = "full",
+  "aria-label": ariaLabel,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -34,6 +35,7 @@ export function ComposerMenuSelect({
   alignMenu?: "left" | "right";
   menuMinWidthPx?: number;
   variant?: "full" | "inline";
+  "aria-label"?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -149,6 +151,7 @@ export function ComposerMenuSelect({
         ref={triggerRef}
         type="button"
         disabled={disabled}
+        aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
