@@ -7,7 +7,8 @@ import { cn } from "../hubUtils";
 
 export const POST_ICON = "h-[18px] w-[18px] stroke-[1.5]";
 
-const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+/** Default reaction strip (feed + chat). */
+export const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
 export const EMOJI_TEXT_MAP: Record<string, string> = {
   "👍": "Liked",

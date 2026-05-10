@@ -106,6 +106,9 @@ export async function createHub(input: CreateHubInput): Promise<HubRecord> {
 
   if (memberError) {
     console.error("[create-hub] Failed to insert creator as member:", memberError);
+    throw new Error(
+      "Hub was created but you could not be added as a member. Try again or contact support.",
+    );
   }
 
   return createdHub;

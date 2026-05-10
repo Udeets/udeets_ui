@@ -12,7 +12,7 @@ export type HubTemplate =
 
 export type HubLayout = "business" | "community";
 
-export type HubTab = "About" | "Posts" | "Attachments" | "Members" | "Menu" | "Events" | "Reviews" | "Schedule" | "Notices" | "Requests" | "Documents" | "Polls" | "Settings";
+export type HubTab = "About" | "Posts" | "Attachments" | "Members" | "Chat" | "Menu" | "Events" | "Reviews" | "Schedule" | "Notices" | "Requests" | "Documents" | "Polls" | "Settings";
 
 export interface HubTerminology {
   hub: string;

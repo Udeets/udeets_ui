@@ -8,6 +8,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import MockAppShell, { cardClass } from "@/components/mock-app-shell";
 import { AuthGuard } from "@/components/AuthGuard";
+import {
+  mergeNotificationPreferences,
+  type ChatPushPreviewMode,
+  type MergedNotificationPreferences,
+} from "@/lib/profile/merge-notification-preferences";
 import { signOut } from "@/services/auth/signOut";
 import { useAuthSession } from "@/services/auth/useAuthSession";
 
@@ -19,10 +24,10 @@ type SettingsNav = "Notifications" | "Privacy" | "Appearance" | "Account" | "Dan
 
 const NAV_ITEMS: SettingsNav[] = ["Notifications", "Privacy", "Appearance", "Account", "Danger Zone"];
 
-type NotifPrefs = { push_new_posts: boolean; weekly_digest: boolean; event_reminders: boolean };
+type NotifPrefs = MergedNotificationPreferences;
 type PrivacyPrefs = { show_profile: boolean; allow_invites: boolean };
 
-const DEFAULT_NOTIF: NotifPrefs = { push_new_posts: true, weekly_digest: true, event_reminders: false };
+const DEFAULT_NOTIF = mergeNotificationPreferences({});
 const DEFAULT_PRIVACY: PrivacyPrefs = { show_profile: true, allow_invites: false };
 
 function Toggle({ enabled, onToggle, label }: { enabled: boolean; onToggle: () => void; label: string }) {
@@ -93,7 +98,7 @@ export default function SettingsPage() {
 
       if (data) {
         setFullName(data.full_name ?? "");
-        if (data.notification_preferences) setNotifPrefs(data.notification_preferences as NotifPrefs);
+        if (data.notification_preferences) setNotifPrefs(mergeNotificationPreferences(data.notification_preferences));
         if (data.privacy_settings) setPrivacyPrefs(data.privacy_settings as PrivacyPrefs);
       }
       setIsLoadingPrefs(false);
@@ -108,7 +113,7 @@ export default function SettingsPage() {
     setTimeout(() => setSavedKey(null), 1500);
   };
 
-  const updateNotifPref = async (key: keyof NotifPrefs) => {
+  const updateNotifPref = async (key: "push_new_posts" | "weekly_digest" | "event_reminders") => {
     if (!user?.id) return;
     const updated = { ...notifPrefs, [key]: !notifPrefs[key] };
     setNotifPrefs(updated);
@@ -117,6 +122,16 @@ export default function SettingsPage() {
     const supabase = createClient();
     await supabase.from("profiles").update({ notification_preferences: updated, updated_at: new Date().toISOString() }).eq("id", user.id);
     showSaved(key);
+  };
+
+  const updateChatPushPreview = async (mode: ChatPushPreviewMode) => {
+    if (!user?.id) return;
+    const updated = { ...notifPrefs, chat_push_preview: mode };
+    setNotifPrefs(updated);
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    await supabase.from("profiles").update({ notification_preferences: updated, updated_at: new Date().toISOString() }).eq("id", user.id);
+    showSaved("chat_push_preview");
   };
 
   const updatePrivacyPref = async (key: keyof PrivacyPrefs) => {
@@ -215,6 +230,47 @@ export default function SettingsPage() {
                       <Toggle enabled={notifPrefs[key]} onToggle={() => updateNotifPref(key)} label={label} />
                     </div>
                   ))}
+
+                  <div className="rounded-xl border border-[var(--ud-border-subtle)] p-4">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-[var(--ud-text-primary)]">Chat message previews (push / future notifications)</p>
+                      <SavedBadge show={savedKey === "chat_push_preview"} />
+                    </div>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Controls how much message content may appear outside the app. Does not change in-app chat rendering.
+                    </p>
+                    <div className="mt-3 flex flex-col gap-2">
+                      {(
+                        [
+                          { id: "full" as const, label: "Full preview", desc: "Room name and message snippet when supported." },
+                          { id: "sender_only" as const, label: "Sender only", desc: "Who sent it without message body." },
+                          { id: "generic" as const, label: "Generic alert", desc: "Only that there is a new message." },
+                        ] as const
+                      ).map((opt) => (
+                        <label
+                          key={opt.id}
+                          className={cn(
+                            "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 text-sm transition",
+                            notifPrefs.chat_push_preview === opt.id
+                              ? "border-[var(--ud-brand-primary)] bg-[var(--ud-brand-light)]/40"
+                              : "border-[var(--ud-border-subtle)] hover:bg-slate-50",
+                          )}
+                        >
+                          <input
+                            type="radio"
+                            name="chat_push_preview"
+                            checked={notifPrefs.chat_push_preview === opt.id}
+                            onChange={() => void updateChatPushPreview(opt.id)}
+                            className="mt-0.5 accent-[var(--ud-brand-primary)]"
+                          />
+                          <span>
+                            <span className="font-medium text-[var(--ud-text-primary)]">{opt.label}</span>
+                            <span className="mt-0.5 block text-xs text-slate-500">{opt.desc}</span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </section>

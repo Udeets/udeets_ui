@@ -565,6 +565,11 @@ Chronological — apply in this order:
 20260418_expand_deet_media_mime_types.sql
 20260502100000_deets_drafts_and_rls.sql
 20260502100001_deets_notice_to_announcement.sql   — migrates legacy `notice` attachments + `Notices` rows to announcements (`Posts` + `announcement` attachment)
+20260513100000_chat_rate_limit_postgres.sql   — `chat_rate_limit_hits` + `chat_rate_limit_sliding_allow` RPC (service_role); see `docs/rate-limiting.md`
+20260514120000_chat_rooms_insert_rls_definer.sql   — `chat_rls_may_insert_chat_room` + insert RLS uses DEFINER; `chat_rooms.created_by` default `auth.uid()`
+20260515140000_chat_rooms_insert_rls_inline.sql   — insert RLS inline (hub_members OR `hubs.created_by`); drops `chat_rls_may_insert_chat_room`
+20260516100000_create_chat_room_rpc.sql   — `create_chat_room_for_hub` RPC (SECURITY DEFINER) for room + owner membership
+20260516120000_chat_message_reports_realtime.sql   — add `chat_message_reports` to `supabase_realtime` publication for moderator push alerts
 ```
 
 See `project-context.md` § Known Issues for the subset that still needs to be applied to the live Supabase instance.

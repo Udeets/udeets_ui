@@ -20,6 +20,7 @@ import type { HubRecord } from "@/lib/hubs";
 import { getHubConfigByCategory } from "@/lib/hub-templates";
 import { getHubColorTheme } from "@/lib/hub-color-themes";
 import { useAuthSession } from "@/services/auth/useAuthSession";
+import { HubChatSection } from "./components/chat/HubChatSection";
 import { AttachmentsSection } from "./components/attachments/AttachmentsSection";
 import { HubHeroHeader } from "./components/HubHeroHeader";
 import { HubSidebarNav } from "./components/HubSidebarNav";
@@ -1240,6 +1241,21 @@ export default function HubClient({
         />
       );
     }
+    if (activeSection === "Chat") {
+      return (
+        <HubChatSection
+          hubId={hub.id}
+          currentUserId={user?.id}
+          hubStaff={isCreatorAdmin}
+          viewerDisplayName={
+            (user?.user_metadata?.full_name as string | undefined) ||
+            (user?.user_metadata?.name as string | undefined) ||
+            user?.email?.split("@")[0] ||
+            "You"
+          }
+        />
+      );
+    }
     if (activeSection === "Events") {
       return (
         <EventsSection
@@ -1395,7 +1411,7 @@ export default function HubClient({
 
         {/* Mobile horizontal tab bar: About, Posts, Events, Attachments */}
         <div className="flex border-b border-[var(--ud-border)] bg-[var(--ud-bg-card)] lg:hidden">
-          {(["About", "Posts", "Events", "Attachments"] as const)
+          {(["About", "Posts", "Events", "Attachments", "Chat"] as const)
             .filter((tab) => canAccessFullContent || tab === "About")
             .map((tab) => (
               <button
@@ -1404,13 +1420,18 @@ export default function HubClient({
                 onClick={() => {
                   if (tab === "Attachments") {
                     requestNavigation({ tab: tab as HubTab, panel: "posts", attachmentsView: "photos" });
+                  } else if (tab === "Chat") {
+                    requestNavigation({ tab: "Chat", panel: "chat" });
                   } else {
                     requestNavigation({ tab: tab as HubTab, panel: "posts" });
                   }
                 }}
                 className={cn(
                   "flex-1 border-b-2 py-3 text-center text-sm font-medium transition",
-                  activeSection === tab && activePanel !== "settings" && activePanel !== "members"
+                  activeSection === tab &&
+                    activePanel !== "settings" &&
+                    activePanel !== "members" &&
+                    (tab === "Chat" ? activePanel === "chat" : activePanel === "posts")
                     ? "border-[var(--ud-brand-primary)] text-[var(--ud-brand-primary)]"
                     : "border-transparent text-[var(--ud-text-muted)] hover:text-[var(--ud-text-secondary)]"
                 )}

@@ -59,13 +59,19 @@ const TEMPLATE_MAP: Record<HubTemplate, HubTemplateConfig> = {
   retail: retailConfig,
 };
 
+function hubConfigWithChatTab(config: HubTemplateConfig): HubTemplateConfig {
+  const tabs = config.tabs as string[];
+  if (tabs.includes("Chat")) return config;
+  return { ...config, tabs: [...config.tabs, "Chat"] };
+}
+
 /**
  * Retrieve the template config for a given hub template.
  * Falls back to the general template if the template is unknown.
  */
 export function getHubConfig(template?: HubTemplate | string | null): HubTemplateConfig {
-  if (!template) return generalConfig;
-  return TEMPLATE_MAP[template as HubTemplate] ?? generalConfig;
+  const raw = !template ? generalConfig : (TEMPLATE_MAP[template as HubTemplate] ?? generalConfig);
+  return hubConfigWithChatTab(raw);
 }
 
 /**
@@ -89,9 +95,9 @@ const CATEGORY_TO_TEMPLATE: Record<string, HubTemplate> = {
  * Get the template config for a hub category slug.
  */
 export function getHubConfigByCategory(categorySlug?: string | null): HubTemplateConfig {
-  if (!categorySlug) return generalConfig;
+  if (!categorySlug) return getHubConfig(null);
   const template = CATEGORY_TO_TEMPLATE[categorySlug];
-  return template ? getHubConfig(template) : generalConfig;
+  return getHubConfig(template ?? null);
 }
 
 export type { HubTemplate, HubTemplateConfig } from "./types";
