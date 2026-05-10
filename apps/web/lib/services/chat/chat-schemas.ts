@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z, type output } from "zod";
 
 import { getChatAttachmentMaxBytesForMime, isChatAttachmentMimeAllowed } from "@/lib/services/chat/chat-attachment-media";
 
@@ -178,7 +178,11 @@ export const chatTypingPhaseBodySchema = z.object({
   phase: z.enum(["started", "stopped"]),
 });
 
-export function parseJsonBody<T>(raw: unknown, schema: z.ZodType<T>): { ok: true; data: T } | { ok: false; error: string } {
+/** Use Zod `output` so `.transform()` / `.pipe()` schemas infer the parsed shape, not the raw input. */
+export function parseJsonBody<S extends z.ZodType>(
+  raw: unknown,
+  schema: S,
+): { ok: true; data: output<S> } | { ok: false; error: string } {
   const parsed = schema.safeParse(raw);
   if (!parsed.success) {
     const msg = parsed.error.flatten().formErrors.join("; ") || parsed.error.message;
@@ -187,7 +191,10 @@ export function parseJsonBody<T>(raw: unknown, schema: z.ZodType<T>): { ok: true
   return { ok: true, data: parsed.data };
 }
 
-export function parseSearchParams<T>(searchParams: URLSearchParams, schema: z.ZodType<T>): { ok: true; data: T } | { ok: false; error: string } {
+export function parseSearchParams<S extends z.ZodType>(
+  searchParams: URLSearchParams,
+  schema: S,
+): { ok: true; data: output<S> } | { ok: false; error: string } {
   const obj: Record<string, string> = {};
   searchParams.forEach((v, k) => {
     obj[k] = v;

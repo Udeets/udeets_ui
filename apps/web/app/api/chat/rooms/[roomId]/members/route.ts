@@ -3,8 +3,14 @@ import { NextResponse } from "next/server";
 import { chatBadRequest } from "@/app/api/chat/_lib/chat-bad-request";
 import { requireChatUserId } from "@/app/api/chat/_lib/chat-route-auth";
 import { chatRouteError } from "@/app/api/chat/_lib/chat-route-error";
-import { addMemberBodySchema, parseJsonBody } from "@/lib/services/chat/chat-schemas";
+import type { AddChatRoomMemberInput } from "@/lib/services/chat/add-chat-room-member";
 import { addChatRoomMember } from "@/lib/services/chat/add-chat-room-member";
+import { addMemberBodySchema, parseJsonBody } from "@/lib/services/chat/chat-schemas";
+
+function roomMemberRoleOrDefault(role: unknown): AddChatRoomMemberInput["role"] {
+  if (role === "admin" || role === "moderator" || role === "member") return role;
+  return "member";
+}
 import { listChatRoomMembers } from "@/lib/services/chat/list-chat-room-members";
 
 type RouteCtx = { params: Promise<{ roomId: string }> };
@@ -31,7 +37,7 @@ export async function POST(request: Request, context: RouteCtx) {
       actorId: userId,
       roomId,
       targetUserId: parsed.data.userId,
-      role: parsed.data.role,
+      role: roomMemberRoleOrDefault(parsed.data.role),
     });
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (err) {
