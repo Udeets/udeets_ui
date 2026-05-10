@@ -40,10 +40,16 @@ export const inviteRevokeQuerySchema = z.object({
   invitedUserId: uuidSchema,
 });
 
-export const addMemberBodySchema = z.object({
-  userId: uuidSchema,
-  role: z.enum(["member", "moderator", "admin"]).optional().default("member"),
-});
+/** Zod v4: use transform so output `role` is always the literal union (optional().default() inference can widen). */
+export const addMemberBodySchema = z
+  .object({
+    userId: uuidSchema,
+    role: z.enum(["member", "moderator", "admin"]).optional(),
+  })
+  .transform((d) => ({
+    userId: d.userId,
+    role: d.role ?? ("member" as const),
+  }));
 
 export const sendMessageBodySchema = z.object({
   body: z.string().max(8000),
