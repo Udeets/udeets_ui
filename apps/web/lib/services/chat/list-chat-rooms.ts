@@ -17,6 +17,8 @@ export type ChatRoomListItem = {
   description: string | null;
   archivedAt: string | null;
   createdAt: string;
+  /** Present when this row is shown because of a pending invite (not yet an active member). */
+  pendingInviteId?: string;
 };
 
 function isHubStaff(role: string | undefined): boolean {
@@ -61,35 +63,96 @@ export async function listChatRoomsForHub(userId: string, hubId: string): Promis
   if (mErr) {
     if (!isBenignChatRoomsQueryError(mErr)) {
       console.error("[listChatRoomsForHub] memberships", mErr);
+      return [];
     }
-    return [];
   }
 
-  if (!memberships?.length) return [];
+  const roomIdsFromMembership = [...new Set((memberships ?? []).map((m) => m.room_id as string))];
 
-  const roomIds = [...new Set(memberships.map((m) => m.room_id as string))];
+  let rooms: ChatRoomListItem[] = [];
 
-  const { data: rooms, error: rErr } = await supabase
-    .from("chat_rooms")
-    .select("id, hub_id, name, description, archived_at, created_at")
-    .eq("hub_id", hubId)
-    .in("id", roomIds)
-    .is("archived_at", null)
-    .order("created_at", { ascending: false });
+  if (roomIdsFromMembership.length) {
+    const { data: roomRows, error: rErr } = await supabase
+      .from("chat_rooms")
+      .select("id, hub_id, name, description, archived_at, created_at")
+      .eq("hub_id", hubId)
+      .in("id", roomIdsFromMembership)
+      .is("archived_at", null)
+      .order("created_at", { ascending: false });
 
-  if (rErr) {
-    if (!isBenignChatRoomsQueryError(rErr)) {
-      console.error("[listChatRoomsForHub] rooms", rErr);
+    if (rErr) {
+      if (!isBenignChatRoomsQueryError(rErr)) {
+        console.error("[listChatRoomsForHub] rooms", rErr);
+      }
+    } else {
+      rooms = (roomRows ?? []).map((r) => ({
+        id: r.id as string,
+        hubId: r.hub_id as string,
+        name: r.name as string,
+        description: (r.description as string | null) ?? null,
+        archivedAt: (r.archived_at as string | null) ?? null,
+        createdAt: r.created_at as string,
+      }));
     }
-    return [];
   }
 
-  return (rooms ?? []).map((r) => ({
-    id: r.id as string,
-    hubId: r.hub_id as string,
-    name: r.name as string,
-    description: (r.description as string | null) ?? null,
-    archivedAt: (r.archived_at as string | null) ?? null,
-    createdAt: r.created_at as string,
-  }));
+  const existingIds = new Set(rooms.map((r) => r.id));
+
+  const { data: invRows, error: invErr } = await supabase
+    .from("chat_room_invites")
+    .select("id, room_id, chat_rooms(id, hub_id, name, description, archived_at, created_at)")
+    .eq("invited_user_id", userId)
+    .eq("status", "pending");
+
+  if (!invErr && invRows?.length) {
+    for (const row of invRows as {
+      id: string;
+      room_id: string;
+      chat_rooms:
+        | {
+            id: string;
+            hub_id: string;
+            name: string;
+            description: string | null;
+            archived_at: string | null;
+            created_at: string;
+          }
+        | {
+            id: string;
+            hub_id: string;
+            name: string;
+            description: string | null;
+            archived_at: string | null;
+            created_at: string;
+          }[]
+        | null;
+    }[]) {
+      const crRaw = row.chat_rooms;
+      const cr = (Array.isArray(crRaw) ? crRaw[0] : crRaw) as {
+        id: string;
+        hub_id: string;
+        name: string;
+        description: string | null;
+        archived_at: string | null;
+        created_at: string;
+      } | null;
+      if (!cr || String(cr.hub_id) !== hubId) continue;
+      if (cr.archived_at) continue;
+      const rid = String(cr.id);
+      if (existingIds.has(rid)) continue;
+      existingIds.add(rid);
+      rooms.push({
+        id: rid,
+        hubId,
+        name: String(cr.name),
+        description: (cr.description as string | null) ?? null,
+        archivedAt: (cr.archived_at as string | null) ?? null,
+        createdAt: String(cr.created_at),
+        pendingInviteId: String(row.id),
+      });
+    }
+  }
+
+  rooms.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  return rooms;
 }

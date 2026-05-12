@@ -5,6 +5,7 @@ import {
   BarChart3,
   ChevronDown,
   Loader2,
+  Lock,
   MessageSquarePlus,
   Paperclip,
   Plus,
@@ -26,6 +27,7 @@ import {
   chatApiPatchMessage,
   chatApiPrepareUpload,
   chatApiRemoveMember,
+  chatApiRespondChatInvite,
   chatApiSendMessage,
   chatApiTyping,
   chatUploadToSignedUrl,
@@ -50,9 +52,11 @@ type HubChatSectionProps = {
   hubStaff: boolean;
   /** Shown on optimistic outbound messages. */
   viewerDisplayName?: string;
+  /** When present (e.g. from ?chatRoom=), selects this room after the room list loads. */
+  initialChatRoomId?: string | null;
 };
 
-export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayName }: HubChatSectionProps) {
+export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayName, initialChatRoomId }: HubChatSectionProps) {
   const [rooms, setRooms] = useState<ChatRoomListItem[]>([]);
   const [roomsLoading, setRoomsLoading] = useState(true);
   const [roomsError, setRoomsError] = useState<string | null>(null);
@@ -111,6 +115,7 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
 
   const [roomSettingsOpen, setRoomSettingsOpen] = useState(false);
   const [modOpen, setModOpen] = useState(false);
+  const [inviteRespondBusy, setInviteRespondBusy] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editMessageId, setEditMessageId] = useState<string | null>(null);
   const [editBody, setEditBody] = useState("");
@@ -265,6 +270,45 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
       setCreateBusy(false);
     }
   };
+
+  useEffect(() => {
+    const id = initialChatRoomId?.trim();
+    if (!id || roomsLoading || !rooms.some((r) => r.id === id)) return;
+    setSelectedRoomId(id);
+  }, [initialChatRoomId, roomsLoading, rooms]);
+
+  const handleAcceptChatInvite = useCallback(async () => {
+    if (!selectedRoomId) return;
+    setInviteRespondBusy(true);
+    thread.setError(null);
+    try {
+      await chatApiRespondChatInvite(selectedRoomId, "accept");
+      await loadRooms();
+      void thread.reloadRoom();
+      void thread.reloadMessages();
+      window.dispatchEvent(new Event("hub-chat-invites-changed"));
+    } catch (e) {
+      thread.setError(friendlyChatUserMessage(e, "Could not join this room. Please try again."));
+    } finally {
+      setInviteRespondBusy(false);
+    }
+  }, [selectedRoomId, loadRooms, thread.reloadRoom, thread.reloadMessages, thread.setError]);
+
+  const handleDeclineChatInvite = useCallback(async () => {
+    if (!selectedRoomId) return;
+    setInviteRespondBusy(true);
+    thread.setError(null);
+    try {
+      await chatApiRespondChatInvite(selectedRoomId, "decline");
+      await loadRooms();
+      window.dispatchEvent(new Event("hub-chat-invites-changed"));
+      setSelectedRoomId(null);
+    } catch (e) {
+      thread.setError(friendlyChatUserMessage(e, "Could not decline invite. Please try again."));
+    } finally {
+      setInviteRespondBusy(false);
+    }
+  }, [selectedRoomId, loadRooms, thread.setError]);
 
   const chronological = [...thread.messages].reverse();
 
@@ -479,6 +523,9 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
                     )}
                   >
                     <MessageSquarePlus className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
+                    {r.pendingInviteId ? (
+                      <Lock className="h-3.5 w-3.5 shrink-0 text-[var(--ud-text-muted)]" aria-label="Invite pending" />
+                    ) : null}
                     <span className="truncate">{r.name}</span>
                   </button>
                 </li>
@@ -534,7 +581,7 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
                   {thread.room?.name ?? rooms.find((r) => r.id === selectedRoomId)?.name ?? "Chat"}
                 </h3>
                 <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
-                {hubStaff ? (
+                {hubStaff && !thread.room?.viewerPendingInvite ? (
                   <>
                     <button
                       type="button"
@@ -557,7 +604,7 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
                     </button>
                   </>
                 ) : null}
-                {currentUserId ? (
+                {currentUserId && !thread.room?.viewerPendingInvite ? (
                   <>
                     <button
                       type="button"
@@ -630,7 +677,50 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
                 aria-live="polite"
                 aria-relevant="additions text"
               >
-                {thread.loading ? (
+                {!thread.room || thread.room.id !== selectedRoomId ? (
+                  <div className="flex justify-center py-12 text-[var(--ud-text-muted)]">
+                    <Loader2 className="h-8 w-8 animate-spin" aria-label="Loading room" />
+                  </div>
+                ) : thread.room.viewerPendingInvite ? (
+                  <div className="flex flex-col items-center justify-center gap-4 px-4 py-12 text-center">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] text-[var(--ud-text-secondary)]">
+                      <Lock className="h-7 w-7" aria-hidden />
+                    </div>
+                    <div>
+                      <p className="text-base font-semibold text-[var(--ud-text-primary)]">You&apos;re invited to this room</p>
+                      <p className="mt-2 max-w-sm text-sm text-[var(--ud-text-secondary)]">
+                        {thread.room.viewerPendingInvite.inviterDisplayName?.trim() ? (
+                          <>
+                            <span className="font-medium text-[var(--ud-text-primary)]">
+                              {thread.room.viewerPendingInvite.inviterDisplayName.trim()}
+                            </span>{" "}
+                            invited you to join this chat. Accept to read and send messages, or decline to remove it from your list.
+                          </>
+                        ) : (
+                          <>A hub admin invited you to join this chat. Accept to read and send messages, or decline to remove it from your list.</>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        className={cn(BUTTON_PRIMARY, "min-w-[7rem] px-4 py-2 text-sm")}
+                        disabled={inviteRespondBusy}
+                        onClick={() => void handleAcceptChatInvite()}
+                      >
+                        {inviteRespondBusy ? "Working…" : "Join"}
+                      </button>
+                      <button
+                        type="button"
+                        className={cn(BUTTON_SECONDARY, "min-w-[7rem] px-4 py-2 text-sm")}
+                        disabled={inviteRespondBusy}
+                        onClick={() => void handleDeclineChatInvite()}
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                ) : thread.loading ? (
                   <div className="flex justify-center py-12 text-[var(--ud-text-muted)]">
                     <Loader2 className="h-8 w-8 animate-spin" aria-label="Loading messages" />
                   </div>
@@ -669,7 +759,7 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
                 )}
               </div>
 
-              {thread.typingUserIds.length > 0 ? (
+              {thread.typingUserIds.length > 0 && !thread.room?.viewerPendingInvite ? (
                 <div className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] px-3 py-1.5 text-xs text-[var(--ud-text-muted)]">
                   {thread.typingUserIds.length === 1
                     ? "Someone is typing…"
@@ -680,7 +770,7 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
                 sending={thread.sending}
                 muted={thread.room?.viewerMuted}
                 banned={thread.room?.viewerBanned}
-                disabled={!selectedRoomId}
+                disabled={!selectedRoomId || Boolean(thread.room?.viewerPendingInvite)}
                 pendingAttachment={pendingAttach}
                 onClearPendingAttachment={clearPendingAttach}
                 onSend={async (t) => {

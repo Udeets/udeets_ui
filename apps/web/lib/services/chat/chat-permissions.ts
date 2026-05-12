@@ -17,6 +17,8 @@ export type ChatAuthContext = {
   isMuted: boolean;
   /** Whether `userId` is banned from the room. */
   isBanned: boolean;
+  /** Pending `chat_room_invites` row for this user in this room, if any. */
+  pendingInviteId: string | null;
 };
 
 export type ChatPermissionVerb =
@@ -104,6 +106,13 @@ export function evaluateChatPermission(
   switch (verb) {
     case "VIEW_ROOM": {
       if (canViewRoomCore(ctx)) return { ok: true };
+      if (
+        ctx.hubMembership?.status === "active" &&
+        ctx.pendingInviteId &&
+        !ctx.room.archivedAt
+      ) {
+        return { ok: true };
+      }
       return { ok: false, reason: "You do not have access to this chat room." };
     }
     case "SEND_MESSAGE": {
@@ -241,7 +250,7 @@ export const CHAT_PERMISSION_MATRIX: ReadonlyArray<{
 }> = [
   { verb: "CREATE_ROOM", rule: "Hub hub_members.role in (creator, admin), status active." },
   { verb: "LIST_ROOMS_IN_HUB", rule: "Any active hub member for that hub_id." },
-  { verb: "VIEW_ROOM", rule: "Active room member, OR hub staff; archived rooms: hub staff or room owner/admin." },
+  { verb: "VIEW_ROOM", rule: "Active room member, OR hub staff; archived: hub staff or room owner/admin; OR active hub member with pending room invite (non-archived)." },
   { verb: "SEND_MESSAGE", rule: "Active room member; not muted; not banned; room not blocked for viewer." },
   { verb: "UPLOAD_ATTACHMENT", rule: "Same as SEND_MESSAGE + room.settings.attachmentsEnabled." },
   {

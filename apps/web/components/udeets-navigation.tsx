@@ -497,6 +497,13 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
         .on("postgres_changes", { event: "*", schema: "public", table: "hub_members" }, () => {
           setHeaderRefreshKey((k) => k + 1);
         })
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "chat_room_invites", filter: `invited_user_id=eq.${user.id}` },
+          () => {
+            setHeaderRefreshKey((k) => k + 1);
+          },
+        )
         .subscribe();
     })();
 
@@ -506,9 +513,11 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
       setTimeout(() => setHeaderRefreshKey((k) => k + 1), 600);
     };
     window.addEventListener("hub-members-changed", onMembersChanged);
+    window.addEventListener("hub-chat-invites-changed", onMembersChanged);
 
     return () => {
       window.removeEventListener("hub-members-changed", onMembersChanged);
+      window.removeEventListener("hub-chat-invites-changed", onMembersChanged);
       if (channel && supabaseRef) {
         void supabaseRef.removeChannel(channel);
       }
@@ -666,6 +675,82 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
           }
         }
 
+        // ── Pending chat room invites (invitee) ──
+        let chatInviteNotifications: HubNotificationItem[] = [];
+        {
+          const { data: pendingChatInvites } = await supabase
+            .from("chat_room_invites")
+            .select("id, created_at, invited_by, room_id")
+            .eq("invited_user_id", user.id)
+            .eq("status", "pending")
+            .order("created_at", { ascending: false })
+            .limit(20);
+
+          const invRows = (pendingChatInvites ?? []) as {
+            id: string;
+            created_at: string;
+            invited_by: string | null;
+            room_id: string;
+          }[];
+          if (invRows.length > 0 && !ignore) {
+            const roomIds = [...new Set(invRows.map((r) => r.room_id))];
+            const { data: roomRows } = await supabase
+              .from("chat_rooms")
+              .select("id, name, hub_id, archived_at")
+              .in("id", roomIds);
+            const rooms = (roomRows ?? []) as { id: string; name: string; hub_id: string; archived_at: string | null }[];
+            const roomMap = new Map(rooms.map((r) => [r.id, r]));
+            const hubIdsForRooms = [...new Set(rooms.map((r) => r.hub_id))];
+            const { data: hubRowsForChat } = await supabase
+              .from("hubs")
+              .select("id, name, slug, category, dp_image_url")
+              .in("id", hubIdsForRooms);
+            const hubById = new Map(
+              (hubRowsForChat ?? []).map((h: { id: string; name: string; slug: string; category: string; dp_image_url: string | null }) => [
+                h.id,
+                h,
+              ]),
+            );
+            const inviterIds = [...new Set(invRows.map((r) => r.invited_by).filter(Boolean) as string[])];
+            let inviterNameById = new Map<string, string>();
+            if (inviterIds.length > 0) {
+              const { data: inviterProfiles } = await supabase
+                .from("profiles")
+                .select("id, full_name")
+                .in("id", inviterIds);
+              inviterNameById = new Map(
+                (inviterProfiles ?? []).map((p: { id: string; full_name: string | null }) => [
+                  p.id,
+                  p.full_name?.trim() || "Someone",
+                ]),
+              );
+            }
+            for (const inv of invRows) {
+              const room = roomMap.get(inv.room_id);
+              if (!room?.name || room.archived_at) continue;
+              const hub = hubById.get(room.hub_id);
+              if (!hub?.slug || !activeHubIds.includes(hub.id)) continue;
+              const inviter =
+                inv.invited_by && inviterNameById.has(inv.invited_by)
+                  ? inviterNameById.get(inv.invited_by)!
+                  : "A moderator";
+              chatInviteNotifications.push({
+                id: `chat-invite-${inv.id}`,
+                title: "Chat room invite",
+                body: `${inviter} invited you to “${room.name}” in ${hub.name}`,
+                meta: formatRelativeTime(inv.created_at),
+                hub: hub.name,
+                hubImage: hub.dp_image_url ?? undefined,
+                type: "Activity" as const,
+                category: hub.category as import("@/lib/hubs").HubCategorySlug,
+                slug: hub.slug,
+                focusId: "",
+                href: `/hubs/${hub.category}/${hub.slug}?tab=Chat&chatRoom=${room.id}`,
+              });
+            }
+          }
+        }
+
         const notifications: HubNotificationItem[] = (recentDeets ?? []).map(
           (d: { id: string; hub_id: string; author_name: string; title: string; body: string; kind: string; created_at: string }) => {
             const hub = hubMap.get(d.hub_id);
@@ -815,7 +900,12 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
         }
 
         if (!ignore) {
-          const allNotifs = [...joinRequestNotifications, ...acceptedNotifications, ...notifications];
+          const allNotifs = [
+            ...joinRequestNotifications,
+            ...chatInviteNotifications,
+            ...acceptedNotifications,
+            ...notifications,
+          ];
           setLiveNotifications(allNotifs);
           setLiveEvents(eventItems);
           // Read/cleared state is persisted in localStorage now — no need to

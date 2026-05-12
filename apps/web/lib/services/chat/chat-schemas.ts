@@ -40,6 +40,10 @@ export const inviteRevokeQuerySchema = z.object({
   invitedUserId: uuidSchema,
 });
 
+export const inviteRespondBodySchema = z.object({
+  action: z.enum(["accept", "decline"]),
+});
+
 /** Zod v4: use transform so output `role` is always the literal union (optional().default() inference can widen). */
 export const addMemberBodySchema = z
   .object({
