@@ -30,6 +30,7 @@ function ctx(partial: Partial<ChatAuthContext>): ChatAuthContext {
     roomMembership: null,
     isMuted: false,
     isBanned: false,
+    pendingInviteId: null,
     ...partial,
   };
 }

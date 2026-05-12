@@ -28,7 +28,7 @@ export async function resolveChatAuthContext(
 
   const r = room as ChatRoomRow;
 
-  const [hubRes, memRes, muteRes, banRes] = await Promise.all([
+  const [hubRes, memRes, muteRes, banRes, inviteRes] = await Promise.all([
     supabase
       .from("hub_members")
       .select("hub_id, user_id, role, status")
@@ -43,6 +43,13 @@ export async function resolveChatAuthContext(
       .maybeSingle(),
     supabase.from("chat_room_mutes").select("muted_until").eq("room_id", roomId).eq("user_id", userId).maybeSingle(),
     supabase.from("chat_room_bans").select("id").eq("room_id", roomId).eq("user_id", userId).maybeSingle(),
+    supabase
+      .from("chat_room_invites")
+      .select("id")
+      .eq("room_id", roomId)
+      .eq("invited_user_id", userId)
+      .eq("status", "pending")
+      .maybeSingle(),
   ]);
 
   const hm = hubRes.data;
@@ -74,6 +81,7 @@ export async function resolveChatAuthContext(
     roomMembership: roomMembershipNorm,
     isMuted,
     isBanned,
+    pendingInviteId: inviteRes.data?.id ? String(inviteRes.data.id) : null,
   };
 }
 

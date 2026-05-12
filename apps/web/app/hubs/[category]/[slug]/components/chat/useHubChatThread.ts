@@ -166,13 +166,17 @@ export function useHubChatThread(
 
   const displayName = viewerDisplayName?.trim() || "You";
 
-  const loadRoom = useCallback(async () => {
-    if (!roomId) return;
+  const loadRoom = useCallback(async (): Promise<ChatRoomDetail | null> => {
+    if (!roomId) return null;
     try {
       const { room: r } = await chatApiGetRoom(roomId);
       setRoom(r);
+      setError(null);
+      return r;
     } catch (e) {
       setError(friendlyChatUserMessage(e, "Could not load this room. Please try again."));
+      setRoom(null);
+      return null;
     }
   }, [roomId]);
 
@@ -218,8 +222,22 @@ export function useHubChatThread(
       setTypingMap({});
       return;
     }
-    void loadRoom();
-    void loadInitialMessages();
+    let cancelled = false;
+    void (async () => {
+      const r = await loadRoom();
+      if (cancelled) return;
+      if (!r) return;
+      if (r.viewerPendingInvite) {
+        setMessages([]);
+        setNextCursor(null);
+        setLoading(false);
+        return;
+      }
+      await loadInitialMessages();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [roomId, loadRoom, loadInitialMessages]);
 
   useEffect(() => {
@@ -239,7 +257,9 @@ export function useHubChatThread(
   }, [roomId]);
 
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomId || !room || room.id !== roomId || room.viewerPendingInvite) {
+      return () => {};
+    }
     let unsub: (() => Promise<void>) | null = null;
     (async () => {
       try {
@@ -263,7 +283,7 @@ export function useHubChatThread(
     return () => {
       void unsub?.();
     };
-  }, [roomId, viewerUserId]);
+  }, [roomId, room, viewerUserId]);
 
   const typingUserIds = Object.keys(typingMap).filter((id) => id !== (viewerUserId ?? ""));
 

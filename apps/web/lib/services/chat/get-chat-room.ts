@@ -19,6 +19,11 @@ export type ChatRoomDetail = {
   viewerBanned: boolean;
   /** Room moderator+ or hub staff — used for moderation UI and realtime message visibility. */
   viewerCanModerate: boolean;
+  /**
+   * When set, the viewer has a pending invite and is not yet an active member (and is not hub staff).
+   * UI should show join/decline instead of the message stream.
+   */
+  viewerPendingInvite: { inviteId: string; inviterDisplayName: string } | null;
 };
 
 export async function getChatRoomForUser(userId: string, roomId: string): Promise<ChatRoomDetail> {
@@ -35,6 +40,25 @@ export async function getChatRoomForUser(userId: string, roomId: string): Promis
 
   if (error || !data) throw new ChatNotFoundError("Chat room not found.");
 
+  const activeMember = ctx.roomMembership?.status === "active";
+  const staff = isHubStaff(ctx.hubMembership);
+  let viewerPendingInvite: ChatRoomDetail["viewerPendingInvite"] = null;
+  if (ctx.pendingInviteId && !activeMember && !staff) {
+    const { data: invRow } = await supabase
+      .from("chat_room_invites")
+      .select("invited_by")
+      .eq("id", ctx.pendingInviteId)
+      .maybeSingle();
+    let inviterDisplayName = "A hub moderator";
+    const ib = invRow?.invited_by != null ? String(invRow.invited_by) : null;
+    if (ib) {
+      const { data: prof } = await supabase.from("profiles").select("full_name").eq("id", ib).maybeSingle();
+      const fn = prof?.full_name?.trim();
+      if (fn) inviterDisplayName = fn;
+    }
+    viewerPendingInvite = { inviteId: ctx.pendingInviteId, inviterDisplayName };
+  }
+
   return {
     id: data.id as string,
     hubId: data.hub_id as string,
@@ -47,5 +71,6 @@ export async function getChatRoomForUser(userId: string, roomId: string): Promis
     viewerMuted: ctx.isMuted,
     viewerBanned: ctx.isBanned,
     viewerCanModerate: isRoomModPlus(ctx.roomMembership) || isHubStaff(ctx.hubMembership),
+    viewerPendingInvite,
   };
 }

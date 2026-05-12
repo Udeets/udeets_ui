@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { CHAT_DELETED_MESSAGE_PLACEHOLDER } from "@/lib/services/chat/chat-message-constants";
 import { assertChatVerb } from "@/lib/services/chat/assert-chat";
-import { ChatNotFoundError } from "@/lib/services/chat/chat-errors";
+import { ChatForbiddenError, ChatNotFoundError } from "@/lib/services/chat/chat-errors";
 import { isHubStaff, isRoomModPlus } from "@/lib/services/chat/chat-viewer-roles";
 import { resolveChatAuthContext } from "@/lib/services/chat/resolve-chat-context";
 import { createClient } from "@/lib/supabase/server";
@@ -101,6 +101,14 @@ export async function listChatMessages(
   const ctx = await resolveChatAuthContext(supabase, roomId, userId);
   if (!ctx) throw new ChatNotFoundError("Chat room not found.");
   assertChatVerb(ctx, "VIEW_ROOM");
+
+  const pendingOnly =
+    Boolean(ctx.pendingInviteId) &&
+    ctx.roomMembership?.status !== "active" &&
+    !isHubStaff(ctx.hubMembership);
+  if (pendingOnly) {
+    throw new ChatForbiddenError("Accept the room invite to read messages.");
+  }
 
   const limit = Math.min(Math.max(opts.limit, 1), 100);
   const viewerIsMod = isRoomModPlus(ctx.roomMembership) || isHubStaff(ctx.hubMembership);

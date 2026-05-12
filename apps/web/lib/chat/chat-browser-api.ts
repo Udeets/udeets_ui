@@ -148,6 +148,16 @@ export async function chatApiDeleteRoom(roomId: string): Promise<void> {
   if (!res.ok) throw new Error(await parseErr(res));
 }
 
+export async function chatApiRespondChatInvite(roomId: string, action: "accept" | "decline"): Promise<void> {
+  const res = await fetch(`/api/chat/rooms/${encodeURIComponent(roomId)}/invites/respond`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action }),
+  });
+  if (!res.ok) throw new Error(await parseErr(res));
+}
+
 export async function chatApiListReports(
   roomId: string,
   opts?: { status?: "pending" | "resolved" | "dismissed" | "all" },

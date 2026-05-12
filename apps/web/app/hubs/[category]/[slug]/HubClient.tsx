@@ -115,6 +115,7 @@ export default function HubClient({
 
   const focusTarget = searchParams.get("focus");
   const requestedTab = searchParams.get("tab");
+  const initialChatRoomId = searchParams.get("chatRoom");
   const isDemoPreview = searchParams.get("demo_preview") === "1";
   const demoHubName = searchParams.get("demo_name")?.trim();
   const demoHubDescription = searchParams.get("demo_description")?.trim();
@@ -1247,6 +1248,7 @@ export default function HubClient({
           hubId={hub.id}
           currentUserId={user?.id}
           hubStaff={isCreatorAdmin}
+          initialChatRoomId={initialChatRoomId}
           viewerDisplayName={
             (user?.user_metadata?.full_name as string | undefined) ||
             (user?.user_metadata?.name as string | undefined) ||
