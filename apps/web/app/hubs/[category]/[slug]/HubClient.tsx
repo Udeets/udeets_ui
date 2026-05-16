@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
 import type { HubContent } from "@/lib/hub-content";
 import type { HubRecord } from "@/lib/hubs";
@@ -30,6 +30,11 @@ import { CTADisplay } from "./components/ctas/CTADisplay";
 import { CTAEditorModal } from "./components/ctas/CTAEditorModal";
 import { CustomSectionEditorModal } from "./components/sections/custom/CustomSectionEditorModal";
 import { InviteModal } from "./components/modals/InviteModal";
+import { InviteTokenHandler } from "./join/components/InviteTokenHandler";
+import { InviteGuestLockedContent } from "./join/components/InviteGuestLockedContent";
+import { MobileAppDownloadPrompt } from "./join/components/MobileAppDownloadPrompt";
+import { buildAuthUrl, buildInviteJoinReturnUrl } from "@/lib/services/hubs/invite-landing-utils";
+import { resolveHubJoinToken } from "@/lib/services/hubs/hub-join-link-client";
 import { DeleteHubModal } from "./components/modals/DeleteHubModal";
 import { DeetSharePopover } from "@/components/deets/DeetSharePopover";
 import { FeedPostBody } from "@/components/deets/FeedPostBody";
@@ -107,9 +112,43 @@ export default function HubClient({
   void mode;
 
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { status, user } = useAuthSession();
+  const isJoinRoute = Boolean(pathname?.endsWith("/join"));
+  const isPrivateHub = hub.visibility === "Private";
+  /** Signed-out visitors on private hubs: same hub chrome, blurred locks on non-About tabs. */
+  const isPrivateHubGuest = isPrivateHub && status !== "authenticated";
   const hubContent = useMemo<HubContent>(() => ({ hubId: hub.id, feed: [], events: [], notifications: [] }), [hub.id]);
+
+  const hubBaseHrefEarly = `/hubs/${hub.category}/${hub.slug}`;
+  const guestAuthReturnUrl = useMemo(() => {
+    if (isJoinRoute) {
+      return buildInviteJoinReturnUrl(hub.category, hub.slug, {
+        deetId: searchParams.get("deet") || undefined,
+        joinToken: searchParams.get("t") || undefined,
+      });
+    }
+    const qs = searchParams.toString();
+    return qs ? `${hubBaseHrefEarly}?${qs}` : hubBaseHrefEarly;
+  }, [isJoinRoute, hub.category, hub.slug, searchParams, hubBaseHrefEarly]);
+
+  const [inviteTokenInvalid, setInviteTokenInvalid] = useState(false);
+  useEffect(() => {
+    if (!isJoinRoute) return;
+    const token = searchParams.get("t");
+    if (!token) return;
+    let cancelled = false;
+    void resolveHubJoinToken(token).then((resolved) => {
+      if (cancelled) return;
+      if (!resolved?.isValid || resolved.category !== hub.category || resolved.slug !== hub.slug) {
+        setInviteTokenInvalid(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isJoinRoute, hub.category, hub.slug, searchParams]);
 
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
 
@@ -153,6 +192,7 @@ export default function HubClient({
 
   const isHubCreator = Boolean(user?.id && hub.createdBy && user.id === hub.createdBy);
   const isCreatorAdmin = isHubCreator || (hubRole === "admin" || hubRole === "super_admin");
+  const canManageInvites = isCreatorAdmin;
 
   const canAccessAdmins = canEditHub;
   const creatorMetadata = user?.user_metadata;
@@ -287,8 +327,9 @@ export default function HubClient({
     return () => { ignore = true; };
   }, [hub.id, user?.id, isCreatorAdmin]);
 
-  // Content gating: non-members see Header + About only
+  // Content gating: non-members see Header + About only (invite guests can browse tabs with locked previews)
   const canAccessFullContent = canViewFullContent || isMember || isCreatorAdmin;
+  const canBrowseAllTabs = canAccessFullContent || isPrivateHubGuest;
 
   // CTA state
   const [hubCTAs, setHubCTAs] = useState<import("@/lib/services/ctas/cta-types").HubCTARecord[]>([]);
@@ -371,11 +412,12 @@ export default function HubClient({
   }, [hub.id]);
 
   useEffect(() => {
-    void loadHubAttachments();
-  }, [loadHubAttachments]);
+    if (!isPrivateHubGuest) void loadHubAttachments();
+  }, [loadHubAttachments, isPrivateHubGuest]);
 
+  const feedHubId = isPrivateHubGuest ? "" : hub.id;
   const { livePublishedItems, liveDraftItems, prependCreatedDeet, removeDeet, replaceFeedDeet } = useHubLiveFeed(
-    hub.id,
+    feedHubId,
     hub.createdBy,
   );
   const [postsListSource, setPostsListSource] = useState<"published" | "drafts">("published");
@@ -472,8 +514,12 @@ export default function HubClient({
     }
   }, [mediaSuccess, isUploadingDp, isUploadingCover, isUploadingGallery, loadHubAttachments]);
 
-  // Merge gallery images with attachment photos, preferring attachments (which include DP/cover uploads)
-  const allPhotos = allAttachmentPhotos.length > 0 ? allAttachmentPhotos : galleryImages;
+  // Merge gallery images with attachment photos (skip for signed-out private hub guests)
+  const allPhotos = isPrivateHubGuest
+    ? []
+    : allAttachmentPhotos.length > 0
+      ? allAttachmentPhotos
+      : galleryImages;
   const recentPhotos = allPhotos.slice(0, 6);
   const displayCoverImageSrc = coverImageSrc;
   const adminImages = (hub.adminImages ?? []).map(normalizePublicSrc).filter(Boolean);
@@ -654,8 +700,9 @@ export default function HubClient({
     async function init() {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
-      // Load active members for About / counts whenever possible (RLS may still gate results).
-      void loadMembers();
+      if (!isPrivateHubGuest) {
+        void loadMembers();
+      }
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.access_token && !ignore && isCreatorAdmin) {
         void loadPendingRequests();
@@ -675,7 +722,7 @@ export default function HubClient({
       ignore = true;
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [hub.id, isCreatorAdmin]);
+  }, [hub.id, isCreatorAdmin, isPrivateHubGuest]);
 
   // Real-time: listen for new join requests so the creator gets a toast notification
   useEffect(() => {
@@ -1019,7 +1066,7 @@ export default function HubClient({
 
   const handleMembershipAction = async () => {
     if (!user?.id) {
-      router.push(`/auth?redirect=${encodeURIComponent(hubBaseHref)}`);
+      router.push(buildAuthUrl(guestAuthReturnUrl, "signin"));
       return;
     }
     setIsJoining(true);
@@ -1058,7 +1105,11 @@ export default function HubClient({
   };
 
   const renderMainContent = () => {
-    // Content gating: non-members only see About
+    if (isPrivateHubGuest && activeSection !== "About") {
+      return <InviteGuestLockedContent section={activeSection} returnUrl={guestAuthReturnUrl} />;
+    }
+
+    // Content gating: signed-in non-members only see About (or locked message on other tabs)
     if (!canAccessFullContent && activeSection !== "About") {
       return (
         <div className={cn(CARD, "p-8 text-center")}>
@@ -1156,7 +1207,7 @@ export default function HubClient({
           activeAdminCount={activeAdminCount}
           eventCount={hubContent.events.length}
           recentPhotoCount={recentPhotos.length}
-          onInviteMembers={() => setIsInviteModalOpen(true)}
+          onInviteMembers={canManageInvites ? () => setIsInviteModalOpen(true) : undefined}
           onOpenSettings={openSettingsPanel}
           onOpenAdminsEditor={() => setIsAdminsEditorOpen(true)}
           onOpenPosts={() => setActiveSection("Posts")}
@@ -1181,15 +1232,15 @@ export default function HubClient({
           hubDescription={hubDescription}
           hubTagline={hub.tagline ?? ""}
           settingsVisibility={settingsVisibility}
-          memberCount={memberCount}
-          hubMemberRoster={memberItems}
+          memberCount={isPrivateHubGuest ? 0 : memberCount}
+          hubMemberRoster={isPrivateHubGuest ? [] : memberItems}
           settingsLocation={settingsLocation}
           hubLocationLabel={hub.locationLabel}
           connectLinks={connectLinks}
           isCreatorAdmin={isCreatorAdmin}
           userRole={isHubCreator ? "creator" : isCreatorAdmin ? "admin" : isJoined ? "member" : isPending ? "pending" : null}
           onMembershipAction={handleMembershipAction}
-          onInviteMembers={() => setIsInviteModalOpen(true)}
+          onInviteMembers={canManageInvites ? () => setIsInviteModalOpen(true) : undefined}
           onOpenSettings={openSettingsPanel}
           onOpenConnectEditor={openConnectEditor}
           connectSuccess={connectSuccess}
@@ -1219,6 +1270,7 @@ export default function HubClient({
           onOpenSectionEditor={() => setIsSectionEditorOpen(true)}
           onLeaveHub={!isHubCreator ? () => setShowLeaveConfirm(true) : undefined}
           accentTheme={accentTheme}
+          photosGuestLockReturnUrl={isPrivateHubGuest ? guestAuthReturnUrl : undefined}
         />
       );
     }
@@ -1382,8 +1434,8 @@ export default function HubClient({
           visibilityLabel={visibilityLabel}
           accentTheme={accentTheme}
           creatorDisplayName={creatorDisplayName}
-          onOpenMembers={() => openCenterMembers("list")}
-          onInviteMembers={() => setIsInviteModalOpen(true)}
+          onOpenMembers={isPrivateHubGuest ? undefined : () => openCenterMembers("list")}
+          onInviteMembers={canManageInvites && !isPrivateHubGuest ? () => setIsInviteModalOpen(true) : undefined}
           onOpenAlerts={() => router.push(`/alerts?hub_id=${hub.id}`)}
           coverImageOffsetY={coverImageOffsetY}
           onSaveCoverOffsetY={async (percent) => {
@@ -1414,7 +1466,7 @@ export default function HubClient({
         {/* Mobile horizontal tab bar: About, Posts, Events, Attachments */}
         <div className="flex border-b border-[var(--ud-border)] bg-[var(--ud-bg-card)] lg:hidden">
           {(["About", "Posts", "Events", "Attachments", "Chat"] as const)
-            .filter((tab) => canAccessFullContent || tab === "About")
+            .filter((tab) => canBrowseAllTabs || tab === "About")
             .map((tab) => (
               <button
                 key={tab}
@@ -1451,7 +1503,7 @@ export default function HubClient({
               activeSection={activeSection}
               activePanel={activePanel}
               isCreatorAdmin={isCreatorAdmin}
-              canAccessFullContent={canAccessFullContent}
+              canAccessFullContent={canBrowseAllTabs}
               templateConfig={hubTemplateConfig}
               pendingCount={pendingRequests.length}
               onNavigate={requestNavigation}
@@ -1460,12 +1512,18 @@ export default function HubClient({
 
           {/* Content area */}
           <main className="min-h-[calc(100vh-200px)] min-w-0 bg-[var(--ud-bg-subtle)] p-3 sm:p-6">
+            {isJoinRoute && isPrivateHubGuest && inviteTokenInvalid ? (
+              <div className="mb-4">
+                <InviteTokenHandler showInvalidBanner />
+              </div>
+            ) : null}
             {renderMainContent()}
           </main>
         </div>
       </div>
 
       {!isDemoPreview ? <UdeetsFooter /> : null}
+      {isPrivateHubGuest ? <MobileAppDownloadPrompt /> : null}
       {/* Bottom nav only shows on /dashboard, not inside hub pages */}
 
       {/* Join Request Toast — shown to creator when someone requests to join */}
@@ -2347,12 +2405,13 @@ export default function HubClient({
       ) : null}
 
       {/* Invite Modal */}
-      {isInviteModalOpen ? (
+      {isInviteModalOpen && canManageInvites ? (
         <InviteModal
           hubName={hubName}
           hubSlug={hub.slug}
           hubCategory={savedHubCategory}
           hubId={hub.id}
+          hubLogoUrl={hub.dpImage}
           onClose={() => setIsInviteModalOpen(false)}
         />
       ) : null}

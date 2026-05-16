@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -5,21 +6,24 @@ import { createClient } from "@/lib/supabase/server";
  * On first login (INSERT): populate full_name, avatar_url, email from the OAuth provider.
  * On subsequent logins (UPDATE): only update email (which may change); never
  * overwrite full_name or avatar_url since the user may have customised them.
+ *
+ * Pass `db` from the route handler that just called `exchangeCodeForSession` so RLS
+ * sees the new session (a separate `createClient()` may not have cookies yet).
  */
 export async function upsertProfile(
   userId: string,
   fullName: string | null,
   avatarUrl: string | null,
   email: string | null,
+  db?: SupabaseClient,
 ): Promise<void> {
-  const supabase = await createClient();
+  const supabase = db ?? (await createClient());
 
-  // Check if profile already exists
   const { data: existing } = await supabase
     .from("profiles")
     .select("id, full_name, avatar_url")
     .eq("id", userId)
-    .single();
+    .maybeSingle();
 
   if (existing) {
     // Existing user — only update email (keep custom name/avatar intact)

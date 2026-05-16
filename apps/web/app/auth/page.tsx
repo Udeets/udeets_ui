@@ -12,6 +12,8 @@ import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import { signInWithApple } from "@/services/auth/signInWithApple";
 import { signInWithGoogle } from "@/services/auth/signInWithGoogle";
 import { useAuthSession } from "@/services/auth/useAuthSession";
+import { getAuthCallbackUrl, setAuthNextCookie } from "@/lib/auth/auth-next-cookie";
+import { readPostAuthRedirect } from "@/lib/services/hubs/invite-landing-utils";
 
 type Mode = "signin" | "signup";
 
@@ -54,8 +56,10 @@ function AuthPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryError = searchParams.get("error") ?? "";
+  const postAuthRedirect = readPostAuthRedirect(searchParams);
+  const initialMode = searchParams.get("mode") === "signup" ? "signup" : "signin";
   const { isAuthenticated } = useAuthSession();
-  const [mode, setMode] = useState<Mode>("signin");
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
@@ -70,6 +74,17 @@ function AuthPageContent() {
   const visibleError = error || (queryError && dismissedQueryError !== queryError ? queryError : "");
 
   useEffect(() => {
+    const oauthCode = searchParams.get("code");
+    if (oauthCode) {
+      const callback = new URL("/auth/callback", window.location.origin);
+      callback.searchParams.set("code", oauthCode);
+      callback.searchParams.set("next", postAuthRedirect);
+      router.replace(callback.pathname + callback.search);
+      return;
+    }
+  }, [searchParams, postAuthRedirect, router]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function checkSession() {
@@ -77,7 +92,7 @@ function AuthPageContent() {
         const session = await getCurrentSession();
 
         if (!cancelled && session) {
-          router.replace("/dashboard");
+          router.replace(postAuthRedirect);
         }
       } catch {
         // Keep the auth page usable even if session lookup fails.
@@ -89,7 +104,7 @@ function AuthPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, postAuthRedirect, searchParams]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -132,12 +147,13 @@ function AuthPageContent() {
       const supabase = createClient();
 
       if (mode === "signup") {
+        setAuthNextCookie(postAuthRedirect);
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: trimmedEmail,
           password,
           options: {
             data: { full_name: fullName.trim() },
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            emailRedirectTo: getAuthCallbackUrl(),
           },
         });
         if (signUpError) {
@@ -152,7 +168,8 @@ function AuthPageContent() {
         }
         // If auto-confirmed, upsert profile and redirect
         if (data.session) {
-          router.replace("/dashboard");
+          router.refresh();
+          router.replace(postAuthRedirect);
         }
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -167,7 +184,8 @@ function AuthPageContent() {
           }
           return;
         }
-        router.replace("/dashboard");
+        router.refresh();
+        router.replace(postAuthRedirect);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
@@ -182,6 +200,7 @@ function AuthPageContent() {
     setIsAppleLoading(true);
 
     try {
+      setAuthNextCookie(postAuthRedirect);
       await signInWithApple();
     } catch (signInError) {
       setError(signInError instanceof Error ? signInError.message : "Failed to sign in with Apple.");
@@ -195,6 +214,7 @@ function AuthPageContent() {
     setIsGoogleLoading(true);
 
     try {
+      setAuthNextCookie(postAuthRedirect);
       await signInWithGoogle();
     } catch (signInError) {
       setError(signInError instanceof Error ? signInError.message : "Failed to sign in with Google.");

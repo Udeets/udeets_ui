@@ -1,14 +1,20 @@
 import { createClient } from "@/lib/supabase/client";
+import { getAuthCallbackUrl } from "@/lib/auth/auth-next-cookie";
 
 /**
  * Google OAuth via Supabase.
  *
- * Dashboard checklist:
- *  - Supabase → Authentication → Providers → **Google** enabled (Web client ID + secret from Google Cloud).
- *  - Supabase → Authentication → URL configuration → **Site URL** = your app origin (e.g. http://localhost:3000).
- *  - Same screen → **Redirect URLs** must include `{origin}/auth/callback` (e.g. http://localhost:3000/auth/callback).
- *  - Google Cloud Console → APIs & Services → Credentials → OAuth 2.0 Client → **Authorized redirect URIs**:
- *    `https://<YOUR_PROJECT_REF>.supabase.co/auth/v1/callback` (Supabase’s callback, not your Next route).
+ * Uses an exact `redirectTo` of `{origin}/auth/callback` (no query params) so it matches
+ * Supabase Redirect URLs like `http://localhost:3000/auth/callback`.
+ * Intended destination is stored in `udeets_auth_next` cookie before redirect.
+ *
+ * Supabase dashboard:
+ *  - Site URL: your primary app URL (e.g. production). For local-only testing you may set
+ *    `http://localhost:3000` temporarily, or rely on Redirect URLs below.
+ *  - Redirect URLs must include BOTH production and local, e.g.:
+ *      https://udeets-ui-web.vercel.app/auth/callback
+ *      http://localhost:3000/auth/callback
+ *      http://127.0.0.1:3000/auth/callback
  */
 export async function signInWithGoogle(): Promise<void> {
   if (typeof window === "undefined") {
@@ -16,10 +22,12 @@ export async function signInWithGoogle(): Promise<void> {
   }
 
   const supabase = createClient();
+  const redirectTo = getAuthCallbackUrl();
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo,
     },
   });
 

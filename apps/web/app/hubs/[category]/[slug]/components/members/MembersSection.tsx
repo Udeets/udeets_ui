@@ -19,7 +19,7 @@ type MembersPeopleSectionProps = {
   activeAdminCount: number;
   eventCount: number;
   recentPhotoCount: number;
-  onInviteMembers: () => void;
+  onInviteMembers?: () => void;
   onOpenSettings: () => void;
   onOpenAdminsEditor: () => void;
   onOpenPosts: () => void;

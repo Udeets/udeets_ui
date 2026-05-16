@@ -310,11 +310,13 @@ export default function ProfilePage() {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
 
+      const nowIso = new Date().toISOString();
       const { data: invitations, error } = await supabase
         .from("hub_invitations")
-        .select("id, hub_id, invited_by, created_at")
+        .select("id, hub_id, invited_by, created_at, expires_at")
         .eq("invited_user_id", user!.id)
         .eq("status", "pending")
+        .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
         .order("created_at", { ascending: false });
 
       if (cancelled) return;

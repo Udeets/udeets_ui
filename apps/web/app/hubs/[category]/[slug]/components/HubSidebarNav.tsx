@@ -61,6 +61,7 @@ export function HubSidebarNav({
         }))
     : DEFAULT_NAV_ITEMS;
 
+  // When false, only About is listed; when true, full nav (members, posts, etc.)
   const visibleItems = canAccessFullContent
     ? navItems
     : navItems.filter((item) => item.tab === "About");

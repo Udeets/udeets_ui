@@ -8,6 +8,7 @@ import type { HubSection } from "@/lib/services/sections/section-types";
 import type { HubColorTheme } from "@/lib/hub-color-themes";
 import { CTADisplay } from "../ctas/CTADisplay";
 import { CustomSectionDisplay } from "./custom/CustomSectionDisplay";
+import { LockedHubGuestPreview } from "../../join/components/LockedHubGuestPreview";
 import { ACTION_ICON, ACTION_ICON_BUTTON, CARD, displayLinkValue, ImageWithFallback, initials, cn } from "../hubUtils";
 
 
@@ -100,6 +101,7 @@ export function AboutSection({
   onOpenSectionEditor,
   onLeaveHub,
   accentTheme,
+  photosGuestLockReturnUrl,
 }: {
   CategoryIcon: LucideIcon;
   categoryLabel: string;
@@ -123,7 +125,7 @@ export function AboutSection({
   userRole: string | null;
   onMembershipAction: () => void;
   onLeaveHub?: () => void;
-  onInviteMembers: () => void;
+  onInviteMembers?: () => void;
   onOpenConnectEditor: () => void;
   onOpenSettings: () => void;
   connectSuccess: string | null;
@@ -148,6 +150,8 @@ export function AboutSection({
   customSections?: HubSection[];
   onOpenSectionEditor?: () => void;
   accentTheme?: HubColorTheme;
+  /** When set, photos are shown as a locked preview (signed-out private hub guests). */
+  photosGuestLockReturnUrl?: string;
 }) {
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [draftDesc, setDraftDesc] = useState(hubDescription);
@@ -197,7 +201,8 @@ export function AboutSection({
   const membersSummaryCount = roster.length > 0 ? roster.length : memberCount;
 
   const showConnectCard = connectItems.length > 0 || isCreatorAdmin;
-  const showPhotosCard = recentPhotos.length > 0 || isCreatorAdmin;
+  const showPhotosLocked = Boolean(photosGuestLockReturnUrl);
+  const showPhotosCard = showPhotosLocked || recentPhotos.length > 0 || isCreatorAdmin;
 
   return (
     <section className={cn(CARD, "w-full min-w-0 p-5 sm:p-6")}>
@@ -504,7 +509,12 @@ export function AboutSection({
         </div>
 
         {/* ═══ BLOCK 4 — Photos row ═══ */}
-        {showPhotosCard ? (
+        {showPhotosLocked ? (
+          <div className="border-t border-[var(--ud-border)] pt-5">
+            <p className="mb-3 text-sm font-medium text-[var(--ud-text-muted)]">Photos</p>
+            <LockedHubGuestPreview returnUrl={photosGuestLockReturnUrl!} />
+          </div>
+        ) : showPhotosCard ? (
           <div className="border-t border-[var(--ud-border)] pt-5">
             <div className="flex items-center justify-between gap-2 mb-3">
               <p className="text-sm font-medium text-[var(--ud-text-muted)]">Photos</p>

@@ -327,19 +327,20 @@ export function HubHeroHeader({
               <span>{memberCount} {memberCount === 1 ? "Member" : "Members"}</span>
             </button>
 
-            {/* Invite button */}
-            <button
-              type="button"
-              onClick={onInviteMembers}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--ud-brand-primary)] py-2 text-xs font-medium text-[var(--ud-brand-primary)] transition hover:bg-[var(--ud-brand-light)]"
-            >
-              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 12h-6M19 9v6" />
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-              </svg>
-              <span>Invite</span>
-            </button>
+            {onInviteMembers ? (
+              <button
+                type="button"
+                onClick={onInviteMembers}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--ud-brand-primary)] py-2 text-xs font-medium text-[var(--ud-brand-primary)] transition hover:bg-[var(--ud-brand-light)]"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 12h-6M19 9v6" />
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                </svg>
+                <span>Invite</span>
+              </button>
+            ) : null}
 
             {/* Alert bell button */}
             <button

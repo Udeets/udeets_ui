@@ -32,7 +32,7 @@ export function AdminsSection({
   activeAdminCount: number;
   eventCount: number;
   recentPhotoCount: number;
-  onInviteMembers: () => void;
+  onInviteMembers?: () => void;
   onOpenSettings: () => void;
   onOpenAdminsEditor: () => void;
   onOpenPosts: () => void;
@@ -160,6 +160,7 @@ export function AdminsSection({
             <h3 className="text-2xl font-semibold tracking-tight text-[var(--ud-text-primary)]">Admin tools</h3>
             <p className="mt-1 text-sm text-[var(--ud-text-secondary)]">Shortcuts into the management actions that already exist today.</p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {onInviteMembers ? (
               <button type="button" onClick={onInviteMembers} className="rounded-[20px] bg-[var(--ud-bg-card)] p-4 text-left transition hover:-translate-y-0.5 hover:shadow-sm">
                 <div className="flex items-center gap-3">
                   <span className={PREMIUM_ICON_WRAPPER}>
@@ -171,6 +172,7 @@ export function AdminsSection({
                   </div>
                 </div>
               </button>
+              ) : null}
               <button type="button" onClick={onOpenSettings} className="rounded-[20px] bg-[var(--ud-bg-card)] p-4 text-left transition hover:-translate-y-0.5 hover:shadow-sm">
                 <div className="flex items-center gap-3">
                   <span className={PREMIUM_ICON_WRAPPER}>
