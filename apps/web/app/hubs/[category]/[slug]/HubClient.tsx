@@ -192,6 +192,7 @@ export default function HubClient({
 
   const isHubCreator = Boolean(user?.id && hub.createdBy && user.id === hub.createdBy);
   const isCreatorAdmin = isHubCreator || (hubRole === "admin" || hubRole === "super_admin");
+  const canManageInvites = isCreatorAdmin;
 
   const canAccessAdmins = canEditHub;
   const creatorMetadata = user?.user_metadata;
@@ -1206,7 +1207,7 @@ export default function HubClient({
           activeAdminCount={activeAdminCount}
           eventCount={hubContent.events.length}
           recentPhotoCount={recentPhotos.length}
-          onInviteMembers={() => setIsInviteModalOpen(true)}
+          onInviteMembers={canManageInvites ? () => setIsInviteModalOpen(true) : undefined}
           onOpenSettings={openSettingsPanel}
           onOpenAdminsEditor={() => setIsAdminsEditorOpen(true)}
           onOpenPosts={() => setActiveSection("Posts")}
@@ -1239,7 +1240,7 @@ export default function HubClient({
           isCreatorAdmin={isCreatorAdmin}
           userRole={isHubCreator ? "creator" : isCreatorAdmin ? "admin" : isJoined ? "member" : isPending ? "pending" : null}
           onMembershipAction={handleMembershipAction}
-          onInviteMembers={() => setIsInviteModalOpen(true)}
+          onInviteMembers={canManageInvites ? () => setIsInviteModalOpen(true) : undefined}
           onOpenSettings={openSettingsPanel}
           onOpenConnectEditor={openConnectEditor}
           connectSuccess={connectSuccess}
@@ -1434,7 +1435,7 @@ export default function HubClient({
           accentTheme={accentTheme}
           creatorDisplayName={creatorDisplayName}
           onOpenMembers={isPrivateHubGuest ? undefined : () => openCenterMembers("list")}
-          onInviteMembers={isPrivateHubGuest ? undefined : () => setIsInviteModalOpen(true)}
+          onInviteMembers={canManageInvites && !isPrivateHubGuest ? () => setIsInviteModalOpen(true) : undefined}
           onOpenAlerts={() => router.push(`/alerts?hub_id=${hub.id}`)}
           coverImageOffsetY={coverImageOffsetY}
           onSaveCoverOffsetY={async (percent) => {
@@ -2404,7 +2405,7 @@ export default function HubClient({
       ) : null}
 
       {/* Invite Modal */}
-      {isInviteModalOpen ? (
+      {isInviteModalOpen && canManageInvites ? (
         <InviteModal
           hubName={hubName}
           hubSlug={hub.slug}

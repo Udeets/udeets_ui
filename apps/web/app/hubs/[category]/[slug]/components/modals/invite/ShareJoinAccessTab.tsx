@@ -7,6 +7,7 @@ import { QRCodeCanvas } from "qrcode.react";
 import { cn } from "../../hubUtils";
 import { buildHubJoinUrl, fetchOrCreateHubJoinLink } from "@/lib/services/hubs/hub-join-link-client";
 import {
+  copyJoinLinkForShare,
   downloadPosterCanvas,
   nativeShareJoinLink,
   nativeShareJoinPoster,
@@ -88,7 +89,13 @@ export function ShareJoinAccessTab({
   const handleShareLink = async () => {
     if (!joinUrl) return;
     const shared = await nativeShareJoinLink(joinUrl, hubName);
-    if (!shared) onToast("Sharing is not available on this device");
+    if (shared) return;
+    const copied = await copyJoinLinkForShare(joinUrl, hubName);
+    onToast(
+      copied
+        ? "Invite copied — paste in WhatsApp to send a clickable link"
+        : "Sharing is not available on this device",
+    );
   };
 
   const handlePrint = () => {

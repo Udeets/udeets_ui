@@ -374,7 +374,7 @@ export function MembersSection({
 }: {
   membersPanelMode: "list" | "invite";
   memberItems: MemberItem[];
-  onInviteMembers: () => void;
+  onInviteMembers?: () => void;
   isCreatorAdmin?: boolean;
   pendingRequests?: PendingRequestItem[];
   processingUserIds?: Set<string>;
@@ -416,7 +416,7 @@ export function MembersSection({
         title={membersPanelMode === "invite" ? "Invite Members" : `Members (${memberItems.length})`}
         description={membersPanelMode === "invite" ? "Invite people to join your hub." : "People connected to this hub."}
         actions={
-          membersPanelMode === "list" ? (
+          membersPanelMode === "list" && isCreatorAdmin && onInviteMembers ? (
             <button
               type="button"
               onClick={onInviteMembers}

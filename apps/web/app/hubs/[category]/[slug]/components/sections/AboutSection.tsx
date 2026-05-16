@@ -125,7 +125,7 @@ export function AboutSection({
   userRole: string | null;
   onMembershipAction: () => void;
   onLeaveHub?: () => void;
-  onInviteMembers: () => void;
+  onInviteMembers?: () => void;
   onOpenConnectEditor: () => void;
   onOpenSettings: () => void;
   connectSuccess: string | null;

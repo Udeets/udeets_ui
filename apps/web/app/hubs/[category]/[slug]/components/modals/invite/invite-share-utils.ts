@@ -29,20 +29,47 @@ export async function copyTextToClipboard(text: string): Promise<boolean> {
   }
 }
 
+/** Canonical URL for sharing (trimmed, parsed when possible). */
+export function normalizeShareUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) return trimmed;
+  try {
+    return new URL(trimmed).href;
+  } catch {
+    return trimmed;
+  }
+}
+
 /**
- * Shares invite message + URL. Keeps the URL in the `url` field (not duplicated in
- * `text`) so target apps render a clickable link where supported.
+ * Invite copy for WhatsApp and similar apps — they only auto-link URLs present in
+ * plain `text`, not the Web Share API `url` field.
+ */
+export function buildJoinLinkShareText(hubName: string, joinUrl: string): string {
+  const url = normalizeShareUrl(joinUrl);
+  return `${hubJoinInviteMessage(hubName)}\n\n${url}`;
+}
+
+export async function copyJoinLinkForShare(joinUrl: string, hubName: string): Promise<boolean> {
+  return copyTextToClipboard(buildJoinLinkShareText(hubName, joinUrl));
+}
+
+/**
+ * Shares invite message with the join URL on its own line in `text` so WhatsApp
+ * renders a tappable link.
  */
 export async function nativeShareJoinLink(joinUrl: string, hubName: string): Promise<boolean> {
   if (typeof navigator === "undefined" || !navigator.share) return false;
 
   const title = hubJoinShareTitle(hubName);
-  const text = hubJoinInviteMessage(hubName);
+  const text = buildJoinLinkShareText(hubName, joinUrl);
+  const url = normalizeShareUrl(joinUrl);
 
   const attempts: ShareData[] = [
-    { title, text, url: joinUrl },
-    { title, url: joinUrl },
-    { url: joinUrl },
+    { text },
+    { title, text },
+    // Fallback for targets that use `url` for link previews (not WhatsApp).
+    { title, text, url },
+    { title, url },
   ];
 
   for (const data of attempts) {
