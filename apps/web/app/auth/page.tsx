@@ -12,7 +12,8 @@ import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import { signInWithApple } from "@/services/auth/signInWithApple";
 import { signInWithGoogle } from "@/services/auth/signInWithGoogle";
 import { useAuthSession } from "@/services/auth/useAuthSession";
-import { getAuthCallbackUrl, setAuthNextCookie } from "@/lib/auth/auth-next-cookie";
+import { buildCognitoAuthorizeUrl } from "@/lib/auth/cognito";
+import { setAuthNextCookie } from "@/lib/auth/auth-next-cookie";
 import { readPostAuthRedirect } from "@/lib/services/hubs/invite-landing-utils";
 
 type Mode = "signin" | "signup";
@@ -143,50 +144,11 @@ function AuthPageContent() {
 
     setIsEmailLoading(true);
     try {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-
-      if (mode === "signup") {
-        setAuthNextCookie(postAuthRedirect);
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email: trimmedEmail,
-          password,
-          options: {
-            data: { full_name: fullName.trim() },
-            emailRedirectTo: getAuthCallbackUrl(),
-          },
-        });
-        if (signUpError) {
-          setError(signUpError.message);
-          return;
-        }
-        // If email confirmation is required, Supabase returns a user but no session
-        if (data.user && !data.session) {
-          setError("");
-          setSignupSuccess(true);
-          return;
-        }
-        // If auto-confirmed, upsert profile and redirect
-        if (data.session) {
-          router.refresh();
-          router.replace(postAuthRedirect);
-        }
-      } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: trimmedEmail,
-          password,
-        });
-        if (signInError) {
-          if (signInError.message.includes("Invalid login credentials")) {
-            setError("Invalid email or password. Please try again.");
-          } else {
-            setError(signInError.message);
-          }
-          return;
-        }
-        router.refresh();
-        router.replace(postAuthRedirect);
-      }
+      setAuthNextCookie(postAuthRedirect);
+      const authUrl = new URL(buildCognitoAuthorizeUrl());
+      authUrl.searchParams.set("login_hint", trimmedEmail);
+      authUrl.searchParams.set("state", mode);
+      window.location.assign(authUrl.toString());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
@@ -225,7 +187,6 @@ function AuthPageContent() {
   const PAGE_BG = "bg-[var(--ud-bg-page)]";
   const HEADER_BG = "bg-[var(--ud-bg-card)] border-b border-[var(--ud-border-subtle)]";
   const FOOTER_BG = "bg-[#0C5C57]";
-  const NAV_TEXT = "text-[var(--ud-text-primary)]";
   const BRAND_TEXT_STYLE = "text-xl sm:text-2xl";
   const BUTTON_PRIMARY = "rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-6 py-3 text-sm font-medium text-white hover:opacity-90";
   const SURFACE = "rounded-2xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-sm";

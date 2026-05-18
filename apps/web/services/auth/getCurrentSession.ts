@@ -1,14 +1,11 @@
-import type { Session } from "@supabase/supabase-js";
+import {
+  buildSessionFromTokens,
+  type CognitoSession,
+  tokensFromCookieHeader,
+} from "@/lib/auth/cognito-session";
 
-import { createClient } from "@/lib/supabase/client";
-
-export async function getCurrentSession(): Promise<Session | null> {
-  const supabase = createClient();
-  const { data, error } = await supabase.auth.getSession();
-
-  if (error) {
-    throw new Error(`Failed to get current session: ${error.message}`);
-  }
-
-  return data.session;
+export async function getCurrentSession(): Promise<CognitoSession | null> {
+  if (typeof document === "undefined") return null;
+  const { accessToken, idToken } = tokensFromCookieHeader(document.cookie);
+  return buildSessionFromTokens(accessToken, idToken);
 }

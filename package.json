@@ -7,11 +7,16 @@
   ],
   "scripts": {
     "dev:web": "npm --workspace apps/web run dev",
+    "dev:web:webpack": "npm --workspace apps/web run dev:webpack",
     "build:web": "npm --workspace apps/web run build",
     "start:web": "npm --workspace apps/web run start",
     "dev:api": "npm --workspace apps/api run dev",
+    "start:api": "npm --workspace apps/api run start",
     "dev": "concurrently -n WEB,API -c auto \"npm run dev:web\" \"npm run dev:api\"",
-    "test:web": "npm --workspace apps/web run test"
+    "test:web": "npm --workspace apps/web run test",
+    "test:api": "npm --workspace apps/api run test",
+    "lint:api": "npm --workspace apps/api run lint",
+    "migrate:api": "npm --workspace apps/api run migrate"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"

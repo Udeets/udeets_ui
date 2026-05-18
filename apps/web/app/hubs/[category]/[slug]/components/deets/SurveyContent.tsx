@@ -13,6 +13,7 @@ import {
   getMySurveyResponses,
   submitSurveyResponses,
 } from "@/lib/services/deets/survey-responses";
+import { getCurrentSession } from "@/services/auth/getCurrentSession";
 
 type SubmittedPayload = {
   fingerprint: string;
@@ -43,7 +44,7 @@ export function SurveyContent({
   bodyHtml,
 }: {
   deetId: string;
-  /** Reserved for future optimistic UI; auth is resolved via Supabase `getUser`. */
+  /** Reserved for future optimistic UI; auth is resolved from session cookies. */
   currentUserId?: string | null;
   attachments?: HubFeedItemAttachment[];
   bodyHtml?: string | undefined;
@@ -68,11 +69,8 @@ export function SurveyContent({
     if (!deetId) return;
     setLoading(true);
     try {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const session = await getCurrentSession();
+      const user = session?.user ?? null;
       setCanRespond(Boolean(user));
 
       const rows = user ? await getMySurveyResponses([deetId]) : [];

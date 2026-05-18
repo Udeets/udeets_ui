@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useState } from "react";
+import { createDeet } from "@/lib/services/deets/create-deet";
+import { createHub } from "@/lib/services/hubs/create-hub";
+import { getHubBySlug } from "@/lib/services/hubs/get-hub-by-slug";
+import { getCurrentSession } from "@/services/auth/getCurrentSession";
 
 /* ── Retail hubs (broadcast-only) with deal posts ── */
 const RETAIL_HUBS = [
@@ -95,11 +98,8 @@ export default function SeedPage() {
 
   async function runSeed() {
     setRunning(true);
-    const supabase = createClient();
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const session = await getCurrentSession();
+    const user = session?.user ?? null;
 
     if (!user) {
       appendLog("ERROR: Not signed in. Please sign in first.");
@@ -114,62 +114,53 @@ export default function SeedPage() {
       appendLog(`Creating retail hub: ${hub.name}...`);
 
       // Check if already exists
-      const { data: existing } = await supabase.from("hubs").select("id").eq("slug", hub.slug).maybeSingle();
+      const existing = await getHubBySlug("retail", hub.slug);
       let hubId: string;
 
       if (existing) {
-        hubId = existing.id;
+        hubId = existing.id as string;
         appendLog(`  ↳ Hub "${hub.name}" already exists (${hubId}), skipping creation.`);
       } else {
-        const { data: created, error } = await supabase
-          .from("hubs")
-          .insert({
+        try {
+          const created = await createHub({
             name: hub.name,
             slug: hub.slug,
             category: "retail",
             visibility: "public",
             tagline: hub.tagline,
             description: hub.description,
-            gallery_image_urls: [],
-            created_by: user.id,
-          })
-          .select("id")
-          .single();
-
-        if (error) {
-          appendLog(`  ✗ Failed to create hub: ${error.message}`);
+          });
+          hubId = created.id as string;
+          appendLog(`  ✓ Created hub ${hubId}`);
+        } catch (error) {
+          appendLog(
+            `  ✗ Failed to create hub: ${
+              error instanceof Error ? error.message : "unknown error"
+            }`,
+          );
           continue;
         }
-
-        hubId = created.id;
-        appendLog(`  ✓ Created hub ${hubId}`);
-
-        // Add creator as member
-        await supabase.from("hub_members").insert({
-          hub_id: hubId,
-          user_id: user.id,
-          role: "creator",
-          status: "active",
-        });
       }
 
       // Create deal posts
       for (const deal of hub.deals) {
-        const { error: deetError } = await supabase.from("deets").insert({
-          hub_id: hubId,
-          author_name: hub.name,
-          title: deal.title,
-          body: deal.body,
-          kind: "Deals",
-          created_by: user.id,
-          attachments: [],
-          is_published: true,
-        });
-
-        if (deetError) {
-          appendLog(`  ✗ Failed to create deal "${deal.title}": ${deetError.message}`);
-        } else {
+        try {
+          await createDeet({
+            hubId,
+            authorName: hub.name,
+            title: deal.title,
+            body: deal.body,
+            kind: "Deals",
+            attachments: [],
+            isPublished: true,
+          });
           appendLog(`  ✓ Deal: ${deal.title}`);
+        } catch (error) {
+          appendLog(
+            `  ✗ Failed to create deal "${deal.title}": ${
+              error instanceof Error ? error.message : "unknown error"
+            }`,
+          );
         }
       }
     }
@@ -178,61 +169,53 @@ export default function SeedPage() {
     for (const hub of NEWS_HUBS) {
       appendLog(`Creating news hub: ${hub.name}...`);
 
-      const { data: existing } = await supabase.from("hubs").select("id").eq("slug", hub.slug).maybeSingle();
+      const existing = await getHubBySlug("community", hub.slug);
       let hubId: string;
 
       if (existing) {
-        hubId = existing.id;
+        hubId = existing.id as string;
         appendLog(`  ↳ Hub "${hub.name}" already exists (${hubId}), skipping creation.`);
       } else {
-        const { data: created, error } = await supabase
-          .from("hubs")
-          .insert({
+        try {
+          const created = await createHub({
             name: hub.name,
             slug: hub.slug,
             category: "community",
             visibility: "public",
             tagline: hub.tagline,
             description: hub.description,
-            gallery_image_urls: [],
-            created_by: user.id,
-          })
-          .select("id")
-          .single();
-
-        if (error) {
-          appendLog(`  ✗ Failed to create hub: ${error.message}`);
+          });
+          hubId = created.id as string;
+          appendLog(`  ✓ Created hub ${hubId}`);
+        } catch (error) {
+          appendLog(
+            `  ✗ Failed to create hub: ${
+              error instanceof Error ? error.message : "unknown error"
+            }`,
+          );
           continue;
         }
-
-        hubId = created.id;
-        appendLog(`  ✓ Created hub ${hubId}`);
-
-        await supabase.from("hub_members").insert({
-          hub_id: hubId,
-          user_id: user.id,
-          role: "creator",
-          status: "active",
-        });
       }
 
       // Create news posts with appropriate tags
       for (const post of hub.posts) {
-        const { error: deetError } = await supabase.from("deets").insert({
-          hub_id: hubId,
-          author_name: hub.name,
-          title: post.title,
-          body: post.body,
-          kind: post.kind,
-          created_by: user.id,
-          attachments: [],
-          is_published: true,
-        });
-
-        if (deetError) {
-          appendLog(`  ✗ Failed to create post "${post.title}": ${deetError.message}`);
-        } else {
+        try {
+          await createDeet({
+            hubId,
+            authorName: hub.name,
+            title: post.title,
+            body: post.body,
+            kind: post.kind,
+            attachments: [],
+            isPublished: true,
+          });
           appendLog(`  ✓ ${post.tag}: ${post.title}`);
+        } catch (error) {
+          appendLog(
+            `  ✗ Failed to create post "${post.title}": ${
+              error instanceof Error ? error.message : "unknown error"
+            }`,
+          );
         }
       }
     }

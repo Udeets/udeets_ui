@@ -35,7 +35,6 @@ import {
 import { chatApiRevokeInvite } from "@/lib/chat/chat-api-invite-revoke";
 import { friendlyChatUserMessage } from "@/lib/chat/friendly-chat-error";
 import type { ChatInviteCandidateDto, ChatRoomListItem, ChatRoomMemberDto } from "@/lib/chat/chat-browser-api";
-import type { ChatRealtimeServerEvent } from "@/lib/services/chat/chat-realtime-contract";
 import type { ChatRoomDetail } from "@/lib/services/chat/get-chat-room";
 import { COMPOSER_INPUT, COMPOSER_TOGGLE, COMPOSER_TOGGLE_KNOB } from "../deets/composer/composerFieldClasses";
 import { BUTTON_PRIMARY, BUTTON_SECONDARY, CARD, INPUT_CLASS, cn, initials, normalizePublicSrc } from "../hubUtils";
@@ -43,6 +42,7 @@ import { ChatComposer } from "./ChatComposer";
 import { ChatMessageRow } from "./ChatMessageRow";
 import { ChatModerationPanel } from "./ChatModerationPanel";
 import { ChatRoomSettingsModal } from "./ChatRoomSettingsModal";
+import { isChatRealtimeFeatureEnabled } from "@/lib/chat/use-chat-realtime";
 import { useHubChatThread } from "./useHubChatThread";
 
 type HubChatSectionProps = {
@@ -82,9 +82,6 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
   const [hubPickerLoading, setHubPickerLoading] = useState(false);
   const [hubPickerQuery, setHubPickerQuery] = useState("");
 
-  const [liveReportBanner, setLiveReportBanner] = useState<{ reportId: string; reason: string | null } | null>(null);
-  const viewerCanModerateRef = useRef(false);
-
   const [members, setMembers] = useState<ChatRoomMemberDto[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
@@ -121,18 +118,14 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
   const [editBody, setEditBody] = useState("");
   const [editBusy, setEditBusy] = useState(false);
 
-  const thread = useHubChatThread(selectedRoomId, currentUserId ?? null, viewerDisplayName ?? null, {
-    onRealtimeEvent: useCallback((ev: ChatRealtimeServerEvent) => {
-      if (ev.name !== "report.created") return;
-      if (!viewerCanModerateRef.current) return;
-      setLiveReportBanner({ reportId: ev.payload.reportId, reason: ev.payload.reason });
-    }, []),
-  });
+  const thread = useHubChatThread(selectedRoomId, currentUserId ?? null, viewerDisplayName ?? null);
 
-  viewerCanModerateRef.current = Boolean(thread.room?.viewerCanModerate);
+  const refreshMessagesUnlessRealtime = useCallback(async () => {
+    if (isChatRealtimeFeatureEnabled() && thread.wsConnected) return;
+    await thread.reloadMessages();
+  }, [thread.wsConnected, thread.reloadMessages]);
 
   useEffect(() => {
-    setLiveReportBanner(null);
     setInviteSentUserIds({});
     setRevokeBusyUserId(null);
   }, [selectedRoomId]);
@@ -214,6 +207,11 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
     if (membersOpen) void loadMembers();
   }, [membersOpen, loadMembers]);
 
+  useEffect(() => {
+    if (!selectedRoomId) return;
+    void loadMembers();
+  }, [thread.membersTick, selectedRoomId, loadMembers]);
+
   const handleTypingPhase = useCallback(
     async (phase: "started" | "stopped") => {
       if (!selectedRoomId) return;
@@ -285,14 +283,14 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
       await chatApiRespondChatInvite(selectedRoomId, "accept");
       await loadRooms();
       void thread.reloadRoom();
-      void thread.reloadMessages();
+      await refreshMessagesUnlessRealtime();
       window.dispatchEvent(new Event("hub-chat-invites-changed"));
     } catch (e) {
       thread.setError(friendlyChatUserMessage(e, "Could not join this room. Please try again."));
     } finally {
       setInviteRespondBusy(false);
     }
-  }, [selectedRoomId, loadRooms, thread.reloadRoom, thread.reloadMessages, thread.setError]);
+  }, [selectedRoomId, loadRooms, thread.reloadRoom, refreshMessagesUnlessRealtime, thread.setError]);
 
   const handleDeclineChatInvite = useCallback(async () => {
     if (!selectedRoomId) return;
@@ -361,7 +359,7 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
         originalFilename: file.name,
         sizeBytes: file.size,
       });
-      await thread.reloadMessages();
+      await refreshMessagesUnlessRealtime();
     } catch (e) {
       thread.setError(friendlyChatUserMessage(e, "Upload failed. Please try again."));
     } finally {
@@ -401,7 +399,7 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
       });
       setPollOpen(false);
       resetPollForm();
-      await thread.reloadMessages();
+      await refreshMessagesUnlessRealtime();
     } catch (e) {
       thread.setError(friendlyChatUserMessage(e, "Could not create poll. Please try again."));
     } finally {
@@ -621,37 +619,6 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
                 ) : null}
                 </div>
               </div>
-
-              {liveReportBanner && thread.room?.viewerCanModerate ? (
-                <div
-                  className="flex flex-wrap items-start gap-2 border-b border-amber-200 bg-amber-50 px-3 py-2 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-50"
-                  role="status"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold">New message report</p>
-                    <p className="mt-0.5 text-xs text-amber-900/90 dark:text-amber-100/90">
-                      {liveReportBanner.reason?.trim()
-                        ? `Reason: ${liveReportBanner.reason.trim()}`
-                        : "A member reported a message. Open Moderation to review it and choose what to do next."}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 flex-wrap gap-1.5">
-                    <button
-                      type="button"
-                      className={cn(BUTTON_PRIMARY, "py-1.5 text-xs")}
-                      onClick={() => {
-                        setModOpen(true);
-                        setLiveReportBanner(null);
-                      }}
-                    >
-                      Review reports
-                    </button>
-                    <button type="button" className={cn(BUTTON_SECONDARY, "py-1.5 text-xs")} onClick={() => setLiveReportBanner(null)}>
-                      Dismiss
-                    </button>
-                  </div>
-                </div>
-              ) : null}
 
               {uploadPct != null ? (
                 <div className="border-b border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] px-3 py-2 text-xs text-[var(--ud-text-secondary)]">
@@ -1115,7 +1082,7 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
           viewerUserId={currentUserId ?? null}
           onClose={() => setModOpen(false)}
           onError={(msg) => thread.setError(friendlyChatUserMessage(new Error(msg), "That action could not be completed. Please try again."))}
-          onModerationDone={() => void thread.reloadMessages()}
+          onModerationDone={() => void refreshMessagesUnlessRealtime()}
         />
       ) : null}
 

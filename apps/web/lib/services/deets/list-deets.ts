@@ -1,9 +1,6 @@
-import { createClient } from "@/lib/supabase/client";
+import { listDeetsApi } from "@/lib/api/deets";
 import type { DeetRecord } from "@/lib/services/deets/deet-types";
 import {
-  DEET_COLUMNS,
-  DEET_COLUMNS_WITHOUT_IS_PUBLISHED,
-  isDeetIsPublishedColumnUnavailable,
   normalizeDeetRecord,
 } from "@/lib/services/deets/query-utils";
 
@@ -26,55 +23,14 @@ export type ListDeetsOptions = {
   draftsOnly?: boolean;
 };
 
-function buildDeetsQuery(
-  supabase: ReturnType<typeof createClient>,
-  options: ListDeetsOptions | undefined,
-  selectCols: string,
-  applyPublishedFilters: boolean,
-) {
-  let query = supabase.from("deets").select(selectCols).order("created_at", { ascending: false });
-
-  if (options?.hubIds?.length) {
-    query = query.in("hub_id", options.hubIds);
-  }
-
-  if (options?.kinds?.length) {
-    query = query.in("kind", options.kinds);
-  }
-
-  if (options?.limit) {
-    query = query.limit(options.limit);
-  }
-
-  if (applyPublishedFilters) {
-    const draftsOnly = Boolean(options?.draftsOnly);
-    const publishedOnly = !draftsOnly && options?.publishedOnly !== false;
-    if (draftsOnly) {
-      query = query.eq("is_published", false);
-    } else if (publishedOnly) {
-      query = query.eq("is_published", true);
-    }
-  }
-
-  return query;
-}
-
 export async function listDeets(options?: ListDeetsOptions): Promise<DeetRecord[]> {
-  const supabase = createClient();
-
-  let { data, error } = await buildDeetsQuery(supabase, options, DEET_COLUMNS, true);
-
-  if (isDeetIsPublishedColumnUnavailable(error)) {
-    const retry = await buildDeetsQuery(supabase, options, DEET_COLUMNS_WITHOUT_IS_PUBLISHED, false);
-    data = retry.data;
-    error = retry.error;
+  try {
+    const rows = await listDeetsApi(options);
+    return (rows ?? []).map((record) => normalizeDeetRecord(record));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    throw new Error(`Failed to load deets: ${message}`);
   }
-
-  if (error) {
-    throw new Error(`Failed to load deets: ${error.message}`);
-  }
-
-  return ((data ?? []) as unknown as DeetRecord[]).map((record) => normalizeDeetRecord(record));
 }
 
 export function subscribeToDeets(
@@ -83,8 +39,8 @@ export function subscribeToDeets(
     hubIds?: string[];
   },
 ) {
-  const supabase = createClient();
-  const relevantHubIds = new Set(options?.hubIds ?? []);
+  // Periodic refresh + focus/visibility nudges keep the feed fresh without browser DB access.
+  void options;
 
   // Debounce rapid bursts (e.g. many likes at once) into a single refresh.
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -96,42 +52,37 @@ export function subscribeToDeets(
     }, 150);
   };
 
-  const channel = supabase
-    .channel(`deets-feed:${options?.hubIds?.join(",") || "all"}`)
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "deets" },
-      (payload) => {
-        if (!relevantHubIds.size) {
-          schedule();
-          return;
-        }
-        const record = (payload.new || payload.old || {}) as { hub_id?: string };
-        if (record.hub_id && relevantHubIds.has(record.hub_id)) {
-          schedule();
-        }
-      },
-    )
-    // Likes / comments don't carry a hub_id directly; we refresh and let the
-    // feed query filter. This keeps counts and reaction lists live across the
-    // feed without separate per-deet subscriptions.
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "deet_likes" },
-      () => schedule(),
-    )
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "deet_comments" },
-      () => schedule(),
-    )
-    .subscribe();
+  const interval = setInterval(() => {
+    // Avoid background-tab churn; focused/visible handlers will catch up.
+    if (typeof document !== "undefined" && document.hidden) return;
+    schedule();
+  }, 8000);
+
+  const onVisible = () => {
+    if (typeof document !== "undefined" && !document.hidden) {
+      schedule();
+    }
+  };
+  const onFocus = () => schedule();
+
+  if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", onVisible);
+  }
+  if (typeof window !== "undefined") {
+    window.addEventListener("focus", onFocus);
+  }
 
   return () => {
+    clearInterval(interval);
+    if (typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", onVisible);
+    }
+    if (typeof window !== "undefined") {
+      window.removeEventListener("focus", onFocus);
+    }
     if (timer) {
       clearTimeout(timer);
       timer = null;
     }
-    void supabase.removeChannel(channel);
   };
 }

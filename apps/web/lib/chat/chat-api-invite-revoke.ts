@@ -12,7 +12,7 @@ async function parseErr(res: Response): Promise<string> {
 
 export async function chatApiRevokeInvite(roomId: string, invitedUserId: string): Promise<{ revoked: boolean }> {
   const qs = new URLSearchParams({ invitedUserId });
-  const res = await fetch(`/api/chat/rooms/${encodeURIComponent(roomId)}/invites?${qs}`, {
+  const res = await fetch(`/api/v1/chat/rooms/${encodeURIComponent(roomId)}/invites?${qs}`, {
     method: "DELETE",
     credentials: "include",
   });

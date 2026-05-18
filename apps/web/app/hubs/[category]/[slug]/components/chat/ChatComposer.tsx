@@ -33,6 +33,7 @@ export function ChatComposer({
 }) {
   const [text, setText] = useState("");
   const typingDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingStoppedIdleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startedSentRef = useRef(false);
 
   const notifyStopped = useCallback(() => {
@@ -44,21 +45,32 @@ export function ChatComposer({
   useEffect(() => {
     return () => {
       if (typingDebounceRef.current) clearTimeout(typingDebounceRef.current);
+      if (typingStoppedIdleRef.current) clearTimeout(typingStoppedIdleRef.current);
       notifyStopped();
     };
   }, [notifyStopped]);
 
+  const scheduleTypingStoppedIdle = useCallback(() => {
+    if (!onTypingPhase || muted || banned || disabled) return;
+    if (typingStoppedIdleRef.current) clearTimeout(typingStoppedIdleRef.current);
+    typingStoppedIdleRef.current = setTimeout(() => {
+      typingStoppedIdleRef.current = null;
+      notifyStopped();
+    }, 2500);
+  }, [onTypingPhase, muted, banned, disabled, notifyStopped]);
+
   const scheduleTypingStarted = useCallback(() => {
     if (!onTypingPhase || muted || banned || disabled) return;
     if (typingDebounceRef.current) clearTimeout(typingDebounceRef.current);
+    scheduleTypingStoppedIdle();
     typingDebounceRef.current = setTimeout(() => {
       typingDebounceRef.current = null;
       if (!startedSentRef.current) {
         startedSentRef.current = true;
         onTypingPhase("started");
       }
-    }, 450);
-  }, [onTypingPhase, muted, banned, disabled]);
+    }, 4000);
+  }, [onTypingPhase, muted, banned, disabled, scheduleTypingStoppedIdle]);
 
   const submit = useCallback(async () => {
     const t = text.trim();
@@ -67,6 +79,10 @@ export function ChatComposer({
     if (typingDebounceRef.current) {
       clearTimeout(typingDebounceRef.current);
       typingDebounceRef.current = null;
+    }
+    if (typingStoppedIdleRef.current) {
+      clearTimeout(typingStoppedIdleRef.current);
+      typingStoppedIdleRef.current = null;
     }
     notifyStopped();
     setText("");
@@ -122,6 +138,10 @@ export function ChatComposer({
             if (typingDebounceRef.current) {
               clearTimeout(typingDebounceRef.current);
               typingDebounceRef.current = null;
+            }
+            if (typingStoppedIdleRef.current) {
+              clearTimeout(typingStoppedIdleRef.current);
+              typingStoppedIdleRef.current = null;
             }
             notifyStopped();
           }}

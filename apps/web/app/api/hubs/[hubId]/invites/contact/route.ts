@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { hubRouteError } from "@/app/api/hubs/_lib/hub-route-error";
-import { requireHubAdminUserId } from "@/app/api/hubs/_lib/hub-route-auth";
-import { createClient } from "@/lib/supabase/server";
+import { buildSessionFromTokens, tokensFromCookieHeader } from "@/lib/auth/cognito-session";
 import { allowSlidingWindowRateLimit } from "@/lib/services/rate-limit/sliding-window-allow";
 import { validateInviteContact } from "@/lib/services/hubs/validate-invite-contact";
 
@@ -21,10 +19,15 @@ const RATE_WINDOW_MS = 60 * 60 * 1000;
 export async function POST(request: Request, context: RouteCtx) {
   try {
     const { hubId } = await context.params;
-    const userId = await requireHubAdminUserId(hubId);
+    const { accessToken, idToken } = tokensFromCookieHeader(request.headers.get("cookie") ?? "");
+    const session = buildSessionFromTokens(accessToken, idToken);
+    const user = session?.user ?? null;
+    if (!user?.id) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    }
 
     const allowed = await allowSlidingWindowRateLimit(
-      `hub-contact-invite:${hubId}:${userId}`,
+      `hub-contact-invite:${hubId}:${user.id}`,
       RATE_MAX,
       RATE_WINDOW_MS,
     );
@@ -46,30 +49,40 @@ export async function POST(request: Request, context: RouteCtx) {
       return NextResponse.json({ error: validation.message }, { status: 400 });
     }
 
-    const supabase = await createClient();
-    const expiresInDays = parsed.data.expiresInDays ?? 30;
-
-    const { data, error } = await supabase.rpc("send_hub_contact_invite", {
-      p_hub_id: hubId,
-      p_contact_type: parsed.data.contactType,
-      p_contact_value: parsed.data.contactValue,
-      p_expires_in_days: expiresInDays,
-    });
-
-    if (error) {
-      console.error("[hub contact invite]", error);
-      if (error.message.includes("invalid_email") || error.message.includes("invalid_phone")) {
-        return NextResponse.json({ error: "Invalid contact information." }, { status: 400 });
-      }
-      return NextResponse.json({ error: "Could not send invitation." }, { status: 500 });
+    if (!session?.access_token) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
-    if (data && typeof data === "object" && "ok" in data && data.ok !== true) {
-      return NextResponse.json({ error: "Could not send invitation." }, { status: 500 });
+    const fastApiBase = (
+      process.env.NEXT_PUBLIC_FASTAPI_BASE_URL ??
+      process.env.FASTAPI_BASE_URL ??
+      "http://localhost:8000"
+    ).replace(/\/$/, "");
+
+    const response = await fetch(`${fastApiBase}/api/v1/hubs/${hubId}/invites/contact`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        contact_type: parsed.data.contactType,
+        contact_value: parsed.data.contactValue,
+        expires_in_days: parsed.data.expiresInDays ?? 30,
+      }),
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => ({}))) as { detail?: string };
+      return NextResponse.json(
+        { error: body.detail || "Could not send invitation." },
+        { status: response.status },
+      );
     }
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return hubRouteError(err);
+    console.error("[hub invites contact route]", err);
+    return NextResponse.json({ error: "Could not send invitation." }, { status: 500 });
   }
 }

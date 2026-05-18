@@ -10,6 +10,13 @@ import { useRouter } from "next/navigation";
 import MockAppShell, { cardClass, sectionTitleClass } from "@/components/mock-app-shell";
 import { AuthGuard } from "@/components/AuthGuard";
 import { useAuthSession } from "@/services/auth/useAuthSession";
+import { getProfileSummary } from "@/lib/services/profile/get-profile-summary";
+import { listHubs } from "@/lib/services/hubs/list-hubs";
+import { listDeets } from "@/lib/services/deets/list-deets";
+import { listMyMembershipsFromApi } from "@/lib/api/members";
+import { cancelMyHubJoinRequestApi, prepareMyAvatarUploadApi, updateMyProfileApi } from "@/lib/api/profiles";
+import { acceptInvitationFromApi, declineInvitationFromApi, listPendingInvitationsFromApi } from "@/lib/api/invites";
+import { uploadToSignedUrl } from "@/lib/api/deet-media";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -83,7 +90,7 @@ function formatTimeAgo(dateStr: string) {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, status } = useAuthSession();
+  const { user, status, session } = useAuthSession();
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   const [activeTab, setActiveTab] = useState<SidebarItem>("My Info");
@@ -114,15 +121,18 @@ export default function ProfilePage() {
     let cancelled = false;
 
     async function load() {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("profiles")
-        .select("full_name, avatar_url, email")
-        .eq("id", user!.id)
-        .single();
-      if (!cancelled && data) setProfile(data);
-      setIsLoadingProfile(false);
+      try {
+        const summary = await getProfileSummary(user!.id);
+        if (!cancelled && summary) {
+          setProfile({
+            full_name: summary.fullName,
+            avatar_url: summary.avatarUrl,
+            email: summary.email,
+          });
+        }
+      } finally {
+        setIsLoadingProfile(false);
+      }
     }
 
     load();
@@ -131,69 +141,73 @@ export default function ProfilePage() {
 
   // Load hub stats
   useEffect(() => {
-    if (status !== "authenticated" || !user?.id) return;
+    if (status !== "authenticated" || !user?.id || !session?.access_token) return;
     let cancelled = false;
 
     async function loadStats() {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const [{ count: createdCount }, { count: joinedCount }] = await Promise.all([
-        supabase.from("hubs").select("*", { count: "exact", head: true }).eq("created_by", user!.id),
-        supabase.from("hub_members").select("*", { count: "exact", head: true }).eq("user_id", user!.id).eq("status", "active"),
+      const [hubs, memberships] = await Promise.all([
+        listHubs(),
+        listMyMembershipsFromApi(session.access_token),
       ]);
-      if (!cancelled) setHubStats({ created: createdCount ?? 0, joined: joinedCount ?? 0 });
+      if (cancelled) return;
+      const createdCount = hubs.filter((hub) => hub.created_by === user.id).length;
+      const joinedCount = memberships.filter((membership) => membership.status === "active").length;
+      setHubStats({ created: createdCount, joined: joinedCount });
     }
 
-    loadStats();
+    void loadStats();
     return () => { cancelled = true; };
-  }, [status, user?.id]);
+  }, [status, user?.id, session?.access_token]);
 
   // Load user hubs when My Hubs tab is active
   useEffect(() => {
-    if (activeTab !== "My Hubs" || status !== "authenticated" || !user?.id) return;
+    if (activeTab !== "My Hubs" || status !== "authenticated" || !user?.id || !session?.access_token) return;
     if (userHubs.length > 0) return;
     let cancelled = false;
 
     async function loadHubs() {
       setIsLoadingHubs(true);
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
+      try {
+        const [memberships, hubs] = await Promise.all([
+          listMyMembershipsFromApi(session.access_token),
+          listHubs(),
+        ]);
 
-      const { data: memberships } = await supabase
-        .from("hub_members")
-        .select("hub_id, role")
-        .eq("user_id", user!.id)
-        .eq("status", "active");
+        if (cancelled) return;
 
-      if (!memberships || memberships.length === 0 || cancelled) {
+        const activeMemberships = memberships.filter((membership) => membership.status === "active");
+        if (!activeMemberships.length) {
+          setIsLoadingHubs(false);
+          return;
+        }
+
+        const roleMap = new Map(activeMemberships.map((membership) => [membership.hubId, membership.role]));
+        const hubMap = new Map(hubs.map((hub) => [hub.id, hub]));
+
+        setUserHubs(
+          activeMemberships
+            .map((membership) => {
+              const hub = hubMap.get(membership.hubId);
+              if (!hub) return null;
+              return {
+                hubId: hub.id,
+                hubName: hub.name,
+                hubCategory: hub.category,
+                hubSlug: hub.slug,
+                dpImage: hub.dp_image_url || "",
+                role: roleMap.get(hub.id) || "member",
+              } as UserHub;
+            })
+            .filter((hub): hub is UserHub => hub !== null),
+        );
+      } finally {
         setIsLoadingHubs(false);
-        return;
       }
-
-      const hubIds = memberships.map((m) => m.hub_id);
-      const roleMap = new Map(memberships.map((m) => [m.hub_id, m.role]));
-
-      const { data: hubs } = await supabase
-        .from("hubs")
-        .select("id, name, category, slug, dp_image_url")
-        .in("id", hubIds);
-
-      if (!cancelled && hubs) {
-        setUserHubs(hubs.map((h) => ({
-          hubId: h.id,
-          hubName: h.name,
-          hubCategory: h.category,
-          hubSlug: h.slug,
-          dpImage: h.dp_image_url || "",
-          role: roleMap.get(h.id) || "member",
-        })));
-      }
-      setIsLoadingHubs(false);
     }
 
-    loadHubs();
+    void loadHubs();
     return () => { cancelled = true; };
-  }, [activeTab, status, user?.id, userHubs.length]);
+  }, [activeTab, status, user?.id, session?.access_token, userHubs.length]);
 
   // Load user deets when My Posts tab is active
   useEffect(() => {
@@ -203,185 +217,118 @@ export default function ProfilePage() {
 
     async function loadDeets() {
       setIsLoadingDeets(true);
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
+      try {
+        const [deets, hubs] = await Promise.all([
+          listDeets({ publishedOnly: true }),
+          listHubs(),
+        ]);
+        if (cancelled) return;
 
-      const { data } = await supabase
-        .from("deets")
-        .select("id, title, body, hub_id, created_at")
-        .eq("created_by", user!.id)
-        .eq("is_published", true)
-        .order("created_at", { ascending: false })
-        .limit(50);
-
-      if (!cancelled && data) {
-        const hubIds = [...new Set(data.map((d) => d.hub_id).filter(Boolean))];
-        let hubNameMap = new Map<string, string>();
-
-        if (hubIds.length > 0) {
-          const { data: hubs } = await supabase.from("hubs").select("id, name").in("id", hubIds);
-          if (hubs) hubNameMap = new Map(hubs.map((h) => [h.id, h.name]));
-        }
-
-        setUserDeets(data.map((d) => ({
-          id: d.id,
-          title: d.title || "",
-          body: d.body || "",
-          hubName: hubNameMap.get(d.hub_id) || "Hub",
-          createdAt: d.created_at,
-        })));
+        const hubNameMap = new Map(hubs.map((hub) => [hub.id, hub.name]));
+        const mine = deets
+          .filter((deet) => deet.created_by === user.id)
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 50)
+          .map((deet) => ({
+            id: deet.id,
+            title: deet.title || "",
+            body: deet.body || "",
+            hubName: hubNameMap.get(deet.hub_id) || "Hub",
+            createdAt: deet.created_at,
+          }));
+        setUserDeets(mine);
+      } finally {
+        setIsLoadingDeets(false);
       }
-      setIsLoadingDeets(false);
     }
 
-    loadDeets();
+    void loadDeets();
     return () => { cancelled = true; };
   }, [activeTab, status, user?.id, userDeets.length]);
 
   // Load pending hub-join requests
   useEffect(() => {
-    if (activeTab !== "Requests" || status !== "authenticated" || !user?.id) return;
+    if (activeTab !== "Requests" || status !== "authenticated" || !user?.id || !session?.access_token) return;
     if (requestsLoaded) return;
     let cancelled = false;
 
     async function loadRequests() {
       setIsLoadingRequests(true);
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
+      try {
+        const [memberships, hubs] = await Promise.all([
+          listMyMembershipsFromApi(session.access_token),
+          listHubs(),
+        ]);
+        if (cancelled) return;
 
-      const { data: memberships } = await supabase
-        .from("hub_members")
-        .select("id, hub_id, created_at")
-        .eq("user_id", user!.id)
-        .eq("status", "pending")
-        .order("created_at", { ascending: false });
+        const pending = memberships
+          .filter((membership) => membership.status === "pending")
+          .sort((a, b) => {
+            const aTime = a.joinedAt ? new Date(a.joinedAt).getTime() : 0;
+            const bTime = b.joinedAt ? new Date(b.joinedAt).getTime() : 0;
+            return bTime - aTime;
+          });
 
-      if (cancelled) return;
+        if (!pending.length) {
+          setPendingRequests([]);
+          setRequestsLoaded(true);
+          return;
+        }
 
-      if (!memberships || memberships.length === 0) {
-        setPendingRequests([]);
-        setIsLoadingRequests(false);
+        const hubMap = new Map(hubs.map((hub) => [hub.id, hub]));
+        const rows: PendingRequest[] = pending
+          .map((membership) => {
+            const hub = hubMap.get(membership.hubId);
+            if (!hub) return null;
+            return {
+              membershipId: membership.id || "",
+              hubId: hub.id,
+              hubName: hub.name,
+              hubCategory: hub.category,
+              hubSlug: hub.slug,
+              dpImage: hub.dp_image_url || "",
+              requestedAt: membership.joinedAt ?? new Date().toISOString(),
+            } as PendingRequest;
+          })
+          .filter((row): row is PendingRequest => row !== null && Boolean(row.membershipId));
+
+        setPendingRequests(rows);
         setRequestsLoaded(true);
-        return;
+      } finally {
+        setIsLoadingRequests(false);
       }
-
-      const hubIds = memberships.map((m) => m.hub_id);
-      const { data: hubs } = await supabase
-        .from("hubs")
-        .select("id, name, category, slug, dp_image_url")
-        .in("id", hubIds);
-
-      if (cancelled) return;
-
-      const hubMap = new Map((hubs ?? []).map((h) => [h.id, h]));
-      const rows: PendingRequest[] = memberships
-        .map((m) => {
-          const hub = hubMap.get(m.hub_id);
-          if (!hub) return null;
-          return {
-            membershipId: m.id,
-            hubId: hub.id,
-            hubName: hub.name,
-            hubCategory: hub.category,
-            hubSlug: hub.slug,
-            dpImage: hub.dp_image_url || "",
-            requestedAt: m.created_at,
-          } as PendingRequest;
-        })
-        .filter((r): r is PendingRequest => r !== null);
-
-      setPendingRequests(rows);
-      setIsLoadingRequests(false);
-      setRequestsLoaded(true);
     }
 
-    loadRequests();
+    void loadRequests();
     return () => { cancelled = true; };
-  }, [activeTab, status, user?.id, requestsLoaded]);
+  }, [activeTab, status, user?.id, session?.access_token, requestsLoaded]);
 
   // Load pending hub invitations
   useEffect(() => {
-    if (activeTab !== "Invitations" || status !== "authenticated" || !user?.id) return;
+    if (activeTab !== "Invitations" || status !== "authenticated" || !user?.id || !session?.access_token) return;
     if (invitationsLoaded) return;
     let cancelled = false;
 
     async function loadInvitations() {
       setIsLoadingInvitations(true);
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-
-      const nowIso = new Date().toISOString();
-      const { data: invitations, error } = await supabase
-        .from("hub_invitations")
-        .select("id, hub_id, invited_by, created_at, expires_at")
-        .eq("invited_user_id", user!.id)
-        .eq("status", "pending")
-        .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
-        .order("created_at", { ascending: false });
-
-      if (cancelled) return;
-
-      // If the table doesn't exist yet (migration not applied), fail gracefully.
-      if (error) {
-        console.warn("[profile] invitations query failed:", error.message);
-        setPendingInvitations([]);
-        setIsLoadingInvitations(false);
+      try {
+        const rows = await listPendingInvitationsFromApi(session.access_token);
+        if (cancelled) return;
+        setPendingInvitations(rows);
         setInvitationsLoaded(true);
-        return;
-      }
-
-      if (!invitations || invitations.length === 0) {
+      } catch (error) {
+        console.warn("[profile] FastAPI invitations path failed:", error);
+        if (cancelled) return;
         setPendingInvitations([]);
-        setIsLoadingInvitations(false);
         setInvitationsLoaded(true);
-        return;
+      } finally {
+        setIsLoadingInvitations(false);
       }
-
-      const hubIds = [...new Set(invitations.map((i) => i.hub_id))];
-      const inviterIds = [...new Set(invitations.map((i) => i.invited_by).filter(Boolean) as string[])];
-
-      const [{ data: hubs }, { data: inviters }] = await Promise.all([
-        supabase.from("hubs").select("id, name, category, slug, dp_image_url").in("id", hubIds),
-        inviterIds.length > 0
-          ? supabase.from("profiles").select("id, full_name, email").in("id", inviterIds)
-          : Promise.resolve({ data: [] as Array<{ id: string; full_name: string | null; email: string | null }> }),
-      ]);
-
-      if (cancelled) return;
-
-      const hubMap = new Map((hubs ?? []).map((h) => [h.id, h]));
-      const inviterMap = new Map(
-        (inviters ?? []).map((p) => {
-          const name = p.full_name || (p.email ? p.email.split("@")[0] : "Someone");
-          return [p.id, name];
-        })
-      );
-
-      const rows: PendingInvitation[] = invitations
-        .map((inv) => {
-          const hub = hubMap.get(inv.hub_id);
-          if (!hub) return null;
-          return {
-            invitationId: inv.id,
-            hubId: hub.id,
-            hubName: hub.name,
-            hubCategory: hub.category,
-            hubSlug: hub.slug,
-            dpImage: hub.dp_image_url || "",
-            invitedAt: inv.created_at,
-            invitedByName: inv.invited_by ? (inviterMap.get(inv.invited_by) || "Someone") : "Someone",
-          } as PendingInvitation;
-        })
-        .filter((r): r is PendingInvitation => r !== null);
-
-      setPendingInvitations(rows);
-      setIsLoadingInvitations(false);
-      setInvitationsLoaded(true);
     }
 
-    loadInvitations();
+    void loadInvitations();
     return () => { cancelled = true; };
-  }, [activeTab, status, user?.id, invitationsLoaded]);
+  }, [activeTab, status, user?.id, session?.access_token, invitationsLoaded]);
 
   const cancelRequest = async (membershipId: string) => {
     if (!user?.id || cancellingRequestId) return;
@@ -389,15 +336,9 @@ export default function ProfilePage() {
     const previous = pendingRequests;
     setPendingRequests((prev) => prev.filter((r) => r.membershipId !== membershipId));
     try {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("hub_members")
-        .delete()
-        .eq("id", membershipId)
-        .eq("user_id", user.id);
-      if (error) {
-        console.error("[profile] cancel request error:", error);
+      const ok = await cancelMyHubJoinRequestApi(membershipId);
+      if (!ok) {
+        console.error("[profile] cancel request error");
         setPendingRequests(previous); // restore on failure
       }
     } catch (err) {
@@ -409,37 +350,18 @@ export default function ProfilePage() {
   };
 
   const acceptInvitation = async (invitation: PendingInvitation) => {
-    if (!user?.id || respondingInvitationId) return;
+    if (!user?.id || !session?.access_token || respondingInvitationId) return;
     setRespondingInvitationId(invitation.invitationId);
     const previous = pendingInvitations;
     setPendingInvitations((prev) => prev.filter((i) => i.invitationId !== invitation.invitationId));
     try {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-
-      // Upsert hub_members first so failures don't leave invitation marked accepted
-      const { error: memberError } = await supabase
-        .from("hub_members")
-        .upsert({ hub_id: invitation.hubId, user_id: user.id, status: "active", role: "member" }, { onConflict: "hub_id,user_id" });
-      if (memberError) {
-        console.error("[profile] accept invitation membership error:", memberError);
-        setPendingInvitations(previous);
+      const ok = await acceptInvitationFromApi(invitation.invitationId, session.access_token);
+      if (ok) {
+        setHubStats((prev) => ({ ...prev, joined: prev.joined + 1 }));
+        setUserHubs([]);
         return;
       }
-
-      const { error: invError } = await supabase
-        .from("hub_invitations")
-        .update({ status: "accepted", responded_at: new Date().toISOString() })
-        .eq("id", invitation.invitationId)
-        .eq("invited_user_id", user.id);
-      if (invError) {
-        console.warn("[profile] accept invitation update warning:", invError);
-        // Membership already in place; not critical to restore UI.
-      }
-
-      // Bump joined hub stat + invalidate My Hubs cache so next visit refetches.
-      setHubStats((prev) => ({ ...prev, joined: prev.joined + 1 }));
-      setUserHubs([]);
+      setPendingInvitations(previous);
     } catch (err) {
       console.error("[profile] accept invitation failed:", err);
       setPendingInvitations(previous);
@@ -449,22 +371,14 @@ export default function ProfilePage() {
   };
 
   const declineInvitation = async (invitation: PendingInvitation) => {
-    if (!user?.id || respondingInvitationId) return;
+    if (!user?.id || !session?.access_token || respondingInvitationId) return;
     setRespondingInvitationId(invitation.invitationId);
     const previous = pendingInvitations;
     setPendingInvitations((prev) => prev.filter((i) => i.invitationId !== invitation.invitationId));
     try {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("hub_invitations")
-        .update({ status: "declined", responded_at: new Date().toISOString() })
-        .eq("id", invitation.invitationId)
-        .eq("invited_user_id", user.id);
-      if (error) {
-        console.error("[profile] decline invitation error:", error);
-        setPendingInvitations(previous);
-      }
+      const ok = await declineInvitationFromApi(invitation.invitationId, session.access_token);
+      if (ok) return;
+      setPendingInvitations(previous);
     } catch (err) {
       console.error("[profile] decline invitation failed:", err);
       setPendingInvitations(previous);
@@ -490,22 +404,18 @@ export default function ProfilePage() {
     setIsUploadingAvatar(true);
     setAvatarError(null);
     try {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const ext = file.name.split(".").pop() || "jpg";
-      const path = `${user.id}/avatar.${ext}`;
-      const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
-      if (uploadError) {
-        console.error("[profile] avatar upload error:", uploadError);
-        setAvatarError(uploadError.message.includes("not found") ? "Avatar storage is not set up yet. Please run the latest database migration." : `Upload failed: ${uploadError.message}`);
+      const prepared = await prepareMyAvatarUploadApi({
+        fileName: file.name,
+        mimeType: file.type,
+        sizeBytes: file.size,
+      });
+      await uploadToSignedUrl(prepared.signedUploadUrl, file, file.type || "application/octet-stream");
+      const publicUrl = `${prepared.publicUrl}?t=${Date.now()}`;
+      const updated = await updateMyProfileApi({ avatarUrl: publicUrl });
+      if (!updated) {
+        setAvatarError("Profile update failed. Please try again.");
         return;
       }
-      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
-      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-      const { error: updateError } = await supabase.from("profiles").update({ avatar_url: publicUrl, updated_at: new Date().toISOString() }).eq("id", user.id);
-      if (updateError) { console.error("[profile] avatar update error:", updateError); setAvatarError(`Profile update failed: ${updateError.message}`); return; }
-      // Also sync avatar to auth user metadata so navigation header updates
-      await supabase.auth.updateUser({ data: { avatar_url: publicUrl } });
       setAvatarLoadFailed(false);
       setProfile((prev) => prev ? { ...prev, avatar_url: publicUrl } : prev);
     } catch (err) {
@@ -523,16 +433,9 @@ export default function ProfilePage() {
     if (!user?.id) return;
     setIsSaving(true);
     try {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const updatePayload: Record<string, string> = { updated_at: new Date().toISOString() };
-      if (field === "full_name") updatePayload.full_name = editDraft;
-      const { error } = await supabase.from("profiles").update(updatePayload).eq("id", user.id);
-      if (error) { console.error("[profile] save error:", error); return; }
-
-      // Also update Supabase auth user metadata so navigation header reflects changes
       if (field === "full_name") {
-        await supabase.auth.updateUser({ data: { full_name: editDraft } });
+        const ok = await updateMyProfileApi({ fullName: editDraft });
+        if (!ok) return;
       }
 
       setProfile((prev) => prev ? { ...prev, full_name: field === "full_name" ? editDraft : prev.full_name } : prev);
@@ -823,7 +726,9 @@ export default function ProfilePage() {
           {activeTab === "Requests" ? (
             <section className={cardClass("p-6 sm:p-8")}>
               <h2 className={sectionTitleClass()}>Requests</h2>
-              <p className="mt-1 mb-5 text-sm text-slate-500">Hubs you've asked to join, pending approval.</p>
+              <p className="mt-1 mb-5 text-sm text-slate-500">
+                Hubs you&apos;ve asked to join, pending approval.
+              </p>
               {isLoadingRequests ? (
                 <div className="flex items-center gap-2 py-8 text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Loading requests...</div>
               ) : pendingRequests.length === 0 ? (

@@ -1,22 +1,23 @@
 {
   "name": "api",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
+  "description": "UDeets FastAPI backend",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts"
+    "dev": "python -X pycache_prefix=.pycache -c \"import uvicorn; from app.core.config import get_settings; s=get_settings(); uvicorn.run('app.main:app', host=s.host, port=s.port)\"",
+    "dev:reload": "python -X pycache_prefix=.pycache -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "start": "python -X pycache_prefix=.pycache -c \"import uvicorn; from app.core.config import get_settings; s=get_settings(); uvicorn.run('app.main:app', host=s.host, port=s.port)\"",
+    "test": "python -X pycache_prefix=.pycache -m pytest -q",
+    "lint": "python -X pycache_prefix=.pycache -m ruff check .",
+    "format": "python -X pycache_prefix=.pycache -m ruff format .",
+    "migrate": "python -X pycache_prefix=.pycache -m alembic upgrade head",
+    "migration:bundle:generate": "python -X pycache_prefix=.pycache scripts/migration/generate_table_bundle_sql.py --help",
+    "migration:bundle:deploy": "python -X pycache_prefix=.pycache scripts/migration/deploy_sql_bundle.py --help",
+    "migration:media:backfill-keys": "python -X pycache_prefix=.pycache scripts/migration/backfill_media_keys.py --help"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "devDependencies": {
-    "@types/node": "^20.19.35",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
-  },
-  "dependencies": {
-    "fastify": "^5.7.4"
-  }
+  "keywords": [
+    "fastapi",
+    "sqlalchemy",
+    "alembic"
+  ]
 }

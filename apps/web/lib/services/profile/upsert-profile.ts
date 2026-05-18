@@ -1,5 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/server";
+import { upsertMyProfileApi } from "@/lib/api/profiles";
 
 /**
  * Upsert profile on OAuth sign-in.
@@ -7,51 +6,45 @@ import { createClient } from "@/lib/supabase/server";
  * On subsequent logins (UPDATE): only update email (which may change); never
  * overwrite full_name or avatar_url since the user may have customised them.
  *
- * Pass `db` from the route handler that just called `exchangeCodeForSession` so RLS
- * sees the new session (a separate `createClient()` may not have cookies yet).
+ * When running in a server callback flow, pass `accessToken` so we can call
+ * FastAPI directly with bearer auth and avoid direct table writes.
  */
 export async function upsertProfile(
-  userId: string,
+  _userId: string,
   fullName: string | null,
   avatarUrl: string | null,
   email: string | null,
-  db?: SupabaseClient,
+  accessToken?: string | null,
 ): Promise<void> {
-  const supabase = db ?? (await createClient());
-
-  const { data: existing } = await supabase
-    .from("profiles")
-    .select("id, full_name, avatar_url")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (existing) {
-    // Existing user — only update email (keep custom name/avatar intact)
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        email: email,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", userId);
-
-    if (error) {
-      console.error("[upsert-profile] Failed to update profile:", error);
-    }
-  } else {
-    // New user — insert with all OAuth data
-    const { error } = await supabase
-      .from("profiles")
-      .insert({
-        id: userId,
-        full_name: fullName,
-        avatar_url: avatarUrl,
-        email: email,
-        updated_at: new Date().toISOString(),
+  if (accessToken) {
+    const base = (process.env.FASTAPI_BASE_URL ?? process.env.NEXT_PUBLIC_FASTAPI_BASE_URL ?? "http://localhost:8002").replace(
+      /\/$/,
+      "",
+    );
+    try {
+      const response = await fetch(`${base}/api/v1/profiles/me/upsert`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ fullName, avatarUrl, email }),
+        cache: "no-store",
       });
-
-    if (error) {
-      console.error("[upsert-profile] Failed to insert profile:", error);
+      if (!response.ok) {
+        const text = await response.text();
+        console.error("[upsert-profile] FastAPI sync failed:", text || response.statusText);
+      }
+      return;
+    } catch (error) {
+      console.error("[upsert-profile] FastAPI sync request failed:", error);
+      return;
     }
+  }
+
+  try {
+    await upsertMyProfileApi({ fullName, avatarUrl, email });
+  } catch (error) {
+    console.error("[upsert-profile] Failed to sync profile:", error);
   }
 }

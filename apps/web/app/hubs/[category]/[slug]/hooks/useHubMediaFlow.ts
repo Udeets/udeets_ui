@@ -3,6 +3,7 @@
 import type { RefObject } from "react";
 import { useEffect, useState } from "react";
 import type { HubRecord } from "@/lib/hubs";
+import { createHubAttachmentApi } from "@/lib/api/hubs";
 import { updateHub } from "@/lib/services/hubs/update-hub";
 import { uploadHubMedia } from "@/lib/services/hubs/upload-hub-media";
 import { normalizePublicSrc } from "../components/hubUtils";
@@ -46,7 +47,7 @@ export function useHubMediaFlow({
     if (kind === "cover") setIsUploadingCover(true);
     if (kind === "gallery") setIsUploadingGallery(true);
     try {
-      const uploadedUrl = await uploadHubMedia({ file, slug: hub.slug, kind });
+      const uploadedUrl = await uploadHubMedia({ file, hubId: hub.id, slug: hub.slug, kind });
       const nextGallery = kind === "gallery" ? [...galleryImages, uploadedUrl] : galleryImages;
       const updatedHub = await updateHub(hub.id, {
         dpImageUrl: kind === "dp" ? uploadedUrl : undefined,
@@ -63,13 +64,10 @@ export function useHubMediaFlow({
       // Silently tolerates the insert failing so older hubs without the
       // attachments table keep working in a degraded mode.
       try {
-        const { createClient } = await import("@/lib/supabase/client");
-        const supabase = createClient();
         const fileType = file.type.startsWith("image/") ? "image" : "file";
-        await supabase.from("attachments").insert({
-          hub_id: hub.id,
+        await createHubAttachmentApi(hub.id, {
           file_url: uploadedUrl,
-          file_type: fileType,
+          file_type: fileType as "image" | "file",
           source: kind,
         });
       } catch (err) {

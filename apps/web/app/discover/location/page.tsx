@@ -6,8 +6,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
 
 import { isUdeetsLogoSrc } from "@/lib/branding";
+import { listHubs } from "@/lib/services/hubs/list-hubs";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
-import type { Hub as SupabaseHub } from "@/types/hub";
+import type { Hub as HubRow } from "@/types/hub";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -33,7 +34,7 @@ type MappedHub = {
   locationLabel: string;
 };
 
-function toMappedHub(hub: SupabaseHub): MappedHub {
+function toMappedHub(hub: HubRow): MappedHub {
   const imageSrc = hub.dp_image_url || hub.cover_image_url || undefined;
   return {
     id: hub.id,
@@ -291,15 +292,8 @@ export default function LocationDiscoverPage() {
       try {
         const session = await getCurrentSession();
         if (!cancelled) setIsAuthenticated(Boolean(session));
-
-        const { createClient } = await import("@/lib/supabase/client");
-        const supabase = createClient();
-
-        const query = session
-          ? supabase.from("hubs").select("*").neq("created_by", session.user.id).order("created_at", { ascending: false })
-          : supabase.from("hubs").select("*").order("created_at", { ascending: false });
-
-        const { data } = await query;
+        const hubs = await listHubs();
+        const data = session ? hubs.filter((hub) => hub.created_by !== session.user.id) : hubs;
         if (!cancelled && data) {
           setAllHubs(data.map(toMappedHub));
         }

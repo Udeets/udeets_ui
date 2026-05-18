@@ -3,7 +3,7 @@ import { sanitizeAuthNextPath } from "@/lib/auth/auth-callback-utils";
 const COOKIE_NAME = "udeets_auth_next";
 const MAX_AGE_SEC = 600;
 
-/** Persist post-login path so OAuth redirectTo can be exactly `/auth/callback` (Supabase allow-list). */
+/** Persist post-login path so hosted OAuth can always return to `/auth/callback`. */
 export function setAuthNextCookie(nextPath: string) {
   if (typeof document === "undefined") return;
   const safe = sanitizeAuthNextPath(nextPath);
@@ -26,7 +26,7 @@ export function clearAuthNextCookie() {
   document.cookie = `${COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax`;
 }
 
-/** Exact callback URL — must match Supabase Redirect URLs (no query string). */
+/** Exact callback URL — used by Cognito Hosted UI redirect URI. */
 export function getAuthCallbackUrl(origin?: string): string {
   const base =
     origin ||

@@ -35,6 +35,9 @@ import { InviteGuestLockedContent } from "./join/components/InviteGuestLockedCon
 import { MobileAppDownloadPrompt } from "./join/components/MobileAppDownloadPrompt";
 import { buildAuthUrl, buildInviteJoinReturnUrl } from "@/lib/services/hubs/invite-landing-utils";
 import { resolveHubJoinToken } from "@/lib/services/hubs/hub-join-link-client";
+import { createHubAttachmentApi, listHubAttachmentsApi, markHubSeenApi } from "@/lib/api/hubs";
+import { listHubMembersFromApi, getMyHubMembershipFromApi, joinHubFromApi } from "@/lib/api/members";
+import { getProfileSummaryApi } from "@/lib/api/profiles";
 import { DeleteHubModal } from "./components/modals/DeleteHubModal";
 import { DeetSharePopover } from "@/components/deets/DeetSharePopover";
 import { FeedPostBody } from "@/components/deets/FeedPostBody";
@@ -204,15 +207,12 @@ export default function HubClient({
     if (!hub.createdBy) return;
     let ignore = false;
     (async () => {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("profiles")
-        .select("full_name, avatar_url")
-        .eq("id", hub.createdBy!)
-        .single();
-      if (!ignore && data) {
-        setCreatorProfile({ fullName: data.full_name || "Hub Creator", avatarUrl: data.avatar_url });
+      const summary = await getProfileSummaryApi(hub.createdBy!);
+      if (!ignore && summary) {
+        setCreatorProfile({
+          fullName: summary.fullName || "Hub Creator",
+          avatarUrl: summary.avatarUrl ?? null,
+        });
       }
     })();
     return () => { ignore = true; };
@@ -225,38 +225,16 @@ export default function HubClient({
     if (user.id === hub.createdBy) return;
     let ignore = false;
     (async () => {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("profiles")
-        .select("full_name, avatar_url")
-        .eq("id", user.id)
-        .single();
-      if (!ignore && data) {
-        setCurrentUserProfile({ fullName: data.full_name || "User", avatarUrl: data.avatar_url });
+      const summary = await getProfileSummaryApi(user.id);
+      if (!ignore && summary) {
+        setCurrentUserProfile({
+          fullName: summary.fullName || "User",
+          avatarUrl: summary.avatarUrl ?? null,
+        });
       }
     })();
     return () => { ignore = true; };
   }, [user?.id, hub.createdBy]);
-
-  // Mark this hub as seen for the current user so dashboard unread can clear (best-effort RPC).
-  useEffect(() => {
-    if (!user?.id || !hub.id) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const { createClient } = await import("@/lib/supabase/client");
-        const supabase = createClient();
-        if (cancelled) return;
-        await supabase.rpc("mark_hub_seen", { p_hub_id: hub.id });
-      } catch (err) {
-        console.warn("[hub] mark_hub_seen failed:", err);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id, hub.id]);
 
   // Prefer profile DB values over auth metadata (user may have customised them)
   const creatorDisplayName =
@@ -284,20 +262,30 @@ export default function HubClient({
   const [isPending, setIsPending] = useState(false);
   const [membershipLoaded, setMembershipLoaded] = useState(isCreatorAdmin);
 
+  // Best-effort: mark hub as seen to clear dashboard unread dots.
+  useEffect(() => {
+    if (!user?.id || !hub.id) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        if (cancelled) return;
+        await markHubSeenApi(hub.id);
+      } catch (err) {
+        console.warn("[hub] mark seen failed:", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, hub.id]);
+
   // Check actual membership status from DB
   useEffect(() => {
     if (isCreatorAdmin || !user?.id) return;
     let ignore = false;
 
     async function checkMembership() {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("hub_members")
-        .select("role, status")
-        .eq("hub_id", hub.id)
-        .eq("user_id", user!.id)
-        .maybeSingle();
+      const data = await getMyHubMembershipFromApi(hub.id);
 
       if (ignore) return;
       if (!data) {
@@ -367,20 +355,7 @@ export default function HubClient({
 
   const loadHubAttachments = useCallback(async () => {
     try {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("attachments")
-        .select("id, file_url, file_type")
-        .eq("hub_id", hub.id)
-        .in("file_type", ["image", "file"])
-        .order("created_at", { ascending: false })
-        .limit(200);
-
-      if (error) {
-        console.error("[load-hub-attachments]", error);
-        return;
-      }
+      const data = await listHubAttachmentsApi(hub.id);
 
       if (!data?.length) {
         setAllAttachmentPhotos([]);
@@ -533,7 +508,7 @@ export default function HubClient({
 
   // Inject author avatars into feed items (memoized so useDeetInteractions' feed effect does not
   // re-fire every render and race / overwrite reactions after a change.)
-  // Prefer the live Supabase-backed list once it has loaded. Concatenating SSR `hubContent.feed`
+  // Prefer the live API-backed list once it has loaded. Concatenating SSR `hubContent.feed`
   // with `liveFeedItems` duplicated every deet, so a client-side remove left the SSR copy visible
   // (and looked like delete failed after refresh if the DB was fine).
   const liveFeedForPostsTab = postsListSource === "drafts" ? liveDraftItems : livePublishedItems;
@@ -626,50 +601,29 @@ export default function HubClient({
     let ignore = false;
 
     async function loadMembers() {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-
-      // Step 1: get active members
-      const { data: members, error: membersError } = await supabase
-        .from("hub_members")
-        .select("user_id, role, joined_at")
-        .eq("hub_id", hub.id)
-        .eq("status", "active");
-
-      if (membersError) {
-        console.error("[members]", membersError);
-        if (!ignore) setMemberItems([]);
-        return;
-      }
+      const members = await listHubMembersFromApi(hub.id);
       if (!members || members.length === 0) {
         if (!ignore) setMemberItems([]);
         return;
       }
 
       // Step 2: get profiles for those user_ids
-      const userIds = members.map((m) => m.user_id);
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, full_name, avatar_url, email")
-        .in("id", userIds);
-
-      const profileMap = new Map(
-        (profiles ?? []).map((p) => [p.id, p])
-      );
+      const { fetchProfilesForUsers } = await import("@/lib/services/members/manage-members");
+      const profileMap = await fetchProfilesForUsers(members.map((m) => m.userId));
 
       if (!ignore) {
         setMemberItems(members.map((m) => {
-          const profile = profileMap.get(m.user_id);
+          const profile = profileMap.get(m.userId);
           // Show "Creator" for the hub creator, otherwise proper role label
-          const isHubCreator = hub.createdBy && m.user_id === hub.createdBy;
+          const isHubCreator = hub.createdBy && m.userId === hub.createdBy;
           const roleLabel = isHubCreator ? "Creator" : m.role === "admin" ? "Admin" : "Member";
           return {
-            userId: m.user_id,
+            userId: m.userId,
             role: roleLabel,
-            fullName: profile?.full_name ?? m.user_id.slice(0, 8),
-            avatarUrl: profile?.avatar_url ? normalizePublicSrc(profile.avatar_url) : null,
+            fullName: profile?.fullName ?? m.userId.slice(0, 8),
+            avatarUrl: profile?.avatarUrl ? normalizePublicSrc(profile.avatarUrl) : null,
             email: profile?.email ?? null,
-            joinedAt: m.joined_at ?? null,
+            joinedAt: m.joinedAt ?? null,
           };
         }));
       }
@@ -698,13 +652,10 @@ export default function HubClient({
     }
 
     async function init() {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
       if (!isPrivateHubGuest) {
         void loadMembers();
       }
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.access_token && !ignore && isCreatorAdmin) {
+      if (user?.id && !ignore && isCreatorAdmin) {
         void loadPendingRequests();
       }
     }
@@ -722,64 +673,50 @@ export default function HubClient({
       ignore = true;
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [hub.id, isCreatorAdmin, isPrivateHubGuest]);
+  }, [hub.id, hub.createdBy, isCreatorAdmin, isPrivateHubGuest, user?.id]);
 
-  // Real-time: listen for new join requests so the creator gets a toast notification
+  // Poll pending requests so creator sees new join requests without direct realtime dependency.
   useEffect(() => {
     if (!isCreatorAdmin) return;
+    let cancelled = false;
+    let knownPendingIds = new Set<string>(pendingRequests.map((item) => item.userId));
 
-    let sub: { unsubscribe: () => void } | null = null;
+    const poll = async () => {
+      try {
+        const { listPendingRequests, fetchProfilesForUsers } = await import("@/lib/services/members/manage-members");
+        const pending = await listPendingRequests(hub.id);
+        if (cancelled) return;
+        const nextIds = new Set(pending.map((p) => p.userId));
+        const newIds = pending
+          .map((p) => p.userId)
+          .filter((id) => !knownPendingIds.has(id));
 
-    (async () => {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
+        if (newIds.length > 0) {
+          const profileMap = await fetchProfilesForUsers(newIds);
+          const firstProfile = profileMap.get(newIds[0]);
+          setJoinRequestToast({
+            name: firstProfile?.fullName ?? "Someone",
+            avatarUrl: firstProfile?.avatarUrl ?? null,
+          });
+          setTimeout(() => setJoinRequestToast(null), 6000);
+        }
 
-      sub = supabase
-        .channel(`hub-join-requests-${hub.id}`)
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "hub_members", filter: `hub_id=eq.${hub.id}` },
-          async (payload) => {
-            const row = payload.new as { user_id: string; status: string; hub_id: string };
-            if (row.status !== "pending") return;
+        knownPendingIds = nextIds;
+      } catch (err) {
+        console.error("[join-request-polling]", err);
+      }
+    };
 
-            // Fetch profile info for the toast
-            try {
-              const { fetchProfilesForUsers } = await import("@/lib/services/members/manage-members");
-              const profileMap = await fetchProfilesForUsers([row.user_id]);
-              const profile = profileMap.get(row.user_id);
-              const fullName = profile?.fullName ?? "Someone";
-              const avatarUrl = profile?.avatarUrl ?? null;
-
-              // Show toast
-              setJoinRequestToast({ name: fullName, avatarUrl });
-
-              // Add to pending list
-              setPendingRequests((prev) => {
-                if (prev.some((r) => r.userId === row.user_id)) return prev;
-                return [...prev, {
-                  userId: row.user_id,
-                  fullName,
-                  avatarUrl,
-                  email: profile?.email ?? null,
-                  requestedAt: new Date().toISOString(),
-                }];
-              });
-
-              // Auto-dismiss toast after 6 seconds
-              setTimeout(() => setJoinRequestToast(null), 6000);
-            } catch (err) {
-              console.error("[join-request-subscription]", err);
-            }
-          },
-        )
-        .subscribe();
-    })();
+    void poll();
+    const interval = window.setInterval(() => {
+      void poll();
+    }, 10000);
 
     return () => {
-      sub?.unsubscribe();
+      cancelled = true;
+      window.clearInterval(interval);
     };
-  }, [hub.id, isCreatorAdmin]);
+  }, [hub.id, isCreatorAdmin, pendingRequests]);
 
   const handleApproveRequest = async (userId: string) => {
     setProcessingUserIds((prev) => new Set(prev).add(userId));
@@ -1020,8 +957,6 @@ export default function HubClient({
     setIsUploadingFile(true);
     try {
       const { uploadDeetMedia } = await import("@/lib/services/deets/upload-deet-media");
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
       for (const file of Array.from(files)) {
         const uploaded = await uploadDeetMedia({
           file,
@@ -1029,15 +964,11 @@ export default function HubClient({
           hubSlug: hub.slug,
           kind: "file",
         });
-        const { error: insertError } = await supabase.from("attachments").insert({
-          hub_id: hub.id,
+        await createHubAttachmentApi(hub.id, {
           file_url: uploaded.publicUrl,
           file_type: "file",
           source: "admin_upload",
         });
-        if (insertError) {
-          console.error("[file-upload] attachment insert:", insertError);
-        }
       }
       await loadHubAttachments();
     } catch (error) {
@@ -1071,32 +1002,21 @@ export default function HubClient({
     }
     setIsJoining(true);
     try {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-
-      if (isPublicHub) {
-        // Public hub: join immediately with active status
-        await supabase.from("hub_members").upsert({
-          hub_id: hub.id,
-          user_id: user.id,
-          role: "member",
-          status: "active",
-        }, { onConflict: "hub_id,user_id" });
+      const membership = await joinHubFromApi(hub.id);
+      if (membership.status === "active") {
         setIsMember(true);
         setIsJoined(true);
-        setShowJoinConfirm(true);
-      } else {
-        // Private hub: create pending request
-        await supabase.from("hub_members").upsert({
-          hub_id: hub.id,
-          user_id: user.id,
-          role: "member",
-          status: "pending",
-          joined_at: new Date().toISOString(),
-        }, { onConflict: "hub_id,user_id" });
+        setIsPending(false);
+      } else if (membership.status === "pending") {
+        setIsMember(false);
+        setIsJoined(false);
         setIsPending(true);
-        setShowJoinConfirm(true);
+      } else {
+        setIsMember(false);
+        setIsJoined(false);
+        setIsPending(false);
       }
+      setShowJoinConfirm(true);
     } catch (err) {
       console.error("[join-hub] error:", err);
     } finally {

@@ -45,9 +45,7 @@ async function addDeetCommentWithSessionRetry(
     return await addDeetComment(deetId, body, parentId, attachments);
   } catch (error) {
     if (!isLikelyStaleSessionError(error)) throw error;
-    const { createClient } = await import("@/lib/supabase/client");
-    const supabase = createClient();
-    await supabase.auth.refreshSession();
+    // Retry once after transient auth/cache staleness.
     return await addDeetComment(deetId, body, parentId, attachments);
   }
 }

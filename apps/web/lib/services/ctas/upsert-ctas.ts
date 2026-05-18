@@ -1,4 +1,8 @@
-import { createClient } from "@/lib/supabase/client";
+import {
+  deleteHubCTAApi,
+  listHubCTAsApi,
+  saveAllHubCTAsApi,
+} from "@/lib/api/hub-customization";
 import type { UpsertCTAInput, HubCTARecord } from "./cta-types";
 import { MAX_CTAS_PER_HUB } from "./cta-types";
 
@@ -9,31 +13,52 @@ import { MAX_CTAS_PER_HUB } from "./cta-types";
 export async function upsertHubCTA(
   input: UpsertCTAInput
 ): Promise<HubCTARecord | null> {
-  const supabase = createClient();
+  try {
+    const existing = await listHubCTAsApi(input.hub_id);
+    const next = [...existing];
+    const idx = input.id ? next.findIndex((item) => item.id === input.id) : -1;
 
-  const row = {
-    hub_id: input.hub_id,
-    label: input.label,
-    action_type: input.action_type,
-    action_value: input.action_value,
-    position: input.position,
-    is_visible: input.is_visible,
-    updated_at: new Date().toISOString(),
-    ...(input.id ? { id: input.id } : {}),
-  };
+    const row = {
+      id: input.id,
+      label: input.label,
+      action_type: input.action_type,
+      action_value: input.action_value,
+      position: input.position,
+      is_visible: input.is_visible,
+    };
 
-  const { data, error } = await supabase
-    .from("hub_ctas")
-    .upsert(row, { onConflict: "id" })
-    .select("*")
-    .single();
+    if (idx >= 0) {
+      next[idx] = { ...next[idx], ...row };
+    } else {
+      next.push({
+        id: input.id ?? crypto.randomUUID(),
+        hub_id: input.hub_id,
+        label: input.label,
+        action_type: input.action_type,
+        action_value: input.action_value,
+        position: input.position,
+        is_visible: input.is_visible,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+    }
 
-  if (error) {
+    const saved = await saveAllHubCTAsApi(
+      input.hub_id,
+      next.map((cta, index) => ({
+        id: cta.id,
+        label: cta.label,
+        action_type: cta.action_type,
+        action_value: cta.action_value,
+        position: index,
+        is_visible: cta.is_visible,
+      })),
+    );
+    return saved.find((item) => item.id === (input.id ?? "")) ?? saved[input.position] ?? null;
+  } catch (error) {
     console.error("[upsert-cta] Failed:", error);
     return null;
   }
-
-  return data as HubCTARecord;
 }
 
 /**
@@ -51,57 +76,22 @@ export async function saveAllHubCTAs(
     );
     ctas = ctas.slice(0, MAX_CTAS_PER_HUB);
   }
-
-  const supabase = createClient();
-
-  // 1. Delete all existing CTAs for this hub
-  const { error: deleteError } = await supabase
-    .from("hub_ctas")
-    .delete()
-    .eq("hub_id", hubId);
-
-  if (deleteError) {
-    console.error("[save-all-ctas] Delete failed:", deleteError);
+  try {
+    return await saveAllHubCTAsApi(hubId, ctas);
+  } catch (error) {
+    console.error("[save-all-ctas] Save failed:", error);
     return [];
   }
-
-  if (ctas.length === 0) return [];
-
-  // 2. Insert fresh rows with correct positions
-  const rows = ctas.map((cta, index) => ({
-    hub_id: hubId,
-    label: cta.label,
-    action_type: cta.action_type,
-    action_value: cta.action_value,
-    position: index,
-    is_visible: cta.is_visible,
-  }));
-
-  const { data, error: insertError } = await supabase
-    .from("hub_ctas")
-    .insert(rows)
-    .select("*");
-
-  if (insertError) {
-    console.error("[save-all-ctas] Insert failed:", insertError);
-    return [];
-  }
-
-  return (data ?? []) as HubCTARecord[];
 }
 
 /**
  * Delete a single CTA by id.
  */
-export async function deleteHubCTA(ctaId: string): Promise<boolean> {
-  const supabase = createClient();
-
-  const { error } = await supabase.from("hub_ctas").delete().eq("id", ctaId);
-
-  if (error) {
+export async function deleteHubCTA(hubId: string, ctaId: string): Promise<boolean> {
+  try {
+    return await deleteHubCTAApi(hubId, ctaId);
+  } catch (error) {
     console.error("[delete-cta] Failed:", error);
     return false;
   }
-
-  return true;
 }
