@@ -24,6 +24,7 @@ import {
   chatApiInviteMember,
   chatApiListMembers,
   chatApiListRooms,
+  chatApiMarkRoomRead,
   chatApiPatchMessage,
   chatApiPrepareUpload,
   chatApiRemoveMember,
@@ -54,14 +55,29 @@ type HubChatSectionProps = {
   viewerDisplayName?: string;
   /** When present (e.g. from ?chatRoom=), selects this room after the room list loads. */
   initialChatRoomId?: string | null;
+  unreadRoomIds?: Set<string>;
+  onChatReadChange?: () => void;
 };
 
-export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayName, initialChatRoomId }: HubChatSectionProps) {
+export function HubChatSection({
+  hubId,
+  currentUserId,
+  hubStaff,
+  viewerDisplayName,
+  initialChatRoomId,
+  unreadRoomIds,
+  onChatReadChange,
+}: HubChatSectionProps) {
   const [rooms, setRooms] = useState<ChatRoomListItem[]>([]);
   const [roomsLoading, setRoomsLoading] = useState(true);
   const [roomsError, setRoomsError] = useState<string | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
+  const prevMessageCountRef = useRef(0);
+  const lastMarkedReadRef = useRef<string | null>(null);
+  const [showNewMessagesChip, setShowNewMessagesChip] = useState(false);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState("");
@@ -310,6 +326,65 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
 
   const chronological = [...thread.messages].reverse();
 
+  const scrollMessagesToBottom = useCallback((behavior: ScrollBehavior = "auto") => {
+    const el = messagesScrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+    isNearBottomRef.current = true;
+    setShowNewMessagesChip(false);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedRoomId || thread.loading) return;
+    requestAnimationFrame(() => scrollMessagesToBottom("auto"));
+    prevMessageCountRef.current = chronological.length;
+  }, [selectedRoomId, thread.loading, scrollMessagesToBottom]);
+
+  useEffect(() => {
+    const count = chronological.length;
+    const prev = prevMessageCountRef.current;
+    if (count > prev && prev > 0 && selectedRoomId) {
+      if (isNearBottomRef.current) {
+        requestAnimationFrame(() => scrollMessagesToBottom("smooth"));
+      } else {
+        setShowNewMessagesChip(true);
+      }
+    }
+    prevMessageCountRef.current = count;
+  }, [chronological.length, selectedRoomId, scrollMessagesToBottom]);
+
+  useEffect(() => {
+    prevMessageCountRef.current = 0;
+    lastMarkedReadRef.current = null;
+    setShowNewMessagesChip(false);
+  }, [selectedRoomId]);
+
+  useEffect(() => {
+    if (!selectedRoomId || thread.loading || thread.room?.viewerPendingInvite) return;
+    const messageId = thread.lastSeenMessageId;
+    if (!messageId || messageId.startsWith("local-")) return;
+    if (lastMarkedReadRef.current === messageId) return;
+    lastMarkedReadRef.current = messageId;
+    let cancelled = false;
+    void (async () => {
+      try {
+        await chatApiMarkRoomRead(selectedRoomId, messageId);
+        if (!cancelled) onChatReadChange?.();
+      } catch {
+        /* best-effort */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    selectedRoomId,
+    thread.loading,
+    thread.lastSeenMessageId,
+    thread.room?.viewerPendingInvite,
+    onChatReadChange,
+  ]);
+
   const hubPickerNotInRoomTargets = useMemo(() => {
     const q = hubPickerQuery.trim().toLowerCase();
     return hubPickerCandidates
@@ -525,6 +600,12 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
                       <Lock className="h-3.5 w-3.5 shrink-0 text-[var(--ud-text-muted)]" aria-label="Invite pending" />
                     ) : null}
                     <span className="truncate">{r.name}</span>
+                    {unreadRoomIds?.has(r.id) && selectedRoomId !== r.id ? (
+                      <span
+                        className="ml-auto h-2 w-2 shrink-0 rounded-full bg-red-500"
+                        aria-label="Unread messages"
+                      />
+                    ) : null}
                   </button>
                 </li>
               ))}
@@ -571,7 +652,7 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
         </aside>
 
         {/* Main thread */}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-[var(--ud-bg-card)]">
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-[var(--ud-bg-card)]">
           {selectedRoomId ? (
             <>
               <div className="flex flex-col gap-2 border-b border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3">
@@ -639,10 +720,18 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
               ) : null}
 
               <div
-                className="min-h-0 flex-1 overflow-y-auto px-2 sm:px-3"
+                ref={messagesScrollRef}
+                className="relative min-h-0 flex-1 overflow-y-auto px-2 sm:px-3"
                 role="log"
                 aria-live="polite"
                 aria-relevant="additions text"
+                onScroll={() => {
+                  const el = messagesScrollRef.current;
+                  if (!el) return;
+                  const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+                  isNearBottomRef.current = nearBottom;
+                  if (nearBottom) setShowNewMessagesChip(false);
+                }}
               >
                 {!thread.room || thread.room.id !== selectedRoomId ? (
                   <div className="flex justify-center py-12 text-[var(--ud-text-muted)]">
@@ -725,6 +814,18 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
                   </>
                 )}
               </div>
+
+              {showNewMessagesChip ? (
+                <div className="pointer-events-none absolute inset-x-0 bottom-24 flex justify-center">
+                  <button
+                    type="button"
+                    className="pointer-events-auto rounded-full bg-[var(--ud-brand-primary)] px-4 py-1.5 text-xs font-medium text-white shadow-md"
+                    onClick={() => scrollMessagesToBottom("smooth")}
+                  >
+                    New messages
+                  </button>
+                </div>
+              ) : null}
 
               {thread.typingUserIds.length > 0 && !thread.room?.viewerPendingInvite ? (
                 <div className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] px-3 py-1.5 text-xs text-[var(--ud-text-muted)]">

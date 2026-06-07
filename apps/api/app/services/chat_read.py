@@ -240,6 +240,57 @@ class ChatReadService:
 
         return {"messages": messages, "nextCursor": next_cursor}
 
+    def get_hub_chat_unread(self, user_id: str, hub_id: str) -> dict:
+        hub_membership = self.chat.get_hub_membership(hub_id, user_id)
+        if not _is_active(hub_membership):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You must be an active hub member to read chat unread state.",
+            )
+        from app.db.repositories.chat_read_state import ChatReadStateRepository
+
+        return ChatReadStateRepository(self.chat.db).get_hub_unread(
+            user_id=user_id, hub_id=hub_id
+        )
+
+    def mark_room_read(
+        self,
+        user_id: str,
+        room_id: str,
+        message_id: str | None = None,
+    ) -> dict:
+        ctx = resolve_room_context(self.chat, room_id=room_id, user_id=user_id)
+        if not ctx or not can_view(ctx):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have access to this chat room.",
+            )
+        pending_only = bool(
+            ctx["pending_invite_id"]
+            and not _is_active(ctx["room_membership"])
+            and not _is_hub_staff(ctx["hub_membership"])
+        )
+        if pending_only:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Accept the room invite to read messages.",
+            )
+
+        resolved_message_id = message_id
+        if not resolved_message_id:
+            rows = self.chat.messages_page(room_id=room_id, limit=1, cursor_id=None)
+            resolved_message_id = str(rows[0]["id"]) if rows else None
+
+        from app.services.chat_unread_notify import mark_room_read_and_notify
+
+        return mark_room_read_and_notify(
+            self.chat.db,
+            user_id=user_id,
+            room_id=room_id,
+            hub_id=str(ctx["room"]["hub_id"]),
+            message_id=resolved_message_id,
+        )
+
     def list_messages_since(
         self,
         user_id: str,

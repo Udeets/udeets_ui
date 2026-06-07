@@ -10,6 +10,8 @@ FastAPI backend scaffold for incremental migration from Next.js route handlers.
    - `pip install -e .[dev]`
 4. Copy `.env.example` to `.env` and update values.
 
+**Or use the monorepo bootstrap** (Docker Postgres + Redis + MinIO): see [docs/local-dev-bootstrap.md](../../docs/local-dev-bootstrap.md) and run `npm run bootstrap` from the repo root.
+
 ## Run
 
 - Dev: `npm --workspace apps/api run dev`

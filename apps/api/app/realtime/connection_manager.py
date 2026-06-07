@@ -117,6 +117,9 @@ class ConnectionManager:
             {"type": "event", "envelope": envelope.model_dump(mode="json")},
         )
 
+    def users_in_room(self, room_id: str) -> set[str]:
+        return {c.user_id for c in self._connections.values() if room_id in c.rooms}
+
 
 _manager: ConnectionManager | None = None
 

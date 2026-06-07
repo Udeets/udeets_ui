@@ -133,6 +133,9 @@ def test_set_join_link_expiration_success(client, monkeypatch) -> None:
 
 
 def test_hub_contact_invite_success(client, monkeypatch) -> None:
+    from app.services.hub_contact_invite_rate_limit import reset_hub_contact_invite_limits_for_tests
+
+    reset_hub_contact_invite_limits_for_tests()
     app.dependency_overrides[get_db] = lambda: iter([object()])
     app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1")
     monkeypatch.setattr(
@@ -149,3 +152,30 @@ def test_hub_contact_invite_success(client, monkeypatch) -> None:
 
     assert response.status_code == 200
     assert response.json() == {"ok": True}
+
+
+def test_hub_contact_invite_rate_limited(client, monkeypatch) -> None:
+    from app.services import hub_contact_invite_rate_limit as rate_limit
+
+    rate_limit.reset_hub_contact_invite_limits_for_tests()
+    app.dependency_overrides[get_db] = lambda: iter([object()])
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1")
+    monkeypatch.setattr(
+        InviteService,
+        "send_contact_invite",
+        lambda self, hub_id, user_id, contact_type, contact_value, expires_in_days: True,  # noqa: ARG005
+    )
+
+    payload = {
+        "contact_type": "email",
+        "contact_value": "hello@example.com",
+        "expires_in_days": 30,
+    }
+    for _ in range(rate_limit.HUB_CONTACT_INVITE_MAX_PER_WINDOW):
+        assert client.post("/api/v1/hubs/hub_1/invites/contact", json=payload).status_code == 200
+
+    blocked = client.post("/api/v1/hubs/hub_1/invites/contact", json=payload)
+    app.dependency_overrides.clear()
+
+    assert blocked.status_code == 429
+    assert blocked.json()["error"] == "Too many invites sent. Please try again later."

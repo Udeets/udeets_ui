@@ -197,3 +197,12 @@ class ChatRoomTyping(Base):
     room_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
     user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ChatRoomReadState(Base):
+    __tablename__ = "chat_room_read_state"
+
+    user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
+    room_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
+    last_read_message_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False), nullable=True)
+    last_read_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

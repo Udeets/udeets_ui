@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     media_provider: Literal["s3_primary"] = "s3_primary"
     auth_provider: Literal["cognito"] = "cognito"
     aws_region: str = "us-east-1"
+    aws_access_key_id: str | None = None
+    aws_secret_access_key: str | None = None
+    aws_endpoint_url: str | None = None
     s3_bucket_name: str | None = None
     s3_media_prefix: str = ""
     s3_public_base_url: str | None = None
@@ -30,8 +33,14 @@ class Settings(BaseSettings):
     chat_pubsub_channel_prefix: str = "chat:room:"
     chat_typing_ttl_seconds: int = 9
     chat_typing_started_rate_limit_seconds: int = 4
+    notifications_realtime_enabled: bool = False
+    notifications_pubsub_channel_prefix: str = "notify:user"
+    notifications_redis_subscribe_mode: Literal["per_user", "pattern"] = "per_user"
+    event_bus_backend: Literal["none", "redis_stream", "eventbridge"] = "redis_stream"
+    event_stream_key: str = "events:udeets"
 
     model_config = SettingsConfigDict(
+        # Later files override earlier ones (.env.local wins over .env).
         env_file=(".env", ".env.local", "../web/.env.local", "../web/.env"),
         env_file_encoding="utf-8",
         extra="ignore",

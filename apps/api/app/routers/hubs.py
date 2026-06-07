@@ -11,6 +11,7 @@ from app.schemas.hub import HubCreateRequest, HubRead, HubUpdateRequest
 from app.schemas.invite import HubContactInviteRequest
 from app.schemas.member import HubMemberRead
 from app.services.hub_attachments import HubAttachmentsService
+from app.services.hub_contact_invite_rate_limit import allow_hub_contact_invite
 from app.services.hub_customization import HubCustomizationService
 from app.services.hub_media import HubMediaService
 from app.services.hub_unread import HubUnreadService
@@ -141,6 +142,11 @@ def invite_hub_by_contact(
     current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, bool]:
+    if not allow_hub_contact_invite(hub_id, current_user.user_id):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many invites sent. Please try again later.",
+        )
     service = InviteService(InviteRepository(db))
     ok = service.send_contact_invite(
         hub_id=hub_id,

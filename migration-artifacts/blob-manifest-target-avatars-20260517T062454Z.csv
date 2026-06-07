@@ -1,0 +1,2 @@
+sha256,size_bytes,source_bucket,source_key,status,target_bucket,target_key
+5ae254f3998439c446497a44918390722d6de0a118c2b97db91df3ee29514049,769364,avatars,8323df4e-858a-47fd-a03a-73a7b44161cb/avatar.png,dry_run,udeets-media,development/avatars/8323df4e-858a-47fd-a03a-73a7b44161cb/avatar.png

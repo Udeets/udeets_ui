@@ -68,6 +68,31 @@ export async function chatApiListRooms(hubId: string): Promise<{ rooms: ChatRoom
   return j(res);
 }
 
+export async function chatApiGetHubUnread(
+  hubId: string,
+): Promise<{ hubId: string; hasUnread: boolean; unreadRoomIds: string[] }> {
+  const id = requireChatHubId(hubId);
+  const res = await fetch(`/api/v1/chat/unread?hubId=${encodeURIComponent(id)}`, {
+    credentials: "include",
+  });
+  return j(res);
+}
+
+export async function chatApiMarkRoomRead(
+  roomId: string,
+  messageId?: string | null,
+): Promise<{ hubId: string; hasUnread: boolean; unreadRoomIds: string[] }> {
+  const parsed = uuidSchema.safeParse(roomId);
+  if (!parsed.success) throw new Error("Invalid room id.");
+  const res = await fetch(`/api/v1/chat/rooms/${encodeURIComponent(parsed.data)}/read`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(messageId ? { messageId } : {}),
+  });
+  return j(res);
+}
+
 export async function chatApiCreateRoom(body: { hubId: string; name: string; description?: string | null }): Promise<{ roomId: string }> {
   const hubId = requireChatHubId(body.hubId);
   const res = await fetch("/api/v1/chat/rooms", {

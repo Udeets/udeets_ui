@@ -1,0 +1,88 @@
+{
+  "domains": [
+    "hubs_members_invites",
+    "profiles_admin",
+    "deets_interactions",
+    "events_rsvps"
+  ],
+  "results": [
+    {
+      "copied_rows": 3,
+      "error": null,
+      "status": "ok",
+      "table": "hubs"
+    },
+    {
+      "copied_rows": 8,
+      "error": null,
+      "status": "ok",
+      "table": "hub_members"
+    },
+    {
+      "copied_rows": 0,
+      "error": null,
+      "status": "ok",
+      "table": "hub_invitations"
+    },
+    {
+      "copied_rows": 4,
+      "error": null,
+      "status": "ok",
+      "table": "hub_join_links"
+    },
+    {
+      "copied_rows": 1,
+      "error": null,
+      "status": "ok",
+      "table": "hub_contact_invites"
+    },
+    {
+      "copied_rows": 0,
+      "error": null,
+      "status": "ok",
+      "table": "hub_sections"
+    },
+    {
+      "copied_rows": 0,
+      "error": null,
+      "status": "ok",
+      "table": "hub_section_items"
+    },
+    {
+      "copied_rows": 0,
+      "error": null,
+      "status": "ok",
+      "table": "hub_ctas"
+    },
+    {
+      "copied_rows": 5,
+      "error": null,
+      "status": "ok",
+      "table": "profiles"
+    },
+    {
+      "copied_rows": 1,
+      "error": null,
+      "status": "ok",
+      "table": "profile_likes"
+    },
+    {
+      "copied_rows": 0,
+      "error": null,
+      "status": "ok",
+      "table": "profile_comments"
+    },
+    {
+      "copied_rows": 0,
+      "error": null,
+      "status": "ok",
+      "table": "user_reports"
+    },
+    {
+      "copied_rows": 0,
+      "error": "cannot adapt type 'dict' using placeholder '%s' (format: AUTO)",
+      "status": "failed",
+      "table": "deets"
+    }
+  ]
+}

@@ -7,8 +7,10 @@ from fastapi.responses import JSONResponse
 from app.core.config import get_settings
 from app.realtime.redis_client import connect_redis, disconnect_redis
 from app.realtime.subscription_manager import get_subscription_manager
+from app.notifications.subscription_manager import get_user_notification_subscription_manager
 from app.routers.api_v1 import router as api_v1_router
 from app.routers.chat_ws import router as chat_ws_router
+from app.routers.notifications_ws import router as notifications_ws_router
 from app.routers.health import router as health_router
 from app.routers.internal_cron import router as internal_cron_router
 
@@ -20,8 +22,11 @@ async def lifespan(_app: FastAPI):
     await connect_redis()
     if settings.chat_realtime_enabled:
         await get_subscription_manager().start()
+    if settings.notifications_realtime_enabled:
+        await get_user_notification_subscription_manager().start()
     yield
     await get_subscription_manager().stop()
+    await get_user_notification_subscription_manager().stop()
     await disconnect_redis()
 
 
@@ -47,6 +52,7 @@ app.add_middleware(
 app.include_router(health_router)
 app.include_router(api_v1_router, prefix=settings.api_v1_prefix)
 app.include_router(chat_ws_router, prefix=settings.api_v1_prefix)
+app.include_router(notifications_ws_router, prefix=settings.api_v1_prefix)
 app.include_router(internal_cron_router)
 
 

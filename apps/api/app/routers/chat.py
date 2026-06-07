@@ -124,6 +124,33 @@ def list_messages_since(
     )
 
 
+@router.get("/unread")
+def get_hub_chat_unread(
+    hub_id: str = Query(alias="hubId"),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    service = ChatReadService(db)
+    return service.get_hub_chat_unread(user_id=current_user.user_id, hub_id=hub_id)
+
+
+@router.post("/rooms/{room_id}/read")
+def mark_room_read(
+    room_id: str,
+    payload: dict = Body(default={}),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    message_id = payload.get("messageId")
+    resolved = str(message_id) if isinstance(message_id, str) and message_id.strip() else None
+    service = ChatReadService(db)
+    return service.mark_room_read(
+        user_id=current_user.user_id,
+        room_id=room_id,
+        message_id=resolved,
+    )
+
+
 @router.post("/rooms/{room_id}/messages")
 async def send_message(
     room_id: str,

@@ -21,6 +21,12 @@ import { getHubConfigByCategory } from "@/lib/hub-templates";
 import { getHubColorTheme } from "@/lib/hub-color-themes";
 import { useAuthSession } from "@/services/auth/useAuthSession";
 import { HubChatSection } from "./components/chat/HubChatSection";
+import { useHubChatUnread } from "./hooks/useHubChatUnread";
+import {
+  MEMBER_PENDING_EVENT,
+  type MemberPendingDetail,
+} from "@/lib/notifications/global-notification-events";
+import { isNotificationsRealtimeFeatureEnabled } from "@/lib/notifications/use-notifications-realtime";
 import { AttachmentsSection } from "./components/attachments/AttachmentsSection";
 import { HubHeroHeader } from "./components/HubHeroHeader";
 import { HubSidebarNav } from "./components/HubSidebarNav";
@@ -319,7 +325,12 @@ export default function HubClient({
   const canAccessFullContent = canViewFullContent || isMember || isCreatorAdmin;
   const canBrowseAllTabs = canAccessFullContent || isPrivateHubGuest;
 
-  // CTA state
+  const {
+    hasUnread: chatHasUnread,
+    unreadRoomIds: chatUnreadRoomIds,
+    refreshUnread: refreshChatUnread,
+  } = useHubChatUnread(hub.id, canBrowseAllTabs && Boolean(user?.id));
+
   const [hubCTAs, setHubCTAs] = useState<import("@/lib/services/ctas/cta-types").HubCTARecord[]>([]);
   const [isCTAEditorOpen, setIsCTAEditorOpen] = useState(false);
 
@@ -675,21 +686,21 @@ export default function HubClient({
     };
   }, [hub.id, hub.createdBy, isCreatorAdmin, isPrivateHubGuest, user?.id]);
 
-  // Poll pending requests so creator sees new join requests without direct realtime dependency.
+  // Realtime join-request toast for hub admins (fallback: visibility refetch only).
   useEffect(() => {
     if (!isCreatorAdmin) return;
     let cancelled = false;
     let knownPendingIds = new Set<string>(pendingRequests.map((item) => item.userId));
 
-    const poll = async () => {
+    const handleNewPending = async () => {
       try {
-        const { listPendingRequests, fetchProfilesForUsers } = await import("@/lib/services/members/manage-members");
+        const { listPendingRequests, fetchProfilesForUsers } = await import(
+          "@/lib/services/members/manage-members"
+        );
         const pending = await listPendingRequests(hub.id);
         if (cancelled) return;
         const nextIds = new Set(pending.map((p) => p.userId));
-        const newIds = pending
-          .map((p) => p.userId)
-          .filter((id) => !knownPendingIds.has(id));
+        const newIds = pending.map((p) => p.userId).filter((id) => !knownPendingIds.has(id));
 
         if (newIds.length > 0) {
           const profileMap = await fetchProfilesForUsers(newIds);
@@ -703,18 +714,30 @@ export default function HubClient({
 
         knownPendingIds = nextIds;
       } catch (err) {
-        console.error("[join-request-polling]", err);
+        console.error("[join-request-realtime]", err);
       }
     };
 
-    void poll();
-    const interval = window.setInterval(() => {
-      void poll();
-    }, 10000);
+    const onMemberPending = (event: Event) => {
+      const detail = (event as CustomEvent<MemberPendingDetail>).detail;
+      if (detail?.hubId !== hub.id) return;
+      void handleNewPending();
+    };
+
+    window.addEventListener(MEMBER_PENDING_EVENT, onMemberPending);
+
+    let interval: ReturnType<typeof setInterval> | undefined;
+    if (!isNotificationsRealtimeFeatureEnabled()) {
+      void handleNewPending();
+      interval = window.setInterval(() => {
+        void handleNewPending();
+      }, 10000);
+    }
 
     return () => {
       cancelled = true;
-      window.clearInterval(interval);
+      window.removeEventListener(MEMBER_PENDING_EVENT, onMemberPending);
+      if (interval) window.clearInterval(interval);
     };
   }, [hub.id, isCreatorAdmin, pendingRequests]);
 
@@ -797,6 +820,9 @@ export default function HubClient({
     isDirty,
     hasFocusTarget: Boolean(focusTarget),
   });
+
+  const showChatTabUnreadDot =
+    chatHasUnread && (activeSection !== "Chat" || activePanel !== "chat");
 
   // Reload pending requests when Members tab is accessed
   useEffect(() => {
@@ -1221,6 +1247,8 @@ export default function HubClient({
           currentUserId={user?.id}
           hubStaff={isCreatorAdmin}
           initialChatRoomId={initialChatRoomId}
+          unreadRoomIds={chatUnreadRoomIds}
+          onChatReadChange={refreshChatUnread}
           viewerDisplayName={
             (user?.user_metadata?.full_name as string | undefined) ||
             (user?.user_metadata?.name as string | undefined) ||
@@ -1410,7 +1438,15 @@ export default function HubClient({
                     : "border-transparent text-[var(--ud-text-muted)] hover:text-[var(--ud-text-secondary)]"
                 )}
               >
-                {tab === "About" ? hubTemplateConfig.terminology.about : tab}
+                <span className="relative inline-flex items-center justify-center">
+                  {tab === "About" ? hubTemplateConfig.terminology.about : tab}
+                  {tab === "Chat" && showChatTabUnreadDot ? (
+                    <span
+                      className="absolute -right-2 top-0 h-2 w-2 rounded-full bg-red-500"
+                      aria-label="Unread chat messages"
+                    />
+                  ) : null}
+                </span>
               </button>
             ))}
         </div>
@@ -1426,6 +1462,7 @@ export default function HubClient({
               canAccessFullContent={canBrowseAllTabs}
               templateConfig={hubTemplateConfig}
               pendingCount={pendingRequests.length}
+              chatHasUnread={showChatTabUnreadDot}
               onNavigate={requestNavigation}
             />
           </aside>

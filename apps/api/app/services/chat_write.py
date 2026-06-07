@@ -58,6 +58,7 @@ from app.realtime.helpers import (
     publish_room_member_removed,
 )
 from app.realtime.revoke import schedule_access_revoked
+from app.services.chat_unread_notify import notify_message_created
 
 _MSG_COLUMNS = (
     "id",
@@ -536,6 +537,13 @@ class ChatWriteService:
         row = self._message_row(message_id)
         if row:
             publish_message_created(room_id=room_id, message=row)
+            notify_message_created(
+                self.chat.db,
+                room_id=room_id,
+                hub_id=str(ctx["room"]["hub_id"]),
+                message_id=message_id,
+                sender_id=user_id,
+            )
         return {"messageId": message_id}
 
     def update_message(self, user_id: str, room_id: str, message_id: str, body: str) -> dict:

@@ -6,6 +6,10 @@ from app.dependencies.auth import CurrentUser, get_current_user
 from app.dependencies.db import get_db
 from app.schemas.member import HubMemberRead, MyMembershipRead
 from app.services.memberships import MembershipService
+from app.services.notification_fanout import (
+    notify_member_join_accepted,
+    notify_member_pending_to_staff,
+)
 
 router = APIRouter(prefix="/memberships", tags=["memberships"])
 
@@ -45,6 +49,7 @@ def approve_member_request(
     )
     if not ok:
         return {"ok": False}
+    notify_member_join_accepted(user_id=user_id, hub_id=hub_id)
     return {"ok": True}
 
 
@@ -97,4 +102,10 @@ def join_hub(
     membership = service.join_hub(hub_id=hub_id, user_id=current_user.user_id)
     if membership is None:
         raise HTTPException(status_code=404, detail="Hub not found")
+    if membership.status == "pending":
+        notify_member_pending_to_staff(
+            db,
+            hub_id=hub_id,
+            requester_user_id=current_user.user_id,
+        )
     return membership

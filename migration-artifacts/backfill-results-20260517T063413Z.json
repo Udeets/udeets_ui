@@ -1,0 +1,142 @@
+{
+  "domains": [
+    "hubs_members_invites",
+    "profiles_admin",
+    "deets_interactions",
+    "events_rsvps"
+  ],
+  "results": [
+    {
+      "copied_rows": 3,
+      "error": null,
+      "status": "ok",
+      "table": "hubs"
+    },
+    {
+      "copied_rows": 8,
+      "error": null,
+      "status": "ok",
+      "table": "hub_members"
+    },
+    {
+      "copied_rows": 0,
+      "error": null,
+      "status": "ok",
+      "table": "hub_invitations"
+    },
+    {
+      "copied_rows": 4,
+      "error": null,
+      "status": "ok",
+      "table": "hub_join_links"
+    },
+    {
+      "copied_rows": 1,
+      "error": null,
+      "status": "ok",
+      "table": "hub_contact_invites"
+    },
+    {
+      "copied_rows": 0,
+      "error": null,
+      "status": "ok",
+      "table": "hub_sections"
+    },
+    {
+      "copied_rows": 0,
+      "error": null,
+      "status": "ok",
+      "table": "hub_section_items"
+    },
+    {
+      "copied_rows": 0,
+      "error": null,
+      "status": "ok",
+      "table": "hub_ctas"
+    },
+    {
+      "copied_rows": 5,
+      "error": null,
+      "status": "ok",
+      "table": "profiles"
+    },
+    {
+      "copied_rows": 1,
+      "error": null,
+      "status": "ok",
+      "table": "profile_likes"
+    },
+    {
+      "copied_rows": 0,
+      "error": null,
+      "status": "ok",
+      "table": "profile_comments"
+    },
+    {
+      "copied_rows": 0,
+      "error": null,
+      "status": "ok",
+      "table": "user_reports"
+    },
+    {
+      "copied_rows": 14,
+      "error": null,
+      "status": "ok",
+      "table": "deets"
+    },
+    {
+      "copied_rows": 7,
+      "error": null,
+      "status": "ok",
+      "table": "deet_likes"
+    },
+    {
+      "copied_rows": 8,
+      "error": null,
+      "status": "ok",
+      "table": "deet_comments"
+    },
+    {
+      "copied_rows": 37,
+      "error": null,
+      "status": "ok",
+      "table": "deet_views"
+    },
+    {
+      "copied_rows": 4,
+      "error": null,
+      "status": "ok",
+      "table": "deet_shares"
+    },
+    {
+      "copied_rows": 3,
+      "error": null,
+      "status": "ok",
+      "table": "comment_reactions"
+    },
+    {
+      "copied_rows": 8,
+      "error": null,
+      "status": "ok",
+      "table": "poll_votes"
+    },
+    {
+      "copied_rows": 2,
+      "error": null,
+      "status": "ok",
+      "table": "survey_responses"
+    },
+    {
+      "copied_rows": 1,
+      "error": null,
+      "status": "ok",
+      "table": "events"
+    },
+    {
+      "copied_rows": 0,
+      "error": null,
+      "status": "ok",
+      "table": "event_rsvps"
+    }
+  ]
+}

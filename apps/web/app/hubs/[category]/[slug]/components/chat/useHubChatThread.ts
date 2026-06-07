@@ -417,6 +417,7 @@ export function useHubChatThread(
     pollTick,
     membersTick,
     wsConnected,
+    lastSeenMessageId,
     reloadRoom: loadRoom,
     reloadMessages: loadInitialMessages,
     typingUserIds,

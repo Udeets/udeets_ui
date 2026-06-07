@@ -1,0 +1,366 @@
+{
+  "results": [
+    {
+      "file": "supabase\\migrations\\20260329100000_create_hubs.sql",
+      "reason": "schema \"auth\" does not exist",
+      "status": "skipped"
+    },
+    {
+      "file": "supabase\\migrations\\20260330100001_create_deet_media_bucket.sql",
+      "reason": "relation \"storage.buckets\" does not exist\nLINE 1: insert into storage.buckets (id, name, public, file_size_lim...\n                    ^",
+      "status": "skipped"
+    },
+    {
+      "file": "supabase\\migrations\\20260330100002_create_deets.sql",
+      "reason": "relation \"public.hubs\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260330100003_enable_deets_rls.sql",
+      "reason": "relation \"public.deets\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260330100004_create_hub_members.sql",
+      "reason": "relation \"public.hubs\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260330100005_create_hub_members_backfill.sql",
+      "reason": "relation \"public.hub_members\" does not exist\nLINE 4: INSERT INTO public.hub_members (hub_id, user_id, role, statu...\n                    ^",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260330100006_create_profiles.sql",
+      "reason": "schema \"auth\" does not exist",
+      "status": "skipped"
+    },
+    {
+      "file": "supabase\\migrations\\20260330100007_create_profiles_preferences.sql",
+      "reason": "relation \"public.profiles\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260330100008_fix_hub_members_rls.sql",
+      "reason": "relation \"public.hub_members\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260330100009_fix_hub_members_rls_v2.sql",
+      "reason": "relation \"public.hub_members\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260401100001_add_hub_visibility.sql",
+      "reason": "relation \"public.hubs\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260401100002_create_hub_ctas.sql",
+      "reason": "relation \"public.hubs\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260401100003_create_hub_sections.sql",
+      "reason": "relation \"public.hubs\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260402100001_add_hub_accent_color.sql",
+      "reason": "relation \"public.hubs\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260402100002_create_deet_interactions.sql",
+      "reason": "relation \"public.deets\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260402100003_hub_members_admin_update_rls.sql",
+      "reason": "relation \"public.hub_members\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260403100001_add_hubs_delete_rls.sql",
+      "reason": "relation \"hubs\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260403100002_create_events.sql",
+      "reason": "relation \"hubs\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260404100001_add_profiles_app_role.sql",
+      "reason": "relation \"public.profiles\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260404100002_admin_manage_roles_rls.sql",
+      "reason": "relation \"public.profiles\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260404100003_create_avatars_bucket.sql",
+      "reason": "relation \"storage.buckets\" does not exist\nLINE 3: insert into storage.buckets (id, name, public, file_size_lim...\n                    ^",
+      "status": "skipped"
+    },
+    {
+      "file": "supabase\\migrations\\20260405100001_create_poll_votes.sql",
+      "reason": "relation \"public.deets\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260405100002_expand_deets_kind_check.sql",
+      "reason": "relation \"public.deets\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260405100003_fix_profiles_rls_recursion.sql",
+      "reason": "relation \"public.profiles\" does not exist\nLINE 19:     SELECT 1 FROM public.profiles\n                           ^",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260413100001_add_comment_attachments.sql",
+      "reason": "relation \"public.deet_comments\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260413100002_add_comment_reactions.sql",
+      "reason": "relation \"public.deet_comments\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260413100003_add_deet_shares.sql",
+      "reason": "relation \"public.deets\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260413100004_add_deets_update_policy.sql",
+      "reason": "relation \"public.deets\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260413100005_add_reaction_type_and_comment_replies.sql",
+      "reason": "relation \"public.deet_likes\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260413100006_create_deet_views.sql",
+      "reason": "relation \"public.deets\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260418054017_new-migration.sql",
+      "status": "applied"
+    },
+    {
+      "file": "supabase\\migrations\\20260419100000_revert_deets_kind_to_posts.sql",
+      "reason": "relation \"public.deets\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260419100001_deet_likes_update_rls.sql",
+      "reason": "relation \"public.deet_likes\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260419100002_create_profile_interactions.sql",
+      "reason": "schema \"auth\" does not exist",
+      "status": "skipped"
+    },
+    {
+      "file": "supabase\\migrations\\20260419100003_allow_self_profile_like.sql",
+      "reason": "relation \"public.profile_likes\" does not exist\nLINE 3:     where conrelid = 'public.profile_likes'::regclass\n                             ^\nQUERY:  select conname\n    from pg_constraint\n    where conrelid = 'public.profile_likes'::regclass\n      and contype = 'c'\nCONTEXT:  PL/pgSQL function inline_code_block line 5 at FOR over SELECT rows",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260420100000_add_deets_delete_rls.sql",
+      "reason": "relation \"public.deets\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260420100001_create_survey_responses.sql",
+      "reason": "relation \"public.deets\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260421100000_create_hub_media_bucket.sql",
+      "reason": "relation \"storage.buckets\" does not exist\nLINE 3: insert into storage.buckets (id, name, public, file_size_lim...\n                    ^",
+      "status": "skipped"
+    },
+    {
+      "file": "supabase\\migrations\\20260421100001_add_deets_allow_comments.sql",
+      "reason": "relation \"public.deets\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260421100002_add_hub_cover_position.sql",
+      "reason": "relation \"public.hubs\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260421100003_add_hub_members_last_seen.sql",
+      "reason": "relation \"public.hub_members\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260421100004_backfill_profile_names.sql",
+      "reason": "relation \"public.profiles\" does not exist\nLINE 11: update public.profiles p\n                ^",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260421100005_create_hub_attachments.sql",
+      "reason": "relation \"public.hubs\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260421100006_create_hub_invitations.sql",
+      "reason": "relation \"public.hubs\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260421100007_expand_deet_media_mime_types.sql",
+      "reason": "relation \"storage.buckets\" does not exist\nLINE 8: update storage.buckets\n               ^",
+      "status": "skipped"
+    },
+    {
+      "file": "supabase\\migrations\\20260421100008_add_hub_dp_position.sql",
+      "reason": "relation \"public.hubs\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260421100009_expand_deets_kind_check_jobs.sql",
+      "reason": "relation \"public.deets\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260421100010_realtime_hub_members.sql",
+      "reason": "publication \"supabase_realtime\" does not exist\nCONTEXT:  SQL statement \"ALTER PUBLICATION supabase_realtime ADD TABLE public.hub_members\"\nPL/pgSQL function inline_code_block line 10 at SQL statement",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260502100000_deets_drafts_and_rls.sql",
+      "reason": "relation \"public.deets\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260502100001_deets_notice_to_announcement.sql",
+      "reason": "relation \"public.deets\" does not exist\nLINE 4: update public.deets d\n               ^",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260509100000_chat_hub_schema.sql",
+      "reason": "relation \"public.hubs\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260509120000_chat_mutes_bans.sql",
+      "reason": "relation \"public.chat_rooms\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260509120001_chat_realtime_publication.sql",
+      "reason": "publication \"supabase_realtime\" does not exist\nCONTEXT:  SQL statement \"ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_messages\"\nPL/pgSQL function inline_code_block line 10 at SQL statement",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260510130000_chat_list_messages_rpc.sql",
+      "reason": "type \"public.chat_messages\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260510140000_chat_media_bucket.sql",
+      "reason": "relation \"storage.buckets\" does not exist\nLINE 3: insert into storage.buckets (id, name, public, file_size_lim...\n                    ^",
+      "status": "skipped"
+    },
+    {
+      "file": "supabase\\migrations\\20260510180000_chat_realtime_denorm_typing_publication.sql",
+      "reason": "relation \"public.chat_message_reactions\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260511090000_chat_rls_fix_recursion.sql",
+      "reason": "relation \"public.chat_rooms\" does not exist\nLINE 18:     from public.chat_rooms cr\n                  ^",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260511120000_chat_attachments_secure_media.sql",
+      "reason": "relation \"storage.buckets\" does not exist\nLINE 7: update storage.buckets\n               ^",
+      "status": "skipped"
+    },
+    {
+      "file": "supabase\\migrations\\20260512140000_chat_reports_reason_appeals.sql",
+      "reason": "relation \"public.chat_message_reports\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260512210000_chat_privacy_retention_purge.sql",
+      "reason": "relation \"public.chat_rooms\" does not exist\nLINE 20: update public.chat_rooms\n                ^",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260512220000_chat_erasure_service_function.sql",
+      "status": "applied"
+    },
+    {
+      "file": "supabase\\migrations\\20260513100000_chat_rate_limit_postgres.sql",
+      "status": "applied"
+    },
+    {
+      "file": "supabase\\migrations\\20260514120000_chat_rooms_insert_rls_definer.sql",
+      "reason": "relation \"public.chat_rooms\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260515140000_chat_rooms_insert_rls_inline.sql",
+      "reason": "relation \"public.chat_rooms\" does not exist\nLINE 17:     from public.chat_rooms cr\n                  ^",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260516100000_create_chat_room_rpc.sql",
+      "status": "applied"
+    },
+    {
+      "file": "supabase\\migrations\\20260516120000_chat_message_reports_realtime.sql",
+      "reason": "publication \"supabase_realtime\" does not exist\nCONTEXT:  SQL statement \"ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_message_reports\"\nPL/pgSQL function inline_code_block line 10 at SQL statement",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260516150000_hub_join_links_and_contact_invites.sql",
+      "reason": "relation \"public.hubs\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260516160000_fix_hub_is_admin_include_creator.sql",
+      "reason": "relation \"public.hub_members\" does not exist\nLINE 12:     select 1 from public.hub_members m\n                           ^",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260516170000_fix_hub_join_link_expires_at_ambiguous.sql",
+      "reason": "relation \"public.hub_join_links\" does not exist\nCONTEXT:  compilation of PL/pgSQL function \"hub_join_link_get_or_create\" near line 4",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260516180000_hub_contact_invite_expiration_us_phone.sql",
+      "reason": "relation \"public.hub_invitations\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260517100000_chat_rooms_delete_rls.sql",
+      "reason": "relation \"public.chat_rooms\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260518120000_chat_invite_accept_decline_rpc.sql",
+      "reason": "relation \"public.chat_room_invites\" does not exist",
+      "status": "failed"
+    },
+    {
+      "file": "supabase\\migrations\\20260518130000_chat_rooms_select_pending_invitee.sql",
+      "reason": "relation \"public.chat_rooms\" does not exist",
+      "status": "failed"
+    }
+  ],
+  "total": 73
+}

@@ -6,6 +6,7 @@ This folder stores SQL files that can be deployed in order to a Postgres instanc
 
 - `001_create_tables.sql`: app table DDL
 - `002_add_constraints.sql`: app constraint DDL (PK/UNIQUE/CHECK/FK)
+- `003_chat_room_read_state.sql`: chat unread read-cursor table (additive)
 
 ## Generate bundle
 

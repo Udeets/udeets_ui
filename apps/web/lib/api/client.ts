@@ -4,35 +4,14 @@ type RequestOptions = Omit<RequestInit, "body"> & {
 };
 
 function buildUrl(path: string, query?: RequestOptions["query"]): string {
-  const membersPath = path.startsWith("/memberships") || /\/hubs\/[^/]+\/members$/.test(path);
-  const invitesPath =
-    path.startsWith("/join-links") ||
-    path.startsWith("/invitations") ||
-    /\/hubs\/[^/]+\/invites\/contact$/.test(path);
-  const hubsPath = path.startsWith("/hubs");
-  const chatPath = path.startsWith("/chat/");
-  const deetsPath = path.startsWith("/deets");
-  const eventsPath = path.startsWith("/events");
-  const profilesPath = path.startsWith("/profiles");
-  const adminPath = path.startsWith("/admin");
-  const useFastApiForPath =
-    path.startsWith("/geo/") ||
-    hubsPath ||
-    membersPath ||
-    invitesPath ||
-    chatPath ||
-    deetsPath ||
-    eventsPath ||
-    profilesPath ||
-    adminPath;
-  const configuredBase = (process.env.NEXT_PUBLIC_FASTAPI_BASE_URL ?? "http://localhost:8002").replace(
+  const configuredBase = (process.env.NEXT_PUBLIC_FASTAPI_BASE_URL ?? "http://localhost:8000").replace(
     /\/$/,
     "",
   );
   const browserSide = typeof window !== "undefined";
-  // Browser requests should stay same-origin and go through Next proxy (/api/v1/*).
-  const base = useFastApiForPath ? (browserSide ? "" : configuredBase) : "";
-  const routePrefix = useFastApiForPath ? "/api/v1" : "/api";
+  // Browser requests stay same-origin and go through the Next proxy (/api/v1/*).
+  const base = browserSide ? "" : configuredBase;
+  const routePrefix = "/api/v1";
   const url = new URL(`${base}${routePrefix}${path}`, "http://localhost");
 
   if (query) {

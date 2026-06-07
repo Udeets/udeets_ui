@@ -33,6 +33,7 @@ export function HubSidebarNav({
   canAccessFullContent = true,
   templateConfig,
   pendingCount = 0,
+  chatHasUnread = false,
   onNavigate,
 }: {
   activeSection: HubTab;
@@ -41,6 +42,7 @@ export function HubSidebarNav({
   canAccessFullContent?: boolean;
   templateConfig?: HubTemplateConfig;
   pendingCount?: number;
+  chatHasUnread?: boolean;
   onNavigate: (next: PendingNavigation) => void;
 }) {
   // Build nav items from template config, or use defaults
@@ -96,6 +98,12 @@ export function HubSidebarNav({
           >
             <Icon className="h-4 w-4 shrink-0" />
             {label}
+            {tab === "Chat" && chatHasUnread ? (
+              <span
+                className="ml-auto h-2 w-2 shrink-0 rounded-full bg-red-500"
+                aria-label="Unread chat messages"
+              />
+            ) : null}
             {tab === "Members" && isCreatorAdmin && pendingCount > 0 ? (
               <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
                 {pendingCount > 99 ? "99+" : pendingCount}

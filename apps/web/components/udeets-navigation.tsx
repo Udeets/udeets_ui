@@ -15,7 +15,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
 import { useTheme } from "@/components/theme-provider";
 import type { HubNotificationItem, HubEventItem } from "@/lib/hub-content";
@@ -25,6 +25,9 @@ import { usePlatformRole } from "@/hooks/useUserRole";
 import { signOut } from "@/services/auth/signOut";
 import { useAuthSession } from "@/services/auth/useAuthSession";
 import { getMyHeaderFeedApi, getProfileSummary } from "@/lib/api/profiles";
+import { FEED_INVALIDATE_EVENT } from "@/lib/notifications/global-notification-events";
+import { useGlobalNotifications } from "@/lib/notifications/use-global-notifications";
+import { isNotificationsRealtimeFeatureEnabled } from "@/lib/notifications/use-notifications-realtime";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -456,22 +459,30 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
   }, [user?.id]);
   const resolvedAvatarUrl = profileData?.avatarUrl || (user?.user_metadata?.avatar_url as string) || "";
 
+  useGlobalNotifications(Boolean(user?.id));
+
   // ── Live notifications & events via FastAPI ──
   const [liveNotifications, setLiveNotifications] = useState<HubNotificationItem[]>([]);
   const [liveEvents, setLiveEvents] = useState<HubEventItem[]>([]);
   const [headerRefreshKey, setHeaderRefreshKey] = useState(0);
 
+  const bumpHeaderFeed = useCallback(() => {
+    setHeaderRefreshKey((value) => value + 1);
+  }, []);
+
   useEffect(() => {
     if (!user?.id) return;
-    const onMembersChanged = () => setTimeout(() => setHeaderRefreshKey((k) => k + 1), 400);
-    window.addEventListener("hub-members-changed", onMembersChanged);
-    window.addEventListener("hub-chat-invites-changed", onMembersChanged);
+    const onRefresh = () => setTimeout(() => bumpHeaderFeed(), 400);
+    window.addEventListener("hub-members-changed", onRefresh);
+    window.addEventListener("hub-chat-invites-changed", onRefresh);
+    window.addEventListener(FEED_INVALIDATE_EVENT, onRefresh);
 
     return () => {
-      window.removeEventListener("hub-members-changed", onMembersChanged);
-      window.removeEventListener("hub-chat-invites-changed", onMembersChanged);
+      window.removeEventListener("hub-members-changed", onRefresh);
+      window.removeEventListener("hub-chat-invites-changed", onRefresh);
+      window.removeEventListener(FEED_INVALIDATE_EVENT, onRefresh);
     };
-  }, [user?.id]);
+  }, [user?.id, bumpHeaderFeed]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -493,15 +504,18 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
       }
     })();
 
-    const interval = setInterval(() => {
-      setHeaderRefreshKey((value) => value + 1);
-    }, 20000);
+    let interval: ReturnType<typeof setInterval> | undefined;
+    if (!isNotificationsRealtimeFeatureEnabled()) {
+      interval = setInterval(() => {
+        bumpHeaderFeed();
+      }, 20000);
+    }
 
     return () => {
       ignore = true;
-      clearInterval(interval);
+      if (interval) clearInterval(interval);
     };
-  }, [user?.id, headerRefreshKey]);
+  }, [user?.id, headerRefreshKey, bumpHeaderFeed]);
 
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {

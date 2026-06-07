@@ -1,4 +1,6 @@
 import { listDeetsApi } from "@/lib/api/deets";
+import { FEED_INVALIDATE_EVENT } from "@/lib/notifications/global-notification-events";
+import { isNotificationsRealtimeFeatureEnabled } from "@/lib/notifications/use-notifications-realtime";
 import type { DeetRecord } from "@/lib/services/deets/deet-types";
 import {
   normalizeDeetRecord,
@@ -52,11 +54,18 @@ export function subscribeToDeets(
     }, 150);
   };
 
-  const interval = setInterval(() => {
-    // Avoid background-tab churn; focused/visible handlers will catch up.
-    if (typeof document !== "undefined" && document.hidden) return;
-    schedule();
-  }, 8000);
+  const onFeedInvalidate = () => schedule();
+  if (typeof window !== "undefined") {
+    window.addEventListener(FEED_INVALIDATE_EVENT, onFeedInvalidate);
+  }
+
+  let interval: ReturnType<typeof setInterval> | undefined;
+  if (!isNotificationsRealtimeFeatureEnabled()) {
+    interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      schedule();
+    }, 8000);
+  }
 
   const onVisible = () => {
     if (typeof document !== "undefined" && !document.hidden) {
@@ -73,7 +82,10 @@ export function subscribeToDeets(
   }
 
   return () => {
-    clearInterval(interval);
+    if (interval) clearInterval(interval);
+    if (typeof window !== "undefined") {
+      window.removeEventListener(FEED_INVALIDATE_EVENT, onFeedInvalidate);
+    }
     if (typeof document !== "undefined") {
       document.removeEventListener("visibilitychange", onVisible);
     }

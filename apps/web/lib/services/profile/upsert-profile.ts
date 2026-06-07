@@ -17,7 +17,7 @@ export async function upsertProfile(
   accessToken?: string | null,
 ): Promise<void> {
   if (accessToken) {
-    const base = (process.env.FASTAPI_BASE_URL ?? process.env.NEXT_PUBLIC_FASTAPI_BASE_URL ?? "http://localhost:8002").replace(
+    const base = (process.env.FASTAPI_BASE_URL ?? process.env.NEXT_PUBLIC_FASTAPI_BASE_URL ?? "http://localhost:8000").replace(
       /\/$/,
       "",
     );

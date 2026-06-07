@@ -13,6 +13,7 @@ from app.db.models.chat import (
     ChatRoomInvite,
     ChatRoomMembership,
     ChatRoomMute,
+    ChatRoomReadState,
     ChatRoomTyping,
 )
 from app.db.models.deet import Deet
@@ -54,6 +55,7 @@ __all__ = [
     "ChatRoomInvite",
     "ChatRoomMembership",
     "ChatRoomMute",
+    "ChatRoomReadState",
     "ChatRoomTyping",
     "Deet",
     "CommentReaction",

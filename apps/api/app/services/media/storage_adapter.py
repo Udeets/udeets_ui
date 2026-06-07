@@ -120,7 +120,13 @@ class S3StorageAdapter(MediaStorageAdapter):
         self._bucket = settings.s3_bucket_name
         self._upload_ttl = settings.s3_upload_url_ttl_seconds
         self._public_base_url = settings.s3_public_base_url
-        self._client = boto3.client("s3", region_name=settings.aws_region)
+        client_kwargs: dict = {"region_name": settings.aws_region}
+        if settings.aws_endpoint_url:
+            client_kwargs["endpoint_url"] = settings.aws_endpoint_url
+        if settings.aws_access_key_id and settings.aws_secret_access_key:
+            client_kwargs["aws_access_key_id"] = settings.aws_access_key_id
+            client_kwargs["aws_secret_access_key"] = settings.aws_secret_access_key
+        self._client = boto3.client("s3", **client_kwargs)
 
     def prepare_upload(
         self,

@@ -29,6 +29,11 @@ import { DeetCommentsPreviewStrip } from "@/app/hubs/[category]/[slug]/component
 import { DeetCommentsSection } from "@/app/hubs/[category]/[slug]/components/deets/DeetCommentsSection";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import { listUnreadHubIdsApi } from "@/lib/api/hubs";
+import {
+  MEMBER_JOIN_ACCEPTED_EVENT,
+  UNREAD_CHANGED_EVENT,
+} from "@/lib/notifications/global-notification-events";
+import { isNotificationsRealtimeFeatureEnabled } from "@/lib/notifications/use-notifications-realtime";
 import { listHubs } from "@/lib/services/hubs/list-hubs";
 import { listMyMemberships, type MyMembership } from "@/lib/services/members/list-my-memberships";
 import type { Hub as HubRow } from "@/types/hub";
@@ -1026,7 +1031,7 @@ function DashboardPageContent() {
     };
   }, [authStatus]);
 
-  // ── Membership refresh loop: detect when a pending request is accepted ──
+  // ── Membership refresh: realtime invalidation or fallback poll ──
   useEffect(() => {
     if (authStatus !== "authenticated" || !currentUserId) return;
 
@@ -1060,13 +1065,33 @@ function DashboardPageContent() {
     };
 
     void refresh();
-    const timer = window.setInterval(() => {
+
+    const onUnreadChanged = () => {
+      void listUnreadHubIdsApi()
+        .then((ids) => {
+          if (!cancelled) setUnreadHubIds(new Set(ids));
+        })
+        .catch(() => {});
+    };
+    const onMembershipChanged = () => {
       void refresh();
-    }, 20_000);
+    };
+
+    window.addEventListener(UNREAD_CHANGED_EVENT, onUnreadChanged);
+    window.addEventListener(MEMBER_JOIN_ACCEPTED_EVENT, onMembershipChanged);
+
+    let timer: ReturnType<typeof setInterval> | undefined;
+    if (!isNotificationsRealtimeFeatureEnabled()) {
+      timer = window.setInterval(() => {
+        void refresh();
+      }, 20_000);
+    }
 
     return () => {
       cancelled = true;
-      window.clearInterval(timer);
+      window.removeEventListener(UNREAD_CHANGED_EVENT, onUnreadChanged);
+      window.removeEventListener(MEMBER_JOIN_ACCEPTED_EVENT, onMembershipChanged);
+      if (timer) window.clearInterval(timer);
     };
   }, [authStatus, currentUserId]);
 

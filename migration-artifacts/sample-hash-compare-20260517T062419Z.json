@@ -1,0 +1,232 @@
+{
+  "rows": [
+    {
+      "match": false,
+      "source_sha256": "5d3f5bf63d23e22c96c3f7e64e57aa5ab9adf06aa73a3c9aae19602ccb92550c",
+      "table": "attachments",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "373728728d54924d695b93aa52ebc82ca037d50d08f75ca194fde9442def47f2",
+      "table": "chat_message_attachments",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "c3db5beb0d778d992b010287b61cd0327f288b29eb22d1271d04abf00c37b778",
+      "table": "chat_message_reactions",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "table": "chat_message_reports",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "1f952447153a688a63992669e95586ced409b96dd12479af4960c93acf14408c",
+      "table": "chat_messages",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "table": "chat_moderation_actions",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "e5e46dd36986412e16263c2281784ca72bb07753d1d8bbc32cf780abbe192452",
+      "table": "chat_poll_options",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "3f92b82756ece309fd96f1428b023c3568c8c11f16b96fe150c85eda5717e1c8",
+      "table": "chat_poll_votes",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "fd3b32516394073f08b4e2b87c236b4814bc9764b5c1a006c36d28b7c0e8b45c",
+      "table": "chat_polls",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "3ae92b13cb203a88003a3d1c949ad40d1a433ae51228ad664ab806a792150a01",
+      "table": "chat_rate_limit_hits",
+      "target_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "match": false,
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "table": "chat_room_bans",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "1db301a99b56bbd2c83350dfa75544ae8102166254297b7ce7276ef6aef387bd",
+      "table": "chat_room_invites",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "944786de382cb92a9108b57079818c91a68b1560a3ea6edb44896568ac9a5b02",
+      "table": "chat_room_memberships",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "table": "chat_room_mutes",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "table": "chat_room_typing",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "8ea8277897025a163e5b77b72a0b4809ff187cc15da21d3113a9fc1c9b12d28a",
+      "table": "chat_rooms",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "7b00f0f0e4c75ee737407bb4300932bced9cb0bcc441f663748065801de19f0a",
+      "table": "comment_reactions",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "a41861809eaa2748e7677c33d02b69d03d2b829176fa54d9e035616668a5f66e",
+      "table": "deet_comments",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "4e59c3adb6053703fc727d7b0649b82ae36748dae076e3820d58cc29e032a37e",
+      "table": "deet_likes",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "4eb9b05896aa9dac3ea148f67b837edad147ec9c1b4480f274a932fc2ec4694c",
+      "table": "deet_shares",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "cb457ff232184cc57b4ec7fe5308359da2d76578c0ebe28f5ea1d47dc3544c02",
+      "table": "deet_views",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "3eec11b91fa2066d05f31d56bb9ae25080df0ee4d6aa8f4a041f3d7dcf237b0e",
+      "table": "deets",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "table": "event_rsvps",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "6a956befbee7b8b67154801bb30c4c90116550487ccacb8518f0b11162b8f658",
+      "table": "events",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "2d550ae69e31778e379e7b6da8fcac99a347097d43b289d6b034aba6c1e75dee",
+      "table": "hub_contact_invites",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "table": "hub_ctas",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "table": "hub_invitations",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "8424ae1fa1e6e843b7623da772a35fe79f1c6de4608c3aa1d829e0e7f508b765",
+      "table": "hub_join_links",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "a960cdd05ac3843a1ef7d82ae3e81e4d2461f58c00ae0327a1ebe462c3a546e2",
+      "table": "hub_members",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "table": "hub_section_items",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "table": "hub_sections",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "16101bae387a2162690a68a9fc854e2f1e79c1e9821508d5c0b9b3344bba60d4",
+      "table": "hubs",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "650c141b90106d399f45e99995b9c2bcedd2438c855a9415ab91129f3a5e1c5f",
+      "table": "poll_votes",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "table": "profile_comments",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "7cebf9f5e10efda1b6c09f8d0c22816acc67135e1418ad2c06de4f908473d459",
+      "table": "profile_likes",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "7449417e0f5dfc756a5a8a9e63628a0ebd06a69c44c9b97188dd16c7d6331dbc",
+      "table": "profiles",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "c9aea3b9f9883a963b8a570b7c310d3c3b1da4b83faba4e5a5f2344fd49983a6",
+      "table": "survey_responses",
+      "target_sha256": null
+    },
+    {
+      "match": false,
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "table": "user_reports",
+      "target_sha256": null
+    }
+  ]
+}

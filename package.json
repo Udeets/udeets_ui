@@ -16,7 +16,10 @@
     "test:web": "npm --workspace apps/web run test",
     "test:api": "npm --workspace apps/api run test",
     "lint:api": "npm --workspace apps/api run lint",
-    "migrate:api": "npm --workspace apps/api run migrate"
+    "migrate:api": "npm --workspace apps/api run migrate",
+    "bootstrap": "python scripts/bootstrap.py",
+    "dev:infra": "docker compose -f docker-compose.dev.yml up -d",
+    "dev:infra:down": "docker compose -f docker-compose.dev.yml down"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
