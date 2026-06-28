@@ -11,7 +11,7 @@ class HubCta(Base):
     __tablename__ = "hub_ctas"
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
-    hub_id: Mapped[str] = mapped_column(Text, nullable=False)
+    hub_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
     label: Mapped[str] = mapped_column(Text, nullable=False)
     action_type: Mapped[str] = mapped_column(Text, nullable=False, default="url")
     action_value: Mapped[str] = mapped_column(Text, nullable=False, default="")

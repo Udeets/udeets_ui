@@ -1,6 +1,6 @@
 # Local development bootstrap
 
-One-command setup for **udeets_ui** on a new machine using Docker for Postgres, Redis, and MinIO (local S3). Authentication still uses your **existing AWS Cognito** user pool.
+One-command setup for **udeets_ui** on a new machine using Docker for Postgres, Redis, and MinIO (local S3). Authentication uses **Google OAuth** with first-party JWT sessions.
 
 ## Prerequisites
 
@@ -40,25 +40,26 @@ For test users, see [local-dev-seed-users.md](local-dev-seed-users.md).
 4. **Environment** — writes `apps/api/.env.local` and `apps/web/.env.local` (never overwrites unless `--force-env`)
 5. **Database** — creates tables from SQLAlchemy models + `alembic stamp head`
 6. **MinIO** — ensures bucket `udeets-media-local` exists and runs an upload smoke test
-7. **Verification** — Postgres, Redis, Cognito JWKS, Alembic revision
+7. **Verification** — Postgres, Redis, auth config, Alembic revision
 
-## Cognito (required)
+## Google OAuth (required)
 
-Bootstrap cannot create a Cognito user pool. Copy values from `apps/api/.env` or AWS Console into `apps/api/.env.local`:
-
-```env
-COGNITO_USER_POOL_ID=us-east-1_xxxx
-COGNITO_APP_CLIENT_ID=xxxx
-```
-
-Web needs (bootstrap copies these when possible):
+Bootstrap generates `JWT_SECRET` automatically. Set Google credentials in `apps/api/.env.local`:
 
 ```env
-NEXT_PUBLIC_COGNITO_DOMAIN=https://....auth.us-east-1.amazoncognito.com
-NEXT_PUBLIC_COGNITO_CLIENT_ID=xxxx
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:3000/auth/callback
 ```
 
-**One-time AWS setup:** add these callback URLs to your Cognito app client:
+Web needs (public client id only):
+
+```env
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_REDIRECT_URI=http://localhost:3000/auth/callback
+```
+
+**One-time Google Cloud setup:** add these authorized redirect URIs to your OAuth client:
 
 - `http://localhost:3000/auth/callback`
 - `http://127.0.0.1:3000/auth/callback`
@@ -128,10 +129,11 @@ Local dev creates schema via **SQLAlchemy `create_all()`** from ORM models (`app
 
 - Stop conflicting services or change `DATABASE_URL` / `REDIS_URL` in `.env.local` and use `--skip-docker`.
 
-**Cognito / sign-in fails**
+**Google OAuth / sign-in fails**
 
-- Confirm callback URLs in Cognito app client.
-- Confirm `NEXT_PUBLIC_COGNITO_*` in `apps/web/.env.local` matches the pool.
+- Confirm redirect URIs in Google Cloud Console match `GOOGLE_REDIRECT_URI`.
+- Confirm `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `apps/api/.env.local`.
+- Confirm `JWT_SECRET` is set in `apps/api/.env.local`.
 
 **Media uploads fail**
 

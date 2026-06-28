@@ -30,7 +30,7 @@ class Hub(Base):
     youtube_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     visibility: Mapped[str | None] = mapped_column(Text, nullable=True)
     accent_color: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_by: Mapped[str] = mapped_column(Text, nullable=False)
+    created_by: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
     created_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

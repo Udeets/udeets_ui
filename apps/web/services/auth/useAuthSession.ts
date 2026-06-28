@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { CognitoSession, CognitoUser } from "@/lib/auth/cognito-session";
+import type { AuthSession, AuthUser } from "@/lib/auth/session";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
 type AuthSessionState = {
   status: AuthStatus;
-  session: CognitoSession | null;
-  user: CognitoUser | null;
+  session: AuthSession | null;
+  user: AuthUser | null;
   isAuthenticated: boolean;
 };
 

@@ -11,7 +11,7 @@ class ProfileComment(Base):
     __tablename__ = "profile_comments"
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
-    profile_id: Mapped[str] = mapped_column(Text, nullable=False)
-    author_id: Mapped[str] = mapped_column(Text, nullable=False)
+    profile_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
+    author_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

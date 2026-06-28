@@ -1,11 +1,11 @@
 import {
-  buildSessionFromTokens,
-  type CognitoSession,
+  buildSessionFromToken,
+  type AuthSession,
   tokensFromCookieHeader,
-} from "@/lib/auth/cognito-session";
+} from "@/lib/auth/session";
 
-export async function getCurrentSession(): Promise<CognitoSession | null> {
+export async function getCurrentSession(): Promise<AuthSession | null> {
   if (typeof document === "undefined") return null;
-  const { accessToken, idToken } = tokensFromCookieHeader(document.cookie);
-  return buildSessionFromTokens(accessToken, idToken);
+  const { accessToken } = tokensFromCookieHeader(document.cookie);
+  return buildSessionFromToken(accessToken);
 }

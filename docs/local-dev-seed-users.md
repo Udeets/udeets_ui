@@ -1,53 +1,24 @@
-# Local dev test users (Cognito)
+# Local dev test users (Google OAuth)
 
-Authentication uses **AWS Cognito**, not Supabase. Create test users through one of the options below.
+Authentication uses **Google OAuth**. Sign in with any Google account you control.
 
-## Option 1 — Sign up in the app (simplest)
+## Option 1 — Sign in via the app (simplest)
 
-1. Run `npm run dev` with bootstrap/Cognito env configured.
+1. Run `npm run dev` with Google OAuth env configured (see [local-dev-bootstrap.md](local-dev-bootstrap.md)).
 2. Open [http://localhost:3000/auth](http://localhost:3000/auth).
-3. Register with email/password or Google/Apple (if configured on the pool).
+3. Click **Continue with Google**.
 
-Ensure the Cognito app client allows:
+Ensure your Google OAuth client allows:
 
 - `http://localhost:3000/auth/callback`
 - `http://127.0.0.1:3000/auth/callback`
 
-## Option 2 — AWS Console
-
-1. Cognito → User pools → your pool → **Users**.
-2. **Create user** with email and a temporary password.
-3. Sign in locally; complete password change if required.
-
-## Option 3 — AWS CLI (bulk dev users)
-
-Requires IAM permission `cognito-idp:AdminCreateUser`.
-
-```bash
-aws cognito-idp admin-create-user \
-  --user-pool-id "$COGNITO_USER_POOL_ID" \
-  --username "alice.test@udeets.dev" \
-  --user-attributes Name=email,Value=alice.test@udeets.dev Name=email_verified,Value=true Name=name,Value="Alice Martin" \
-  --temporary-password "ChangeMe-2026!" \
-  --message-action SUPPRESS
-```
-
-Repeat for additional testers. Users sign in with the temporary password and set a new one on first login.
-
-## Suggested test accounts
-
-| Name | Email |
-|------|-------|
-| Alice Martin | alice.test@udeets.dev |
-| Bob Sharma | bob.test@udeets.dev |
-| Carol Chen | carol.test@udeets.dev |
-
-Use distinct emails your team controls. Do not commit real passwords.
-
 ## Profile row
 
-On first OAuth/sign-in, `apps/web/app/auth/callback/route.ts` upserts the profile via FastAPI (`POST /api/v1/profiles/me/upsert`). No separate seed script is required for `profiles`.
+On first Google sign-in, the API creates `users`, `oauth_accounts`, and `profiles` rows automatically (`full_name`, `email`, `avatar_url` from Google).
 
-## Removed script
+## Suggested test flow
 
-`scripts/create-mock-users.mjs` (Supabase) was removed. Use this doc instead.
+1. Sign in with a personal Google account.
+2. Confirm you land on `/dashboard`.
+3. Check `profiles` in Postgres for your name and email.

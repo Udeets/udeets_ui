@@ -27,11 +27,7 @@ function resolveBearerToken(request: Request): string | null {
   const cookieHeader = request.headers.get("cookie") ?? "";
   const candidateKeys = [
     "udeets_access_token",
-    "udeets_id_token",
-    "cognito_access_token",
-    "cognito_id_token",
     "access_token",
-    "id_token",
   ];
   for (const key of candidateKeys) {
     const token = readCookieValue(cookieHeader, key);

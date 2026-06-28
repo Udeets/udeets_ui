@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { CognitoUser } from "@/lib/auth/cognito-session";
+import type { AuthUser } from "@/lib/auth/session";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import { upsertProfile } from "@/lib/services/profile/upsert-profile";
 
@@ -10,7 +10,7 @@ import { upsertProfile } from "@/lib/services/profile/upsert-profile";
  * Runs once per session — backfills from auth user_metadata if the profile
  * columns are NULL (fixes users who signed up before the upsert was added).
  */
-export function useProfileSync(user: CognitoUser | null) {
+export function useProfileSync(user: AuthUser | null) {
   const syncedRef = useRef<string | null>(null);
 
   useEffect(() => {

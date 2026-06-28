@@ -26,7 +26,7 @@ export function clearAuthNextCookie() {
   document.cookie = `${COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax`;
 }
 
-/** Exact callback URL — used by Cognito Hosted UI redirect URI. */
+/** Exact OAuth callback URL registered with Google. */
 export function getAuthCallbackUrl(origin?: string): string {
   const base =
     origin ||

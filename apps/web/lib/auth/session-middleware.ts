@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { buildAuthCallbackHref, buildNextFromRequestUrl } from "@/lib/auth/auth-callback-utils";
 
-/** Cognito OAuth: forward `?code=` to `/auth/callback` when it lands on a non-callback path. */
+/** OAuth: forward `?code=` to `/auth/callback` when it lands on a non-callback path. */
 export async function updateSession(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const pathname = request.nextUrl.pathname;

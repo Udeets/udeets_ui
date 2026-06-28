@@ -35,7 +35,9 @@ from app.db.models.hub_invitation import HubInvitation
 from app.db.models.hub_join_link import HubJoinLink
 from app.db.models.hub_member import HubMember
 from app.db.models.hub_section import HubSection, HubSectionItem
+from app.db.models.oauth_account import OAuthAccount
 from app.db.models.profile import Profile
+from app.db.models.user import User
 from app.db.models.profile_comment import ProfileComment
 from app.db.models.profile_like import ProfileLike
 from app.db.models.user_report import UserReport
@@ -78,5 +80,7 @@ __all__ = [
     "HubInvitation",
     "HubJoinLink",
     "HubMember",
+    "OAuthAccount",
     "Profile",
+    "User",
 ]

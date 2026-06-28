@@ -15,7 +15,13 @@ class Settings(BaseSettings):
     cron_secret: str | None = None
     db_provider: Literal["rds_primary"] = "rds_primary"
     media_provider: Literal["s3_primary"] = "s3_primary"
-    auth_provider: Literal["cognito"] = "cognito"
+    auth_provider: Literal["udeets"] = "udeets"
+    jwt_secret: str | None = None
+    jwt_issuer: str = "udeets"
+    jwt_access_ttl_seconds: int = 3600
+    google_client_id: str | None = None
+    google_client_secret: str | None = None
+    google_redirect_uri: str | None = None
     aws_region: str = "us-east-1"
     aws_access_key_id: str | None = None
     aws_secret_access_key: str | None = None
@@ -24,9 +30,6 @@ class Settings(BaseSettings):
     s3_media_prefix: str = ""
     s3_public_base_url: str | None = None
     s3_upload_url_ttl_seconds: int = 900
-    cognito_user_pool_id: str | None = None
-    cognito_jwks_url: str | None = None
-    cognito_app_client_id: str | None = None
     redis_url: str | None = None
     chat_realtime_enabled: bool = False
     chat_redis_subscribe_mode: Literal["per_room", "pattern"] = "per_room"

@@ -12,7 +12,7 @@ class DeetLike(Base):
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
     deet_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
-    user_id: Mapped[str] = mapped_column(Text, nullable=False)
+    user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
     reaction_type: Mapped[str] = mapped_column(Text, nullable=False, default="like")
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -22,7 +22,7 @@ class DeetComment(Base):
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
     deet_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
-    user_id: Mapped[str] = mapped_column(Text, nullable=False)
+    user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
     parent_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False), nullable=True)
     image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -37,7 +37,7 @@ class DeetView(Base):
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
     deet_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
-    user_id: Mapped[str] = mapped_column(Text, nullable=False)
+    user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
     viewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
@@ -46,7 +46,7 @@ class DeetShare(Base):
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
     deet_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
-    user_id: Mapped[str] = mapped_column(Text, nullable=False)
+    user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
     shared_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
@@ -55,7 +55,7 @@ class CommentReaction(Base):
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
     comment_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
-    user_id: Mapped[str] = mapped_column(Text, nullable=False)
+    user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
     reaction_type: Mapped[str] = mapped_column(Text, nullable=False, default="like")
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -65,7 +65,7 @@ class PollVote(Base):
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
     deet_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
-    user_id: Mapped[str] = mapped_column(Text, nullable=False)
+    user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
     option_index: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -75,7 +75,7 @@ class SurveyResponse(Base):
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
     deet_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
-    user_id: Mapped[str] = mapped_column(Text, nullable=False)
+    user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
     question_index: Mapped[int] = mapped_column(Integer, nullable=False)
     option_index: Mapped[int] = mapped_column(Integer, nullable=False)
     fingerprint: Mapped[str] = mapped_column(Text, nullable=False)

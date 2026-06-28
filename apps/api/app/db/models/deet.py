@@ -19,7 +19,7 @@ class Deet(Base):
     preview_image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     preview_image_urls: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
     attachments: Mapped[list | dict | None] = mapped_column(JSON, nullable=True)
-    created_by: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by: Mapped[str | None] = mapped_column(UUID(as_uuid=False), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     like_count: Mapped[int | None] = mapped_column(Integer, nullable=True)

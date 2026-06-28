@@ -16,6 +16,7 @@ import argparse
 import json
 import os
 import re
+import secrets
 import shutil
 import socket
 import subprocess
@@ -42,7 +43,13 @@ LOCAL_API_ENV = {
     "DATABASE_URL": "postgresql+psycopg://postgres:postgres@localhost:5432/udeets",
     "DB_PROVIDER": "rds_primary",
     "MEDIA_PROVIDER": "s3_primary",
-    "AUTH_PROVIDER": "cognito",
+    "AUTH_PROVIDER": "udeets",
+    "JWT_SECRET": "",
+    "JWT_ISSUER": "udeets",
+    "JWT_ACCESS_TTL_SECONDS": "3600",
+    "GOOGLE_CLIENT_ID": "",
+    "GOOGLE_CLIENT_SECRET": "",
+    "GOOGLE_REDIRECT_URI": "http://localhost:3000/auth/callback",
     "AWS_REGION": "us-east-1",
     "AWS_ACCESS_KEY_ID": "minioadmin",
     "AWS_SECRET_ACCESS_KEY": "minioadmin",
@@ -73,15 +80,15 @@ LOCAL_WEB_ENV = {
     "NEXT_PUBLIC_NOTIFICATIONS_REALTIME_ENABLED": "true",
     "NEXT_PUBLIC_NOTIFICATIONS_WS_URL": "ws://localhost:8000/api/v1/notifications/ws",
     "NEXT_PUBLIC_MEDIA_PUBLIC_BASE_URL": "http://127.0.0.1:9000/udeets-media-local",
-    "NEXT_PUBLIC_COGNITO_OAUTH_SCOPES": "openid email phone",
+    "GOOGLE_CLIENT_ID": "",
+    "GOOGLE_REDIRECT_URI": "http://localhost:3000/auth/callback",
 }
 
-COGNITO_KEYS = (
-    "COGNITO_USER_POOL_ID",
-    "COGNITO_APP_CLIENT_ID",
-    "COGNITO_JWKS_URL",
-    "NEXT_PUBLIC_COGNITO_DOMAIN",
-    "NEXT_PUBLIC_COGNITO_CLIENT_ID",
+AUTH_KEYS = (
+    "JWT_SECRET",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+    "GOOGLE_REDIRECT_URI",
 )
 
 
@@ -290,30 +297,13 @@ def format_env_file(values: dict[str, str]) -> str:
     return "\n".join(lines)
 
 
-def merge_cognito_from_existing(target: dict[str, str], sources: list[Path]) -> None:
+def merge_auth_from_existing(target: dict[str, str], sources: list[Path]) -> None:
     for path in sources:
         for key, value in parse_env_file(path).items():
-            if key in COGNITO_KEYS and value and not target.get(key):
+            if key in AUTH_KEYS and value and not target.get(key):
                 target[key] = value
-    api_env = parse_env_file(API_ROOT / ".env")
-    web_env = parse_env_file(WEB_ROOT / ".env.local")
-    for key in ("COGNITO_USER_POOL_ID", "COGNITO_APP_CLIENT_ID", "COGNITO_JWKS_URL"):
-        if api_env.get(key) and not target.get(key):
-            target[key] = api_env[key]
-    if api_env.get("COGNITO_USER_POOL_ID") and not target.get("NEXT_PUBLIC_COGNITO_DOMAIN"):
-        pool = api_env["COGNITO_USER_POOL_ID"]
-        region = api_env.get("AWS_REGION") or target.get("AWS_REGION") or "us-east-1"
-        slug = pool.split("_", 1)[-1].lower() if "_" in pool else pool.lower()
-        target["NEXT_PUBLIC_COGNITO_DOMAIN"] = f"https://{region}{slug}.auth.{region}.amazoncognito.com"
-    if api_env.get("COGNITO_APP_CLIENT_ID"):
-        if not target.get("NEXT_PUBLIC_COGNITO_CLIENT_ID"):
-            target["NEXT_PUBLIC_COGNITO_CLIENT_ID"] = api_env["COGNITO_APP_CLIENT_ID"]
-        if not target.get("COGNITO_APP_CLIENT_ID"):
-            target["COGNITO_APP_CLIENT_ID"] = api_env["COGNITO_APP_CLIENT_ID"]
-    if web_env.get("NEXT_PUBLIC_COGNITO_DOMAIN") and not target.get("NEXT_PUBLIC_COGNITO_DOMAIN"):
-        target["NEXT_PUBLIC_COGNITO_DOMAIN"] = web_env["NEXT_PUBLIC_COGNITO_DOMAIN"]
-    if web_env.get("NEXT_PUBLIC_COGNITO_CLIENT_ID") and not target.get("NEXT_PUBLIC_COGNITO_CLIENT_ID"):
-        target["NEXT_PUBLIC_COGNITO_CLIENT_ID"] = web_env["NEXT_PUBLIC_COGNITO_CLIENT_ID"]
+    if not target.get("JWT_SECRET"):
+        target["JWT_SECRET"] = secrets.token_urlsafe(48)
 
 
 def write_env_files(force_env: bool) -> None:
@@ -325,7 +315,7 @@ def write_env_files(force_env: bool) -> None:
         log(f"Keeping existing {api_local}")
     else:
         api_values = dict(LOCAL_API_ENV)
-        merge_cognito_from_existing(api_values, [API_ROOT / ".env", api_local])
+        merge_auth_from_existing(api_values, [API_ROOT / ".env", api_local, WEB_ROOT / ".env.local"])
         api_local.write_text(format_env_file(api_values), encoding="utf-8")
         log(f"Wrote {api_local}")
 
@@ -333,11 +323,11 @@ def write_env_files(force_env: bool) -> None:
         log(f"Keeping existing {web_local}")
     else:
         web_values = dict(LOCAL_WEB_ENV)
-        merge_cognito_from_existing(web_values, [WEB_ROOT / ".env.local", API_ROOT / ".env"])
+        merge_auth_from_existing(web_values, [WEB_ROOT / ".env.local", API_ROOT / ".env.local", API_ROOT / ".env"])
         web_out = {
             k: v
             for k, v in web_values.items()
-            if k in LOCAL_WEB_ENV or k.startswith("NEXT_PUBLIC_")
+            if k in LOCAL_WEB_ENV or k.startswith("NEXT_PUBLIC_") or k == "GOOGLE_CLIENT_ID"
         }
         web_local.write_text(format_env_file(web_out), encoding="utf-8")
         log(f"Wrote {web_local}")
@@ -437,31 +427,21 @@ def verify_redis(env: dict[str, str]) -> bool:
         return False
 
 
-def verify_cognito(env: dict[str, str]) -> bool:
-    pool = env.get("COGNITO_USER_POOL_ID") or parse_env_file(API_ROOT / ".env").get(
-        "COGNITO_USER_POOL_ID"
-    )
-    client_id = env.get("COGNITO_APP_CLIENT_ID") or env.get("NEXT_PUBLIC_COGNITO_CLIENT_ID")
-    if not pool or not client_id:
+def verify_auth(env: dict[str, str]) -> bool:
+    jwt_secret = env.get("JWT_SECRET")
+    google_client_id = env.get("GOOGLE_CLIENT_ID")
+    google_secret = env.get("GOOGLE_CLIENT_SECRET")
+    if not jwt_secret:
+        warn("JWT_SECRET is not configured in apps/api/.env.local")
+        return False
+    if not google_client_id or not google_secret:
         warn(
-            "Cognito is not configured. Set COGNITO_USER_POOL_ID and COGNITO_APP_CLIENT_ID "
-            "in apps/api/.env.local (copy from apps/api/.env or AWS Console)."
+            "Google OAuth is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET "
+            "in apps/api/.env.local (and GOOGLE_CLIENT_ID in apps/web/.env.local)."
         )
         return False
-    region = env.get("AWS_REGION", "us-east-1")
-    jwks_url = (
-        env.get("COGNITO_JWKS_URL")
-        or f"https://cognito-idp.{region}.amazonaws.com/{pool}/.well-known/jwks.json"
-    )
-    try:
-        with urllib.request.urlopen(jwks_url, timeout=8) as resp:
-            data = json.loads(resp.read().decode())
-            if "keys" in data:
-                log("Cognito JWKS reachable")
-                return True
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
-        warn(f"Cognito JWKS check failed: {exc}")
-    return False
+    log("Auth config present (JWT + Google OAuth)")
+    return True
 
 
 def verify_alembic(env: dict[str, str]) -> bool:
@@ -491,7 +471,7 @@ def verify() -> None:
     results = {
         "postgres": verify_postgres(env),
         "redis": verify_redis(env),
-        "cognito": verify_cognito(env),
+        "auth": verify_auth(env),
         "alembic": verify_alembic(env),
     }
 
@@ -508,13 +488,13 @@ def verify() -> None:
     print("  npm run dev:infra:down   # stop Docker services")
     print()
     print("MinIO console: http://localhost:9001  (minioadmin / minioadmin)")
-    print("Ensure Cognito app client callback includes:")
+    print("Ensure Google OAuth redirect URI includes:")
     print("  http://localhost:3000/auth/callback")
     print("  http://127.0.0.1:3000/auth/callback")
     print("=" * 60)
 
-    if not results["cognito"]:
-        warn("Auth will not work until Cognito vars are set in apps/api/.env.local")
+    if not results["auth"]:
+        warn("Auth will not work until JWT_SECRET and Google OAuth vars are set in apps/api/.env.local")
 
 
 def main() -> int:

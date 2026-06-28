@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from app.routers.auth import router as auth_router
 from app.routers.admin import router as admin_router
 from app.routers.chat import router as chat_router
 from app.routers.deets import router as deets_router
@@ -12,6 +13,7 @@ from app.routers.memberships import router as memberships_router
 from app.routers.profiles import router as profiles_router
 
 router = APIRouter()
+router.include_router(auth_router)
 router.include_router(geo_router)
 router.include_router(hubs_router)
 router.include_router(memberships_router)
