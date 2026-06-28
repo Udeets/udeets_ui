@@ -31,7 +31,7 @@ import { UdeetsBrandLockup, UdeetsLogoIcon } from "@/components/brand-logo";
 
 import { listHubs } from "@/lib/services/hubs/list-hubs";
 import { useAuthSession } from "@/services/auth/useAuthSession";
-import type { Hub as SupabaseHub } from "@/types/hub";
+import type { Hub as HubRow } from "@/types/hub";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -54,7 +54,7 @@ type TopHub = {
   locationLabel: string;
 };
 
-function toTopHub(hub: SupabaseHub): TopHub {
+function toTopHub(hub: HubRow): TopHub {
   return {
     id: hub.id,
     name: hub.name,

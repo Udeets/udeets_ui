@@ -220,6 +220,18 @@ Same as **PATCH** with `{ "archived": true }`.
 
 ---
 
+### 11b. Messages since cursor (reconnect backfill)
+
+`GET /api/v1/chat/rooms/:roomId/messages/since?after=<messageId>&limit=50`
+
+- Returns messages **newer than** `after` (ordered by `created_at`, then `id`).
+- Used after WebSocket reconnect when pub/sub may have missed events.
+- Same message shape as paginated history.
+
+**200** `{ "messages": [ ... ] }`
+
+---
+
 ### 12. Edit message
 
 `PATCH /api/chat/rooms/:roomId/messages/:messageId`

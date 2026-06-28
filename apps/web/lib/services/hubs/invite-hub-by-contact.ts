@@ -1,4 +1,5 @@
-import { createClient } from "@/lib/supabase/client";
+import { sendHubContactInviteFromApi } from "@/lib/api/invites";
+import { getCurrentSession } from "@/services/auth/getCurrentSession";
 
 import type { InviteContactType } from "./validate-invite-contact";
 
@@ -11,38 +12,16 @@ export async function inviteHubByContact(
   contactType: InviteContactType,
   contactValue: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const supabase = createClient();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-  if (userError || !user) {
+  const session = await getCurrentSession();
+  if (!session?.access_token) {
     return { ok: false, message: "You must be signed in to send invitations." };
   }
 
-  const { data, error } = await supabase.rpc("send_hub_contact_invite", {
-    p_hub_id: hubId,
-    p_contact_type: contactType,
-    p_contact_value: contactValue,
-  });
-
-  if (error) {
+  try {
+    await sendHubContactInviteFromApi(hubId, session.access_token, contactType, contactValue, 30);
+    return { ok: true };
+  } catch (error) {
     console.error("[inviteHubByContact]", error);
-    if (error.message.includes("invalid_email")) {
-      return { ok: false, message: "Enter a valid email address." };
-    }
-    if (error.message.includes("invalid_phone")) {
-      return { ok: false, message: "Enter a valid US phone number." };
-    }
-    if (error.code === "42501" || error.message.includes("not_authorized")) {
-      return { ok: false, message: "You do not have permission to invite members." };
-    }
     return { ok: false, message: "Could not send the invitation. Please try again." };
   }
-
-  if (data && typeof data === "object" && "ok" in data && data.ok === true) {
-    return { ok: true };
-  }
-
-  return { ok: true };
 }

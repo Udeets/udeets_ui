@@ -2,12 +2,12 @@
 
 export const dynamic = "force-dynamic";
 
-/* eslint-disable @next/next/no-img-element */
 import { Check, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import MockAppShell, { cardClass } from "@/components/mock-app-shell";
 import { AuthGuard } from "@/components/AuthGuard";
+import { getMyProfileApi, updateMyProfileApi } from "@/lib/api/profiles";
 import {
   mergeNotificationPreferences,
   type ChatPushPreviewMode,
@@ -86,19 +86,15 @@ export default function SettingsPage() {
     let cancelled = false;
 
     async function load() {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("profiles")
-        .select("full_name, notification_preferences, privacy_settings")
-        .eq("id", user!.id)
-        .single();
+      const data = await getMyProfileApi();
 
       if (cancelled) return;
 
       if (data) {
         setFullName(data.full_name ?? "");
-        if (data.notification_preferences) setNotifPrefs(mergeNotificationPreferences(data.notification_preferences));
+        if (data.notification_preferences) {
+          setNotifPrefs(mergeNotificationPreferences(data.notification_preferences));
+        }
         if (data.privacy_settings) setPrivacyPrefs(data.privacy_settings as PrivacyPrefs);
       }
       setIsLoadingPrefs(false);
@@ -117,10 +113,7 @@ export default function SettingsPage() {
     if (!user?.id) return;
     const updated = { ...notifPrefs, [key]: !notifPrefs[key] };
     setNotifPrefs(updated);
-
-    const { createClient } = await import("@/lib/supabase/client");
-    const supabase = createClient();
-    await supabase.from("profiles").update({ notification_preferences: updated, updated_at: new Date().toISOString() }).eq("id", user.id);
+    await updateMyProfileApi({ notificationPreferences: updated });
     showSaved(key);
   };
 
@@ -128,9 +121,7 @@ export default function SettingsPage() {
     if (!user?.id) return;
     const updated = { ...notifPrefs, chat_push_preview: mode };
     setNotifPrefs(updated);
-    const { createClient } = await import("@/lib/supabase/client");
-    const supabase = createClient();
-    await supabase.from("profiles").update({ notification_preferences: updated, updated_at: new Date().toISOString() }).eq("id", user.id);
+    await updateMyProfileApi({ notificationPreferences: updated });
     showSaved("chat_push_preview");
   };
 
@@ -138,22 +129,15 @@ export default function SettingsPage() {
     if (!user?.id) return;
     const updated = { ...privacyPrefs, [key]: !privacyPrefs[key] };
     setPrivacyPrefs(updated);
-
-    const { createClient } = await import("@/lib/supabase/client");
-    const supabase = createClient();
-    await supabase.from("profiles").update({ privacy_settings: updated, updated_at: new Date().toISOString() }).eq("id", user.id);
+    await updateMyProfileApi({ privacySettings: updated });
     showSaved(key);
   };
 
   const saveName = async () => {
     if (!user?.id) return;
     setIsSavingName(true);
-    const { createClient } = await import("@/lib/supabase/client");
-    const supabase = createClient();
-    const { error } = await supabase.from("profiles").update({ full_name: nameDraft, updated_at: new Date().toISOString() }).eq("id", user.id);
-    if (error) { console.error("[settings] name save error:", error); setIsSavingName(false); return; }
-    // Sync to auth user metadata so header updates
-    await supabase.auth.updateUser({ data: { full_name: nameDraft } });
+    const ok = await updateMyProfileApi({ fullName: nameDraft });
+    if (!ok) { console.error("[settings] name save error"); setIsSavingName(false); return; }
     setFullName(nameDraft);
     setEditingName(false);
     setIsSavingName(false);

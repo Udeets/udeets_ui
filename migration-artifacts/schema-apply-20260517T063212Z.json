@@ -1,0 +1,554 @@
+{
+  "results": [
+    {
+      "applied_statements": 3,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260329100000_create_hubs.sql",
+      "skipped_statements": 4,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260330100001_create_deet_media_bucket.sql",
+      "skipped_statements": 3,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 2,
+      "failed_statements": 3,
+      "file": "supabase\\migrations\\20260330100002_create_deets.sql",
+      "reason": "relation \"public.deets\" does not exist",
+      "skipped_statements": 1,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260330100003_enable_deets_rls.sql",
+      "skipped_statements": 5,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 2,
+      "file": "supabase\\migrations\\20260330100004_create_hub_members.sql",
+      "reason": "relation \"public.hub_members\" does not exist",
+      "skipped_statements": 7,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 1,
+      "file": "supabase\\migrations\\20260330100005_create_hub_members_backfill.sql",
+      "reason": "relation \"public.hub_members\" does not exist\nLINE 4: INSERT INTO public.hub_members (hub_id, user_id, role, statu...\n                    ^",
+      "skipped_statements": 0,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260330100006_create_profiles.sql",
+      "skipped_statements": 5,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 2,
+      "file": "supabase\\migrations\\20260330100007_create_profiles_preferences.sql",
+      "reason": "relation \"public.profiles\" does not exist",
+      "skipped_statements": 0,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260330100008_fix_hub_members_rls.sql",
+      "skipped_statements": 3,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260330100009_fix_hub_members_rls_v2.sql",
+      "skipped_statements": 9,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 1,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260401100001_add_hub_visibility.sql",
+      "skipped_statements": 0,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 2,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260401100002_create_hub_ctas.sql",
+      "skipped_statements": 9,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 2,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260401100003_create_hub_sections.sql",
+      "skipped_statements": 6,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 2,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260402100001_add_hub_accent_color.sql",
+      "skipped_statements": 0,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 6,
+      "file": "supabase\\migrations\\20260402100002_create_deet_interactions.sql",
+      "reason": "relation \"public.deet_likes\" does not exist",
+      "skipped_statements": 10,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260402100003_hub_members_admin_update_rls.sql",
+      "skipped_statements": 1,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260403100001_add_hubs_delete_rls.sql",
+      "skipped_statements": 1,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 5,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260403100002_create_events.sql",
+      "skipped_statements": 10,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 1,
+      "failed_statements": 2,
+      "file": "supabase\\migrations\\20260404100001_add_profiles_app_role.sql",
+      "reason": "relation \"public.profiles\" does not exist",
+      "skipped_statements": 0,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260404100002_admin_manage_roles_rls.sql",
+      "skipped_statements": 2,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260404100003_create_avatars_bucket.sql",
+      "skipped_statements": 7,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 2,
+      "file": "supabase\\migrations\\20260405100001_create_poll_votes.sql",
+      "reason": "relation \"public.poll_votes\" does not exist",
+      "skipped_statements": 5,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 2,
+      "file": "supabase\\migrations\\20260405100002_expand_deets_kind_check.sql",
+      "reason": "relation \"public.deets\" does not exist",
+      "skipped_statements": 0,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260405100003_fix_profiles_rls_recursion.sql",
+      "skipped_statements": 5,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 1,
+      "file": "supabase\\migrations\\20260413100001_add_comment_attachments.sql",
+      "reason": "relation \"public.deet_comments\" does not exist",
+      "skipped_statements": 0,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 2,
+      "file": "supabase\\migrations\\20260413100002_add_comment_reactions.sql",
+      "reason": "relation \"public.comment_reactions\" does not exist",
+      "skipped_statements": 6,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 2,
+      "file": "supabase\\migrations\\20260413100003_add_deet_shares.sql",
+      "reason": "relation \"public.deets\" does not exist",
+      "skipped_statements": 4,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260413100004_add_deets_update_policy.sql",
+      "skipped_statements": 4,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 1,
+      "failed_statements": 3,
+      "file": "supabase\\migrations\\20260413100005_add_reaction_type_and_comment_replies.sql",
+      "reason": "relation \"public.deet_likes\" does not exist",
+      "skipped_statements": 0,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 1,
+      "file": "supabase\\migrations\\20260413100006_create_deet_views.sql",
+      "reason": "relation \"public.deet_views\" does not exist",
+      "skipped_statements": 5,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260418054017_new-migration.sql",
+      "skipped_statements": 0,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 3,
+      "file": "supabase\\migrations\\20260419100000_revert_deets_kind_to_posts.sql",
+      "reason": "relation \"public.deets\" does not exist",
+      "skipped_statements": 0,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260419100001_deet_likes_update_rls.sql",
+      "skipped_statements": 2,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 7,
+      "file": "supabase\\migrations\\20260419100002_create_profile_interactions.sql",
+      "reason": "relation \"public.profile_likes\" does not exist",
+      "skipped_statements": 28,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 1,
+      "file": "supabase\\migrations\\20260419100003_allow_self_profile_like.sql",
+      "reason": "relation \"public.profile_likes\" does not exist\nLINE 3:     where conrelid = 'public.profile_likes'::regclass\n                             ^\nQUERY:  select conname\n    from pg_constraint\n    where conrelid = 'public.profile_likes'::regclass\n      and contype = 'c'\nCONTEXT:  PL/pgSQL function inline_code_block line 5 at FOR over SELECT rows",
+      "skipped_statements": 0,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260420100000_add_deets_delete_rls.sql",
+      "skipped_statements": 3,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 2,
+      "file": "supabase\\migrations\\20260420100001_create_survey_responses.sql",
+      "reason": "relation \"public.survey_responses\" does not exist",
+      "skipped_statements": 5,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260421100000_create_hub_media_bucket.sql",
+      "skipped_statements": 7,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 1,
+      "file": "supabase\\migrations\\20260421100001_add_deets_allow_comments.sql",
+      "reason": "relation \"public.deets\" does not exist",
+      "skipped_statements": 0,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 1,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260421100002_add_hub_cover_position.sql",
+      "skipped_statements": 0,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 4,
+      "file": "supabase\\migrations\\20260421100003_add_hub_members_last_seen.sql",
+      "reason": "relation \"public.hub_members\" does not exist",
+      "skipped_statements": 2,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 1,
+      "file": "supabase\\migrations\\20260421100004_backfill_profile_names.sql",
+      "reason": "relation \"public.profiles\" does not exist\nLINE 1: select count(*)                from public.profiles where fu...\n                                            ^\nQUERY:  select count(*)                from public.profiles where full_name is null\nCONTEXT:  PL/pgSQL function inline_code_block line 5 at SQL statement",
+      "skipped_statements": 1,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 5,
+      "file": "supabase\\migrations\\20260421100005_create_hub_attachments.sql",
+      "reason": "relation \"public.attachments\" does not exist",
+      "skipped_statements": 8,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 3,
+      "file": "supabase\\migrations\\20260421100006_create_hub_invitations.sql",
+      "reason": "relation \"public.hub_invitations\" does not exist",
+      "skipped_statements": 12,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260421100007_expand_deet_media_mime_types.sql",
+      "skipped_statements": 1,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 1,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260421100008_add_hub_dp_position.sql",
+      "skipped_statements": 0,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 2,
+      "file": "supabase\\migrations\\20260421100009_expand_deets_kind_check_jobs.sql",
+      "reason": "relation \"public.deets\" does not exist",
+      "skipped_statements": 0,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260421100010_realtime_hub_members.sql",
+      "skipped_statements": 1,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 3,
+      "failed_statements": 3,
+      "file": "supabase\\migrations\\20260502100000_deets_drafts_and_rls.sql",
+      "reason": "relation \"public.deets\" does not exist",
+      "skipped_statements": 41,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 1,
+      "file": "supabase\\migrations\\20260502100001_deets_notice_to_announcement.sql",
+      "reason": "relation \"public.deets\" does not exist\nLINE 4: update public.deets d\n               ^",
+      "skipped_statements": 0,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 32,
+      "file": "supabase\\migrations\\20260509100000_chat_hub_schema.sql",
+      "reason": "relation \"public.chat_rooms\" does not exist",
+      "skipped_statements": 82,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 4,
+      "file": "supabase\\migrations\\20260509120000_chat_mutes_bans.sql",
+      "reason": "relation \"public.chat_room_mutes\" does not exist",
+      "skipped_statements": 18,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260509120001_chat_realtime_publication.sql",
+      "skipped_statements": 1,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 2,
+      "file": "supabase\\migrations\\20260510130000_chat_list_messages_rpc.sql",
+      "reason": "type \"public.chat_messages\" does not exist",
+      "skipped_statements": 0,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260510140000_chat_media_bucket.sql",
+      "skipped_statements": 8,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 4,
+      "failed_statements": 13,
+      "file": "supabase\\migrations\\20260510180000_chat_realtime_denorm_typing_publication.sql",
+      "reason": "relation \"public.chat_message_reactions\" does not exist",
+      "skipped_statements": 11,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 11,
+      "file": "supabase\\migrations\\20260511090000_chat_rls_fix_recursion.sql",
+      "reason": "relation \"public.chat_room_memberships\" does not exist\nLINE 10:     from public.chat_room_memberships m\n                  ^",
+      "skipped_statements": 41,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 1,
+      "failed_statements": 10,
+      "file": "supabase\\migrations\\20260511120000_chat_attachments_secure_media.sql",
+      "reason": "relation \"public.chat_message_attachments\" does not exist",
+      "skipped_statements": 3,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 9,
+      "file": "supabase\\migrations\\20260512140000_chat_reports_reason_appeals.sql",
+      "reason": "relation \"public.chat_message_reports\" does not exist",
+      "skipped_statements": 0,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 5,
+      "failed_statements": 3,
+      "file": "supabase\\migrations\\20260512210000_chat_privacy_retention_purge.sql",
+      "reason": "relation \"public.chat_rooms\" does not exist\nLINE 1: update public.chat_rooms\n               ^",
+      "skipped_statements": 0,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 4,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260512220000_chat_erasure_service_function.sql",
+      "skipped_statements": 0,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 8,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260513100000_chat_rate_limit_postgres.sql",
+      "skipped_statements": 1,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 3,
+      "file": "supabase\\migrations\\20260514120000_chat_rooms_insert_rls_definer.sql",
+      "reason": "function public.chat_rls_may_insert_chat_room(uuid, uuid) does not exist",
+      "skipped_statements": 4,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 1,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260515140000_chat_rooms_insert_rls_inline.sql",
+      "skipped_statements": 3,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 2,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260516100000_create_chat_room_rpc.sql",
+      "skipped_statements": 2,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260516120000_chat_message_reports_realtime.sql",
+      "skipped_statements": 1,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 1,
+      "failed_statements": 20,
+      "file": "supabase\\migrations\\20260516150000_hub_join_links_and_contact_invites.sql",
+      "reason": "relation \"public.hub_join_links\" does not exist",
+      "skipped_statements": 13,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 3,
+      "file": "supabase\\migrations\\20260516160000_fix_hub_is_admin_include_creator.sql",
+      "reason": "relation \"public.hub_members\" does not exist\nLINE 12:     select 1 from public.hub_members m\n                           ^",
+      "skipped_statements": 0,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260516170000_fix_hub_join_link_expires_at_ambiguous.sql",
+      "skipped_statements": 3,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 2,
+      "failed_statements": 5,
+      "file": "supabase\\migrations\\20260516180000_hub_contact_invite_expiration_us_phone.sql",
+      "reason": "relation \"public.hub_invitations\" does not exist",
+      "skipped_statements": 3,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260517100000_chat_rooms_delete_rls.sql",
+      "skipped_statements": 2,
+      "status": "applied"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 4,
+      "file": "supabase\\migrations\\20260518120000_chat_invite_accept_decline_rpc.sql",
+      "reason": "function public.accept_chat_room_invite(uuid) does not exist",
+      "skipped_statements": 6,
+      "status": "failed"
+    },
+    {
+      "applied_statements": 0,
+      "failed_statements": 0,
+      "file": "supabase\\migrations\\20260518130000_chat_rooms_select_pending_invitee.sql",
+      "skipped_statements": 2,
+      "status": "applied"
+    }
+  ],
+  "total": 73
+}

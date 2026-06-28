@@ -1,0 +1,70 @@
+name: api-ci
+
+on:
+  pull_request:
+    paths:
+      - "apps/api/**"
+      - ".github/workflows/api-ci.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "apps/api/**"
+      - ".github/workflows/api-ci.yml"
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPYCACHEPREFIX: apps/api/.pycache
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: udeets
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d udeets"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    strategy:
+      fail-fast: false
+      matrix:
+        db_provider: [hybrid, rds_primary]
+        media_provider: [s3_primary]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install API dependencies
+        run: python -m pip install -e "./apps/api[dev]"
+      - name: Apply RDS app SQL bundle to CI Postgres
+        env:
+          MIGRATION_TARGET_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/udeets
+        run: python apps/api/scripts/migration/deploy_sql_bundle.py --sql-dir apps/api/sql/rds-app-schema
+
+      - name: Ruff lint
+        run: python -m ruff check apps/api
+
+      - name: Pytest
+        env:
+          DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/udeets
+          DB_PROVIDER: ${{ matrix.db_provider }}
+          MEDIA_PROVIDER: ${{ matrix.media_provider }}
+          S3_BUCKET_NAME: ci-media
+          S3_MEDIA_PREFIX: ci
+          S3_PUBLIC_BASE_URL: https://example.invalid
+          SUPABASE_URL: https://example.invalid
+          SUPABASE_SERVICE_ROLE_KEY: fake-service-role-key
+        run: python -m pytest -q apps/api/tests
+
+      - name: Validate Alembic revision graph
+        run: python -m alembic -c apps/api/alembic.ini heads

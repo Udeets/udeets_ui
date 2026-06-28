@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { UdeetsBottomNav, UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
 import { useUserProfileModal } from "@/components/UserProfileModalProvider";
+import { getProfileSummaryApi, listBriefProfilesApi } from "@/lib/api/profiles";
 import { mapDeetToDashboardCard } from "@/lib/mappers/deets/map-deet-to-dashboard-card";
 import { listDeets, subscribeToDeets } from "@/lib/services/deets/list-deets";
 import type { DeetAttachment, DeetRecord } from "@/lib/services/deets/deet-types";
@@ -27,9 +28,15 @@ import { SafeDeetBody } from "@/components/deets/SafeDeetBody";
 import { DeetCommentsPreviewStrip } from "@/app/hubs/[category]/[slug]/components/deets/DeetCommentsPreviewStrip";
 import { DeetCommentsSection } from "@/app/hubs/[category]/[slug]/components/deets/DeetCommentsSection";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
+import { listUnreadHubIdsApi } from "@/lib/api/hubs";
+import {
+  MEMBER_JOIN_ACCEPTED_EVENT,
+  UNREAD_CHANGED_EVENT,
+} from "@/lib/notifications/global-notification-events";
+import { isNotificationsRealtimeFeatureEnabled } from "@/lib/notifications/use-notifications-realtime";
 import { listHubs } from "@/lib/services/hubs/list-hubs";
 import { listMyMemberships, type MyMembership } from "@/lib/services/members/list-my-memberships";
-import type { Hub as SupabaseHub } from "@/types/hub";
+import type { Hub as HubRow } from "@/types/hub";
 import { DashboardHubCard, type DashboardHubCardData } from "./components/DashboardHubCard";
 import { isGenericDeetTitle } from "@/lib/deets/deet-title";
 import { normalizePollSettings } from "@/lib/deets/normalize-poll-settings";
@@ -117,7 +124,7 @@ function normalizePublicSrc(src?: string | null) {
   return `/${src}`;
 }
 
-function memberCountLabel(hub: SupabaseHub) {
+function memberCountLabel(hub: HubRow) {
   const galleryCount = Array.isArray(hub.gallery_image_urls) ? hub.gallery_image_urls.length : 0;
   const count = Math.max(1, galleryCount + 1);
   return `${count} ${count === 1 ? "Member" : "Members"}`;
@@ -257,7 +264,7 @@ function feedAttachmentsToHubShape(att: FeedAttachment[]): HubFeedItemAttachment
     }));
 }
 
-function toDashboardHub(hub: SupabaseHub): DashboardHub {
+function toDashboardHub(hub: HubRow): DashboardHub {
   return {
     id: hub.id,
     name: hub.name,
@@ -733,23 +740,18 @@ function DashboardPageContent() {
     let cancelled = false;
     (async () => {
       try {
-        const { createClient } = await import("@/lib/supabase/client");
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (cancelled || !user) return;
+        const session = await getCurrentSession();
+        const user = session?.user;
+        if (cancelled || !user || user.id !== currentUserId) return;
         const meta = user.user_metadata ?? {};
         const fallbackName =
           (meta.full_name as string | undefined)?.trim() ||
           user.email?.split("@")[0] ||
           "You";
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("full_name, avatar_url")
-          .eq("id", user.id)
-          .maybeSingle();
+        const profile = await getProfileSummaryApi(user.id);
         if (cancelled) return;
-        setCurrentUserDisplayName(profile?.full_name?.trim() || fallbackName);
-        setCurrentUserAvatarUrl(profile?.avatar_url ?? (meta.avatar_url as string) ?? "");
+        setCurrentUserDisplayName(profile?.fullName?.trim() || fallbackName);
+        setCurrentUserAvatarUrl(profile?.avatarUrl ?? (meta.avatar_url as string) ?? "");
       } catch {
         if (!cancelled) {
           setCurrentUserDisplayName("You");
@@ -980,26 +982,16 @@ function DashboardPageContent() {
       setHubsLoadError(null);
 
       try {
-        const [dbHubs, myMemberships] = await Promise.all([
+        const [dbHubs, myMemberships, unreadHubIds] = await Promise.all([
           listHubs(),
           listMyMemberships(),
+          listUnreadHubIdsApi().catch(() => []),
         ]);
         if (!cancelled) {
           const dashHubs = dbHubs.map(toDashboardHub);
           setHubs(dashHubs);
           setMemberships(myMemberships);
-
-          // ── Load unread hubs (best-effort; ignore if RPC not yet deployed) ──
-          try {
-            const { createClient } = await import("@/lib/supabase/client");
-            const supabase = createClient();
-            const { data: unreadRows, error: unreadError } = await supabase.rpc("user_hubs_with_unread");
-            if (!unreadError && Array.isArray(unreadRows) && !cancelled) {
-              setUnreadHubIds(new Set(unreadRows.map((r: { hub_id: string }) => r.hub_id)));
-            }
-          } catch (unreadErr) {
-            console.warn("[dashboard] unread hubs lookup failed:", unreadErr);
-          }
+          setUnreadHubIds(new Set(unreadHubIds));
 
           // ── Track recently accepted memberships (show in Requested tab with dot) ──
           const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
@@ -1039,52 +1031,67 @@ function DashboardPageContent() {
     };
   }, [authStatus]);
 
-  // ── Real-time: detect when a pending request is accepted ──
+  // ── Membership refresh: realtime invalidation or fallback poll ──
   useEffect(() => {
     if (authStatus !== "authenticated" || !currentUserId) return;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let channel: any = null;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let supabaseRef: any = null;
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const [dbHubs, myMemberships, unreadHubIds] = await Promise.all([
+          listHubs(),
+          listMyMemberships(),
+          listUnreadHubIdsApi().catch(() => []),
+        ]);
+        if (cancelled) return;
+        setHubs(dbHubs.map(toDashboardHub));
+        setMemberships(myMemberships);
+        setUnreadHubIds(new Set(unreadHubIds));
+        const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+        for (const membership of myMemberships) {
+          if (
+            membership.status === "active" &&
+            membership.role !== "creator" &&
+            membership.joinedAt &&
+            new Date(membership.joinedAt).getTime() > fiveMinutesAgo &&
+            !celebratedIdsRef.current.has(membership.hubId)
+          ) {
+            setAcceptedHubIds((prev) => new Set(prev).add(membership.hubId));
+          }
+        }
+      } catch (err) {
+        console.error("[membership-acceptance]", err);
+      }
+    };
 
-    (async () => {
-      const { createClient: createSupa } = await import("@/lib/supabase/client");
-      supabaseRef = createSupa();
+    void refresh();
 
-      channel = supabaseRef
-        .channel(`dashboard-membership-${currentUserId}`)
-        .on(
-          "postgres_changes",
-          { event: "UPDATE", schema: "public", table: "hub_members", filter: `user_id=eq.${currentUserId}` },
-          async (payload: { new: { hub_id: string; status: string; user_id: string }; old: { status?: string } }) => {
-            const row = payload.new;
-            if (row.status !== "active") return;
-            // A membership was just approved — refetch to update lists
-            try {
-              const [dbHubs, myMemberships] = await Promise.all([
-                listHubs(),
-                listMyMemberships(),
-              ]);
-              setHubs(dbHubs.map(toDashboardHub));
-              setMemberships(myMemberships);
+    const onUnreadChanged = () => {
+      void listUnreadHubIdsApi()
+        .then((ids) => {
+          if (!cancelled) setUnreadHubIds(new Set(ids));
+        })
+        .catch(() => {});
+    };
+    const onMembershipChanged = () => {
+      void refresh();
+    };
 
-              // Mark hub as accepted — user will see dot on Requested tab
-              if (!celebratedIdsRef.current.has(row.hub_id)) {
-                setAcceptedHubIds((prev) => new Set(prev).add(row.hub_id));
-              }
-            } catch (err) {
-              console.error("[membership-acceptance]", err);
-            }
-          },
-        )
-        .subscribe();
-    })();
+    window.addEventListener(UNREAD_CHANGED_EVENT, onUnreadChanged);
+    window.addEventListener(MEMBER_JOIN_ACCEPTED_EVENT, onMembershipChanged);
+
+    let timer: ReturnType<typeof setInterval> | undefined;
+    if (!isNotificationsRealtimeFeatureEnabled()) {
+      timer = window.setInterval(() => {
+        void refresh();
+      }, 20_000);
+    }
 
     return () => {
-      if (channel && supabaseRef) {
-        void supabaseRef.removeChannel(channel);
-      }
+      cancelled = true;
+      window.removeEventListener(UNREAD_CHANGED_EVENT, onUnreadChanged);
+      window.removeEventListener(MEMBER_JOIN_ACCEPTED_EVENT, onMembershipChanged);
+      if (timer) window.clearInterval(timer);
     };
   }, [authStatus, currentUserId]);
 
@@ -1196,18 +1203,12 @@ function DashboardPageContent() {
         const authorIds = [...new Set(feedItems.map((i) => i.authorId).filter(Boolean))] as string[];
         if (authorIds.length) {
           try {
-            const { createClient: createSupa } = await import("@/lib/supabase/client");
-            const supabase = createSupa();
-            const { data: profiles } = await supabase
-              .from("profiles")
-              .select("id, avatar_url")
-              .in("id", authorIds);
-
+            const profiles = await listBriefProfilesApi(authorIds);
             if (!cancelled && profiles?.length) {
               const avatarMap = new Map(
                 profiles
-                  .filter((p: { avatar_url: string | null }) => p.avatar_url)
-                  .map((p: { id: string; avatar_url: string }) => [p.id, p.avatar_url])
+                  .filter((p) => p.avatar_url)
+                  .map((p) => [p.id, p.avatar_url as string])
               );
               for (const item of feedItems) {
                 if (item.authorId && avatarMap.has(item.authorId)) {

@@ -14,6 +14,8 @@ import {
   type InviteExpiryOption,
 } from "@/lib/services/hubs/validate-invite-contact";
 import { validateInviteContact } from "@/lib/services/hubs/validate-invite-contact";
+import { sendHubContactInviteFromApi } from "@/lib/api/invites";
+import { getCurrentSession } from "@/services/auth/getCurrentSession";
 
 const EXPIRY_SELECT_OPTIONS: ComposerMenuSelectOption[] = INVITE_EXPIRY_OPTIONS.map((opt) => ({
   value: opt.days === null ? "never" : String(opt.days),
@@ -53,25 +55,19 @@ export function SendInviteTab({
 
       setIsSending(true);
       try {
-        const res = await fetch(`/api/hubs/${hubId}/invites/contact`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contactType,
-            contactValue: contactType === "phone" ? validation.normalized : contactValue.trim(),
-            expiresInDays,
-          }),
-        });
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        const session = await getCurrentSession();
+        if (!session?.access_token) {
+          setFieldError("You must be signed in to send invitations.");
+          return;
+        }
 
-        if (res.status === 429) {
-          setFieldError(body.error || "Too many invites sent. Please try again later.");
-          return;
-        }
-        if (!res.ok) {
-          setFieldError(body.error || "Could not send the invitation. Please try again.");
-          return;
-        }
+        await sendHubContactInviteFromApi(
+          hubId,
+          session.access_token,
+          contactType,
+          contactType === "phone" ? validation.normalized : contactValue.trim(),
+          expiresInDays,
+        );
 
         setSent(true);
         setContactValue("");

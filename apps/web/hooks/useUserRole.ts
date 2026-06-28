@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useAuthSession } from "@/services/auth/useAuthSession";
-import { createClient } from "@/lib/supabase/client";
+import { getMyHubMembershipFromApi } from "@/lib/api/members";
+import { getMyProfileApi } from "@/lib/api/profiles";
 import {
   type AppRole,
   type EffectiveRole,
@@ -40,15 +41,10 @@ export function usePlatformRole(): PlatformRoleState {
 
     let ignore = false;
     async function fetchAppRole() {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("profiles")
-        .select("app_role")
-        .eq("id", user!.id)
-        .maybeSingle();
+      const profile = await getMyProfileApi();
 
       if (!ignore) {
-        setAppRole((data?.app_role as AppRole) ?? "user");
+        setAppRole((profile?.app_role as AppRole) ?? "user");
         setLoaded(true);
       }
     }
@@ -112,30 +108,18 @@ export function useHubRole(hubId: string, hubCreatedBy: string | null): HubRoleS
     let ignore = false;
 
     async function fetchRoles() {
-      const supabase = createClient();
-
-      // Fetch both in parallel
-      const [profileResult, memberResult] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("app_role")
-          .eq("id", user!.id)
-          .maybeSingle(),
-        supabase
-          .from("hub_members")
-          .select("role, status")
-          .eq("hub_id", hubId)
-          .eq("user_id", user!.id)
-          .maybeSingle(),
+      const [profile, member] = await Promise.all([
+        getMyProfileApi(),
+        getMyHubMembershipFromApi(hubId),
       ]);
 
       if (ignore) return;
 
-      setAppRole((profileResult.data?.app_role as AppRole) ?? "user");
+      setAppRole((profile?.app_role as AppRole) ?? "user");
 
-      if (memberResult.data) {
-        setHubRole(memberResult.data.role as HubMemberRole);
-        setHubStatus(memberResult.data.status as string);
+      if (member) {
+        setHubRole(member.role as HubMemberRole);
+        setHubStatus(member.status as string);
       } else if (isCreator) {
         // Creator always has admin access even if hub_members row is missing
         setHubRole("creator");

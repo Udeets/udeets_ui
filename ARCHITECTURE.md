@@ -14,22 +14,20 @@
 | UI | React | 19.2.3 |
 | Styling | Tailwind CSS + CSS custom properties | 4 |
 | Language | TypeScript (strict) | 5.x |
-| Auth | Supabase Auth (Google + Apple OAuth + email/password) | @supabase/ssr 0.9 |
-| Database | Supabase Postgres with RLS | @supabase/supabase-js 2.57 |
-| Storage | Supabase Storage (`deet-media`, `avatars`) | — |
-| Realtime | Supabase Realtime (deets, deet_likes, deet_comments) | — |
+| **API** | **FastAPI (`apps/api`)** | Python 3.11+ |
+| Auth | **Amazon Cognito** (Hosted UI + JWT) | — |
+| Database | **Postgres** (AWS RDS prod; Docker locally) | SQLAlchemy + Alembic |
+| Storage | **S3** (MinIO locally) | boto3 presigned uploads |
+| Chat realtime | **FastAPI WebSocket + Redis/Valkey** | — |
 | Icons | Lucide React + Phosphor Icons | 0.577, 2.1.10 |
 | Forms/UI state | React hooks only (no Redux / Zustand / Query lib) | — |
-| Monorepo | npm workspaces | — |
-| Deploy | Vercel | — |
-| Geo | Browser Geolocation API + Nominatim (OpenStreetMap) | — |
-| Supabase project ID | `psckhdbtissnmdgcfwgo` | — |
+| Monorepo | npm workspaces + Python API | — |
+| Deploy | Vercel (web) + API host | — |
+| Geo | Nominatim via FastAPI (`/api/v1/geo/*`) | — |
 
-**Env vars** (`apps/web/.env.local`):
-- `NEXT_PUBLIC_SUPABASE_URL=https://psckhdbtissnmdgcfwgo.supabase.co`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon_key>`
+**Env vars:** `apps/web/.env.local` (Cognito, FastAPI URLs) and `apps/api/.env.local` (DB, S3/MinIO, Cognito JWKS). See [docs/local-dev-bootstrap.md](docs/local-dev-bootstrap.md).
 
-**Remote image hosts** (`next.config.ts`): `lh3.googleusercontent.com`, `psckhdbtissnmdgcfwgo.supabase.co`
+**Local setup:** `npm run bootstrap` then `npm run dev`.
 
 **Path alias:** `@/*` → `apps/web/*`
 

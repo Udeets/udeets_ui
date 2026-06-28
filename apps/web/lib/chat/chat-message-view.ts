@@ -7,3 +7,11 @@ export type ChatMessageViewModel = ChatMessageListItem & {
   /** Stable key while `id` may be temp then replaced with server id. */
   clientLocalId?: string;
 };
+
+export function stripClientSendFields(message: ChatMessageViewModel): ChatMessageViewModel {
+  const { clientSendState, clientSendError, clientLocalId, ...rest } = message;
+  void clientSendState;
+  void clientSendError;
+  void clientLocalId;
+  return rest;
+}

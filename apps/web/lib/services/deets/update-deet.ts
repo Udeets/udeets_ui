@@ -1,7 +1,7 @@
 import { sanitizeDeetBodyHtml } from "@/lib/deets/sanitize-deet-html";
-import { createClient } from "@/lib/supabase/client";
+import { updateDeetApi } from "@/lib/api/deets";
 import type { DeetAttachment, DeetKind, DeetRecord } from "@/lib/services/deets/deet-types";
-import { DEET_COLUMNS, normalizeDeetAttachment, normalizeDeetRecord } from "@/lib/services/deets/query-utils";
+import { normalizeDeetAttachment, normalizeDeetRecord } from "@/lib/services/deets/query-utils";
 
 export interface UpdateDeetInput {
   id: string;
@@ -21,7 +21,15 @@ function isPersistableMediaRef(value?: string | null) {
   const trimmed = value.trim();
   if (!trimmed) return false;
   if (trimmed.startsWith("data:") || trimmed.startsWith("blob:")) return false;
-  return trimmed.startsWith("https://") || trimmed.startsWith("http://") || trimmed.startsWith("/");
+  return (
+    trimmed.startsWith("https://") ||
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("/") ||
+    trimmed.startsWith("avatars/") ||
+    trimmed.startsWith("hub-media/") ||
+    trimmed.startsWith("deet-media/") ||
+    trimmed.startsWith("chat-media/")
+  );
 }
 
 function sanitizePersistableMediaRefs(values?: string[]) {
@@ -30,20 +38,9 @@ function sanitizePersistableMediaRefs(values?: string[]) {
 
 /**
  * Updates an existing deet. The caller must be the deet's author or a hub admin.
- * Supabase RLS policies enforce the ownership / admin check.
+ * The API enforces ownership / admin authorization.
  */
 export async function updateDeet(input: UpdateDeetInput): Promise<DeetRecord> {
-  const supabase = createClient();
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    throw new Error("You must be signed in to update a post.");
-  }
-
   // Build the update payload with only provided fields
   const payload: Record<string, unknown> = {};
 
@@ -78,53 +75,23 @@ export async function updateDeet(input: UpdateDeetInput): Promise<DeetRecord> {
     payload.is_published = input.isPublished;
   }
 
-  let { data, error } = await supabase
-    .from("deets")
-    .update(payload)
-    .eq("id", input.id)
-    .select(DEET_COLUMNS)
-    .single();
-
-  // Retry without allow_comments if the column isn't migrated yet.
-  if (error && error.message.includes("allow_comments")) {
-    const { allow_comments: _unused, ...payloadWithout } = payload as Record<string, unknown> & { allow_comments?: boolean };
-    void _unused;
-    const fallbackSelect = DEET_COLUMNS.split(",").map((c) => c.trim()).filter((c) => c !== "allow_comments").join(", ");
-    const retry = await supabase
-      .from("deets")
-      .update(payloadWithout)
-      .eq("id", input.id)
-      .select(fallbackSelect)
-      .single();
-    data = retry.data as typeof data;
-    error = retry.error;
+  const apiPayload: Record<string, unknown> = { ...payload };
+  if ("allow_comments" in apiPayload) {
+    apiPayload.allowComments = apiPayload.allow_comments;
+    delete apiPayload.allow_comments;
   }
-
-  if (error?.message.includes("is_published")) {
-    const { is_published: _ip, ...payloadWithout } = payload as Record<string, unknown> & { is_published?: boolean };
-    void _ip;
-    const fallbackSelect = DEET_COLUMNS.split(",").map((c) => c.trim()).filter((c) => c !== "is_published").join(", ");
-    const retry = await supabase.from("deets").update(payloadWithout).eq("id", input.id).select(fallbackSelect).single();
-    data = retry.data as typeof data;
-    error = retry.error;
+  if ("is_published" in apiPayload) {
+    apiPayload.isPublished = apiPayload.is_published;
+    delete apiPayload.is_published;
   }
-
-  if (error && payload.kind === "Jobs" && error.message.includes("deets_kind_check")) {
-    const compatPayload = { ...payload, kind: "Posts" };
-    let r2 = await supabase.from("deets").update(compatPayload).eq("id", input.id).select(DEET_COLUMNS).single();
-    if (r2.error?.message.includes("allow_comments")) {
-      const { allow_comments: _a, ...withoutAc } = compatPayload as Record<string, unknown> & { allow_comments?: boolean };
-      void _a;
-      const fallbackSelect = DEET_COLUMNS.split(",").map((c) => c.trim()).filter((c) => c !== "allow_comments").join(", ");
-      r2 = await supabase.from("deets").update(withoutAc).eq("id", input.id).select(fallbackSelect).single();
-    }
-    data = r2.data as typeof data;
-    error = r2.error;
+  if ("preview_image_url" in apiPayload) {
+    apiPayload.previewImageUrl = apiPayload.preview_image_url;
+    delete apiPayload.preview_image_url;
   }
-
-  if (error) {
-    throw new Error(`Failed to update post: ${error.message}`);
+  if ("preview_image_urls" in apiPayload) {
+    apiPayload.previewImageUrls = apiPayload.preview_image_urls;
+    delete apiPayload.preview_image_urls;
   }
-
-  return normalizeDeetRecord(data as DeetRecord);
+  const updated = await updateDeetApi(input.id, apiPayload);
+  return normalizeDeetRecord(updated as DeetRecord);
 }

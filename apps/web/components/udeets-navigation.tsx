@@ -15,7 +15,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
 import { useTheme } from "@/components/theme-provider";
 import type { HubNotificationItem, HubEventItem } from "@/lib/hub-content";
@@ -24,7 +24,11 @@ import { can } from "@/lib/roles";
 import { usePlatformRole } from "@/hooks/useUserRole";
 import { signOut } from "@/services/auth/signOut";
 import { useAuthSession } from "@/services/auth/useAuthSession";
-import { isDeetIsPublishedColumnUnavailable } from "@/lib/services/deets/query-utils";
+import { getMyHeaderFeedApi } from "@/lib/api/profiles";
+import { getProfileSummary } from "@/lib/services/profile/get-profile-summary";
+import { FEED_INVALIDATE_EVENT } from "@/lib/notifications/global-notification-events";
+import { useGlobalNotifications } from "@/lib/notifications/use-global-notifications";
+import { isNotificationsRealtimeFeatureEnabled } from "@/lib/notifications/use-notifications-realtime";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -431,14 +435,6 @@ function ProfilePanel({ user, onLogout, profileData }: { user: { email?: string;
   );
 }
 
-function formatRelativeTime(iso: string): string {
-  const diffMins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
-  if (diffMins >= 1440) return `${Math.floor(diffMins / 1440)}d`;
-  if (diffMins >= 60) return `${Math.floor(diffMins / 60)}h`;
-  if (diffMins >= 1) return `${diffMins}m`;
-  return "just now";
-}
-
 function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?: () => void; onOpenSearch?: () => void; isCreatorAdmin?: boolean } }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -455,74 +451,39 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
     if (!user?.id) return;
     let ignore = false;
     (async () => {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("profiles")
-        .select("full_name, avatar_url")
-        .eq("id", user.id)
-        .single();
-      if (!ignore && data) {
-        setProfileData({ fullName: data.full_name, avatarUrl: data.avatar_url });
+      const summary = await getProfileSummary(user.id);
+      if (!ignore && summary) {
+        setProfileData({ fullName: summary.fullName, avatarUrl: summary.avatarUrl });
       }
     })();
     return () => { ignore = true; };
   }, [user?.id]);
   const resolvedAvatarUrl = profileData?.avatarUrl || (user?.user_metadata?.avatar_url as string) || "";
 
-  // ── Live notifications & events from Supabase ──
+  useGlobalNotifications(Boolean(user?.id));
+
+  // ── Live notifications & events via FastAPI ──
   const [liveNotifications, setLiveNotifications] = useState<HubNotificationItem[]>([]);
   const [liveEvents, setLiveEvents] = useState<HubEventItem[]>([]);
   const [headerRefreshKey, setHeaderRefreshKey] = useState(0);
 
-  // Subscribe to deet/event changes so header refreshes when new data arrives
+  const bumpHeaderFeed = useCallback(() => {
+    setHeaderRefreshKey((value) => value + 1);
+  }, []);
+
   useEffect(() => {
     if (!user?.id) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let channel: any = null;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let supabaseRef: any = null;
-
-    (async () => {
-      const { createClient: createSupa } = await import("@/lib/supabase/client");
-      supabaseRef = createSupa();
-      channel = supabaseRef
-        .channel("header-deets-live")
-        .on("postgres_changes", { event: "*", schema: "public", table: "deets" }, () => {
-          setHeaderRefreshKey((k) => k + 1);
-        })
-        .on("postgres_changes", { event: "*", schema: "public", table: "events" }, () => {
-          setHeaderRefreshKey((k) => k + 1);
-        })
-        .on("postgres_changes", { event: "*", schema: "public", table: "hub_members" }, () => {
-          setHeaderRefreshKey((k) => k + 1);
-        })
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "chat_room_invites", filter: `invited_user_id=eq.${user.id}` },
-          () => {
-            setHeaderRefreshKey((k) => k + 1);
-          },
-        )
-        .subscribe();
-    })();
-
-    // Also listen for direct "hub-members-changed" events dispatched after approve/reject
-    const onMembersChanged = () => {
-      // Small delay so the DB write is fully committed before we re-query
-      setTimeout(() => setHeaderRefreshKey((k) => k + 1), 600);
-    };
-    window.addEventListener("hub-members-changed", onMembersChanged);
-    window.addEventListener("hub-chat-invites-changed", onMembersChanged);
+    const onRefresh = () => setTimeout(() => bumpHeaderFeed(), 400);
+    window.addEventListener("hub-members-changed", onRefresh);
+    window.addEventListener("hub-chat-invites-changed", onRefresh);
+    window.addEventListener(FEED_INVALIDATE_EVENT, onRefresh);
 
     return () => {
-      window.removeEventListener("hub-members-changed", onMembersChanged);
-      window.removeEventListener("hub-chat-invites-changed", onMembersChanged);
-      if (channel && supabaseRef) {
-        void supabaseRef.removeChannel(channel);
-      }
+      window.removeEventListener("hub-members-changed", onRefresh);
+      window.removeEventListener("hub-chat-invites-changed", onRefresh);
+      window.removeEventListener(FEED_INVALIDATE_EVENT, onRefresh);
     };
-  }, [user?.id]);
+  }, [user?.id, bumpHeaderFeed]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -535,393 +496,27 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
 
     (async () => {
       try {
-        const { createClient: createSupa } = await import("@/lib/supabase/client");
-        const supabase = createSupa();
-
-        // 1. Get user's hub memberships
-        const { data: memberships } = await supabase
-          .from("hub_members")
-          .select("hub_id, role, status")
-          .eq("user_id", user.id);
-
-        const activeHubIds = (memberships ?? [])
-          .filter((m: { status: string }) => m.status === "active")
-          .map((m: { hub_id: string }) => m.hub_id);
-
-        if (!activeHubIds.length || ignore) return;
-
-        // 2. Fetch hub metadata for names, slugs, categories, images
-        const { data: hubRows } = await supabase
-          .from("hubs")
-          .select("id, name, slug, category, dp_image_url")
-          .in("id", activeHubIds);
-
-        const hubMap = new Map(
-          (hubRows ?? []).map((h: { id: string; name: string; slug: string; category: string; dp_image_url: string | null }) => [
-            h.id,
-            { name: h.name, slug: h.slug, category: h.category, dpImage: h.dp_image_url },
-          ])
-        );
-
-        // 3. Fetch recent deets for notifications (retry without is_published if column not migrated)
-        const recentDeetsPrimary = await supabase
-          .from("deets")
-          .select("id, hub_id, author_name, title, body, kind, created_at, is_published")
-          .in("hub_id", activeHubIds)
-          .eq("is_published", true)
-          .order("created_at", { ascending: false })
-          .limit(30);
-        const recentDeets = isDeetIsPublishedColumnUnavailable(recentDeetsPrimary.error)
-          ? (
-              await supabase
-                .from("deets")
-                .select("id, hub_id, author_name, title, body, kind, created_at")
-                .in("hub_id", activeHubIds)
-                .order("created_at", { ascending: false })
-                .limit(30)
-            ).data ?? []
-          : (recentDeetsPrimary.data ?? []);
-
+        const feed = await getMyHeaderFeedApi();
         if (ignore) return;
-
-        // ── Fetch pending join requests for hubs the user created ──
-        const { data: createdHubs } = await supabase
-          .from("hubs")
-          .select("id, name, slug, category, dp_image_url")
-          .eq("created_by", user.id);
-
-        const createdHubIds = (createdHubs ?? []).map((h: { id: string }) => h.id);
-        let joinRequestNotifications: HubNotificationItem[] = [];
-
-        if (createdHubIds.length > 0) {
-          const { data: pendingMembers } = await supabase
-            .from("hub_members")
-            .select("id, hub_id, user_id, joined_at")
-            .in("hub_id", createdHubIds)
-            .eq("status", "pending")
-            .order("joined_at", { ascending: false })
-            .limit(20);
-
-          if (pendingMembers && pendingMembers.length > 0 && !ignore) {
-            // Fetch requester profiles
-            const requesterIds = (pendingMembers as { user_id: string }[]).map((m) => m.user_id);
-            const { data: requesterProfiles } = await supabase
-              .from("profiles")
-              .select("id, full_name, avatar_url")
-              .in("id", requesterIds);
-
-            const profileMap = new Map(
-              (requesterProfiles ?? []).map((p: { id: string; full_name: string | null; avatar_url: string | null }) => [p.id, p])
-            );
-
-            joinRequestNotifications = (pendingMembers as { id: string; hub_id: string; user_id: string; joined_at: string }[]).map((m) => {
-              const hub = (createdHubs ?? []).find((h: { id: string }) => h.id === m.hub_id) as { id: string; name: string; slug: string; category: string; dp_image_url: string | null } | undefined;
-              const profile = profileMap.get(m.user_id);
-              const requesterName = profile?.full_name ?? "Someone";
-              const hubName = hub?.name ?? "Hub";
-
-              return {
-                id: `join-${m.id}`,
-                title: `${requesterName} wants to join`,
-                body: `Pending join request for ${hubName}`,
-                meta: formatRelativeTime(m.joined_at),
-                hub: hubName,
-                hubImage: hub?.dp_image_url ?? undefined,
-                type: "Activity" as const,
-                category: (hub?.category ?? "") as import("@/lib/hubs").HubCategorySlug,
-                slug: hub?.slug ?? "",
-                focusId: "",
-                href: `/hubs/${hub?.category ?? ""}/${hub?.slug ?? ""}?tab=Members`,
-              };
-            });
-          }
-        }
-
-        // ── Fetch recently-accepted join requests for the current user ──
-        const acceptedNotifications: HubNotificationItem[] = [];
-        {
-          const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-          const { data: acceptedMemberships } = await supabase
-            .from("hub_members")
-            .select("id, hub_id, joined_at")
-            .eq("user_id", user.id)
-            .eq("status", "active")
-            .neq("role", "creator")
-            .gte("joined_at", sevenDaysAgo)
-            .order("joined_at", { ascending: false })
-            .limit(10);
-
-          if (acceptedMemberships && acceptedMemberships.length > 0 && !ignore) {
-            for (const m of acceptedMemberships as { id: string; hub_id: string; joined_at: string }[]) {
-              const hub = hubMap.get(m.hub_id);
-              if (!hub) continue;
-              acceptedNotifications.push({
-                id: `accepted-${m.id}`,
-                title: "You've been accepted!",
-                body: `You're now a member of ${hub.name}`,
-                meta: formatRelativeTime(m.joined_at),
-                hub: hub.name,
-                hubImage: hub.dpImage ?? undefined,
-                type: "Activity" as const,
-                category: hub.category as import("@/lib/hubs").HubCategorySlug,
-                slug: hub.slug,
-                focusId: "",
-                // Land directly on the hub's About tab so the new member can
-                // read about what they just joined, rather than bouncing them
-                // to the dashboard's Joined list.
-                href: `/hubs/${hub.category}/${hub.slug}?tab=About`,
-              });
-            }
-          }
-        }
-
-        // ── Pending chat room invites (invitee) ──
-        let chatInviteNotifications: HubNotificationItem[] = [];
-        {
-          const { data: pendingChatInvites } = await supabase
-            .from("chat_room_invites")
-            .select("id, created_at, invited_by, room_id")
-            .eq("invited_user_id", user.id)
-            .eq("status", "pending")
-            .order("created_at", { ascending: false })
-            .limit(20);
-
-          const invRows = (pendingChatInvites ?? []) as {
-            id: string;
-            created_at: string;
-            invited_by: string | null;
-            room_id: string;
-          }[];
-          if (invRows.length > 0 && !ignore) {
-            const roomIds = [...new Set(invRows.map((r) => r.room_id))];
-            const { data: roomRows } = await supabase
-              .from("chat_rooms")
-              .select("id, name, hub_id, archived_at")
-              .in("id", roomIds);
-            const rooms = (roomRows ?? []) as { id: string; name: string; hub_id: string; archived_at: string | null }[];
-            const roomMap = new Map(rooms.map((r) => [r.id, r]));
-            const hubIdsForRooms = [...new Set(rooms.map((r) => r.hub_id))];
-            const { data: hubRowsForChat } = await supabase
-              .from("hubs")
-              .select("id, name, slug, category, dp_image_url")
-              .in("id", hubIdsForRooms);
-            const hubById = new Map(
-              (hubRowsForChat ?? []).map((h: { id: string; name: string; slug: string; category: string; dp_image_url: string | null }) => [
-                h.id,
-                h,
-              ]),
-            );
-            const inviterIds = [...new Set(invRows.map((r) => r.invited_by).filter(Boolean) as string[])];
-            let inviterNameById = new Map<string, string>();
-            if (inviterIds.length > 0) {
-              const { data: inviterProfiles } = await supabase
-                .from("profiles")
-                .select("id, full_name")
-                .in("id", inviterIds);
-              inviterNameById = new Map(
-                (inviterProfiles ?? []).map((p: { id: string; full_name: string | null }) => [
-                  p.id,
-                  p.full_name?.trim() || "Someone",
-                ]),
-              );
-            }
-            for (const inv of invRows) {
-              const room = roomMap.get(inv.room_id);
-              if (!room?.name || room.archived_at) continue;
-              const hub = hubById.get(room.hub_id);
-              if (!hub?.slug || !activeHubIds.includes(hub.id)) continue;
-              const inviter =
-                inv.invited_by && inviterNameById.has(inv.invited_by)
-                  ? inviterNameById.get(inv.invited_by)!
-                  : "A moderator";
-              chatInviteNotifications.push({
-                id: `chat-invite-${inv.id}`,
-                title: "Chat room invite",
-                body: `${inviter} invited you to “${room.name}” in ${hub.name}`,
-                meta: formatRelativeTime(inv.created_at),
-                hub: hub.name,
-                hubImage: hub.dp_image_url ?? undefined,
-                type: "Activity" as const,
-                category: hub.category as import("@/lib/hubs").HubCategorySlug,
-                slug: hub.slug,
-                focusId: "",
-                href: `/hubs/${hub.category}/${hub.slug}?tab=Chat&chatRoom=${room.id}`,
-              });
-            }
-          }
-        }
-
-        const notifications: HubNotificationItem[] = (recentDeets ?? []).map(
-          (d: { id: string; hub_id: string; author_name: string; title: string; body: string; kind: string; created_at: string }) => {
-            const hub = hubMap.get(d.hub_id);
-            const hubName = hub?.name ?? "Hub";
-            const hubSlug = hub?.slug ?? "";
-            const hubCategory = hub?.category ?? "";
-            const hubImage = hub?.dpImage ?? undefined;
-            const bodyText = (d.body || "").replace(/<[^>]*>/g, "").slice(0, 120);
-
-            // Map kind to notification type
-            let type: "Tagged" | "New Posts" | "Activity" = "New Posts";
-            if (d.kind === "Notices" || d.kind === "Alerts") type = "Tagged";
-            else if (d.kind === "Posts" || d.kind === "Photos" || d.kind === "News") type = "New Posts";
-            else type = "Activity";
-
-            // Relative time label
-            const createdMs = new Date(d.created_at).getTime();
-            const diffMins = Math.round((Date.now() - createdMs) / 60000);
-            let meta = "Just now";
-            if (diffMins >= 1440) meta = `${Math.floor(diffMins / 1440)}d`;
-            else if (diffMins >= 60) meta = `${Math.floor(diffMins / 60)}h`;
-            else if (diffMins >= 1) meta = `${diffMins}m`;
-
-            return {
-              id: d.id,
-              title: d.title || d.author_name,
-              body: bodyText || d.title || "New post",
-              meta,
-              hub: hubName,
-              hubImage,
-              type,
-              category: hubCategory as import("@/lib/hubs").HubCategorySlug,
-              slug: hubSlug,
-              focusId: d.id,
-              // Deep-link into the Posts tab so the feed is rendered and the
-              // ?focus scroll-to-deet logic can actually find the element.
-              // Without tab=Posts the hub would open on the default About tab
-              // where the feed isn't mounted, so the focus would silently miss.
-              href: `/hubs/${hubCategory}/${hubSlug}?tab=Posts&focus=${d.id}`,
-            };
-          }
-        );
-
-        // 4. Fetch events for events panel
-        const today = new Date();
-        const todayStr = today.toISOString().split("T")[0];
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowStr = tomorrow.toISOString().split("T")[0];
-        const endOfWeek = new Date(today);
-        endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()));
-        const endOfWeekStr = endOfWeek.toISOString().split("T")[0];
-
-        const { data: eventRows } = await supabase
-          .from("events")
-          .select("id, hub_id, title, description, event_date, start_time, end_time, location")
-          .in("hub_id", activeHubIds)
-          .gte("event_date", todayStr)
-          .lte("event_date", endOfWeekStr)
-          .order("event_date", { ascending: true })
-          .limit(30);
-
-        if (ignore) return;
-
-        // Also check deets with event kind for events added via deet composer
-        const eventDeetsPrimary = await supabase
-          .from("deets")
-          .select("id, hub_id, author_name, title, body, kind, attachments, created_at, is_published")
-          .in("hub_id", activeHubIds)
-          .eq("is_published", true)
-          .or("kind.eq.Hazards,kind.eq.Alerts")
-          .order("created_at", { ascending: false })
-          .limit(20);
-        const eventDeets = isDeetIsPublishedColumnUnavailable(eventDeetsPrimary.error)
-          ? (
-              await supabase
-                .from("deets")
-                .select("id, hub_id, author_name, title, body, kind, attachments, created_at")
-                .in("hub_id", activeHubIds)
-                .or("kind.eq.Hazards,kind.eq.Alerts")
-                .order("created_at", { ascending: false })
-                .limit(20)
-            ).data ?? []
-          : (eventDeetsPrimary.data ?? []);
-
-        const eventItems: HubEventItem[] = [];
-
-        // Map events table rows
-        for (const ev of eventRows ?? []) {
-          const hub = hubMap.get(ev.hub_id as string);
-          if (!hub) continue;
-          const evDate = ev.event_date as string;
-          let group: "Today" | "Tomorrow" | "This Week" = "This Week";
-          if (evDate === todayStr) group = "Today";
-          else if (evDate === tomorrowStr) group = "Tomorrow";
-
-          eventItems.push({
-            id: ev.id as string,
-            title: (ev.title as string) || "Event",
-            hub: hub.name,
-            hubImage: hub.dpImage ?? undefined,
-            category: hub.category as import("@/lib/hubs").HubCategorySlug,
-            slug: hub.slug,
-            dateLabel: new Date(evDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-            time: (ev.start_time as string) || "",
-            location: (ev.location as string) || "",
-            badge: "My Hubs",
-            theme: "Community" as const,
-            description: (ev.description as string) || "",
-            focusId: ev.id as string,
-            href: `/hubs/${hub.category}/${hub.slug}?focus=${ev.id}`,
-            group,
-          });
-        }
-
-        // Map deets with event-like attachments (events created via composer)
-        for (const d of eventDeets ?? []) {
-          const hub = hubMap.get(d.hub_id as string);
-          if (!hub) continue;
-          const attachments = Array.isArray(d.attachments) ? d.attachments : [];
-          const eventAtt = attachments.find((a: { type?: string }) => a?.type === "event");
-          if (!eventAtt) continue;
-
-          const createdDate = new Date(d.created_at as string);
-          const createdStr = createdDate.toISOString().split("T")[0];
-          let group: "Today" | "Tomorrow" | "This Week" = "This Week";
-          if (createdStr === todayStr) group = "Today";
-          else if (createdStr === tomorrowStr) group = "Tomorrow";
-
-          eventItems.push({
-            id: d.id as string,
-            title: (eventAtt as { title?: string }).title || (d.title as string) || "Event",
-            hub: hub.name,
-            hubImage: hub.dpImage ?? undefined,
-            category: hub.category as import("@/lib/hubs").HubCategorySlug,
-            slug: hub.slug,
-            dateLabel: createdDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-            time: (eventAtt as { detail?: string }).detail || "",
-            location: "",
-            badge: "My Hubs",
-            theme: "Community" as const,
-            description: ((d.body as string) || "").replace(/<[^>]*>/g, "").slice(0, 120),
-            focusId: d.id as string,
-            href: `/hubs/${hub.category}/${hub.slug}?focus=${d.id}`,
-            group,
-          });
-        }
-
-        if (!ignore) {
-          const allNotifs = [
-            ...joinRequestNotifications,
-            ...chatInviteNotifications,
-            ...acceptedNotifications,
-            ...notifications,
-          ];
-          setLiveNotifications(allNotifs);
-          setLiveEvents(eventItems);
-          // Read/cleared state is persisted in localStorage now — no need to
-          // reset a local "all marked read" flag when new items arrive. The
-          // bell dot naturally reappears whenever an unseen notification id
-          // shows up (since it isn't in readNotifIds).
-        }
+        setLiveNotifications(feed.notifications ?? []);
+        setLiveEvents(feed.events ?? []);
       } catch (err) {
         console.error("[header-live-data]", err);
       }
     })();
 
+    let interval: ReturnType<typeof setInterval> | undefined;
+    if (!isNotificationsRealtimeFeatureEnabled()) {
+      interval = setInterval(() => {
+        bumpHeaderFeed();
+      }, 20000);
+    }
+
     return () => {
       ignore = true;
+      if (interval) clearInterval(interval);
     };
-  }, [user?.id, headerRefreshKey]);
+  }, [user?.id, headerRefreshKey, bumpHeaderFeed]);
 
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {

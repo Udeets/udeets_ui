@@ -1,0 +1,341 @@
+{
+  "source": [
+    {
+      "child_column": "hub_id",
+      "child_table": "attachments",
+      "constraint": "attachments_hub_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "hubs"
+    },
+    {
+      "child_column": "message_id",
+      "child_table": "chat_message_attachments",
+      "constraint": "chat_message_attachments_message_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "chat_messages"
+    },
+    {
+      "child_column": "message_id",
+      "child_table": "chat_message_reactions",
+      "constraint": "chat_message_reactions_message_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "chat_messages"
+    },
+    {
+      "child_column": "room_id",
+      "child_table": "chat_message_reactions",
+      "constraint": "chat_message_reactions_room_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "chat_rooms"
+    },
+    {
+      "child_column": "hub_id",
+      "child_table": "chat_message_reports",
+      "constraint": "chat_message_reports_hub_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "hubs"
+    },
+    {
+      "child_column": "room_id",
+      "child_table": "chat_message_reports",
+      "constraint": "chat_message_reports_room_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "chat_rooms"
+    },
+    {
+      "child_column": "target_message_id",
+      "child_table": "chat_message_reports",
+      "constraint": "chat_message_reports_target_message_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "chat_messages"
+    },
+    {
+      "child_column": "reply_to_id",
+      "child_table": "chat_messages",
+      "constraint": "chat_messages_reply_to_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "chat_messages"
+    },
+    {
+      "child_column": "room_id",
+      "child_table": "chat_messages",
+      "constraint": "chat_messages_room_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "chat_rooms"
+    },
+    {
+      "child_column": "hub_id",
+      "child_table": "chat_moderation_actions",
+      "constraint": "chat_moderation_actions_hub_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "hubs"
+    },
+    {
+      "child_column": "room_id",
+      "child_table": "chat_moderation_actions",
+      "constraint": "chat_moderation_actions_room_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "chat_rooms"
+    },
+    {
+      "child_column": "target_message_id",
+      "child_table": "chat_moderation_actions",
+      "constraint": "chat_moderation_actions_target_message_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "chat_messages"
+    },
+    {
+      "child_column": "poll_id",
+      "child_table": "chat_poll_options",
+      "constraint": "chat_poll_options_poll_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "chat_polls"
+    },
+    {
+      "child_column": "option_id",
+      "child_table": "chat_poll_votes",
+      "constraint": "chat_poll_votes_option_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "chat_poll_options"
+    },
+    {
+      "child_column": "poll_id",
+      "child_table": "chat_poll_votes",
+      "constraint": "chat_poll_votes_poll_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "chat_polls"
+    },
+    {
+      "child_column": "room_id",
+      "child_table": "chat_poll_votes",
+      "constraint": "chat_poll_votes_room_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "chat_rooms"
+    },
+    {
+      "child_column": "message_id",
+      "child_table": "chat_polls",
+      "constraint": "chat_polls_message_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "chat_messages"
+    },
+    {
+      "child_column": "room_id",
+      "child_table": "chat_room_bans",
+      "constraint": "chat_room_bans_room_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "chat_rooms"
+    },
+    {
+      "child_column": "room_id",
+      "child_table": "chat_room_invites",
+      "constraint": "chat_room_invites_room_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "chat_rooms"
+    },
+    {
+      "child_column": "room_id",
+      "child_table": "chat_room_memberships",
+      "constraint": "chat_room_memberships_room_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "chat_rooms"
+    },
+    {
+      "child_column": "room_id",
+      "child_table": "chat_room_mutes",
+      "constraint": "chat_room_mutes_room_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "chat_rooms"
+    },
+    {
+      "child_column": "room_id",
+      "child_table": "chat_room_typing",
+      "constraint": "chat_room_typing_room_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "chat_rooms"
+    },
+    {
+      "child_column": "hub_id",
+      "child_table": "chat_rooms",
+      "constraint": "chat_rooms_hub_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "hubs"
+    },
+    {
+      "child_column": "comment_id",
+      "child_table": "comment_reactions",
+      "constraint": "comment_reactions_comment_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "deet_comments"
+    },
+    {
+      "child_column": "deet_id",
+      "child_table": "deet_comments",
+      "constraint": "deet_comments_deet_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "deets"
+    },
+    {
+      "child_column": "parent_id",
+      "child_table": "deet_comments",
+      "constraint": "deet_comments_parent_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "deet_comments"
+    },
+    {
+      "child_column": "deet_id",
+      "child_table": "deet_likes",
+      "constraint": "deet_likes_deet_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "deets"
+    },
+    {
+      "child_column": "deet_id",
+      "child_table": "deet_shares",
+      "constraint": "deet_shares_deet_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "deets"
+    },
+    {
+      "child_column": "deet_id",
+      "child_table": "deet_views",
+      "constraint": "deet_views_deet_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "deets"
+    },
+    {
+      "child_column": "hub_id",
+      "child_table": "deets",
+      "constraint": "deets_hub_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "hubs"
+    },
+    {
+      "child_column": "event_id",
+      "child_table": "event_rsvps",
+      "constraint": "event_rsvps_event_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "events"
+    },
+    {
+      "child_column": "hub_id",
+      "child_table": "events",
+      "constraint": "events_hub_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "hubs"
+    },
+    {
+      "child_column": "hub_id",
+      "child_table": "hub_contact_invites",
+      "constraint": "hub_contact_invites_hub_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "hubs"
+    },
+    {
+      "child_column": "hub_invitation_id",
+      "child_table": "hub_contact_invites",
+      "constraint": "hub_contact_invites_hub_invitation_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "hub_invitations"
+    },
+    {
+      "child_column": "hub_id",
+      "child_table": "hub_invitations",
+      "constraint": "hub_invitations_hub_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "hubs"
+    },
+    {
+      "child_column": "hub_id",
+      "child_table": "hub_join_links",
+      "constraint": "hub_join_links_hub_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "hubs"
+    },
+    {
+      "child_column": "replaced_by",
+      "child_table": "hub_join_links",
+      "constraint": "hub_join_links_replaced_by_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "hub_join_links"
+    },
+    {
+      "child_column": "hub_id",
+      "child_table": "hub_members",
+      "constraint": "hub_members_hub_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "hubs"
+    },
+    {
+      "child_column": "section_id",
+      "child_table": "hub_section_items",
+      "constraint": "hub_section_items_section_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "hub_sections"
+    },
+    {
+      "child_column": "hub_id",
+      "child_table": "hub_sections",
+      "constraint": "hub_sections_hub_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "hubs"
+    },
+    {
+      "child_column": "deet_id",
+      "child_table": "poll_votes",
+      "constraint": "poll_votes_deet_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "deets"
+    },
+    {
+      "child_column": "deet_id",
+      "child_table": "survey_responses",
+      "constraint": "survey_responses_deet_id_fkey",
+      "orphan_count": 0,
+      "parent_column": "id",
+      "parent_table": "deets"
+    }
+  ],
+  "target": []
+}

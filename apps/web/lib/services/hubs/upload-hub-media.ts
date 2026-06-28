@@ -1,6 +1,5 @@
-import { createClient } from "@/lib/supabase/client";
-
-const HUB_MEDIA_BUCKET = "hub-media";
+import { prepareHubMediaUploadApi } from "@/lib/api/hubs";
+import { uploadToSignedUrl } from "@/lib/api/deet-media";
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
 function sanitizeFileName(value: string) {
@@ -23,15 +22,15 @@ function fileExtensionFor(file: File) {
 
 export async function uploadHubMedia({
   file,
+  hubId,
   slug,
   kind,
 }: {
   file: File;
+  hubId: string;
   slug: string;
   kind: "dp" | "cover" | "gallery";
 }): Promise<string> {
-  const supabase = createClient();
-
   if (!file.type.startsWith("image/")) {
     throw new Error("Please upload an image file for your hub media.");
   }
@@ -40,39 +39,18 @@ export async function uploadHubMedia({
     throw new Error("Hub images must be 5 MB or smaller.");
   }
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError) {
-    throw new Error(`Unable to verify your account: ${userError.message}`);
-  }
-
-  if (!user) {
-    throw new Error("You must be signed in to upload hub media.");
-  }
-
   const extension = fileExtensionFor(file);
-  const filePath = `${user.id}/${sanitizeFileName(slug)}/${kind}-${Date.now()}.${extension}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from(HUB_MEDIA_BUCKET)
-    .upload(filePath, file, {
-      cacheControl: "3600",
-      contentType: file.type,
-      upsert: true,
-    });
-
-  if (uploadError) {
-    throw new Error(`Failed to upload ${kind === "dp" ? "display picture" : "cover image"}: ${uploadError.message}`);
-  }
-
-  const { data } = supabase.storage.from(HUB_MEDIA_BUCKET).getPublicUrl(filePath);
-
-  if (!data.publicUrl) {
+  const safeName = `${sanitizeFileName(slug) || "hub"}-${Date.now()}.${extension}`;
+  const prepared = await prepareHubMediaUploadApi({
+    hubId,
+    kind,
+    fileName: safeName,
+    mimeType: file.type,
+    sizeBytes: file.size,
+  });
+  await uploadToSignedUrl(prepared.signedUploadUrl, file, file.type);
+  if (!prepared.publicUrl) {
     throw new Error("Hub media uploaded, but a public URL could not be generated.");
   }
-
-  return data.publicUrl;
+  return prepared.publicUrl;
 }

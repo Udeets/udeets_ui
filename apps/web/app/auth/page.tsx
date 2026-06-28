@@ -9,10 +9,8 @@ import { Suspense, useEffect, useState } from "react";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
 
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
-import { signInWithApple } from "@/services/auth/signInWithApple";
 import { signInWithGoogle } from "@/services/auth/signInWithGoogle";
 import { useAuthSession } from "@/services/auth/useAuthSession";
-import { getAuthCallbackUrl, setAuthNextCookie } from "@/lib/auth/auth-next-cookie";
 import { readPostAuthRedirect } from "@/lib/services/hubs/invite-landing-utils";
 
 type Mode = "signin" | "signup";
@@ -44,14 +42,6 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-function AppleIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
-      <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-    </svg>
-  );
-}
-
 function AuthPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -60,17 +50,9 @@ function AuthPageContent() {
   const initialMode = searchParams.get("mode") === "signup" ? "signup" : "signin";
   const { isAuthenticated } = useAuthSession();
   const [mode, setMode] = useState<Mode>(initialMode);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState("");
   const [dismissedQueryError, setDismissedQueryError] = useState<string | null>(null);
-  const [fullName, setFullName] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [isAppleLoading, setIsAppleLoading] = useState(false);
-  const [isEmailLoading, setIsEmailLoading] = useState(false);
-  const [signupSuccess, setSignupSuccess] = useState(false);
   const visibleError = error || (queryError && dismissedQueryError !== queryError ? queryError : "");
 
   useEffect(() => {
@@ -78,6 +60,8 @@ function AuthPageContent() {
     if (oauthCode) {
       const callback = new URL("/auth/callback", window.location.origin);
       callback.searchParams.set("code", oauthCode);
+      const state = searchParams.get("state");
+      if (state) callback.searchParams.set("state", state);
       callback.searchParams.set("next", postAuthRedirect);
       router.replace(callback.pathname + callback.search);
       return;
@@ -106,165 +90,54 @@ function AuthPageContent() {
     };
   }, [router, postAuthRedirect, searchParams]);
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setDismissedQueryError(queryError);
-    setError("");
-
-    // --- Validation (#18) ---
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail) {
-      setError("Please enter your email address.");
-      return;
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmedEmail)) {
-      setError("Please enter a valid email address.");
-      return;
-    }
-    if (!password) {
-      setError("Please enter a password.");
-      return;
-    }
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
-    }
-    if (mode === "signup") {
-      if (!fullName.trim()) {
-        setError("Please enter your full name.");
-        return;
-      }
-      if (password !== confirmPassword) {
-        setError("Passwords do not match.");
-        return;
-      }
-    }
-
-    setIsEmailLoading(true);
-    try {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-
-      if (mode === "signup") {
-        setAuthNextCookie(postAuthRedirect);
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email: trimmedEmail,
-          password,
-          options: {
-            data: { full_name: fullName.trim() },
-            emailRedirectTo: getAuthCallbackUrl(),
-          },
-        });
-        if (signUpError) {
-          setError(signUpError.message);
-          return;
-        }
-        // If email confirmation is required, Supabase returns a user but no session
-        if (data.user && !data.session) {
-          setError("");
-          setSignupSuccess(true);
-          return;
-        }
-        // If auto-confirmed, upsert profile and redirect
-        if (data.session) {
-          router.refresh();
-          router.replace(postAuthRedirect);
-        }
-      } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: trimmedEmail,
-          password,
-        });
-        if (signInError) {
-          if (signInError.message.includes("Invalid login credentials")) {
-            setError("Invalid email or password. Please try again.");
-          } else {
-            setError(signInError.message);
-          }
-          return;
-        }
-        router.refresh();
-        router.replace(postAuthRedirect);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
-    } finally {
-      setIsEmailLoading(false);
-    }
-  }
-
-  async function handleAppleSignIn() {
-    setDismissedQueryError(queryError);
-    setError("");
-    setIsAppleLoading(true);
-
-    try {
-      setAuthNextCookie(postAuthRedirect);
-      await signInWithApple();
-    } catch (signInError) {
-      setError(signInError instanceof Error ? signInError.message : "Failed to sign in with Apple.");
-      setIsAppleLoading(false);
-    }
-  }
-
   async function handleGoogleSignIn() {
     setDismissedQueryError(queryError);
     setError("");
     setIsGoogleLoading(true);
 
     try {
-      setAuthNextCookie(postAuthRedirect);
-      await signInWithGoogle();
+      await signInWithGoogle(postAuthRedirect);
     } catch (signInError) {
       setError(signInError instanceof Error ? signInError.message : "Failed to sign in with Google.");
       setIsGoogleLoading(false);
     }
   }
 
-  const PAGE_BG = "bg-[var(--ud-bg-page)]";
-  const HEADER_BG = "bg-[var(--ud-bg-card)] border-b border-[var(--ud-border-subtle)]";
-  const FOOTER_BG = "bg-[#0C5C57]";
-  const NAV_TEXT = "text-[var(--ud-text-primary)]";
-  const BRAND_TEXT_STYLE = "text-xl sm:text-2xl";
-  const BUTTON_PRIMARY = "rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-6 py-3 text-sm font-medium text-white hover:opacity-90";
   const SURFACE = "rounded-2xl border border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] shadow-sm";
 
   return (
-    <div className={cx("min-h-screen", PAGE_BG)}>
-      {/* HEADER */}
-      <header className={cx("sticky top-0 z-50", HEADER_BG)}>
-        <div className="flex min-h-16 w-full items-center justify-between px-4 py-2 sm:px-6 lg:px-10">
-          <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <UdeetsBrandLockup textClassName={BRAND_TEXT_STYLE} priority />
-          </Link>
+    <div className="min-h-screen bg-[var(--ud-bg-page)]">
+      <header className="sticky top-0 z-50 border-b border-[var(--ud-border-subtle)] bg-[var(--ud-bg-page)]/80 backdrop-blur-lg">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
+              <UdeetsBrandLockup textClassName="text-xl sm:text-2xl" priority />
+            </Link>
+            <Link
+              href="/about"
+              className="hidden rounded-full px-3 py-2 text-sm font-medium text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)] sm:inline-flex"
+            >
+              About
+            </Link>
+          </div>
 
-          <nav className="flex items-center gap-1 sm:gap-1.5">
+          <nav className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/discover"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
-              aria-label="Discover"
+              className="rounded-full px-3 py-2 text-sm font-medium text-[var(--ud-text-secondary)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
             >
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.3-4.3" />
-              </svg>
+              Discover
             </Link>
             <Link
               href={isAuthenticated ? "/dashboard" : "/"}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--ud-text-muted)] transition hover:bg-[var(--ud-bg-subtle)] hover:text-[var(--ud-text-primary)]"
-              aria-label="Home"
+              className="inline-flex items-center rounded-full border border-[var(--ud-border)] px-4 py-2 text-sm font-medium text-[var(--ud-text-primary)] transition hover:bg-[var(--ud-bg-subtle)]"
             >
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                <polyline points="9 22 9 12 15 12 15 22" />
-              </svg>
+              {isAuthenticated ? "Dashboard" : "Back to home"}
             </Link>
           </nav>
         </div>
       </header>
 
-      {/* MAIN */}
       <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-7xl items-center justify-center px-4 py-10 sm:px-6 lg:px-10">
         <div className={cx(SURFACE, "w-full max-w-md p-6 sm:p-8")}>
           <div className="mb-8 text-center">
@@ -272,29 +145,29 @@ function AuthPageContent() {
             <p className="text-[var(--ud-text-secondary)]">Create. Subscribe. Stay Informed.</p>
           </div>
 
-          {/* Toggle */}
+          {/* Sign in / Sign up toggle */}
           <div className="mb-6">
             <div className="flex rounded-xl bg-[var(--ud-bg-subtle)] p-1">
               <button
                 type="button"
-                onClick={() => { setMode("signin"); setError(""); setSignupSuccess(false); }}
+                onClick={() => { setMode("signin"); setError(""); setDismissedQueryError(queryError); }}
                 className={cx(
                   "flex-1 py-2 px-4 text-sm font-medium rounded-lg transition",
                   mode === "signin"
                     ? "bg-[var(--ud-bg-card)] text-[var(--ud-text-primary)] shadow-sm"
-                    : "text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]"
+                    : "text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]",
                 )}
               >
                 Sign in
               </button>
               <button
                 type="button"
-                onClick={() => { setMode("signup"); setError(""); setSignupSuccess(false); }}
+                onClick={() => { setMode("signup"); setError(""); setDismissedQueryError(queryError); }}
                 className={cx(
                   "flex-1 py-2 px-4 text-sm font-medium rounded-lg transition",
                   mode === "signup"
                     ? "bg-[var(--ud-bg-card)] text-[var(--ud-text-primary)] shadow-sm"
-                    : "text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]"
+                    : "text-[var(--ud-text-muted)] hover:text-[var(--ud-text-primary)]",
                 )}
               >
                 Sign up
@@ -302,116 +175,35 @@ function AuthPageContent() {
             </div>
           </div>
 
-          {/* Social */}
-          <div className="mb-6 space-y-3">
+          <div className="mb-6 text-center">
+            <h1 className="text-lg font-semibold text-[var(--ud-text-primary)]">
+              {mode === "signup" ? "Create your account" : "Welcome back"}
+            </h1>
+            <p className="mt-1 text-sm text-[var(--ud-text-secondary)]">
+              {mode === "signup"
+                ? "Use Google to sign up — we'll save your name and email automatically."
+                : "Sign in with your Google account to continue."}
+            </p>
+          </div>
+
+          <div className="space-y-4">
             <button
               type="button"
               onClick={handleGoogleSignIn}
-              disabled={isGoogleLoading || isAppleLoading}
+              disabled={isGoogleLoading}
               className="w-full flex items-center justify-center px-4 py-3 border border-[var(--ud-border)] rounded-xl bg-[var(--ud-bg-page)] text-[var(--ud-text-primary)] hover:bg-[var(--ud-bg-subtle)] transition disabled:cursor-not-allowed disabled:opacity-60"
             >
               <GoogleIcon className="w-5 h-5 mr-3" />
-              {isGoogleLoading ? "Connecting to Google..." : "Continue with Google"}
-            </button>
-            <button
-              type="button"
-              onClick={handleAppleSignIn}
-              disabled={isGoogleLoading || isAppleLoading}
-              className="w-full flex items-center justify-center px-4 py-3 border border-[var(--ud-border)] rounded-xl bg-black text-white hover:bg-gray-900 transition disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <AppleIcon className="w-5 h-5 mr-3" />
-              {isAppleLoading ? "Connecting to Apple..." : "Continue with Apple"}
-            </button>
-          </div>
-
-          {/* Divider */}
-          <div className="mb-6 relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[var(--ud-border)]" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-[var(--ud-bg-card)] text-[var(--ud-text-muted)]">OR</span>
-            </div>
-          </div>
-
-          {/* Form */}
-          {signupSuccess ? (
-            <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-center">
-              <p className="text-sm font-medium text-green-800">Check your email!</p>
-              <p className="mt-1 text-sm text-green-700">
-                We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account.
-              </p>
-            </div>
-          ) : (
-          <form onSubmit={onSubmit} className="space-y-4">
-            {mode === "signup" && (
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Full Name"
-                className="w-full rounded-xl border border-[var(--ud-border)] bg-[var(--ud-bg-input)] px-3 py-3 text-[var(--ud-text-primary)] placeholder:text-[var(--ud-text-muted)] focus:ring-2 focus:ring-[#A9D1CA] outline-none"
-              />
-            )}
-
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email"
-              className="w-full rounded-xl border border-[var(--ud-border)] bg-[var(--ud-bg-input)] px-3 py-3 text-[var(--ud-text-primary)] placeholder:text-[var(--ud-text-muted)] focus:ring-2 focus:ring-[#A9D1CA] outline-none"
-            />
-
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              className="w-full rounded-xl border border-[var(--ud-border)] bg-[var(--ud-bg-input)] px-3 py-3 text-[var(--ud-text-primary)] placeholder:text-[var(--ud-text-muted)] focus:ring-2 focus:ring-[#A9D1CA] outline-none"
-            />
-
-            {mode === "signup" && (
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm Password"
-                className="w-full rounded-xl border border-[var(--ud-border)] bg-[var(--ud-bg-input)] px-3 py-3 text-[var(--ud-text-primary)] placeholder:text-[var(--ud-text-muted)] focus:ring-2 focus:ring-[#A9D1CA] outline-none"
-              />
-            )}
-
-            {visibleError && <p className="text-sm text-red-600">{visibleError}</p>}
-
-            {mode === "signin" && (
-              <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-[var(--ud-brand-primary)]"
-                  />
-                  <span className="ml-2 text-sm text-[var(--ud-text-secondary)]">Remember me</span>
-                </label>
-                <button type="button" className="text-sm text-[var(--ud-brand-primary)]">
-                  Forgot password?
-                </button>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={isEmailLoading}
-              className={cx(BUTTON_PRIMARY, "w-full disabled:cursor-not-allowed disabled:opacity-60")}
-            >
-              {isEmailLoading
-                ? "Please wait..."
-                : mode === "signin"
-                  ? "Sign In"
-                  : "Create Account"}
+              {isGoogleLoading
+                ? "Connecting to Google..."
+                : mode === "signup"
+                  ? "Sign up with Google"
+                  : "Continue with Google"}
             </button>
 
-            <p className="text-xs text-center text-[var(--ud-text-muted)] mt-4">
+            {visibleError ? <p className="text-sm text-red-600 text-center">{visibleError}</p> : null}
+
+            <p className="text-xs text-center text-[var(--ud-text-muted)]">
               By continuing, I agree to the{" "}
               <Link href="/terms" className="text-[var(--ud-brand-primary)] hover:underline">
                 Terms & Conditions
@@ -422,13 +214,12 @@ function AuthPageContent() {
               </Link>
               .
             </p>
-          </form>
-          )}
+          </div>
         </div>
       </main>
 
-      <footer className={FOOTER_BG}>
-        <div className="flex min-h-16 w-full items-center justify-between px-4 py-3 text-white sm:px-6 lg:px-10">
+      <footer className="bg-[#0C5C57]">
+        <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between px-4 py-3 text-white sm:px-6 lg:px-10">
           <p className="text-sm sm:text-base">© uDeets. All rights reserved.</p>
           <div className="flex gap-4 text-sm">
             <Link href="/terms" className="hover:underline">Terms</Link>

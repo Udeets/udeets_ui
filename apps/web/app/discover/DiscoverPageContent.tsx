@@ -7,10 +7,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
 
 import { isUdeetsLogoSrc } from "@/lib/branding";
+import { listHubs } from "@/lib/services/hubs/list-hubs";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
-import type { Hub as SupabaseHub } from "@/types/hub";
+import type { Hub as HubRow } from "@/types/hub";
 
-type InitialHubRow = SupabaseHub & { _memberCount?: number };
+type InitialHubRow = HubRow & { _memberCount?: number };
 
 const PAGE_BG = "bg-[var(--ud-bg-page)]";
 
@@ -58,7 +59,7 @@ type Hub = {
   tags: Array<"trending" | "popular" | "nearby">;
 };
 
-type SupabaseLoadState = "idle" | "loading" | "success" | "error";
+type HubsLoadState = "idle" | "loading" | "success" | "error";
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -79,11 +80,11 @@ function normalizePublicSrc(src?: string) {
   return `/${src}`;
 }
 
-function locationLabelFor(hub: SupabaseHub) {
+function locationLabelFor(hub: HubRow) {
   return [hub.city, hub.state, hub.country].filter(Boolean).join(", ") || "";
 }
 
-function toDiscoverHub(hub: SupabaseHub, memberCount?: number): Hub {
+function toDiscoverHub(hub: HubRow, memberCount?: number): Hub {
   const imageSrc = hub.dp_image_url || hub.cover_image_url || undefined;
   const vis = (hub.visibility ?? "public").toString().toLowerCase();
   const count = memberCount ?? 0;
@@ -273,11 +274,13 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: Ini
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<DisplayCategory>("All");
-  const [supabaseHubs, setSupabaseHubs] = useState<Hub[]>(() =>
+  const [discoverHubs, setDiscoverHubs] = useState<Hub[]>(() =>
     (initialHubs ?? []).map((h) => toDiscoverHub(h, h._memberCount ?? undefined))
   );
-  const [supabaseLoadState, setSupabaseLoadState] = useState<SupabaseLoadState>(initialHubs && initialHubs.length > 0 ? "success" : "idle");
-  const [supabaseLoadError, setSupabaseLoadError] = useState<string | null>(null);
+  const [hubsLoadState, setHubsLoadState] = useState<HubsLoadState>(
+    initialHubs && initialHubs.length > 0 ? "success" : "idle",
+  );
+  const [hubsLoadError, setHubsLoadError] = useState<string | null>(null);
 
   // Category strip scrolling
   const stripRef = useRef<HTMLDivElement | null>(null);
@@ -323,33 +326,16 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: Ini
 
         if (session) {
           try {
-            const { createClient } = await import("@/lib/supabase/client");
-            const supabase = createClient();
-            // Same scope as public discover: include hubs you created (do not exclude `created_by`).
-            // A previous `.neq(created_by, user)` caused SSR to show your hub then client refresh hid it.
-            const { data, error } = await supabase
-              .from("hubs")
-              .select("*")
-              .order("created_at", { ascending: false });
-            if (!cancelled && data && !error) {
-              // Fetch active member counts for all discovered hubs
-              const hubIds = data.map((h) => h.id);
-              const countMap = new Map<string, number>();
-              if (hubIds.length > 0) {
-                const { data: memberRows } = await supabase
-                  .from("hub_members")
-                  .select("hub_id")
-                  .in("hub_id", hubIds)
-                  .eq("status", "active");
-                for (const row of memberRows ?? []) {
-                  countMap.set(row.hub_id, (countMap.get(row.hub_id) ?? 0) + 1);
-                }
-              }
-              setSupabaseHubs(data.map((h) => toDiscoverHub(h, countMap.get(h.id))));
-              setSupabaseLoadState("success");
+            const [data] = await Promise.all([listHubs()]);
+            if (!cancelled && data) {
+              setDiscoverHubs(data.map((h) => toDiscoverHub(h)));
+              setHubsLoadState("success");
             }
           } catch {
-            // Silently fall back to server-fetched hubs
+            if (!cancelled) {
+              setHubsLoadState("error");
+              setHubsLoadError("Could not refresh discover hubs.");
+            }
           }
         }
       })
@@ -361,7 +347,7 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: Ini
   }, []);
 
   // Filtering
-  const allHubs = useMemo(() => supabaseHubs, [supabaseHubs]);
+  const allHubs = useMemo(() => discoverHubs, [discoverHubs]);
 
   const baseFiltered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -522,15 +508,15 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: Ini
 
       {/* ── Hub list ─────────────────────────────────────────────── */}
       <main className="mx-auto max-w-4xl px-4 py-4 sm:px-6 lg:px-10">
-        {supabaseLoadState === "loading" ? (
+        {hubsLoadState === "loading" ? (
           <div className="mb-4 rounded-lg bg-white px-4 py-3 text-sm text-slate-500">
             Loading hubs...
           </div>
         ) : null}
 
-        {supabaseLoadState === "error" ? (
+        {hubsLoadState === "error" ? (
           <div className="mb-4 rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-600">
-            {supabaseLoadError ?? "Could not load hubs."}
+            {hubsLoadError ?? "Could not load hubs."}
           </div>
         ) : null}
 

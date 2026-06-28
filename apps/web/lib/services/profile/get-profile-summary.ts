@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/client";
+import { getProfileSummaryApi } from "@/lib/api/profiles";
 
 export type ProfileSummary = {
   id: string;
@@ -20,37 +20,10 @@ export type ProfileSummary = {
  */
 export async function getProfileSummary(userId: string): Promise<ProfileSummary | null> {
   if (!userId) return null;
-  const supabase = createClient();
-
-  const { data: { user: viewer } } = await supabase.auth.getUser();
-  const viewerId = viewer?.id ?? null;
-
-  const [profileRes, likeCountRes, commentCountRes, postCountRes, viewerLikeRes] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, avatar_url, email, created_at").eq("id", userId).maybeSingle(),
-    supabase.from("profile_likes").select("*", { count: "exact", head: true }).eq("profile_id", userId),
-    supabase.from("profile_comments").select("*", { count: "exact", head: true }).eq("profile_id", userId),
-    supabase.from("deets").select("*", { count: "exact", head: true }).eq("created_by", userId).eq("is_published", true),
-    viewerId
-      ? supabase.from("profile_likes").select("id").eq("profile_id", userId).eq("liker_id", viewerId).maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
-  ]);
-
-  if (profileRes.error || !profileRes.data) {
-    console.warn("[getProfileSummary] profile lookup failed:", profileRes.error);
+  try {
+    return await getProfileSummaryApi(userId);
+  } catch (error) {
+    console.warn("[getProfileSummary] profile lookup failed:", error);
     return null;
   }
-
-  const profile = profileRes.data as { id: string; full_name: string | null; avatar_url: string | null; email: string | null; created_at: string | null };
-
-  return {
-    id: profile.id,
-    fullName: profile.full_name || profile.email?.split("@")[0] || "uDeets User",
-    avatarUrl: profile.avatar_url,
-    email: profile.email,
-    joinedAt: profile.created_at,
-    likeCount: likeCountRes.count ?? 0,
-    commentCount: commentCountRes.count ?? 0,
-    postCount: postCountRes.count ?? 0,
-    viewerHasLiked: Boolean(viewerLikeRes.data),
-  };
 }

@@ -1,10 +1,12 @@
-import { createClient } from "@/lib/supabase/client";
-
 export async function signOut(): Promise<void> {
-  const supabase = createClient();
-  const { error } = await supabase.auth.signOut();
-
-  if (error) {
-    throw new Error(`Failed to sign out: ${error.message}`);
+  const response = await fetch("/auth/signout", {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to clear local auth session.");
+  }
+  if (typeof window !== "undefined") {
+    window.location.assign("/auth");
   }
 }

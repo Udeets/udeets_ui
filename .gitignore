@@ -4,4 +4,10 @@ node_modules
 .env
 .env.*
 !.env.example
+!.env.local.example
 supabase/.temp/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.venv/

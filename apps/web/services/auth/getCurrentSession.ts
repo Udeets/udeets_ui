@@ -1,14 +1,11 @@
-import type { Session } from "@supabase/supabase-js";
+import {
+  buildSessionFromToken,
+  type AuthSession,
+  tokensFromCookieHeader,
+} from "@/lib/auth/session";
 
-import { createClient } from "@/lib/supabase/client";
-
-export async function getCurrentSession(): Promise<Session | null> {
-  const supabase = createClient();
-  const { data, error } = await supabase.auth.getSession();
-
-  if (error) {
-    throw new Error(`Failed to get current session: ${error.message}`);
-  }
-
-  return data.session;
+export async function getCurrentSession(): Promise<AuthSession | null> {
+  if (typeof document === "undefined") return null;
+  const { accessToken } = tokensFromCookieHeader(document.cookie);
+  return buildSessionFromToken(accessToken);
 }

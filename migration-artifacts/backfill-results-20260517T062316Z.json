@@ -1,0 +1,16 @@
+{
+  "domains": [
+    "hubs_members_invites",
+    "profiles_admin",
+    "deets_interactions",
+    "events_rsvps"
+  ],
+  "results": [
+    {
+      "copied_rows": 0,
+      "error": "relation \"public.hubs\" does not exist",
+      "status": "failed",
+      "table": "hubs"
+    }
+  ]
+}

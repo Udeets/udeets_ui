@@ -119,7 +119,7 @@ export function toHubRecord(hub: DbHubRecord): HubRecord {
       "More details, updates, and media can be added over time.",
     ],
     offerings: ["Updates", "Community posts", "Upcoming activity"],
-    highlights: ["Newly created", "Supabase-backed", "Ready for first updates"],
+    highlights: ["Newly created", "Ready for first updates"],
     contact: {
       visit: "Location and contact details can be added as this hub grows.",
       stayConnected: "Follow this hub for future posts, events, and updates.",

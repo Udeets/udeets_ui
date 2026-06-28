@@ -1,0 +1,233 @@
+{
+  "results": [
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "attachments"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "chat_message_attachments"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "chat_message_reactions"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "chat_message_reports"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "chat_messages"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "chat_moderation_actions"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "chat_poll_options"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "chat_poll_votes"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "chat_polls"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "chat_rate_limit_hits"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "chat_room_bans"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "chat_room_invites"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "chat_room_memberships"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "chat_room_mutes"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "chat_room_typing"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "chat_rooms"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "comment_reactions"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "deet_comments"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "deet_likes"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "deet_shares"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "deet_views"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "deets"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "event_rsvps"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "events"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "hub_contact_invites"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "hub_ctas"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "hub_invitations"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "hub_join_links"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "hub_members"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "hub_section_items"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "hub_sections"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "hubs"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "poll_votes"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "profile_comments"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "profile_likes"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "profiles"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "survey_responses"
+    },
+    {
+      "reason": "connection failed: connection to server at \"3.131.201.192\", port 5432 failed: fe_sendauth: no password supplied",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "user_reports"
+    }
+  ],
+  "since": "2026-01-01T00:00:00Z"
+}

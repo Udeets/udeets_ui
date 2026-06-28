@@ -1,0 +1,233 @@
+{
+  "results": [
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "attachments"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "chat_message_attachments"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "chat_message_reactions"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "chat_message_reports"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "chat_messages"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "chat_moderation_actions"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "chat_poll_options"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "chat_poll_votes"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "chat_polls"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "chat_rate_limit_hits"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "chat_room_bans"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "chat_room_invites"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "chat_room_memberships"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "chat_room_mutes"
+    },
+    {
+      "reason": null,
+      "status": "ok",
+      "synced_rows": 0,
+      "table": "chat_room_typing"
+    },
+    {
+      "reason": "cannot adapt type 'dict' using placeholder '%s' (format: AUTO)",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "chat_rooms"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "comment_reactions"
+    },
+    {
+      "reason": "relation \"public.deet_comments\" does not exist\nLINE 1: INSERT INTO public.\"deet_comments\" (\"id\", \"deet_id\", \"user_i...\n                    ^",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "deet_comments"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "deet_likes"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "deet_shares"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "deet_views"
+    },
+    {
+      "reason": "cannot adapt type 'dict' using placeholder '%s' (format: AUTO)",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "deets"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "event_rsvps"
+    },
+    {
+      "reason": "relation \"public.events\" does not exist\nLINE 1: INSERT INTO public.\"events\" (\"id\", \"hub_id\", \"title\", \"descr...\n                    ^",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "events"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "hub_contact_invites"
+    },
+    {
+      "reason": null,
+      "status": "ok",
+      "synced_rows": 0,
+      "table": "hub_ctas"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "hub_invitations"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "hub_join_links"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "hub_members"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "hub_section_items"
+    },
+    {
+      "reason": null,
+      "status": "ok",
+      "synced_rows": 0,
+      "table": "hub_sections"
+    },
+    {
+      "reason": "relation \"public.hubs\" does not exist\nLINE 1: INSERT INTO public.\"hubs\" (\"id\", \"name\", \"slug\", \"category\",...\n                    ^",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "hubs"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "poll_votes"
+    },
+    {
+      "reason": null,
+      "status": "ok",
+      "synced_rows": 0,
+      "table": "profile_comments"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "profile_likes"
+    },
+    {
+      "reason": "cannot adapt type 'dict' using placeholder '%s' (format: AUTO)",
+      "status": "failed",
+      "synced_rows": 0,
+      "table": "profiles"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "survey_responses"
+    },
+    {
+      "reason": "no updated_at",
+      "status": "skipped",
+      "synced_rows": 0,
+      "table": "user_reports"
+    }
+  ],
+  "since": "2026-01-01T00:00:00Z"
+}

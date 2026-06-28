@@ -3,28 +3,15 @@
 export const dynamic = "force-dynamic";
 
 import { Calendar, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import MockAppShell from "@/components/mock-app-shell";
 import { AuthGuard } from "@/components/AuthGuard";
 import { getUpcomingPublicHolidays } from "@/lib/calendar/public-holidays";
-import { createClient } from "@/lib/supabase/client";
-import { listMyMemberships } from "@/lib/services/members/list-my-memberships";
+import { listUpcomingEventsFeedApi } from "@/lib/api/events";
 
 /* ── helpers ── */
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
-}
-
-interface EventRow {
-  id: string;
-  hub_id: string;
-  title: string;
-  description: string | null;
-  event_date: string;
-  start_time: string | null;
-  end_time: string | null;
-  location: string | null;
-  created_at: string;
 }
 
 interface EventDisplay {
@@ -36,6 +23,16 @@ interface EventDisplay {
   location: string;
   isHoliday: boolean;
 }
+
+type UpcomingEventFeedRow = {
+  id: string;
+  title: string;
+  hubName?: string;
+  eventDate: string;
+  startTime: string | null;
+  endTime: string | null;
+  location: string | null;
+};
 
 const SHORT_DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const FULL_MONTHS = [
@@ -118,39 +115,28 @@ export default function EventsPage() {
     let cancelled = false;
 
     async function loadEvents() {
-      const supabase = createClient();
-      const memberships = await listMyMemberships();
-      const hubIds = memberships.filter((m) => m.status === "active").map((m) => m.hubId);
-
-      if (!hubIds.length || cancelled) {
-        if (!cancelled) { setEvents(getUpcomingPublicHolidays()); setLoading(false); }
-        return;
+      let rows: UpcomingEventFeedRow[] = [];
+      try {
+        rows = await listUpcomingEventsFeedApi(50);
+      } catch (error) {
+        console.error("[events] failed to load events feed", error);
       }
 
-      const todayStr = new Date().toISOString().slice(0, 10);
-      const { data: rows, error } = await supabase
-        .from("events")
-        .select("id, hub_id, title, description, event_date, start_time, end_time, location, created_at")
-        .in("hub_id", hubIds)
-        .gte("event_date", todayStr)
-        .order("event_date", { ascending: true })
-        .limit(50);
-
-      if (error || cancelled) {
-        if (!cancelled) { setEvents(getUpcomingPublicHolidays()); setLoading(false); }
+      if (!rows.length || cancelled) {
+        if (!cancelled) {
+          setEvents(getUpcomingPublicHolidays());
+          setLoading(false);
+        }
         return;
       }
-
-      const { data: hubs } = await supabase.from("hubs").select("id, name").in("id", hubIds);
-      const hubMap = Object.fromEntries((hubs ?? []).map((h) => [h.id, h.name]));
       if (cancelled) return;
 
-      const mapped: EventDisplay[] = (rows ?? []).map((row: EventRow) => ({
+      const mapped: EventDisplay[] = rows.map((row) => ({
         id: row.id,
         title: row.title,
-        hubName: hubMap[row.hub_id] || "Hub",
-        eventDate: new Date(row.event_date + "T00:00:00"),
-        time: formatTime(row.start_time, row.end_time),
+        hubName: row.hubName || "Hub",
+        eventDate: new Date(row.eventDate + "T00:00:00"),
+        time: formatTime(row.startTime, row.endTime),
         location: row.location || "",
         isHoliday: false,
       }));

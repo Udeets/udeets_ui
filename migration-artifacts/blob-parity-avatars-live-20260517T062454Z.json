@@ -1,0 +1,14 @@
+{
+  "copied_count": 0,
+  "failure_count": 1,
+  "failures": [
+    {
+      "error": "Unable to locate credentials",
+      "source_bucket": "avatars",
+      "source_key": "8323df4e-858a-47fd-a03a-73a7b44161cb/avatar.png",
+      "target_bucket": "udeets-media",
+      "target_key": "development/avatars/8323df4e-858a-47fd-a03a-73a7b44161cb/avatar.png"
+    }
+  ],
+  "input_count": 1
+}

@@ -1,4 +1,10 @@
-import { createClient } from "@/lib/supabase/client";
+import {
+  getEventRsvpCountsApi,
+  getMyEventRsvpApi,
+  listEventRsvpsApi,
+  removeMyEventRsvpApi,
+  upsertMyEventRsvpApi,
+} from "@/lib/api/events";
 import type { EventRsvp } from "./event-types";
 
 /**
@@ -9,59 +15,26 @@ export async function rsvpToEvent(
   userId: string,
   status: "going" | "maybe" | "not_going"
 ): Promise<EventRsvp | null> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("event_rsvps")
-    .upsert(
-      [
-        {
-          event_id: eventId,
-          user_id: userId,
-          status: status,
-        },
-      ],
-      {
-        onConflict: "event_id,user_id",
-      }
-    )
-    .select()
-    .single();
-
-  if (error) {
+  // `userId` kept for backward compatibility with existing callers.
+  void userId;
+  try {
+    return await upsertMyEventRsvpApi(eventId, status);
+  } catch (error) {
     console.error("Error creating/updating RSVP:", error);
     return null;
   }
-
-  if (!data) return null;
-
-  return {
-    eventId: data.event_id,
-    userId: data.user_id,
-    status: data.status,
-  };
 }
 
 /**
  * Fetches all RSVPs for an event
  */
 export async function getEventRsvps(eventId: string): Promise<EventRsvp[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("event_rsvps")
-    .select("*")
-    .eq("event_id", eventId);
-
-  if (error) {
+  try {
+    return await listEventRsvpsApi(eventId);
+  } catch (error) {
     console.error("Error fetching event RSVPs:", error);
     return [];
   }
-
-  return (data || [])// eslint-disable-next-line @typescript-eslint/no-explicit-any
-.map((row: any) => ({
-    eventId: row.event_id,
-    userId: row.user_id,
-    status: row.status,
-  }));
 }
 
 /**
@@ -71,47 +44,28 @@ export async function getUserRsvp(
   eventId: string,
   userId: string
 ): Promise<EventRsvp | null> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("event_rsvps")
-    .select("*")
-    .eq("event_id", eventId)
-    .eq("user_id", userId)
-    .single();
-
-  if (error) {
-    // No RSVP found is not an error
-    if (error.code === "PGRST116") return null;
+  // `userId` kept for backward compatibility with existing callers.
+  void userId;
+  try {
+    return await getMyEventRsvpApi(eventId);
+  } catch (error) {
     console.error("Error fetching user RSVP:", error);
     return null;
   }
-
-  if (!data) return null;
-
-  return {
-    eventId: data.event_id,
-    userId: data.user_id,
-    status: data.status,
-  };
 }
 
 /**
  * Removes an RSVP
  */
 export async function removeRsvp(eventId: string, userId: string): Promise<boolean> {
-  const supabase = createClient();
-  const { error } = await supabase
-    .from("event_rsvps")
-    .delete()
-    .eq("event_id", eventId)
-    .eq("user_id", userId);
-
-  if (error) {
+  // `userId` kept for backward compatibility with existing callers.
+  void userId;
+  try {
+    return await removeMyEventRsvpApi(eventId);
+  } catch (error) {
     console.error("Error removing RSVP:", error);
     return false;
   }
-
-  return true;
 }
 
 /**
@@ -120,24 +74,10 @@ export async function removeRsvp(eventId: string, userId: string): Promise<boole
 export async function getEventRsvpCounts(
   eventId: string
 ): Promise<{ going: number; maybe: number; notGoing: number }> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("event_rsvps")
-    .select("status")
-    .eq("event_id", eventId);
-
-  if (error) {
+  try {
+    return await getEventRsvpCountsApi(eventId);
+  } catch (error) {
     console.error("Error fetching RSVP counts:", error);
     return { going: 0, maybe: 0, notGoing: 0 };
   }
-
-  const counts = { going: 0, maybe: 0, notGoing: 0 };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-(data || []).forEach((row: any) => {
-    if (row.status === "going") counts.going++;
-    else if (row.status === "maybe") counts.maybe++;
-    else if (row.status === "not_going") counts.notGoing++;
-  });
-
-  return counts;
 }

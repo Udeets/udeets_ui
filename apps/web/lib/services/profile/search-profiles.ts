@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/client";
+import { searchProfilesApi } from "@/lib/api/profiles";
 
 export type SearchedProfile = {
   id: string;
@@ -21,28 +21,10 @@ export async function searchProfiles(query: string, limit = 10): Promise<Searche
   const trimmed = query.trim();
   if (trimmed.length < 2) return [];
 
-  const supabase = createClient();
-  // PostgREST requires percent escaping inside `or=`. Escape any commas/parens
-  // that could otherwise break the filter expression.
-  const safe = trimmed.replace(/[,()%]/g, "");
-  const pattern = `%${safe}%`;
-
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, full_name, avatar_url, email")
-    .or(`full_name.ilike.${pattern},email.ilike.${pattern}`)
-    .order("full_name", { ascending: true })
-    .limit(limit);
-
-  if (error) {
+  try {
+    return await searchProfilesApi(trimmed, limit);
+  } catch (error) {
     console.error("[search-profiles]", error);
     return [];
   }
-
-  return (data ?? []).map((row: { id: string; full_name: string | null; avatar_url: string | null; email: string | null }) => ({
-    id: row.id,
-    fullName: row.full_name || row.email?.split("@")[0] || "uDeets user",
-    avatarUrl: row.avatar_url,
-    email: row.email,
-  }));
 }

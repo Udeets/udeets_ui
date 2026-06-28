@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/client";
+import { updateUserAppRoleApi } from "@/lib/api/admin";
 import type { AppRole } from "@/lib/roles";
 
 /**
@@ -9,17 +9,5 @@ export async function updateUserAppRole(
   userId: string,
   newRole: AppRole,
 ): Promise<{ success: boolean; error?: string }> {
-  const supabase = createClient();
-
-  const { error } = await supabase
-    .from("profiles")
-    .update({ app_role: newRole, updated_at: new Date().toISOString() })
-    .eq("id", userId);
-
-  if (error) {
-    console.error("[update-user-role] Failed:", error);
-    return { success: false, error: error.message };
-  }
-
-  return { success: true };
+  return updateUserAppRoleApi(userId, newRole);
 }

@@ -5,12 +5,15 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import MockAppShell, { cardClass, sectionTitleClass } from "@/components/mock-app-shell";
 import { AuthGuard } from "@/components/AuthGuard";
-import { createClient } from "@/lib/supabase/client";
+import { useAuthSession } from "@/services/auth/useAuthSession";
+import { listDeets } from "@/lib/services/deets/list-deets";
+import { listHubs } from "@/lib/services/hubs/list-hubs";
 import { MyPostCard } from "./components/MyPostCard";
 import { WorkflowStatCard } from "./components/WorkflowStatCard";
 import type { MyPost, WorkflowStat } from "./types";
 
 export default function MyPostsPage() {
+  const { user, status } = useAuthSession();
   const [posts, setPosts] = useState<MyPost[]>([]);
   const [stats, setStats] = useState<WorkflowStat[]>([
     { label: "Total Posts", value: "0" },
@@ -20,72 +23,56 @@ export default function MyPostsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (status !== "authenticated" || !user?.id) {
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     async function loadPosts() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user || cancelled) {
-        setLoading(false);
-        return;
-      }
+      try {
+        const [allDeets, hubs] = await Promise.all([listDeets({ publishedOnly: true }), listHubs()]);
+        if (cancelled) return;
 
-      // Fetch user's deets
-      const { data: deets, error } = await supabase
-        .from("deets")
-        .select("id, hub_id, title, body, kind, created_at, like_count, comment_count, view_count")
-        .eq("created_by", user.id)
-        .eq("is_published", true)
-        .order("created_at", { ascending: false });
+        const deets = allDeets
+          .filter((row) => row.created_by === user.id)
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-      if (error || cancelled) {
+        const hubMap = Object.fromEntries(hubs.map((h) => [h.id, h.name]));
+
+        const mapped: MyPost[] = deets.map((d) => ({
+          id: d.id,
+          title: d.title || "(Untitled)",
+          type: d.kind ?? "Posts",
+          status: "Published",
+          audience: hubMap[d.hub_id] || "Unknown Hub",
+          dateLabel: formatRelativeDate(d.created_at),
+          body: stripHtml(d.body || ""),
+          likeCount: d.like_count ?? 0,
+          commentCount: d.comment_count ?? 0,
+          viewCount: d.view_count ?? 0,
+        }));
+
+        setPosts(mapped);
+
+        const totalLikes = mapped.reduce((sum, p) => sum + p.likeCount, 0);
+        const uniqueHubIds = new Set(deets.map((d) => d.hub_id));
+        setStats([
+          { label: "Total Posts", value: String(mapped.length) },
+          { label: "Hubs Active In", value: String(uniqueHubIds.size) },
+          { label: "Total Likes", value: String(totalLikes) },
+        ]);
+      } catch (error) {
         console.error("[my-posts] Failed to load:", error);
+      } finally {
         setLoading(false);
-        return;
       }
-
-      // Fetch hub names for each unique hub
-      const hubIds = [...new Set((deets ?? []).map((d) => d.hub_id))];
-      let hubMap: Record<string, string> = {};
-      if (hubIds.length) {
-        const { data: hubs } = await supabase
-          .from("hubs")
-          .select("id, name")
-          .in("id", hubIds);
-        hubMap = Object.fromEntries((hubs ?? []).map((h) => [h.id, h.name]));
-      }
-
-      if (cancelled) return;
-
-      const mapped: MyPost[] = (deets ?? []).map((d) => ({
-        id: d.id,
-        title: d.title || "(Untitled)",
-        type: d.kind ?? "Posts",
-        status: "Published",
-        audience: hubMap[d.hub_id] || "Unknown Hub",
-        dateLabel: formatRelativeDate(d.created_at),
-        body: stripHtml(d.body || ""),
-        likeCount: d.like_count ?? 0,
-        commentCount: d.comment_count ?? 0,
-        viewCount: d.view_count ?? 0,
-      }));
-
-      setPosts(mapped);
-
-      const totalLikes = mapped.reduce((sum, p) => sum + p.likeCount, 0);
-      setStats([
-        { label: "Total Posts", value: String(mapped.length) },
-        { label: "Hubs Active In", value: String(hubIds.length) },
-        { label: "Total Likes", value: String(totalLikes) },
-      ]);
-      setLoading(false);
     }
 
     void loadPosts();
     return () => { cancelled = true; };
-  }, []);
+  }, [status, user?.id]);
 
   return (
     <AuthGuard>

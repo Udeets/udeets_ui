@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { DollarSign, Loader2, MapPin, Plus, Trash2 } from "lucide-react";
+import { reverseGeo, searchGeoNearby } from "@/lib/api/geo";
 import { clampPollMultiSelectLimit, maxPollMultiSelectAnswers } from "@/lib/deets/poll-multi-select-limit";
 import { ComposerMenuSelect, type ComposerMenuSelectOption } from "./composer/ComposerMenuSelect";
 
@@ -407,25 +408,25 @@ export function CheckinChildContent({
         // enforces per-IP rate limit, and keeps upstream errors off the client).
         try {
           const viewbox = `${longitude - 0.005},${latitude + 0.005},${longitude + 0.005},${latitude - 0.005}`;
-          const [res, nearbyRes] = await Promise.all([
-            fetch(`/api/geo/reverse?lat=${latitude}&lon=${longitude}`),
-            fetch(`/api/geo/search?lat=${latitude}&lon=${longitude}&limit=8&viewbox=${encodeURIComponent(viewbox)}`),
+          const [data, nearbyData] = await Promise.allSettled([
+            reverseGeo(latitude, longitude),
+            searchGeoNearby(latitude, longitude, 8, viewbox),
           ]);
 
-          if (!res.ok && !nearbyRes.ok) {
-            throw new Error(`geo proxy error: reverse=${res.status} search=${nearbyRes.status}`);
+          if (data.status === "rejected" && nearbyData.status === "rejected") {
+            throw new Error("geo proxy error: reverse and search failed");
           }
 
-          const data = res.ok ? await res.json() : {};
-          const nearbyData = nearbyRes.ok ? await nearbyRes.json() : [];
+          const reverseData = data.status === "fulfilled" ? data.value : {};
+          const nearbyPlaces = nearbyData.status === "fulfilled" ? nearbyData.value : [];
 
           const currentPlace: NearbyPlace = {
-            name: data.name || data.address?.road || "Current Location",
-            address: data.display_name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
+            name: reverseData.name || reverseData.address?.road || "Current Location",
+            address: reverseData.display_name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
           };
 
-          const nearby: NearbyPlace[] = Array.isArray(nearbyData)
-            ? nearbyData
+          const nearby: NearbyPlace[] = Array.isArray(nearbyPlaces)
+            ? nearbyPlaces
                 .filter((p: { display_name: string; name?: string }) => p.name)
                 .map((p: { display_name: string; name: string }) => ({
                   name: p.name,

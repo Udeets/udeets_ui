@@ -2,156 +2,39 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { subscribeChatRoomRealtime } from "@/lib/chat/subscribe-chat-room-realtime";
-import { chatApiGetRoom, chatApiListMessages, chatApiSendMessage } from "@/lib/chat/chat-browser-api";
+import {
+  chatApiGetRoom,
+  chatApiListMessages,
+  chatApiListMessagesSince,
+  chatApiSendMessage,
+} from "@/lib/chat/chat-browser-api";
+import type { ChatEventEnvelope } from "@/lib/chat/chat-realtime-types";
 import { friendlyChatUserMessage } from "@/lib/chat/friendly-chat-error";
-import type { ChatMessageViewModel } from "@/lib/chat/chat-message-view";
-import { applyTypingRealtimeEvent, pruneTypingMap, type TypingMap } from "@/lib/chat/merge-chat-typing";
-import type { ChatRealtimeServerEvent } from "@/lib/services/chat/chat-realtime-contract";
+import { stripClientSendFields, type ChatMessageViewModel } from "@/lib/chat/chat-message-view";
+import { applyMessageEnvelope, applyReactionEnvelope } from "@/lib/chat/merge-chat-events";
+import { pruneTypingMap, type TypingMap } from "@/lib/chat/merge-chat-typing";
+import {
+  isChatPollingFallbackEnabled,
+  isChatRealtimeFeatureEnabled,
+  useChatRealtime,
+} from "@/lib/chat/use-chat-realtime";
 import { CHAT_DELETED_MESSAGE_PLACEHOLDER } from "@/lib/services/chat/chat-message-constants";
 import { sameChatReactionEmoji } from "@/lib/services/chat/chat-reaction-emoji";
 import type { ChatRoomDetail } from "@/lib/services/chat/get-chat-room";
 
-export type HubChatThreadOptions = {
-  /** Fired for every realtime event (before message map is applied). */
-  onRealtimeEvent?: (ev: ChatRealtimeServerEvent) => void;
-};
-
 const TYPING_PRUNE_MS = 8000;
 
-function toListItemFromRow(
-  row: Record<string, unknown> | undefined | null,
-  viewerCanModerate: boolean,
-  viewerUserId: string | null | undefined,
-): ChatMessageViewModel | null {
-  if (!row || typeof row.id !== "string") return null;
-  const deletedAt = row.deleted_at != null ? String(row.deleted_at) : null;
-  const deleted = !!deletedAt;
-  const senderIdRaw = row.sender_id != null ? String(row.sender_id) : null;
-  const isOwn = Boolean(viewerUserId && senderIdRaw === viewerUserId);
-  const redacted = deleted && (!viewerCanModerate || isOwn);
-  const modReason = row.moderation_reason != null ? String(row.moderation_reason) : null;
-  return {
-    id: String(row.id),
-    roomId: String(row.room_id ?? ""),
-    messageKind: String(row.message_kind ?? "text"),
-    createdAt: String(row.created_at ?? ""),
-    editedAt: row.edited_at != null ? String(row.edited_at) : null,
-    deletedAt,
-    senderId: senderIdRaw,
-    senderDisplayName: row.sender_display_name_snapshot != null ? String(row.sender_display_name_snapshot) : null,
-    senderAvatarUrl: row.sender_avatar_url_snapshot != null ? String(row.sender_avatar_url_snapshot) : null,
-    body: redacted ? CHAT_DELETED_MESSAGE_PLACEHOLDER : row.body != null ? String(row.body) : "",
-    attachments: redacted ? [] : [],
-    reactions: redacted ? [] : [],
-    redacted,
-    moderationReason: viewerCanModerate && deleted && !isOwn ? modReason : null,
-  };
-}
+/** Poll interval when WebSocket realtime is off or disconnected (fallback). */
+const MESSAGE_SYNC_POLL_MS = 4000;
 
-function stripClientSendFields(m: ChatMessageViewModel): ChatMessageViewModel {
-  const { clientSendState: _s, clientSendError: _e, clientLocalId: _l, ...rest } = m;
-  return rest;
-}
-
-function applyServerEvent(
-  prev: ChatMessageViewModel[],
-  ev: ChatRealtimeServerEvent,
-  viewerCanModerate: boolean,
-  viewerUserId: string | null | undefined,
-): ChatMessageViewModel[] {
-  switch (ev.name) {
-    case "message.created": {
-      const item = toListItemFromRow(ev.payload.message as Record<string, unknown>, viewerCanModerate, viewerUserId);
-      if (!item) return prev;
-      if (prev.some((m) => m.id === item.id)) return prev;
-      return [item, ...prev];
-    }
-    case "message.edited":
-    case "message.deleted": {
-      const row = ev.payload.message as Record<string, unknown>;
-      const id = String(row.id ?? "");
-      const next = toListItemFromRow(row, viewerCanModerate, viewerUserId);
-      if (!next) return prev;
-      return prev.map((m) => {
-        if (m.id !== id) return m;
-        const merged = { ...next, reactions: m.reactions, attachments: m.attachments };
-        return stripClientSendFields(merged);
-      });
-    }
-    case "moderation.message_hidden": {
-      const { messageId, moderationReason } = ev.payload;
-      const now = new Date().toISOString();
-      return prev.map((m) => {
-        if (m.id !== messageId) return m;
-        if (viewerCanModerate) {
-          return stripClientSendFields({
-            ...m,
-            deletedAt: m.deletedAt ?? now,
-            moderationReason: moderationReason ?? m.moderationReason ?? null,
-            redacted: false,
-          });
-        }
-        return stripClientSendFields({
-          ...m,
-          redacted: true,
-          deletedAt: m.deletedAt ?? now,
-          senderId: null,
-          senderDisplayName: null,
-          senderAvatarUrl: null,
-          body: CHAT_DELETED_MESSAGE_PLACEHOLDER,
-          attachments: [],
-          reactions: [],
-          moderationReason: null,
-        });
-      });
-    }
-    case "reaction.updated": {
-      const { messageId, kind, reaction, reactionId } = ev.payload;
-      return prev.map((m) => {
-        if (m.id !== messageId) return m;
-        const reactions = [...m.reactions];
-        if (kind === "added" && reaction) {
-          const r = reaction as Record<string, unknown>;
-          const id = String(r.id ?? "");
-          const userId = String(r.user_id ?? "");
-          const emoji = String(r.emoji ?? "");
-          const createdAt = String(r.created_at ?? "");
-          const dup = reactions.some((x) => x.id === id || (x.userId === userId && sameChatReactionEmoji(x.emoji, emoji)));
-          if (!dup) {
-            reactions.push({ id, userId, emoji, createdAt });
-          }
-        } else if (kind === "removed") {
-          let idx = reactionId ? reactions.findIndex((x) => x.id === reactionId) : -1;
-          if (idx < 0 && reaction) {
-            const r = reaction as Record<string, unknown>;
-            const uid = typeof r.user_id === "string" ? r.user_id : undefined;
-            const em = typeof r.emoji === "string" ? r.emoji : undefined;
-            if (uid && em) {
-              idx = reactions.findIndex((x) => x.userId === uid && sameChatReactionEmoji(x.emoji, em));
-            }
-          }
-          if (idx >= 0) reactions.splice(idx, 1);
-        }
-        return { ...m, reactions };
-      });
-    }
-    case "report.created":
-      return prev;
-    default:
-      return prev;
-  }
-}
-
+/**
+ * Hub chat thread: REST for writes/history; WebSocket push when realtime flags are enabled.
+ */
 export function useHubChatThread(
   roomId: string | null,
   viewerUserId?: string | null,
   viewerDisplayName?: string | null,
-  options?: HubChatThreadOptions,
 ) {
-  const onRealtimeEventRef = useRef(options?.onRealtimeEvent);
-  onRealtimeEventRef.current = options?.onRealtimeEvent;
-
   const [room, setRoom] = useState<ChatRoomDetail | null>(null);
   const viewerCanModerateRef = useRef(false);
   const viewerUserIdRef = useRef<string | null | undefined>(viewerUserId);
@@ -162,7 +45,75 @@ export function useHubChatThread(
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [pollTick, setPollTick] = useState(0);
-  const [typingMap, setTypingMap] = useState<TypingMap>({});
+  const [localTypingMap, setLocalTypingMap] = useState<TypingMap>({});
+  const [wsConnected, setWsConnected] = useState(false);
+  const [membersTick, setMembersTick] = useState(0);
+
+  const realtimeEnabled =
+    isChatRealtimeFeatureEnabled() && Boolean(roomId) && Boolean(room?.id === roomId && !room?.viewerPendingInvite);
+  const usePollingFallback =
+    isChatPollingFallbackEnabled() && (!isChatRealtimeFeatureEnabled() || !wsConnected);
+
+  const lastSeenMessageId = messages.find((m) => !m.clientSendState && !m.id.startsWith("local-"))?.id ?? null;
+
+  const onRealtimeEvent = useCallback((envelope: ChatEventEnvelope) => {
+    if (envelope.event_type === "poll.updated") {
+      setPollTick((x) => x + 1);
+      return;
+    }
+    if (envelope.event_type === "reaction.updated") {
+      setMessages((prev) => applyReactionEnvelope(prev, envelope));
+      return;
+    }
+    if (
+      envelope.event_type === "room.member_joined" ||
+      envelope.event_type === "room.member_removed"
+    ) {
+      setMembersTick((x) => x + 1);
+      return;
+    }
+    if (
+      envelope.event_type.startsWith("message.") ||
+      envelope.event_type === "moderation.message_hidden"
+    ) {
+      setMessages((prev) => applyMessageEnvelope(prev, envelope));
+    }
+  }, []);
+
+  const { typingMap: realtimeTypingMap } = useChatRealtime({
+    roomId: realtimeEnabled ? roomId : null,
+    enabled: realtimeEnabled,
+    lastSeenMessageId,
+    onEvent: onRealtimeEvent,
+    onConnectionChange: setWsConnected,
+    onAccessRevoked: () => {
+      setError("You no longer have access to this chat room.");
+    },
+  });
+
+  useEffect(() => {
+    if (!realtimeEnabled || !wsConnected || !roomId || !lastSeenMessageId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await chatApiListMessagesSince(roomId, lastSeenMessageId, { limit: 50 });
+        if (cancelled || res.messages.length === 0) return;
+        setMessages((prev) => {
+          const ids = new Set(prev.map((m) => m.id));
+          const incoming = (res.messages as ChatMessageViewModel[]).filter((m) => !ids.has(m.id));
+          if (incoming.length === 0) return prev;
+          return [...incoming.reverse(), ...prev];
+        });
+      } catch {
+        /* backfill is best-effort */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [realtimeEnabled, wsConnected, roomId, lastSeenMessageId]);
+
+  const typingMap = isChatRealtimeFeatureEnabled() ? realtimeTypingMap : localTypingMap;
 
   const displayName = viewerDisplayName?.trim() || "You";
 
@@ -219,7 +170,7 @@ export function useHubChatThread(
       setMessages([]);
       setNextCursor(null);
       setError(null);
-      setTypingMap({});
+      setLocalTypingMap({});
       return;
     }
     let cancelled = false;
@@ -249,41 +200,44 @@ export function useHubChatThread(
   }, [viewerUserId]);
 
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomId || isChatRealtimeFeatureEnabled()) return;
     const t = setInterval(() => {
-      setTypingMap((m) => pruneTypingMap(m, Date.now(), TYPING_PRUNE_MS));
+      setLocalTypingMap((m) => pruneTypingMap(m, Date.now(), TYPING_PRUNE_MS));
     }, 2000);
     return () => clearInterval(t);
   }, [roomId]);
 
   useEffect(() => {
-    if (!roomId || !room || room.id !== roomId || room.viewerPendingInvite) {
+    if (!usePollingFallback || !roomId || !room || room.id !== roomId || room.viewerPendingInvite) {
       return () => {};
     }
-    let unsub: (() => Promise<void>) | null = null;
-    (async () => {
+    let cancelled = false;
+    const syncMessages = async () => {
       try {
-        unsub = await subscribeChatRoomRealtime(roomId, {
-          onServerEvent: (ev) => {
-            onRealtimeEventRef.current?.(ev);
-            if (ev.name === "poll.updated") setPollTick((x) => x + 1);
-            if (ev.name === "typing.started" || ev.name === "typing.stopped") {
-              setTypingMap((prev) => applyTypingRealtimeEvent(prev, ev, viewerUserId ?? undefined));
-              return;
-            }
-            setMessages((prev) =>
-              applyServerEvent(prev, ev, viewerCanModerateRef.current, viewerUserIdRef.current),
-            );
-          },
+        const res = await chatApiListMessages(roomId, { limit: 40 });
+        if (cancelled) return;
+        setPollTick((x) => x + 1);
+        setMessages((prev) => {
+          const serverMessages = res.messages as ChatMessageViewModel[];
+          const serverIds = new Set(serverMessages.map((m) => m.id));
+          const pendingClientMessages = prev.filter(
+            (m) => m.clientSendState === "pending" && !serverIds.has(m.id),
+          );
+          return [...pendingClientMessages, ...serverMessages];
         });
       } catch {
-        /* Realtime optional */
+        /* polling is best-effort */
       }
-    })();
-    return () => {
-      void unsub?.();
     };
-  }, [roomId, room, viewerUserId]);
+    void syncMessages();
+    const timer = window.setInterval(() => {
+      void syncMessages();
+    }, MESSAGE_SYNC_POLL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [roomId, room, usePollingFallback]);
 
   const typingUserIds = Object.keys(typingMap).filter((id) => id !== (viewerUserId ?? ""));
 
@@ -461,6 +415,9 @@ export function useHubChatThread(
     retrySend,
     setError,
     pollTick,
+    membersTick,
+    wsConnected,
+    lastSeenMessageId,
     reloadRoom: loadRoom,
     reloadMessages: loadInitialMessages,
     typingUserIds,

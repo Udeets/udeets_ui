@@ -1,48 +1,31 @@
-import { createClient } from "@/lib/supabase/client";
-import type { HubMember, MemberStatus } from "@/lib/services/members/member-types";
+import {
+  approveHubMemberFromApi,
+  leaveHubFromApi,
+  listPendingHubMembersFromApi,
+  rejectHubMemberFromApi,
+} from "@/lib/api/members";
+import { listBriefProfilesApi } from "@/lib/api/profiles";
+import type { HubMember } from "@/lib/services/members/member-types";
 
 /**
  * List pending member requests for a hub (admin-only in the UI layer).
  */
 export async function listPendingRequests(hubId: string): Promise<HubMember[]> {
-  const supabase = createClient();
-
-  const { data, error } = await supabase
-    .from("hub_members")
-    .select("hub_id, user_id, role, status, joined_at")
-    .eq("hub_id", hubId)
-    .eq("status", "pending")
-    .order("joined_at", { ascending: true });
-
-  if (error) {
+  try {
+    return await listPendingHubMembersFromApi(hubId);
+  } catch (error) {
     console.error("[manage-members] Failed to list pending requests:", error);
     return [];
   }
-
-  return (data ?? []).map((row) => ({
-    hubId: row.hub_id,
-    userId: row.user_id,
-    role: row.role,
-    status: row.status as MemberStatus,
-    joinedAt: row.joined_at ?? null,
-  }));
 }
 
 /**
  * Approve a pending member request — sets status to "active".
  */
 export async function approveMemberRequest(hubId: string, userId: string): Promise<void> {
-  const supabase = createClient();
-
-  const { error } = await supabase
-    .from("hub_members")
-    .update({ status: "active" })
-    .eq("hub_id", hubId)
-    .eq("user_id", userId)
-    .eq("status", "pending");
-
-  if (error) {
-    throw new Error(`Failed to approve member: ${error.message}`);
+  const ok = await approveHubMemberFromApi(hubId, userId);
+  if (!ok) {
+    throw new Error("Failed to approve member.");
   }
 }
 
@@ -50,29 +33,9 @@ export async function approveMemberRequest(hubId: string, userId: string): Promi
  * Reject a pending member request — deletes the membership row.
  */
 export async function rejectMemberRequest(hubId: string, userId: string): Promise<void> {
-  const supabase = createClient();
-
-  // We need a delete policy. Since we only have update, change status to a
-  // sentinel or simply update to a "rejected" state we can filter out.
-  // For now, just update status — we don't have a delete policy for admins.
-  // Using "invited" as a pseudo-rejected state that won't show in any queries.
-  // A cleaner approach would be to add a DELETE policy, but to keep things
-  // simple and avoid new migrations, we'll update status + remove the row
-  // by having the user "cancel" their own request.
-  //
-  // Actually, the creator can UPDATE rows (per our new RLS policy), so we
-  // just set status to something the app ignores. Let's add "rejected" as
-  // a conceptual state — the DB column is text so it accepts any value.
-
-  const { error } = await supabase
-    .from("hub_members")
-    .update({ status: "rejected" })
-    .eq("hub_id", hubId)
-    .eq("user_id", userId)
-    .eq("status", "pending");
-
-  if (error) {
-    throw new Error(`Failed to reject member request: ${error.message}`);
+  const ok = await rejectHubMemberFromApi(hubId, userId);
+  if (!ok) {
+    throw new Error("Failed to reject member request.");
   }
 }
 
@@ -82,16 +45,11 @@ export async function rejectMemberRequest(hubId: string, userId: string): Promis
 export async function fetchProfilesForUsers(
   userIds: string[]
 ): Promise<Map<string, { fullName: string; avatarUrl: string | null; email: string | null }>> {
-  const supabase = createClient();
   const result = new Map<string, { fullName: string; avatarUrl: string | null; email: string | null }>();
   if (!userIds.length) return result;
 
-  const { data } = await supabase
-    .from("profiles")
-    .select("id, full_name, avatar_url, email")
-    .in("id", userIds);
-
-  for (const p of data ?? []) {
+  const data = await listBriefProfilesApi(userIds);
+  for (const p of data) {
     result.set(p.id, {
       fullName: p.full_name ?? p.id.slice(0, 8),
       avatarUrl: p.avatar_url ?? null,
@@ -107,32 +65,9 @@ export async function fetchProfilesForUsers(
  * Attempts to delete the row; if RLS prevents deletion, falls back to updating status to 'left'.
  */
 export async function leaveHub(hubId: string, userId: string): Promise<void> {
-  const supabase = createClient();
-
-  // Attempt delete first
-  const { error: deleteError } = await supabase
-    .from("hub_members")
-    .delete()
-    .eq("hub_id", hubId)
-    .eq("user_id", userId)
-    .eq("status", "active");
-
-  // If delete succeeded, we're done
-  if (!deleteError) {
-    return;
-  }
-
-  // If delete failed (likely due to RLS), fall back to updating status to 'left'
-  const { error: updateError } = await supabase
-    .from("hub_members")
-    .update({ status: "left" })
-    .eq("hub_id", hubId)
-    .eq("user_id", userId)
-    .eq("status", "active");
-
-  if (updateError) {
-    throw new Error(
-      `Failed to leave hub: delete failed with "${deleteError.message}" and fallback update failed with "${updateError.message}"`
-    );
+  void userId;
+  const ok = await leaveHubFromApi(hubId);
+  if (!ok) {
+    throw new Error("Failed to leave hub.");
   }
 }

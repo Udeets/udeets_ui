@@ -24,6 +24,7 @@ import {
   chatApiInviteMember,
   chatApiListMembers,
   chatApiListRooms,
+  chatApiMarkRoomRead,
   chatApiPatchMessage,
   chatApiPrepareUpload,
   chatApiRemoveMember,
@@ -35,7 +36,6 @@ import {
 import { chatApiRevokeInvite } from "@/lib/chat/chat-api-invite-revoke";
 import { friendlyChatUserMessage } from "@/lib/chat/friendly-chat-error";
 import type { ChatInviteCandidateDto, ChatRoomListItem, ChatRoomMemberDto } from "@/lib/chat/chat-browser-api";
-import type { ChatRealtimeServerEvent } from "@/lib/services/chat/chat-realtime-contract";
 import type { ChatRoomDetail } from "@/lib/services/chat/get-chat-room";
 import { COMPOSER_INPUT, COMPOSER_TOGGLE, COMPOSER_TOGGLE_KNOB } from "../deets/composer/composerFieldClasses";
 import { BUTTON_PRIMARY, BUTTON_SECONDARY, CARD, INPUT_CLASS, cn, initials, normalizePublicSrc } from "../hubUtils";
@@ -43,6 +43,7 @@ import { ChatComposer } from "./ChatComposer";
 import { ChatMessageRow } from "./ChatMessageRow";
 import { ChatModerationPanel } from "./ChatModerationPanel";
 import { ChatRoomSettingsModal } from "./ChatRoomSettingsModal";
+import { isChatRealtimeFeatureEnabled } from "@/lib/chat/use-chat-realtime";
 import { useHubChatThread } from "./useHubChatThread";
 
 type HubChatSectionProps = {
@@ -54,14 +55,29 @@ type HubChatSectionProps = {
   viewerDisplayName?: string;
   /** When present (e.g. from ?chatRoom=), selects this room after the room list loads. */
   initialChatRoomId?: string | null;
+  unreadRoomIds?: Set<string>;
+  onChatReadChange?: () => void;
 };
 
-export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayName, initialChatRoomId }: HubChatSectionProps) {
+export function HubChatSection({
+  hubId,
+  currentUserId,
+  hubStaff,
+  viewerDisplayName,
+  initialChatRoomId,
+  unreadRoomIds,
+  onChatReadChange,
+}: HubChatSectionProps) {
   const [rooms, setRooms] = useState<ChatRoomListItem[]>([]);
   const [roomsLoading, setRoomsLoading] = useState(true);
   const [roomsError, setRoomsError] = useState<string | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
+  const prevMessageCountRef = useRef(0);
+  const lastMarkedReadRef = useRef<string | null>(null);
+  const [showNewMessagesChip, setShowNewMessagesChip] = useState(false);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState("");
@@ -81,9 +97,6 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
   const [hubPickerCandidates, setHubPickerCandidates] = useState<ChatInviteCandidateDto[]>([]);
   const [hubPickerLoading, setHubPickerLoading] = useState(false);
   const [hubPickerQuery, setHubPickerQuery] = useState("");
-
-  const [liveReportBanner, setLiveReportBanner] = useState<{ reportId: string; reason: string | null } | null>(null);
-  const viewerCanModerateRef = useRef(false);
 
   const [members, setMembers] = useState<ChatRoomMemberDto[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
@@ -121,18 +134,14 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
   const [editBody, setEditBody] = useState("");
   const [editBusy, setEditBusy] = useState(false);
 
-  const thread = useHubChatThread(selectedRoomId, currentUserId ?? null, viewerDisplayName ?? null, {
-    onRealtimeEvent: useCallback((ev: ChatRealtimeServerEvent) => {
-      if (ev.name !== "report.created") return;
-      if (!viewerCanModerateRef.current) return;
-      setLiveReportBanner({ reportId: ev.payload.reportId, reason: ev.payload.reason });
-    }, []),
-  });
+  const thread = useHubChatThread(selectedRoomId, currentUserId ?? null, viewerDisplayName ?? null);
 
-  viewerCanModerateRef.current = Boolean(thread.room?.viewerCanModerate);
+  const refreshMessagesUnlessRealtime = useCallback(async () => {
+    if (isChatRealtimeFeatureEnabled() && thread.wsConnected) return;
+    await thread.reloadMessages();
+  }, [thread.wsConnected, thread.reloadMessages]);
 
   useEffect(() => {
-    setLiveReportBanner(null);
     setInviteSentUserIds({});
     setRevokeBusyUserId(null);
   }, [selectedRoomId]);
@@ -214,6 +223,11 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
     if (membersOpen) void loadMembers();
   }, [membersOpen, loadMembers]);
 
+  useEffect(() => {
+    if (!selectedRoomId) return;
+    void loadMembers();
+  }, [thread.membersTick, selectedRoomId, loadMembers]);
+
   const handleTypingPhase = useCallback(
     async (phase: "started" | "stopped") => {
       if (!selectedRoomId) return;
@@ -285,14 +299,14 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
       await chatApiRespondChatInvite(selectedRoomId, "accept");
       await loadRooms();
       void thread.reloadRoom();
-      void thread.reloadMessages();
+      await refreshMessagesUnlessRealtime();
       window.dispatchEvent(new Event("hub-chat-invites-changed"));
     } catch (e) {
       thread.setError(friendlyChatUserMessage(e, "Could not join this room. Please try again."));
     } finally {
       setInviteRespondBusy(false);
     }
-  }, [selectedRoomId, loadRooms, thread.reloadRoom, thread.reloadMessages, thread.setError]);
+  }, [selectedRoomId, loadRooms, thread.reloadRoom, refreshMessagesUnlessRealtime, thread.setError]);
 
   const handleDeclineChatInvite = useCallback(async () => {
     if (!selectedRoomId) return;
@@ -311,6 +325,65 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
   }, [selectedRoomId, loadRooms, thread.setError]);
 
   const chronological = [...thread.messages].reverse();
+
+  const scrollMessagesToBottom = useCallback((behavior: ScrollBehavior = "auto") => {
+    const el = messagesScrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+    isNearBottomRef.current = true;
+    setShowNewMessagesChip(false);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedRoomId || thread.loading) return;
+    requestAnimationFrame(() => scrollMessagesToBottom("auto"));
+    prevMessageCountRef.current = chronological.length;
+  }, [selectedRoomId, thread.loading, scrollMessagesToBottom]);
+
+  useEffect(() => {
+    const count = chronological.length;
+    const prev = prevMessageCountRef.current;
+    if (count > prev && prev > 0 && selectedRoomId) {
+      if (isNearBottomRef.current) {
+        requestAnimationFrame(() => scrollMessagesToBottom("smooth"));
+      } else {
+        setShowNewMessagesChip(true);
+      }
+    }
+    prevMessageCountRef.current = count;
+  }, [chronological.length, selectedRoomId, scrollMessagesToBottom]);
+
+  useEffect(() => {
+    prevMessageCountRef.current = 0;
+    lastMarkedReadRef.current = null;
+    setShowNewMessagesChip(false);
+  }, [selectedRoomId]);
+
+  useEffect(() => {
+    if (!selectedRoomId || thread.loading || thread.room?.viewerPendingInvite) return;
+    const messageId = thread.lastSeenMessageId;
+    if (!messageId || messageId.startsWith("local-")) return;
+    if (lastMarkedReadRef.current === messageId) return;
+    lastMarkedReadRef.current = messageId;
+    let cancelled = false;
+    void (async () => {
+      try {
+        await chatApiMarkRoomRead(selectedRoomId, messageId);
+        if (!cancelled) onChatReadChange?.();
+      } catch {
+        /* best-effort */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    selectedRoomId,
+    thread.loading,
+    thread.lastSeenMessageId,
+    thread.room?.viewerPendingInvite,
+    onChatReadChange,
+  ]);
 
   const hubPickerNotInRoomTargets = useMemo(() => {
     const q = hubPickerQuery.trim().toLowerCase();
@@ -361,7 +434,7 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
         originalFilename: file.name,
         sizeBytes: file.size,
       });
-      await thread.reloadMessages();
+      await refreshMessagesUnlessRealtime();
     } catch (e) {
       thread.setError(friendlyChatUserMessage(e, "Upload failed. Please try again."));
     } finally {
@@ -401,7 +474,7 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
       });
       setPollOpen(false);
       resetPollForm();
-      await thread.reloadMessages();
+      await refreshMessagesUnlessRealtime();
     } catch (e) {
       thread.setError(friendlyChatUserMessage(e, "Could not create poll. Please try again."));
     } finally {
@@ -527,6 +600,12 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
                       <Lock className="h-3.5 w-3.5 shrink-0 text-[var(--ud-text-muted)]" aria-label="Invite pending" />
                     ) : null}
                     <span className="truncate">{r.name}</span>
+                    {unreadRoomIds?.has(r.id) && selectedRoomId !== r.id ? (
+                      <span
+                        className="ml-auto h-2 w-2 shrink-0 rounded-full bg-red-500"
+                        aria-label="Unread messages"
+                      />
+                    ) : null}
                   </button>
                 </li>
               ))}
@@ -573,7 +652,7 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
         </aside>
 
         {/* Main thread */}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-[var(--ud-bg-card)]">
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-[var(--ud-bg-card)]">
           {selectedRoomId ? (
             <>
               <div className="flex flex-col gap-2 border-b border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3">
@@ -622,37 +701,6 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
                 </div>
               </div>
 
-              {liveReportBanner && thread.room?.viewerCanModerate ? (
-                <div
-                  className="flex flex-wrap items-start gap-2 border-b border-amber-200 bg-amber-50 px-3 py-2 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-50"
-                  role="status"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold">New message report</p>
-                    <p className="mt-0.5 text-xs text-amber-900/90 dark:text-amber-100/90">
-                      {liveReportBanner.reason?.trim()
-                        ? `Reason: ${liveReportBanner.reason.trim()}`
-                        : "A member reported a message. Open Moderation to review it and choose what to do next."}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 flex-wrap gap-1.5">
-                    <button
-                      type="button"
-                      className={cn(BUTTON_PRIMARY, "py-1.5 text-xs")}
-                      onClick={() => {
-                        setModOpen(true);
-                        setLiveReportBanner(null);
-                      }}
-                    >
-                      Review reports
-                    </button>
-                    <button type="button" className={cn(BUTTON_SECONDARY, "py-1.5 text-xs")} onClick={() => setLiveReportBanner(null)}>
-                      Dismiss
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-
               {uploadPct != null ? (
                 <div className="border-b border-[var(--ud-border-subtle)] bg-[var(--ud-bg-subtle)] px-3 py-2 text-xs text-[var(--ud-text-secondary)]">
                   Uploading… {uploadPct}%
@@ -672,10 +720,18 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
               ) : null}
 
               <div
-                className="min-h-0 flex-1 overflow-y-auto px-2 sm:px-3"
+                ref={messagesScrollRef}
+                className="relative min-h-0 flex-1 overflow-y-auto px-2 sm:px-3"
                 role="log"
                 aria-live="polite"
                 aria-relevant="additions text"
+                onScroll={() => {
+                  const el = messagesScrollRef.current;
+                  if (!el) return;
+                  const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+                  isNearBottomRef.current = nearBottom;
+                  if (nearBottom) setShowNewMessagesChip(false);
+                }}
               >
                 {!thread.room || thread.room.id !== selectedRoomId ? (
                   <div className="flex justify-center py-12 text-[var(--ud-text-muted)]">
@@ -758,6 +814,18 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
                   </>
                 )}
               </div>
+
+              {showNewMessagesChip ? (
+                <div className="pointer-events-none absolute inset-x-0 bottom-24 flex justify-center">
+                  <button
+                    type="button"
+                    className="pointer-events-auto rounded-full bg-[var(--ud-brand-primary)] px-4 py-1.5 text-xs font-medium text-white shadow-md"
+                    onClick={() => scrollMessagesToBottom("smooth")}
+                  >
+                    New messages
+                  </button>
+                </div>
+              ) : null}
 
               {thread.typingUserIds.length > 0 && !thread.room?.viewerPendingInvite ? (
                 <div className="border-t border-[var(--ud-border-subtle)] bg-[var(--ud-bg-card)] px-3 py-1.5 text-xs text-[var(--ud-text-muted)]">
@@ -1115,7 +1183,7 @@ export function HubChatSection({ hubId, currentUserId, hubStaff, viewerDisplayNa
           viewerUserId={currentUserId ?? null}
           onClose={() => setModOpen(false)}
           onError={(msg) => thread.setError(friendlyChatUserMessage(new Error(msg), "That action could not be completed. Please try again."))}
-          onModerationDone={() => void thread.reloadMessages()}
+          onModerationDone={() => void refreshMessagesUnlessRealtime()}
         />
       ) : null}
 
