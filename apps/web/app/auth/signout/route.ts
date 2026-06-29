@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 const COOKIE_OPTIONS = {
   path: "/",
   maxAge: 0,
+  httpOnly: true,
   sameSite: "lax" as const,
   secure: process.env.NODE_ENV === "production",
 };

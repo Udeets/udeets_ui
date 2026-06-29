@@ -14,7 +14,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - udeets_postgres_data:/var/lib/postgresql/data
+      - udeets_postgres_data_v2:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d udeets"]
       interval: 5s
@@ -64,5 +64,5 @@ services:
     restart: "no"
 
 volumes:
-  udeets_postgres_data:
+  udeets_postgres_data_v2:
   udeets_minio_data:

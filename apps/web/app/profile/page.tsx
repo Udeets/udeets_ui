@@ -3,13 +3,18 @@
 export const dynamic = "force-dynamic";
 
 /* eslint-disable @next/next/no-img-element */
-import { Check, Loader2 } from "lucide-react";
+import { AlertCircle, Check, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import MockAppShell, { cardClass, sectionTitleClass } from "@/components/mock-app-shell";
 import { AuthGuard } from "@/components/AuthGuard";
+import { useVerification } from "@/components/auth/VerificationProvider";
+import { PhoneInput } from "@/components/auth/PhoneInput";
 import { useAuthSession } from "@/services/auth/useAuthSession";
+import { changeContact } from "@/lib/api/auth";
+import { notifyAuthSessionChanged } from "@/lib/auth/auth-session-events";
+import { formatUsPhoneDisplay } from "@/lib/auth/verification-routes";
 import { getProfileSummary } from "@/lib/services/profile/get-profile-summary";
 import { listHubs } from "@/lib/services/hubs/list-hubs";
 import { listDeets } from "@/lib/services/deets/list-deets";
@@ -91,6 +96,7 @@ function formatTimeAgo(dateStr: string) {
 export default function ProfilePage() {
   const router = useRouter();
   const { user, status, session } = useAuthSession();
+  const { openVerification } = useVerification();
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   const [activeTab, setActiveTab] = useState<SidebarItem>("My Info");
@@ -101,6 +107,7 @@ export default function ProfilePage() {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [hubStats, setHubStats] = useState({ created: 0, joined: 0 });
   const [userHubs, setUserHubs] = useState<UserHub[]>([]);
   const [isLoadingHubs, setIsLoadingHubs] = useState(false);
@@ -389,6 +396,8 @@ export default function ProfilePage() {
 
   const displayName = profile?.full_name || (user?.user_metadata?.full_name as string) || user?.email || "uDeets User";
   const displayEmail = user?.email || profile?.email || "";
+  const displayPhone = formatUsPhoneDisplay(user?.phone);
+  const isGoogleConnected = Boolean(user?.oauthProviders?.includes("google"));
   const rawAvatarUrl = profile?.avatar_url || (user?.user_metadata?.avatar_url as string | undefined) || "";
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
   const avatarUrl = avatarLoadFailed ? "" : rawAvatarUrl;
@@ -426,23 +435,44 @@ export default function ProfilePage() {
     }
   };
 
-  const startEditing = (field: string, currentValue: string) => { setEditingField(field); setEditDraft(currentValue); };
-  const cancelEditing = () => { setEditingField(null); setEditDraft(""); };
+  const startEditing = (field: string, currentValue: string) => {
+    setSaveError(null);
+    setEditingField(field);
+    if (field === "phone") {
+      const digits = (user?.phone ?? "").replace(/\D/g, "");
+      const national = digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
+      setEditDraft(national);
+    } else {
+      setEditDraft(currentValue);
+    }
+  };
+  const cancelEditing = () => { setEditingField(null); setEditDraft(""); setSaveError(null); };
 
   const saveField = async (field: string) => {
     if (!user?.id) return;
     setIsSaving(true);
+    setSaveError(null);
     try {
       if (field === "full_name") {
         const ok = await updateMyProfileApi({ fullName: editDraft });
         if (!ok) return;
+        setProfile((prev) => prev ? { ...prev, full_name: editDraft } : prev);
+        setEditingField(null);
+        setEditDraft("");
+        return;
       }
 
-      setProfile((prev) => prev ? { ...prev, full_name: field === "full_name" ? editDraft : prev.full_name } : prev);
-      setEditingField(null);
-      setEditDraft("");
+      if (field === "email" || field === "phone") {
+        await changeContact({ channel: field, value: editDraft });
+        notifyAuthSessionChanged();
+        setEditingField(null);
+        setEditDraft("");
+        // New/changed contact is unverified — prompt verification immediately.
+        openVerification(field);
+        return;
+      }
     } catch (err) {
-      console.error("[profile] save error:", err);
+      setSaveError(err instanceof Error ? err.message : "Could not save. Try again.");
     } finally {
       setIsSaving(false);
     }
@@ -456,9 +486,36 @@ export default function ProfilePage() {
     setActiveTab(item);
   };
 
-  const infoRows: Array<{ label: string; field: string; value: string; editable: boolean }> = [
+  type ContactRow = {
+    label: string;
+    field: string;
+    value: string;
+    editable: boolean;
+    verified?: boolean;
+    showVerifyAction?: boolean;
+    verifyFocus?: "phone" | "email";
+  };
+
+  const infoRows: ContactRow[] = [
     { label: "Full Name", field: "full_name", value: profile?.full_name || "", editable: true },
-    { label: "Email", field: "email", value: displayEmail, editable: false },
+    {
+      label: "Email",
+      field: "email",
+      value: displayEmail,
+      editable: !isGoogleConnected,
+      verified: user?.email ? Boolean(user?.emailVerified) : undefined,
+      showVerifyAction: Boolean(user?.email && !user.emailVerified && !isGoogleConnected),
+      verifyFocus: "email",
+    },
+    {
+      label: "Phone",
+      field: "phone",
+      value: displayPhone,
+      editable: true,
+      verified: user?.phone ? Boolean(user?.phoneVerified) : undefined,
+      showVerifyAction: Boolean(user?.phone && !user.phoneVerified),
+      verifyFocus: "phone",
+    },
   ];
 
   return (
@@ -548,32 +605,85 @@ export default function ProfilePage() {
                   <p className="mt-1 text-sm text-slate-500">Keep your profile details up to date.</p>
                 </div>
                 <div className="divide-y divide-slate-100">
-                  {infoRows.map(({ label, field, value, editable }) => (
+                  {infoRows.map(({ label, field, value, editable, verified, showVerifyAction, verifyFocus }) => (
                     <div key={label} className="flex flex-col gap-2 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between">
                       {editingField === field && editable ? (
-                        <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
-                          <p className="w-32 shrink-0 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-                          <input value={editDraft} onChange={(e) => setEditDraft(e.target.value)} className="flex-1 rounded-xl border border-[var(--ud-border)] px-3 py-2 text-sm text-[var(--ud-text-primary)] outline-none ring-[#A9D1CA] focus:ring-2" autoFocus />
-                          <div className="flex gap-2">
-                            <button type="button" onClick={() => saveField(field)} disabled={isSaving} className="rounded-lg bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-4 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60">
-                              {isSaving ? "Saving..." : "Save"}
-                            </button>
-                            <button type="button" onClick={cancelEditing} className="rounded-lg border border-[var(--ud-border)] px-4 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
-                              Cancel
-                            </button>
+                        <div className="flex flex-1 flex-col gap-2">
+                          <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+                            <p className="w-32 shrink-0 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+                            {field === "phone" ? (
+                              <div className="flex-1">
+                                <PhoneInput value={editDraft} onChange={setEditDraft} />
+                              </div>
+                            ) : (
+                              <input
+                                value={editDraft}
+                                onChange={(e) => setEditDraft(e.target.value)}
+                                type={field === "email" ? "email" : "text"}
+                                className="flex-1 rounded-xl border border-[var(--ud-border)] px-3 py-2 text-sm text-[var(--ud-text-primary)] outline-none ring-[#A9D1CA] focus:ring-2"
+                                autoFocus
+                              />
+                            )}
+                            <div className="flex gap-2">
+                              <button type="button" onClick={() => saveField(field)} disabled={isSaving} className="rounded-lg bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-4 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60">
+                                {isSaving ? "Saving..." : "Save"}
+                              </button>
+                              <button type="button" onClick={cancelEditing} className="rounded-lg border border-[var(--ud-border)] px-4 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                                Cancel
+                              </button>
+                            </div>
                           </div>
+                          {field !== "full_name" ? (
+                            <p className="text-xs text-slate-500">
+                              {field === "email"
+                                ? "We'll send a verification link to confirm this email."
+                                : "We'll text a 6-digit code to confirm this number."}
+                            </p>
+                          ) : null}
+                          {saveError ? <p className="text-xs text-red-600">{saveError}</p> : null}
                         </div>
                       ) : (
                         <>
                           <div className="min-w-0">
-                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+                              {typeof verified === "boolean" ? (
+                                verified ? (
+                                  <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700">
+                                    <Check className="h-3.5 w-3.5" />
+                                    Verified
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700">
+                                    <AlertCircle className="h-3.5 w-3.5" />
+                                    Not verified
+                                  </span>
+                                )
+                              ) : null}
+                            </div>
                             <p className="mt-1 text-sm font-medium text-[var(--ud-text-primary)]">{value || "Not set"}</p>
+                            {showVerifyAction ? (
+                              <p className="mt-1 text-xs text-amber-700">
+                                Verify this {label.toLowerCase()} to unlock full account access.
+                              </p>
+                            ) : null}
                           </div>
-                          {editable ? (
-                            <button type="button" onClick={() => startEditing(field, value)} className="shrink-0 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
-                              Change
-                            </button>
-                          ) : null}
+                          <div className="flex shrink-0 gap-2">
+                            {showVerifyAction && verifyFocus ? (
+                              <button
+                                type="button"
+                                onClick={() => openVerification(verifyFocus)}
+                                className="rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-800 hover:bg-amber-100"
+                              >
+                                Verify
+                              </button>
+                            ) : null}
+                            {editable ? (
+                              <button type="button" onClick={() => startEditing(field, value)} className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
+                                {value ? "Change" : "Add"}
+                              </button>
+                            ) : null}
+                          </div>
                         </>
                       )}
                     </div>
@@ -599,13 +709,22 @@ export default function ProfilePage() {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-[var(--ud-text-primary)]">Google</p>
-                        <p className="text-xs text-slate-500">{displayEmail}</p>
+                        <p className="text-xs text-slate-500">{isGoogleConnected ? displayEmail : "Not connected"}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5 text-sm font-medium text-[var(--ud-brand-primary)]">
-                      <Check className="h-4 w-4" />
-                      Connected
-                    </div>
+                    {isGoogleConnected ? (
+                      <div className="flex items-center gap-1.5 text-sm font-medium text-[var(--ud-brand-primary)]">
+                        <Check className="h-4 w-4" />
+                        Connected
+                      </div>
+                    ) : (
+                      <a
+                        href="/auth/google?next=/profile"
+                        className="rounded-full border border-slate-300 px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                      >
+                        Connect
+                      </a>
+                    )}
                   </div>
                   <div className="flex items-center justify-between py-4 last:pb-0">
                     <div className="flex items-center gap-3">

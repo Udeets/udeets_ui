@@ -5,7 +5,7 @@ from app.db.repositories.hub_unread import HubUnreadRepository
 from app.db.repositories.hubs import HubRepository
 from app.db.repositories.invites import InviteRepository
 from app.db.repositories.memberships import MembershipRepository
-from app.dependencies.auth import CurrentUser, get_current_user
+from app.dependencies.auth import CurrentUser, get_verified_user
 from app.dependencies.db import get_db
 from app.schemas.hub import HubCreateRequest, HubRead, HubUpdateRequest
 from app.schemas.invite import HubContactInviteRequest
@@ -46,7 +46,7 @@ def get_hub_by_slug(
 
 @router.get("/unread")
 def list_unread_hubs(
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = HubUnreadService(HubUnreadRepository(db))
@@ -68,7 +68,7 @@ def get_hub_by_id(
 @router.post("/{hub_id}/seen")
 def mark_hub_seen(
     hub_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict[str, bool]:
     service = HubUnreadService(HubUnreadRepository(db))
@@ -87,7 +87,7 @@ def list_hub_members(
 @router.post("", response_model=HubRead)
 def create_hub(
     payload: HubCreateRequest,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> HubRead:
     service = HubService(HubRepository(db))
@@ -98,7 +98,7 @@ def create_hub(
 def update_hub(
     hub_id: str,
     payload: HubUpdateRequest,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> HubRead:
     service = HubService(HubRepository(db))
@@ -115,7 +115,7 @@ def update_hub(
 @router.delete("/{hub_id}")
 def delete_hub(
     hub_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict[str, bool]:
     service = HubService(HubRepository(db))
@@ -128,7 +128,7 @@ def delete_hub(
 @router.post("/media/prepare")
 def prepare_hub_media_upload(
     payload: dict,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = HubMediaService(db)
@@ -139,7 +139,7 @@ def prepare_hub_media_upload(
 def invite_hub_by_contact(
     hub_id: str,
     payload: HubContactInviteRequest,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict[str, bool]:
     if not allow_hub_contact_invite(hub_id, current_user.user_id):
@@ -164,7 +164,7 @@ def invite_hub_by_contact(
 def invite_hub_user(
     hub_id: str,
     invited_user_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
     service = HubService(HubRepository(db))
@@ -190,7 +190,7 @@ def list_hub_attachments(
 def create_hub_attachment(
     hub_id: str,
     payload: dict,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = HubAttachmentsService(db)
@@ -216,7 +216,7 @@ def list_hub_sections(
 def save_hub_sections(
     hub_id: str,
     payload: list[dict],
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = HubCustomizationService(db)
@@ -236,7 +236,7 @@ def list_hub_ctas(
 def save_hub_ctas(
     hub_id: str,
     payload: list[dict],
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = HubCustomizationService(db)
@@ -247,7 +247,7 @@ def save_hub_ctas(
 def delete_hub_cta(
     hub_id: str,
     cta_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = HubCustomizationService(db)

@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
+from app.middleware.verification_gate import VerificationGateMiddleware
 from app.realtime.redis_client import connect_redis, disconnect_redis
 from app.realtime.subscription_manager import get_subscription_manager
 from app.notifications.subscription_manager import get_user_notification_subscription_manager
@@ -31,6 +32,8 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
+
+app.add_middleware(VerificationGateMiddleware)
 
 
 @app.exception_handler(HTTPException)

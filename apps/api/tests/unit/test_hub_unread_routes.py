@@ -11,7 +11,7 @@ def test_hub_unread_requires_auth(client) -> None:
 
 
 def test_hub_unread_returns_hub_ids(client, monkeypatch) -> None:
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1")
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1", verification_complete=True)
     monkeypatch.setattr(
         HubUnreadService,
         "list_unread_hub_ids",
@@ -40,7 +40,7 @@ def test_mark_hub_seen_success(client, monkeypatch) -> None:
         seen["hub_id"] = hub_id
         return {"ok": True}
 
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_42")
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_42", verification_complete=True)
     monkeypatch.setattr(HubUnreadService, "mark_hub_seen", _mark)
 
     try:

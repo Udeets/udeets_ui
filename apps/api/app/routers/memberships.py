@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.repositories.memberships import MembershipRepository
-from app.dependencies.auth import CurrentUser, get_current_user
+from app.dependencies.auth import CurrentUser, get_verified_user
 from app.dependencies.db import get_db
 from app.schemas.member import HubMemberRead, MyMembershipRead
 from app.services.memberships import MembershipService
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/memberships", tags=["memberships"])
 
 @router.get("/me", response_model=list[MyMembershipRead])
 def list_my_memberships(
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> list[MyMembershipRead]:
     service = MembershipService(MembershipRepository(db))
@@ -26,7 +26,7 @@ def list_my_memberships(
 @router.get("/hubs/{hub_id}/pending", response_model=list[HubMemberRead])
 def list_pending_requests(
     hub_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> list[HubMemberRead]:
     _ = current_user
@@ -38,7 +38,7 @@ def list_pending_requests(
 def approve_member_request(
     hub_id: str,
     user_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict[str, bool]:
     service = MembershipService(MembershipRepository(db))
@@ -57,7 +57,7 @@ def approve_member_request(
 def reject_member_request(
     hub_id: str,
     user_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict[str, bool]:
     service = MembershipService(MembershipRepository(db))
@@ -74,7 +74,7 @@ def reject_member_request(
 @router.post("/hubs/{hub_id}/leave")
 def leave_hub(
     hub_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict[str, bool]:
     service = MembershipService(MembershipRepository(db))
@@ -85,7 +85,7 @@ def leave_hub(
 @router.get("/hubs/{hub_id}/me", response_model=HubMemberRead | None)
 def get_my_membership_for_hub(
     hub_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> HubMemberRead | None:
     service = MembershipService(MembershipRepository(db))
@@ -95,7 +95,7 @@ def get_my_membership_for_hub(
 @router.post("/hubs/{hub_id}/join", response_model=HubMemberRead)
 def join_hub(
     hub_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> HubMemberRead:
     service = MembershipService(MembershipRepository(db))

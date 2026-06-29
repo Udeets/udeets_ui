@@ -4,7 +4,7 @@
   "private": true,
   "description": "UDeets FastAPI backend",
   "scripts": {
-    "dev": "python -X pycache_prefix=.pycache -c \"import uvicorn; from app.core.config import get_settings; s=get_settings(); uvicorn.run('app.main:app', host=s.host, port=s.port)\"",
+    "dev": "python -X pycache_prefix=.pycache -c \"import uvicorn; from app.core.config import get_settings; s=get_settings(); uvicorn.run('app.main:app', host=s.host, port=s.port, reload=True)\"",
     "dev:reload": "python -X pycache_prefix=.pycache -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
     "start": "python -X pycache_prefix=.pycache -c \"import uvicorn; from app.core.config import get_settings; s=get_settings(); uvicorn.run('app.main:app', host=s.host, port=s.port)\"",
     "test": "python -X pycache_prefix=.pycache -m pytest -q",

@@ -25,6 +25,7 @@ import { usePlatformRole } from "@/hooks/useUserRole";
 import { signOut } from "@/services/auth/signOut";
 import { useAuthSession } from "@/services/auth/useAuthSession";
 import { getMyHeaderFeedApi } from "@/lib/api/profiles";
+import { isVerificationRequiredError } from "@/lib/api/client";
 import { getProfileSummary } from "@/lib/services/profile/get-profile-summary";
 import { FEED_INVALIDATE_EVENT } from "@/lib/notifications/global-notification-events";
 import { useGlobalNotifications } from "@/lib/notifications/use-global-notifications";
@@ -460,7 +461,7 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
   }, [user?.id]);
   const resolvedAvatarUrl = profileData?.avatarUrl || (user?.user_metadata?.avatar_url as string) || "";
 
-  useGlobalNotifications(Boolean(user?.id));
+  useGlobalNotifications(Boolean(user?.id && user.verificationComplete));
 
   // ── Live notifications & events via FastAPI ──
   const [liveNotifications, setLiveNotifications] = useState<HubNotificationItem[]>([]);
@@ -501,7 +502,9 @@ function UdeetsHeaderContent({ hubSettings }: { hubSettings?: { onOpenSettings?:
         setLiveNotifications(feed.notifications ?? []);
         setLiveEvents(feed.events ?? []);
       } catch (err) {
-        console.error("[header-live-data]", err);
+        if (!isVerificationRequiredError(err)) {
+          console.error("[header-live-data]", err);
+        }
       }
     })();
 

@@ -3,6 +3,22 @@ type RequestOptions = Omit<RequestInit, "body"> & {
   body?: unknown;
 };
 
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
+export function isVerificationRequiredError(error: unknown): boolean {
+  return error instanceof ApiError && (error.code === "VERIFICATION_REQUIRED" || error.status === 403);
+}
+
 function buildUrl(path: string, query?: RequestOptions["query"]): string {
   const configuredBase = (process.env.NEXT_PUBLIC_FASTAPI_BASE_URL ?? "http://localhost:8000").replace(
     /\/$/,
@@ -44,8 +60,17 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   });
 
   if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `API request failed: ${response.status}`);
+    const raw = await response.text();
+    let message = raw;
+    let code: string | undefined;
+    try {
+      const parsed = JSON.parse(raw) as { error?: string; detail?: string; code?: string };
+      message = parsed.error ?? parsed.detail ?? raw;
+      code = parsed.code;
+    } catch {
+      /* non-JSON body; keep raw text */
+    }
+    throw new ApiError(message || `API request failed: ${response.status}`, response.status, code);
   }
 
   return (await response.json()) as T;

@@ -1,6 +1,6 @@
 # Chat REST API
 
-Base path: **`/api/chat`**. All routes require an authenticated Supabase session (same cookies / session as the web app). Unauthenticated requests return **401**.
+Base path: **`/api/v1/chat`** (FastAPI, proxied same-origin from the Next.js app at `/api/v1/*`). All routes require an authenticated session — JWT in HttpOnly cookie (or `Authorization: Bearer` for API clients). Unauthenticated requests return **401**.
 
 Errors use JSON `{ "error": "..." }` unless noted. Status codes follow `chatRouteError` (404 for missing room, 403 for forbidden, 400 for validation).
 
@@ -329,7 +329,7 @@ Optional JSON body: `{ "moderationReason": "..." }` when used in moderation cont
 }
 ```
 
-Use **`signedUploadUrl`** to upload bytes (Supabase storage). Send the opaque **`storageKey`** back to **complete** (never exposed in message lists). Allowed MIME types and per-type size limits are enforced on prepare/complete (e.g. most types 25 MB, video types up to 100 MB — see `chat-attachment-media.ts` and the `chat-media` bucket). Message list responses include attachment metadata **without** storage keys; downloads use the signed URL endpoint below.
+Use **`signedUploadUrl`** to upload bytes (S3 presigned URL via API). Send the opaque **`storageKey`** back to **complete** (never exposed in message lists). Allowed MIME types and per-type size limits are enforced on prepare/complete (e.g. most types 25 MB, video types up to 100 MB — see `chat-attachment-media.ts` and the `chat-media` bucket). Message list responses include attachment metadata **without** storage keys; downloads use the signed URL endpoint below.
 
 **Complete (record row after upload)**
 
@@ -521,4 +521,4 @@ Intended when the account is deleted or the user requests erasure. Implementatio
 
 ### Scheduled retention purge (ops)
 
-`POST /api/cron/chat-retention` with header `Authorization: Bearer <CRON_SECRET>` runs `chat_purge_messages_past_retention` using `SUPABASE_SERVICE_ROLE_KEY`. See `docs/chat-privacy.md`.
+`POST /api/cron/chat-retention` with header `Authorization: Bearer <CRON_SECRET>` proxies to FastAPI `POST /internal/cron/chat-retention`, which runs `chat_purge_messages_past_retention` against Postgres. See `docs/chat-privacy.md`. API must have `CRON_SECRET` set.

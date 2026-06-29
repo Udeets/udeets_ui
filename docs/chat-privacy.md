@@ -30,14 +30,13 @@ This document describes **what the product stores**, **how long it is kept**, **
 
 Room admins / hub staff set retention in **Hub → Chat → Room settings → Message retention**.
 
-**Cleanup job:** Migration `20260512210000_chat_privacy_retention_purge.sql` defines `public.chat_purge_messages_past_retention(p_limit int)`. Run it on a schedule with the **Supabase service role** (see below).
+**Cleanup job:** Migration `20260512210000_chat_privacy_retention_purge.sql` defines `public.chat_purge_messages_past_retention(p_limit int)`. Run it on a schedule via the FastAPI cron endpoint (see below).
 
-**Suggested schedule:** Daily `POST` to `/api/cron/chat-retention` with header `Authorization: Bearer <CRON_SECRET>` (e.g. Vercel Cron). The handler loops in batches until no rows are deleted (cap: 40 × 500 rows per run).
+**Suggested schedule:** Daily `POST` to `/api/cron/chat-retention` with header `Authorization: Bearer <CRON_SECRET>` (e.g. Vercel Cron). The Next route proxies to FastAPI; the handler loops in batches until no rows are deleted (cap: 40 × 500 rows per run).
 
 **Required env (production):**
 
-- `SUPABASE_SERVICE_ROLE_KEY` — server-only; used for retention purge and chat erasure RPC.
-- `CRON_SECRET` — shared secret verified by the cron route.
+- `CRON_SECRET` — shared secret on **both** web (`apps/web`) and API (`apps/api`); verified by the cron routes.
 
 See `apps/web/.env.example`.
 
@@ -65,7 +64,7 @@ Returns JSON (no-store) including:
 
 Intended when the user deletes their account or requests erasure of chat content.
 
-**With `SUPABASE_SERVICE_ROLE_KEY`:** Calls `public.chat_erasure_apply_for_user(user_id)` (migration `20260512220000_chat_erasure_service_function.sql`), which:
+**Via FastAPI:** `POST /api/v1/chat/me/anonymize` calls `public.chat_erasure_apply_for_user(user_id)` on Postgres when the RPC exists (migration `20260512220000_chat_erasure_service_function.sql`), which:
 
 - Clears `sender_id` on authored messages, replaces `body` with `[Content removed]`, sets display snapshot to **`Deleted User`**.
 - Deletes the user’s reactions and poll votes.
@@ -73,7 +72,7 @@ Intended when the user deletes their account or requests erasure of chat content
 - Removes room mutes/bans rows for the user.
 - Soft-deletes attachment rows they uploaded (`deleted_at`, clears filename, `scan_status = skipped`).
 
-**Without service role:** Falls back to the authenticated Supabase client (may be incomplete if RLS blocks some updates).
+**Fallback:** If the RPC is missing, the API uses a SQLAlchemy fallback path (`anonymize_user_fallback`) that may not cover every edge case — ensure migrations are applied on RDS.
 
 **Storage objects:** Orphaned files in `chat-media` are **not** automatically removed in this pass; a separate storage lifecycle or admin job can purge unreferenced keys.
 

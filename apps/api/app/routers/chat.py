@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.dependencies.auth import CurrentUser, get_current_user
+from app.dependencies.auth import CurrentUser, get_verified_user
 from app.dependencies.db import get_db
 from app.db.repositories.chat import ChatRepository
 from app.services.chat_moderation_and_compliance import ChatModerationAndComplianceService
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 @router.get("/rooms")
 def list_rooms(
     hub_id: str = Query(alias="hubId"),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatReadService(db)
@@ -26,7 +26,7 @@ def list_rooms(
 @router.post("/rooms")
 def create_room(
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatWriteService(db)
@@ -43,7 +43,7 @@ def create_room(
 @router.get("/rooms/{room_id}")
 def get_room(
     room_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatReadService(db)
@@ -54,7 +54,7 @@ def get_room(
 def patch_room(
     room_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatWriteService(db)
@@ -83,7 +83,7 @@ def patch_room(
 @router.delete("/rooms/{room_id}")
 def delete_room(
     room_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatWriteService(db)
@@ -95,7 +95,7 @@ def list_messages(
     room_id: str,
     limit: int = Query(default=30, ge=1, le=100),
     cursor: str | None = Query(default=None),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatReadService(db)
@@ -112,7 +112,7 @@ def list_messages_since(
     room_id: str,
     after: str = Query(alias="after"),
     limit: int = Query(default=50, ge=1, le=100),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatReadService(db)
@@ -127,7 +127,7 @@ def list_messages_since(
 @router.get("/unread")
 def get_hub_chat_unread(
     hub_id: str = Query(alias="hubId"),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatReadService(db)
@@ -138,7 +138,7 @@ def get_hub_chat_unread(
 def mark_room_read(
     room_id: str,
     payload: dict = Body(default={}),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     message_id = payload.get("messageId")
@@ -155,7 +155,7 @@ def mark_room_read(
 async def send_message(
     room_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     if not await allow_message_send(current_user.user_id, room_id):
@@ -181,7 +181,7 @@ def patch_message(
     room_id: str,
     message_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatWriteService(db)
@@ -198,7 +198,7 @@ def delete_message(
     room_id: str,
     message_id: str,
     payload: dict | None = Body(default=None),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatWriteService(db)
@@ -216,7 +216,7 @@ def add_reaction(
     room_id: str,
     message_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatWriteService(db)
@@ -233,7 +233,7 @@ def remove_reaction(
     room_id: str,
     message_id: str,
     emoji: str = Query(default=""),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatWriteService(db)
@@ -249,7 +249,7 @@ def remove_reaction(
 def invite_user(
     room_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatWriteService(db)
@@ -264,7 +264,7 @@ def invite_user(
 def revoke_invite(
     room_id: str,
     invited_user_id: str = Query(alias="invitedUserId"),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatWriteService(db)
@@ -279,7 +279,7 @@ def revoke_invite(
 def respond_invite(
     room_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     action = str(payload.get("action") or "")
@@ -295,7 +295,7 @@ def respond_invite(
 def add_member(
     room_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatWriteService(db)
@@ -310,7 +310,7 @@ def add_member(
 @router.get("/rooms/{room_id}/members")
 def list_members(
     room_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatModerationAndComplianceService(db)
@@ -321,7 +321,7 @@ def list_members(
 def remove_member(
     room_id: str,
     member_user_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatWriteService(db)
@@ -337,7 +337,7 @@ def ban_member(
     room_id: str,
     member_user_id: str,
     payload: dict | None = Body(default=None),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     reason = (
@@ -359,7 +359,7 @@ def mute_member(
     room_id: str,
     member_user_id: str,
     payload: dict | None = Body(default=None),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     muted_until = (
@@ -386,7 +386,7 @@ def mute_member(
 def create_poll(
     room_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatWriteService(db)
@@ -409,7 +409,7 @@ def create_poll(
 @router.get("/rooms/{room_id}/invite-candidates")
 def invite_candidates(
     room_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatModerationAndComplianceService(db)
@@ -420,7 +420,7 @@ def invite_candidates(
 def get_poll(
     room_id: str,
     poll_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatModerationAndComplianceService(db)
@@ -435,7 +435,7 @@ def get_poll(
 def get_poll_by_message(
     room_id: str,
     message_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatModerationAndComplianceService(db)
@@ -451,7 +451,7 @@ def prepare_attachment(
     room_id: str,
     message_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatModerationAndComplianceService(db)
@@ -470,7 +470,7 @@ def complete_attachment(
     room_id: str,
     message_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatModerationAndComplianceService(db)
@@ -490,7 +490,7 @@ def attachment_download(
     room_id: str,
     attachment_id: str,
     expires_in: int | None = Query(default=None, alias="expiresIn"),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatModerationAndComplianceService(db)
@@ -507,7 +507,7 @@ def vote_poll(
     room_id: str,
     poll_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatWriteService(db)
@@ -523,7 +523,7 @@ def vote_poll(
 def list_reports(
     room_id: str,
     status_filter: str = Query(default="all", alias="status"),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatModerationAndComplianceService(db)
@@ -538,7 +538,7 @@ def list_reports(
 def create_report(
     room_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatModerationAndComplianceService(db)
@@ -566,7 +566,7 @@ def patch_report(
     room_id: str,
     report_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatModerationAndComplianceService(db)
@@ -585,7 +585,7 @@ def patch_report(
 def moderation_action(
     room_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatModerationAndComplianceService(db)
@@ -599,7 +599,7 @@ def moderation_action(
 @router.get("/rooms/{room_id}/moderation-actions")
 def moderation_actions(
     room_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatModerationAndComplianceService(db)
@@ -613,7 +613,7 @@ def moderation_actions(
 async def typing(
     room_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatTypingService(ChatRepository(db))
@@ -627,7 +627,7 @@ async def typing(
 @router.get("/rooms/{room_id}/realtime-preflight")
 def realtime_preflight(
     room_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatModerationAndComplianceService(db)
@@ -639,7 +639,7 @@ def realtime_preflight(
 
 @router.get("/me/export")
 def export_me(
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatModerationAndComplianceService(db)
@@ -648,7 +648,7 @@ def export_me(
 
 @router.post("/me/anonymize")
 def anonymize_me(
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ChatModerationAndComplianceService(db)

@@ -16,7 +16,7 @@ For v1, **durable mutations never go over WebSocket**. Ephemeral typing uses RES
 ## Client
 
 - Browser connects to `NEXT_PUBLIC_FASTAPI_WS_URL` (not the Next `/api/v1` proxy).
-- Cognito token via `?token=` or `Authorization: Bearer`.
+- JWT access token via `?token=` or `Authorization: Bearer` (from `/api/auth/access-token` or session cookie flow).
 - Feature flags: `NEXT_PUBLIC_CHAT_REALTIME_ENABLED`, `NEXT_PUBLIC_CHAT_POLLING_FALLBACK_ENABLED`.
 
 ## Server events

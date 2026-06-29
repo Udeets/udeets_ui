@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { getChatAccessTokenFromCookies } from "@/lib/chat/get-chat-access-token";
+import { getChatAccessToken } from "@/lib/chat/get-chat-access-token";
 import type {
   NotificationEventEnvelope,
   NotificationRealtimeServerMessage,
@@ -49,9 +49,9 @@ export function useNotificationsRealtime({
     }
   }, []);
 
-  const connect = useCallback(() => {
+  const connect = useCallback(async () => {
     if (!isNotificationsRealtimeEnabled() || !enabled) return;
-    const token = getChatAccessTokenFromCookies();
+    const token = await getChatAccessToken();
     if (!token) return;
 
     const url = `${notificationsWsBaseUrl()}?token=${encodeURIComponent(token)}`;

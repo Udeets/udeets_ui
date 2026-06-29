@@ -29,6 +29,8 @@ import { DeetCommentsPreviewStrip } from "@/app/hubs/[category]/[slug]/component
 import { DeetCommentsSection } from "@/app/hubs/[category]/[slug]/components/deets/DeetCommentsSection";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import { listUnreadHubIdsApi } from "@/lib/api/hubs";
+import { isVerificationRequiredError } from "@/lib/api/client";
+import { useVerificationOptional } from "@/components/auth/VerificationProvider";
 import {
   MEMBER_JOIN_ACCEPTED_EVENT,
   UNREAD_CHANGED_EVENT,
@@ -600,6 +602,8 @@ function DashboardPageContent() {
   const [memberships, setMemberships] = useState<MyMembership[]>([]);
   const [isLoadingHubs, setIsLoadingHubs] = useState(true);
   const [hubsLoadError, setHubsLoadError] = useState<string | null>(null);
+  const [verificationLimited, setVerificationLimited] = useState(false);
+  const verification = useVerificationOptional();
   const [myDeetsItems, setMyDeetsItems] = useState<FeedItem[]>([]);
   const [unreadHubIds, setUnreadHubIds] = useState<Set<string>>(new Set());
 
@@ -980,6 +984,7 @@ function DashboardPageContent() {
     async function loadDashboardHubs() {
       setIsLoadingHubs(true);
       setHubsLoadError(null);
+      setVerificationLimited(false);
 
       try {
         const [dbHubs, myMemberships, unreadHubIds] = await Promise.all([
@@ -1015,7 +1020,12 @@ function DashboardPageContent() {
         if (!cancelled) {
           setHubs([]);
           setMemberships([]);
-          setHubsLoadError(error instanceof Error ? error.message : "Hubs could not be loaded.");
+          if (isVerificationRequiredError(error)) {
+            setVerificationLimited(true);
+            verification?.openVerification();
+          } else {
+            setHubsLoadError(error instanceof Error ? error.message : "Hubs could not be loaded.");
+          }
         }
       } finally {
         if (!cancelled) {
@@ -1397,7 +1407,25 @@ function DashboardPageContent() {
           </section>
         ) : null}
 
-        {hubsLoadError ? (
+        {verificationLimited && !isLoadingHubs ? (
+          <section className={cn(CARD, "mt-6 p-6 text-center sm:p-8")}>
+            <h2 className={cn("text-2xl font-semibold tracking-tight", TEXT_DARK)}>
+              Verify your account to unlock your dashboard
+            </h2>
+            <p className={cn("mt-3 text-sm leading-6 sm:text-base", TEXT_MUTED)}>
+              You have limited access until you verify your email or phone. Verify a contact method to see your hubs and feed.
+            </p>
+            <button
+              type="button"
+              onClick={() => verification?.openVerification()}
+              className="mt-5 inline-flex items-center rounded-full bg-gradient-to-r from-[var(--ud-gradient-from)] to-[var(--ud-gradient-to)] px-5 py-2.5 text-sm font-semibold text-white"
+            >
+              Verify now
+            </button>
+          </section>
+        ) : null}
+
+        {hubsLoadError && !verificationLimited ? (
           <section className={cn(CARD, "mt-6 p-6 text-center sm:p-8")}>
             <h2 className={cn("text-2xl font-semibold tracking-tight", TEXT_DARK)}>
               We couldn&apos;t load your dashboard
@@ -1406,7 +1434,7 @@ function DashboardPageContent() {
           </section>
         ) : null}
 
-        {!isLoadingHubs && !hubsLoadError ? (
+        {!isLoadingHubs && !hubsLoadError && !verificationLimited ? (
           <div className="mt-6 space-y-6">
             <HubLauncher
               selectedView={selectedHubView}

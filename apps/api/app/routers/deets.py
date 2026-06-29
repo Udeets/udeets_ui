@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Body, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.dependencies.auth import CurrentUser, get_current_user
+from app.dependencies.auth import CurrentUser, get_verified_user
 from app.dependencies.db import get_db
 from app.services.deet_interactions import DeetInteractionsService
 from app.services.deet_media import DeetMediaService
@@ -17,7 +17,7 @@ def list_deets(
     limit: int | None = Query(default=None, ge=1, le=500),
     published_only: bool | None = Query(default=None, alias="publishedOnly"),
     drafts_only: bool | None = Query(default=None, alias="draftsOnly"),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetsService(db)
@@ -36,7 +36,7 @@ def list_deets(
 @router.post("")
 def create_deet(
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetsService(db)
@@ -47,7 +47,7 @@ def create_deet(
 def patch_deet(
     deet_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetsService(db)
@@ -57,7 +57,7 @@ def patch_deet(
 @router.delete("/{deet_id}")
 def remove_deet(
     deet_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetsService(db)
@@ -68,7 +68,7 @@ def remove_deet(
 def toggle_like(
     deet_id: str,
     payload: dict = Body(default={}),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -82,7 +82,7 @@ def toggle_like(
 @router.get("/likes/status")
 def like_status(
     ids: str = Query(default=""),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -94,7 +94,7 @@ def like_status(
 def create_comment(
     deet_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -114,7 +114,7 @@ def create_comment(
 @router.get("/{deet_id}/comments")
 def comments(
     deet_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -125,7 +125,7 @@ def comments(
 def patch_comment(
     comment_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -140,7 +140,7 @@ def patch_comment(
 def drop_comment(
     comment_id: str,
     deet_id: str = Query(alias="deetId"),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -154,7 +154,7 @@ def drop_comment(
 @router.get("/{deet_id}/reactors")
 def reactors(
     deet_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -164,7 +164,7 @@ def reactors(
 @router.get("/reactors/previews")
 def reactor_previews(
     ids: str = Query(default=""),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -175,7 +175,7 @@ def reactor_previews(
 @router.get("/counts")
 def counts(
     ids: str = Query(default=""),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -187,7 +187,7 @@ def counts(
 def poll_votes(
     ids: str = Query(default=""),
     mine_only: bool = Query(default=False, alias="mineOnly"),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -203,7 +203,7 @@ def poll_votes(
 def cast_poll_vote(
     deet_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -218,7 +218,7 @@ def cast_poll_vote(
 def toggle_poll_multi_vote(
     deet_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -235,7 +235,7 @@ def toggle_poll_multi_vote(
 @router.delete("/{deet_id}/polls/vote")
 def remove_poll_vote(
     deet_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -245,7 +245,7 @@ def remove_poll_vote(
 @router.get("/surveys/responses")
 def survey_responses(
     ids: str = Query(default=""),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -257,7 +257,7 @@ def survey_responses(
 def submit_survey_responses(
     deet_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -274,7 +274,7 @@ def submit_survey_responses(
 @router.delete("/{deet_id}/surveys/responses")
 def delete_survey_responses(
     deet_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -284,7 +284,7 @@ def delete_survey_responses(
 @router.post("/{deet_id}/views/increment")
 def increment_view(
     deet_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -294,7 +294,7 @@ def increment_view(
 @router.get("/{deet_id}/viewers")
 def viewers(
     deet_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -304,7 +304,7 @@ def viewers(
 @router.get("/views/counts")
 def view_counts(
     ids: str = Query(default=""),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -315,7 +315,7 @@ def view_counts(
 @router.post("/{deet_id}/shares/record")
 def record_share(
     deet_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -325,7 +325,7 @@ def record_share(
 @router.get("/shares/counts")
 def share_counts(
     ids: str = Query(default=""),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -337,7 +337,7 @@ def share_counts(
 def toggle_comment_reaction(
     comment_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -351,7 +351,7 @@ def toggle_comment_reaction(
 @router.get("/comments/reactions")
 def comment_reactions(
     ids: str = Query(default=""),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetInteractionsService(db)
@@ -362,7 +362,7 @@ def comment_reactions(
 @router.post("/media/prepare")
 def prepare_media_upload(
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = DeetMediaService(db)

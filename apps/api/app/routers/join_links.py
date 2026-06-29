@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.repositories.invites import InviteRepository
-from app.dependencies.auth import CurrentUser, get_current_user
+from app.dependencies.auth import CurrentUser, get_verified_user
 from app.dependencies.db import get_db
 from app.schemas.invite import (
     HubJoinLinkExpirationRequest,
@@ -27,7 +27,7 @@ def resolve_join_token(
 def get_or_create_join_link(
     hub_id: str,
     expires_in_days: int | None = Query(default=None, ge=0, le=365),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> HubJoinLinkStateRead:
     service = InviteService(InviteRepository(db))
@@ -45,7 +45,7 @@ def get_or_create_join_link(
 def regenerate_join_link(
     hub_id: str,
     expires_in_days: int | None = Query(default=None, ge=0, le=365),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> HubJoinLinkStateRead:
     service = InviteService(InviteRepository(db))
@@ -62,7 +62,7 @@ def regenerate_join_link(
 @router.post("/{hub_id}/disable")
 def disable_join_link(
     hub_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict[str, bool]:
     service = InviteService(InviteRepository(db))
@@ -76,7 +76,7 @@ def disable_join_link(
 def set_join_link_expiration(
     hub_id: str,
     payload: HubJoinLinkExpirationRequest,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict[str, str | None]:
     service = InviteService(InviteRepository(db))

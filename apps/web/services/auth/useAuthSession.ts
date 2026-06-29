@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { AuthSession, AuthUser } from "@/lib/auth/session";
+import { AUTH_SESSION_CHANGED_EVENT } from "@/lib/auth/auth-session-events";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
@@ -50,8 +51,14 @@ export function useAuthSession(): AuthSessionState {
 
     void loadSession();
 
+    const onSessionChanged = () => {
+      void loadSession();
+    };
+    window.addEventListener(AUTH_SESSION_CHANGED_EVENT, onSessionChanged);
+
     return () => {
       cancelled = true;
+      window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, onSessionChanged);
     };
   }, []);
 

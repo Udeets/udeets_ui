@@ -4,8 +4,8 @@ import logging
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from app.auth.ws_connect import authenticate_verified_websocket
 from app.core.config import get_settings
-from app.dependencies.auth import current_user_from_bearer_token
 from app.notifications.connection_manager import get_notification_connection_manager
 
 logger = logging.getLogger(__name__)
@@ -28,14 +28,8 @@ async def notifications_websocket(websocket: WebSocket) -> None:
         return
 
     token = _extract_token(websocket)
-    if not token:
-        await websocket.close(code=4401, reason="Missing bearer token")
-        return
-
-    try:
-        user = current_user_from_bearer_token(token)
-    except ValueError:
-        await websocket.close(code=4401, reason="Invalid token")
+    user = await authenticate_verified_websocket(websocket, token)
+    if user is None:
         return
 
     await websocket.accept()

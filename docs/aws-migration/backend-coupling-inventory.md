@@ -1,6 +1,8 @@
 # Backend Coupling Inventory
 
-This inventory tracks remaining Supabase coupling points in the API backend.
+> **Historical** — documents the Supabase cutover inventory from early 2026. Runtime no longer uses Supabase REST, Supabase Auth, or provider toggles. See [README.md](./README.md).
+
+This inventory tracked Supabase coupling points in the API backend during migration.
 
 ## Supabase DB/REST coupling
 

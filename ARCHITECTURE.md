@@ -2,7 +2,7 @@
 
 > Quick-reference for AI assistants and developers. Read this file before exploring code.
 > Covers: tech stack, monorepo layout, component tree, services, DB schema, patterns, and phase-2 / future migration plans.
-> **Scope markers:** sections tagged `[CURRENT]` describe the shipped Supabase stack. `[PHASE 2]` covers the AWS migration. `[FUTURE]` covers the long-term platform vision.
+> **Scope markers:** `[CURRENT]` is the shipped FastAPI + Next.js stack. `[FUTURE]` covers longer-term platform plans. Legacy Supabase/AWS-migration notes live under `docs/aws-migration/` (historical).
 
 ---
 
@@ -15,7 +15,7 @@
 | Styling | Tailwind CSS + CSS custom properties | 4 |
 | Language | TypeScript (strict) | 5.x |
 | **API** | **FastAPI (`apps/api`)** | Python 3.11+ |
-| Auth | **Amazon Cognito** (Hosted UI + JWT) | — |
+| Auth | **uDeets JWT** (Google OAuth + email/phone/password) | HS256 |
 | Database | **Postgres** (AWS RDS prod; Docker locally) | SQLAlchemy + Alembic |
 | Storage | **S3** (MinIO locally) | boto3 presigned uploads |
 | Chat realtime | **FastAPI WebSocket + Redis/Valkey** | — |
@@ -25,7 +25,7 @@
 | Deploy | Vercel (web) + API host | — |
 | Geo | Nominatim via FastAPI (`/api/v1/geo/*`) | — |
 
-**Env vars:** `apps/web/.env.local` (Cognito, FastAPI URLs) and `apps/api/.env.local` (DB, S3/MinIO, Cognito JWKS). See [docs/local-dev-bootstrap.md](docs/local-dev-bootstrap.md).
+**Env vars:** `apps/web/.env.local` and `apps/api/.env` / `.env.local` (DB, JWT, Google OAuth, S3, Redis). See [docs/local-dev-bootstrap.md](docs/local-dev-bootstrap.md).
 
 **Local setup:** `npm run bootstrap` then `npm run dev`.
 
@@ -33,31 +33,23 @@
 
 ---
 
-## 2. Tech Stack `[PHASE 2 — AWS Migration]`
+## 2. Backend & data `[CURRENT]`
 
-Plan is to swap Supabase for AWS-native services while keeping the service-layer interface stable. No UI code changes required because all DB calls go through `apps/web/lib/services/*`.
+The app runs on **FastAPI + Postgres (RDS or local Docker) + S3 + Redis**. The web app calls the API via same-origin `/api/v1` proxy; there is no Supabase client in runtime code.
 
-| Layer | Current (Supabase) | Phase 2 (AWS) | Migration notes |
-|---|---|---|---|
-| Auth | Supabase Auth | Amazon Cognito | Same callback route pattern, same `upsertProfile` call |
-| Database | Supabase Postgres | Aurora Serverless v2 (Postgres-compatible) | Export/import via `pg_dump`, reapply RLS-equivalent policies at the API layer |
-| Storage | Supabase Storage | S3 + CloudFront | Abstract storage behind a `lib/services/storage/` file first |
-| API | Next.js Route Handlers + Supabase JS client | API Gateway + Lambda | Swap service layer implementations; UI stays untouched |
-| Realtime | Supabase Realtime | AppSync (GraphQL subscriptions) or API Gateway WebSockets | Keep `subscribeToDeets` signature; swap underlying transport |
+| Layer | Technology | Notes |
+|-------|------------|--------|
+| Auth | uDeets JWT (HS256) | Google OAuth + email/phone/password registration |
+| Database | Postgres on RDS (prod) / Docker (local) | SQLAlchemy ORM + Alembic deltas |
+| Schema bootstrap (local) | `npm run bootstrap` | `create_all()` from models, then Alembic stamp |
+| Schema bootstrap (RDS) | `apps/api/sql/rds-app-schema/` | Ordered SQL bundle + Alembic |
+| Storage | S3 (MinIO locally) | Presigned uploads via FastAPI |
+| Realtime | FastAPI WebSocket + Redis pub/sub | Chat + notifications |
+| API | FastAPI `apps/api` | Source of truth for business logic |
 
-**Readiness checklist (current status):**
-- ✅ All DB calls behind service files (`lib/services/*`)
-- ✅ No direct Supabase calls in pages/components
-- ✅ `profiles` table is canonical user data (portable)
-- ✅ Auth callback isolated (`/auth/callback/route.ts`)
-- ⚠️ Storage bucket abstraction — needs a dedicated service file before swap
-- ⚠️ Discover page has one raw fetch — needs a service wrapper
+**Do not** run `supabase db push` or apply `supabase/migrations/` on new environments — that folder is [archived](../supabase/README.md).
 
-**Migration sequence (when triggered):**
-1. Storage → S3 + CloudFront
-2. Auth → Cognito
-3. DB → Aurora Serverless
-4. API → Lambda + API Gateway
+**Empty local Postgres:** run `npm run bootstrap` first. Do not run `alembic upgrade head` from zero on an empty database (mid-chain revisions assume tables already exist).
 
 ---
 
@@ -77,13 +69,14 @@ Plan is to swap Supabase for AWS-native services while keeping the service-layer
 ```
 udeets-ui/
 ├── apps/
-│   ├── web/              # Next.js frontend (primary app)
-│   ├── api/              # Fastify API server (minimal, mostly unused)
+│   ├── web/              # Next.js frontend
+│   ├── api/              # FastAPI backend (ORM, Alembic, routers, WebSocket)
+│   │   ├── alembic/      # Incremental DB revisions
+│   │   └── sql/rds-app-schema/  # RDS DDL bundle (ordered apply)
 │   └── db/               # DB config placeholder
-├── packages/             # Shared packages (reserved, empty)
-├── supabase/
-│   └── migrations/       # SQL migration files (chronological)
-├── scripts/              # Build/deploy scripts
+├── packages/             # Shared packages (reserved)
+├── supabase/             # ARCHIVED legacy SQL only — see supabase/README.md
+├── scripts/              # bootstrap.py, migration helpers
 ├── package.json          # Root workspace config
 ├── CLAUDE.md             # AI-assistant index
 ├── project-context.md    # Current state + open items + future plans
@@ -121,7 +114,7 @@ apps/web/
 ├── lib/                          # Core library (services + utilities)
 ├── public/                       # Static assets (hub-images/, avatars/)
 ├── middleware.ts                 # Auth session middleware
-└── next.config.ts                # Image remote patterns for Google + Supabase
+└── next.config.ts                # Image remote patterns (CDN / S3 media hosts)
 ```
 
 ---
@@ -168,7 +161,7 @@ page.tsx (Server Component)
           │  ├── useHubSettingsFlow()   — hub settings persistence
           │  ├── useHubConnectFlow()    — social/contact links
           │  ├── useHubFilters()        — search + filter feed items
-          │  ├── useHubLiveFeed()       — realtime Supabase subscription
+          │  ├── useHubLiveFeed()       — deets feed refresh (WebSocket invalidation + polling fallback)
           │  └── useHubSectionState()   — tab/panel navigation
           │
           │  RENDERED SECTIONS:
@@ -238,15 +231,9 @@ DeetsSection (exported function, ~30 props)
 
 ## 7. Lib — Services & Utilities `[CURRENT]`
 
-### Supabase Clients (`lib/supabase/`)
+### API client (`lib/api/` + `lib/services/*`)
 
-| File | Purpose |
-|------|---------|
-| `client.ts` | Browser client via `createBrowserClient()` — singleton |
-| `server.ts` | Server client via `createServerClient()` with cookie handling |
-| `middleware.ts` | `updateSession(request)` — auth middleware |
-
-**Env vars:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (or legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY`)
+All data access goes through service modules that call FastAPI (`/api/v1/*` proxy). Pages and components do not talk to the database directly.
 
 ### Deet Services (`lib/services/deets/`)
 
@@ -376,7 +363,7 @@ DeetsSection (exported function, ~30 props)
 
 ## 9. Key Patterns & Conventions `[CURRENT]`
 
-1. **Service layer first** — every Supabase call goes through `lib/services/*`. Pages and components never import `@/lib/supabase/client` directly.
+1. **Service layer first** — every API call goes through `lib/services/*` or `lib/api/*`. Pages and components do not embed SQL or direct DB clients.
 
 2. **Backward-compatible queries** — service functions try queries with new columns, catch errors mentioning missing columns, retry without. This lets code deploy before migrations are applied.
 
@@ -396,13 +383,13 @@ DeetsSection (exported function, ~30 props)
 
 10. **Component colocation** — hub page components live under `app/hubs/[category]/[slug]/components/` alongside their hooks in `hooks/`.
 
-11. **Supabase RLS** — row-level security is used extensively. `is_super_admin()` SECURITY DEFINER avoids recursive policy checks.
+11. **Authorization in API** — access control is enforced in FastAPI (membership checks, hub roles), not Postgres RLS.
 
 12. **RLS gotcha** — `hubs.created_by` is `text`, `auth.uid()` is `uuid`. Always cast with `::text` in policies.
 
-13. **FK gotcha** — Supabase relational queries fail when FK points to `auth.users` instead of `profiles`. Use two-step fetch (fetch IDs, then fetch profiles separately).
+13. **Profiles are canonical** — `profiles.id` matches `users.id` (first-party auth). Fetch profile display fields from `profiles`, not legacy auth-provider metadata alone.
 
-14. **Migrations only for schema** — no direct dashboard schema edits. Files in `supabase/migrations/YYYYMMDD_<name>.sql`.
+14. **Schema changes** — local: bootstrap + Alembic; RDS: SQL bundle + Alembic. See `apps/api/alembic/versions/` and `apps/api/sql/rds-app-schema/`. Do not edit `supabase/migrations/` (archived).
 
 15. **No hardcoded colors** — use `lib/theme.ts` + CSS tokens from `globals.css`.
 
@@ -571,7 +558,7 @@ Chronological — apply in this order:
 20260517100000_chat_rooms_delete_rls.sql   — RLS `DELETE` on `chat_rooms` for hub staff or room owner/admin (hard delete room)
 ```
 
-See `project-context.md` § Known Issues for the subset that still needs to be applied to the live Supabase instance.
+See `project-context.md` for open items. Historical SQL under `supabase/migrations/` is archived — use Alembic + RDS bundle for live schema.
 
 ---
 
@@ -606,14 +593,14 @@ Alerts → alert     Jobs → update
 
 ## 16. Architecture Evolution `[PHASE 2 — AWS Migration]`
 
-When Supabase is swapped for AWS:
+Current direction (partially implemented):
 
-- **`apps/web/lib/supabase/` → `apps/web/lib/api/`** — single HTTP client wrapping API Gateway
-- **All `lib/services/*` files** — implementations swap from Supabase JS client calls to `fetch` against API Gateway. Interfaces stay identical so no UI changes.
-- **RLS policies → Lambda authorizers** — translate Postgres RLS rules into Cognito-claim-based authorizer logic or Postgres policies on Aurora.
-- **`subscribeToDeets`** — swap Supabase channel subscription for AppSync subscription or WebSocket. Keep `onChange` callback signature.
-- **Storage helpers** — abstract `uploadDeetMedia`, `uploadHubMedia`, etc. behind a `lib/services/storage/` module now so the swap becomes a one-file change.
-- **`/auth/callback`** — swap Supabase `exchangeCodeForSession` for Cognito Hosted UI callback. `upsertProfile` stays the same.
+- **`apps/web/lib/api/`** — typed HTTP client to FastAPI (`NEXT_PUBLIC_API_BASE_URL`)
+- **All `lib/services/*`** — call FastAPI; no direct DB client in the browser
+- **Auth** — FastAPI JWT (Google OAuth + email/phone/password); HttpOnly cookies on the web app
+- **Realtime** — WebSocket notification hub + chat; polling fallback when disabled
+- **Storage** — S3 presigned uploads via API (see `lib/services/storage/`)
+- **Remaining AWS work** — production hardening, SES/SMS delivery, optional API Gateway in front of ECS
 
 ---
 

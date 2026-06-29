@@ -41,6 +41,17 @@ class Settings(BaseSettings):
     notifications_redis_subscribe_mode: Literal["per_user", "pattern"] = "per_user"
     event_bus_backend: Literal["none", "redis_stream", "eventbridge"] = "redis_stream"
     event_stream_key: str = "events:udeets"
+    auth_web_base_url: str = "http://localhost:3000"
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str | None = None
+    smtp_use_tls: bool = True
+    sms_provider: Literal["log", "twilio"] = "log"
+    twilio_account_sid: str | None = None
+    twilio_auth_token: str | None = None
+    twilio_from_number: str | None = None
 
     model_config = SettingsConfigDict(
         # Later files override earlier ones (.env.local wins over .env).

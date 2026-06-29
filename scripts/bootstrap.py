@@ -47,6 +47,7 @@ LOCAL_API_ENV = {
     "JWT_SECRET": "",
     "JWT_ISSUER": "udeets",
     "JWT_ACCESS_TTL_SECONDS": "3600",
+    "AUTH_WEB_BASE_URL": "http://localhost:3000",
     "GOOGLE_CLIENT_ID": "",
     "GOOGLE_CLIENT_SECRET": "",
     "GOOGLE_REDIRECT_URI": "http://localhost:3000/auth/callback",

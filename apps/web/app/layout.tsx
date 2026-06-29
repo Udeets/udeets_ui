@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { VerificationProvider } from "@/components/auth/VerificationProvider";
 import { UserProfileModalProvider } from "@/components/UserProfileModalProvider";
 import "./globals.css";
 
@@ -25,7 +26,9 @@ export default function RootLayout({
       <body className="min-h-screen font-sans antialiased">
         <ThemeProvider>
           <UserProfileModalProvider>
-            <div className="app-shell flex min-h-screen flex-col">{children}</div>
+            <VerificationProvider>
+              <div className="app-shell flex min-h-screen flex-col">{children}</div>
+            </VerificationProvider>
           </UserProfileModalProvider>
         </ThemeProvider>
       </body>
