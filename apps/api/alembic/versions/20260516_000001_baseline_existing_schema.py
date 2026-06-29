@@ -1,8 +1,8 @@
-"""Baseline revision for existing Supabase-managed schema.
+"""Baseline revision for an existing Postgres schema.
 
 This baseline intentionally does not create or alter tables.
-It marks the current production schema state so future SQLAlchemy/Alembic
-changes can be introduced safely without rewriting existing objects.
+It marks databases that already had the app schema (from RDS bundle or
+local bootstrap) so later Alembic revisions can be applied incrementally.
 """
 
 from collections.abc import Sequence

@@ -1,10 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { sanitizeAuthNextPath } from "@/lib/auth/auth-callback-utils";
+import { applyAuthCookie, getFastApiBase } from "@/lib/auth/auth-cookie-server";
 
 const AUTH_NEXT_COOKIE = "udeets_auth_next";
 const OAUTH_STATE_COOKIE = "udeets_oauth_state";
-const COOKIE_OPTIONS = {
+const COOKIE_CLEAR = {
   path: "/",
+  maxAge: 0,
   sameSite: "lax" as const,
   secure: process.env.NODE_ENV === "production",
 };
@@ -20,14 +22,6 @@ function resolvePostAuthPath(request: NextRequest, requestUrl: URL): string {
     }
   }
   return sanitizeAuthNextPath(fromQuery);
-}
-
-function getFastApiBase(): string {
-  return (
-    process.env.FASTAPI_BASE_URL ??
-    process.env.NEXT_PUBLIC_FASTAPI_BASE_URL ??
-    "http://localhost:8000"
-  ).replace(/\/$/, "");
 }
 
 export async function GET(request: NextRequest) {
@@ -66,10 +60,7 @@ export async function GET(request: NextRequest) {
   let tokenBody: {
     accessToken?: string;
     user?: {
-      id?: string;
-      email?: string | null;
-      fullName?: string | null;
-      avatarUrl?: string | null;
+      verificationComplete?: boolean;
     };
     error?: string;
     detail?: string;
@@ -98,15 +89,14 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const redirectResponse = NextResponse.redirect(new URL(next, requestUrl.origin));
-  redirectResponse.cookies.set(AUTH_NEXT_COOKIE, "", { path: "/", maxAge: 0 });
-  redirectResponse.cookies.set(OAUTH_STATE_COOKIE, "", { path: "/", maxAge: 0 });
-  redirectResponse.cookies.set("udeets_id_token", "", { path: "/", maxAge: 0 });
+  const destination = tokenBody.user?.verificationComplete
+    ? next
+    : "/auth/verify";
 
-  redirectResponse.cookies.set("udeets_access_token", tokenBody.accessToken ?? "", {
-    ...COOKIE_OPTIONS,
-    maxAge: 3600,
-  });
-
+  const redirectResponse = NextResponse.redirect(new URL(destination, requestUrl.origin));
+  redirectResponse.cookies.set(AUTH_NEXT_COOKIE, "", COOKIE_CLEAR);
+  redirectResponse.cookies.set(OAUTH_STATE_COOKIE, "", COOKIE_CLEAR);
+  redirectResponse.cookies.set("udeets_id_token", "", COOKIE_CLEAR);
+  applyAuthCookie(redirectResponse, tokenBody.accessToken ?? "");
   return redirectResponse;
 }

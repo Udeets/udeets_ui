@@ -11,8 +11,8 @@ Use this skill when I describe a bug, broken behavior, or regression in the udee
 
 ## Phase 1 — Orient (always first)
 
-1. **Read `project-context.md`** — check § 8 Open Items to see if this bug is already tracked. If yes, look for prior investigation notes before starting from scratch.
-2. **Read `architecture.md`** sections relevant to the feature area (service, hook, component, table, RLS policy).
+1. **Read `project-context.md`** — check Phase Status and docs links for known gaps.
+2. **Read `ARCHITECTURE.md`** sections relevant to the feature area (service, hook, component, table, API route).
 3. **Capture the bug report** in one sentence. If my description is vague, ask me a single clarifying question before diving in.
 
 ---
@@ -22,21 +22,21 @@ Use this skill when I describe a bug, broken behavior, or regression in the udee
 Trace the bug along the udeets layer stack, in this order:
 
 1. **UI layer** — which page / component renders this? Look under `apps/web/app/...` or `apps/web/app/hubs/[category]/[slug]/components/...`
-2. **Hook layer** — is there a `useXxx` hook orchestrating state? Look in `apps/web/app/hubs/[category]/[slug]/hooks/` or `apps/web/hooks/` or `apps/web/services/auth/`
+2. **Hook layer** — is there a `useXxx` hook orchestrating state? Look in `apps/web/app/hubs/[category]/[slug]/hooks/` or `apps/web/hooks/` or `apps/web/lib/auth/`
 3. **Service layer** — which function in `apps/web/lib/services/*` is involved? Never skip this layer.
-4. **DB layer** — is there an RLS policy, trigger, or RPC? Look in `supabase/migrations/`
-5. **Network layer** — is a server API route involved? Look in `apps/web/app/api/`
+4. **API / DB layer** — FastAPI router in `apps/api/app/routers/`, repository in `apps/api/app/db/repositories/`, or Postgres RPC from archived SQL in `supabase/migrations/` (reference). Check Alembic in `apps/api/alembic/versions/` for schema changes.
+5. **Network layer** — Next proxy at `apps/web/app/api/v1/[...path]/route.ts` or dedicated routes under `apps/web/app/api/`
 
 At each layer, read the actual code. Do NOT assume behavior from names. Report which layer(s) are implicated before writing a fix.
 
 ### udeets-specific heuristics
 
-- **"Not saving" bugs** — 90% of the time this is one of: RLS policy denying the write, optimistic UI not reconciling, or a missing `await` on the service call. Check RLS first if the insert/update returns success but the row isn't persisted on reload.
-- **"Wrong count" bugs** — denormalized `*_count` columns drift. Check `syncDeet*Counts` was called, or if the interaction row itself wasn't inserted.
-- **"Author name is blank / says User"** bugs — the profile name cascade is `profiles.full_name → auth user_metadata.full_name → auth user_metadata.name → email prefix → "User"`. Check that `useProfileSync` has run for the user and that `listDeetComments` / similar service calls are reading profiles correctly.
-- **"Column does not exist" errors** — the migration hasn't been applied to the live Supabase. Check `project-context.md` § 8 for pending migrations.
-- **"Permission denied" / "row violates RLS"** errors — RLS gotchas list: `hubs.created_by` is text not uuid (cast `auth.uid()::text`); FK to `auth.users` breaks Supabase joins (use two-step fetch).
-- **Realtime stale** — `subscribeToDeets` watches `deets`, `deet_likes`, `deet_comments`. If the update doesn't appear, either (a) the table isn't in the subscription list, or (b) the 150 ms debounce is coalescing.
+- **"Not saving" bugs** — often: API 403 (unverified user), validation error swallowed in UI, or missing `await` on the service call. Check FastAPI logs and network tab for the proxied `/api/v1/*` response.
+- **"Wrong count" bugs** — denormalized `*_count` columns drift. Check count sync was called, or if the interaction row itself wasn't inserted.
+- **"Author name is blank / says User"** bugs — check profile fetch via API and that `useProfileSync` / profile upsert has run for the user.
+- **"Column does not exist" errors** — Alembic migration not applied on the target DB. Local empty DB: `npm run bootstrap`. Existing RDS: `cd apps/api && alembic upgrade head`.
+- **"Permission denied" / 403** — check `verification_gate` middleware (unverified account) or hub membership / role checks in the API service layer.
+- **Realtime stale** — chat/notifications use WebSocket with polling fallback when `NEXT_PUBLIC_*_REALTIME_ENABLED` is not `true`. Check env and `/health`.
 - **Hub tab/template behavior** — all templates use universal tabs: About, Posts, Attachments, Events, Members. If a tab is missing, check `lib/hub-templates/<category>.ts` and `HubClient.tsx`.
 
 ---
@@ -47,7 +47,7 @@ Before writing any code, present:
 
 1. **Root cause** — one paragraph, no speculation
 2. **Proposed fix** — which files, which lines, what the change does
-3. **Risk** — does this touch a shared service? any RLS implications? any migration needed?
+3. **Risk** — does this touch a shared service? any migration needed?
 4. **Tests** — what tests will you add or update?
 
 Wait for explicit approval before editing files. Exception: single-line typo fixes can proceed without approval.
@@ -57,7 +57,7 @@ Wait for explicit approval before editing files. Exception: single-line typo fix
 ## Phase 4 — Fix
 
 - **Match existing patterns.** Mimic the style of neighboring code.
-- **Service layer first.** Never call `supabase.from(...)` directly in pages/components.
+- **Service layer first.** Never call FastAPI or the DB directly from pages/components — use `apps/web/lib/services/*` and `lib/api/client.ts`.
 - **Backward-compatible queries.** If adding a new column read, wrap in try/catch that falls back to the old shape.
 - **Optimistic UI + server reconciliation.** Keep the `*CountOverrides` pattern for interaction changes.
 - **No hardcoded colors.** Use `lib/theme.ts` + CSS tokens.
@@ -65,9 +65,10 @@ Wait for explicit approval before editing files. Exception: single-line typo fix
 - **No unrelated refactors.**
 
 If the fix requires a migration:
-1. Create `supabase/migrations/YYYYMMDD_<name>.sql` (use today's date)
-2. Add graceful fallback for deploys that haven't applied it yet
-3. Flag that I need to `supabase db push` or apply via the SQL editor
+1. Add an Alembic revision under `apps/api/alembic/versions/` (follow existing naming)
+2. Update SQLAlchemy models in `apps/api/app/db/models/`
+3. Add graceful fallback for deploys that haven't applied it yet
+4. Flag that I need `alembic upgrade head` on RDS (or re-bootstrap locally)
 
 ---
 
@@ -87,10 +88,8 @@ Report back with:
 
 ## Phase 6 — Document
 
-1. If the bug was in `project-context.md` § 8 Open Items, remove it.
-2. Add an entry to `project-context.md` § 7 Completed Work — Session Log under today's date describing what shipped.
-3. If a new pattern / convention emerged, add it to `architecture.md` § Key Patterns & Conventions.
-4. Bump "Last updated" at the top of `project-context.md`.
+1. If the bug was tracked in project docs, update or remove the note.
+2. If a new pattern / convention emerged, add it to `ARCHITECTURE.md` § Key Patterns & Conventions.
 
 ---
 

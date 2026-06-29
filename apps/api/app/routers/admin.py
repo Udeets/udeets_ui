@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Body, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.dependencies.auth import CurrentUser, get_current_user
+from app.dependencies.auth import CurrentUser, get_verified_user
 from app.dependencies.db import get_db
 from app.services.admin import AdminService
 
@@ -14,7 +14,7 @@ def list_users(
     role_filter: str | None = Query(default=None, alias="roleFilter"),
     limit: int = Query(default=25),
     offset: int = Query(default=0),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = AdminService(db)
@@ -31,7 +31,7 @@ def list_users(
 def update_user_role(
     user_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = AdminService(db)

@@ -1,15 +1,18 @@
 # Backend Inventory Baseline (Pre-FastAPI Migration)
 
+> **Historical snapshot only** — captured before the FastAPI cutover. Current runtime: `apps/api` (FastAPI) + Alembic migrations + JWT auth. See [project-context.md](../project-context.md) and [ARCHITECTURE.md](../ARCHITECTURE.md). Do not treat Supabase paths below as live.
+
 This file freezes the backend-related surface area before migration.
 It is the source-of-truth snapshot for parity checks and rollback during incremental migration to `apps/api` (FastAPI).
 
 ## Repo And Runtime Baseline
 
 - Monorepo workspaces are defined in `package.json` (`apps/*`, `packages/*`).
-- Current frontend/backend runtime:
+- **At time of snapshot** (superseded):
   - `apps/web` = Next.js app router UI + route handlers
   - `apps/api` = minimal Fastify stub (`/health`, `/hubs`)
-  - `supabase/migrations` = authoritative SQL schema/RLS/RPC layer
+  - `supabase/migrations` = legacy SQL (now archived — see `supabase/README.md`)
+- **Current:** FastAPI in `apps/api`, schema via Alembic + SQLAlchemy models, web proxies `/api/v1/*`.
 - No committed CI workflows currently exist in `.github/workflows`.
 
 ## Next.js Route Surface
@@ -79,18 +82,14 @@ Current route handlers:
 
 ### Auth Route Handler (Outside `app/api`)
 
-- `app/auth/callback/route.ts` (`GET`) for Supabase OAuth callback + profile upsert.
+- `app/auth/callback/route.ts` (`GET`) for OAuth callback + profile upsert (now FastAPI JWT + HttpOnly cookie).
 
 ## Current Backend Logic Locations
 
-### Auth And Session
+### Auth And Session (snapshot — Supabase client removed)
 
-- `apps/web/lib/supabase/client.ts`
-- `apps/web/lib/supabase/server.ts`
-- `apps/web/lib/supabase/middleware.ts`
-- `apps/web/middleware.ts`
 - `apps/web/lib/auth/*`
-- `apps/web/services/auth/*`
+- `apps/web/lib/api/*` — current HTTP client to FastAPI
 
 ### Domain Services
 
@@ -113,8 +112,9 @@ Current route handlers:
 
 ## Database And Schema Baseline
 
-- Database stack is Supabase Postgres.
-- Migrations are under `supabase/migrations` and currently include 73 SQL files.
+- Database: PostgreSQL (local Docker or RDS).
+- **Live migrations:** `apps/api/alembic/versions/`
+- **Archived SQL:** `supabase/migrations/` (reference only)
 - Schema/features represented in migrations include:
   - hubs, members, invitations, join links, contact invites
   - deets (posts/announcements-like), comments, likes, poll votes, survey responses
@@ -133,4 +133,4 @@ Current route handlers:
 
 - Do not remove old Next route handlers until feature-flagged FastAPI replacement has parity checks.
 - Keep response contract compatibility for frontend consumers during each endpoint cutover.
-- Preserve Supabase-auth based session behavior while introducing API-side token validation.
+- Preserve session behavior (HttpOnly JWT cookie + `/api/v1/auth/me`) while introducing API-side token validation.

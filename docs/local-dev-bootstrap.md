@@ -121,7 +121,7 @@ Later files override earlier ones in the API (` .env.local` wins over `.env`).
 
 ## Schema note
 
-Local dev creates schema via **SQLAlchemy `create_all()`** from ORM models (`apps/api/scripts/bootstrap_db.py`). Production/RDS uses the SQL bundle under `apps/api/sql/rds-app-schema/` and the Alembic baseline revision. Schemas should match for app use, but local bootstrap does not apply Supabase migration files (they depend on Supabase Auth/RLS).
+Local dev creates schema via **SQLAlchemy `create_all()`** from ORM models (`apps/api/scripts/bootstrap_db.py`), then stamps Alembic at head. Production/RDS uses the SQL bundle under `apps/api/sql/rds-app-schema/` plus incremental Alembic revisions. The archived SQL under `supabase/migrations/` is reference-only — do not apply it on new environments (see `supabase/README.md`).
 
 ## Troubleshooting
 

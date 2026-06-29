@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.repositories.invites import InviteRepository
-from app.dependencies.auth import CurrentUser, get_current_user
+from app.dependencies.auth import CurrentUser, get_verified_user
 from app.dependencies.db import get_db
 from app.schemas.invite import PendingInvitationRead
 from app.services.invites import InviteService
@@ -12,7 +12,7 @@ router = APIRouter(prefix="/invitations", tags=["invitations"])
 
 @router.get("/me", response_model=list[PendingInvitationRead])
 def list_my_pending_invitations(
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> list[PendingInvitationRead]:
     service = InviteService(InviteRepository(db))
@@ -22,7 +22,7 @@ def list_my_pending_invitations(
 @router.post("/{invitation_id}/accept")
 def accept_invitation(
     invitation_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict[str, bool]:
     service = InviteService(InviteRepository(db))
@@ -35,7 +35,7 @@ def accept_invitation(
 @router.post("/{invitation_id}/decline")
 def decline_invitation(
     invitation_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict[str, bool]:
     service = InviteService(InviteRepository(db))

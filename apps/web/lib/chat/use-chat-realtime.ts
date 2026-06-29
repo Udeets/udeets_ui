@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ChatEventEnvelope, ChatRealtimeServerMessage } from "@/lib/chat/chat-realtime-types";
 import { chatApiRealtimePreflight } from "@/lib/chat/chat-browser-api";
-import { getChatAccessTokenFromCookies } from "@/lib/chat/get-chat-access-token";
+import { getChatAccessToken } from "@/lib/chat/get-chat-access-token";
 import { pruneTypingMap, type TypingMap } from "@/lib/chat/merge-chat-typing";
 
 const TYPING_PRUNE_MS = 8000;
@@ -99,10 +99,14 @@ export function useChatRealtime({
 
   const connect = useCallback(() => {
     if (!isRealtimeEnabled() || !enabled || !roomId) return;
-    const token = getChatAccessTokenFromCookies();
-    if (!token) return;
 
     void (async () => {
+      const token = await getChatAccessToken();
+      if (!token) {
+        onConnectionChange?.(false);
+        return;
+      }
+
       try {
         await chatApiRealtimePreflight(roomId);
       } catch {

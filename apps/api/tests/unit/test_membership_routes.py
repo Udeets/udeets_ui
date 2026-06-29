@@ -39,7 +39,7 @@ def test_list_my_memberships_requires_auth(client) -> None:
 
 def test_list_my_memberships_success(client, monkeypatch) -> None:
     app.dependency_overrides[get_db] = lambda: iter([object()])
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1")
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1", verification_complete=True)
     monkeypatch.setattr(
         MembershipService,
         "list_my_memberships",

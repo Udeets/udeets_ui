@@ -1,11 +1,9 @@
-import {
-  buildSessionFromToken,
-  type AuthSession,
-  tokensFromCookieHeader,
-} from "@/lib/auth/session";
+import { buildSessionFromAuthMe, type AuthSession } from "@/lib/auth/session";
+import { fetchAuthMe } from "@/lib/api/auth";
 
 export async function getCurrentSession(): Promise<AuthSession | null> {
-  if (typeof document === "undefined") return null;
-  const { accessToken } = tokensFromCookieHeader(document.cookie);
-  return buildSessionFromToken(accessToken);
+  if (typeof window === "undefined") return null;
+  const me = await fetchAuthMe();
+  if (!me) return null;
+  return buildSessionFromAuthMe(me);
 }

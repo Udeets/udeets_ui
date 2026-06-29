@@ -1,9 +1,6 @@
 # Chat realtime implementation plan
 
-> **Status:** Planning (not started)  
-> **Target:** WebSocket push + Redis/Valkey pub/sub; Postgres durable; REST v1 writes  
-> **Dev cache:** `master.udeets-dev-chat-valkey.rnchv4.use1.cache.amazonaws.com:6379`  
-> **Architecture spec:** See conversation / `docs/chat-realtime.md` (to be updated on cutover)
+> **Status:** Largely implemented — see [chat-realtime.md](./chat-realtime.md). This plan is kept for history; Supabase realtime references below are obsolete.
 
 ---
 

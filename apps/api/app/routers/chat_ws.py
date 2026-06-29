@@ -5,10 +5,10 @@ import logging
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 
+from app.auth.ws_connect import authenticate_verified_websocket
 from app.core.config import get_settings
-from app.dependencies.auth import current_user_from_bearer_token
-from app.db.repositories.chat import ChatRepository
 from app.db.session import SessionLocal
+from app.db.repositories.chat import ChatRepository
 from app.realtime.connection_manager import get_connection_manager
 from app.services.chat.context import can_view, resolve_room_context
 from app.services.chat.context import is_active as _is_active
@@ -49,14 +49,8 @@ async def chat_websocket(websocket: WebSocket) -> None:
         return
 
     token = _extract_token(websocket)
-    if not token:
-        await websocket.close(code=4401, reason="Missing bearer token")
-        return
-
-    try:
-        user = current_user_from_bearer_token(token)
-    except ValueError:
-        await websocket.close(code=4401, reason="Invalid token")
+    user = await authenticate_verified_websocket(websocket, token)
+    if user is None:
         return
 
     await websocket.accept()

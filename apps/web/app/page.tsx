@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   Bell,
@@ -470,7 +471,8 @@ const TEMPLATES = [
 ];
 
 export default function Page() {
-  const { isAuthenticated } = useAuthSession();
+  const router = useRouter();
+  const { status, isAuthenticated } = useAuthSession();
   const hubsRowRef = useRef<HTMLDivElement | null>(null);
   const [pauseAutoScroll, setPauseAutoScroll] = useState(false);
   const [topHubs, setTopHubs] = useState<TopHub[]>([]);
@@ -478,6 +480,13 @@ export default function Page() {
   const [showDownloadPopup, setShowDownloadPopup] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement | null>(null);
+
+  // Signed-in users belong in the app, not on the marketing landing page.
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/dashboard");
+    }
+  }, [status, router]);
 
   // Close mobile menu on outside click or Escape
   useEffect(() => {
@@ -531,6 +540,14 @@ export default function Page() {
       cancelled = true;
     };
   }, []);
+
+  if (status === "authenticated") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--ud-bg-page)]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--ud-brand-primary)] border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[var(--ud-bg-page)]">

@@ -35,7 +35,7 @@ def test_invitations_me_requires_auth(client) -> None:
 
 def test_invitations_me_success(client, monkeypatch) -> None:
     app.dependency_overrides[get_db] = lambda: iter([object()])
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1")
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1", verification_complete=True)
     monkeypatch.setattr(
         InviteService,
         "list_pending_invitations",
@@ -62,7 +62,7 @@ def test_invitations_me_success(client, monkeypatch) -> None:
 
 def test_accept_invitation_success(client, monkeypatch) -> None:
     app.dependency_overrides[get_db] = lambda: iter([object()])
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1")
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1", verification_complete=True)
     monkeypatch.setattr(
         InviteService,
         "accept_invitation",
@@ -78,7 +78,7 @@ def test_accept_invitation_success(client, monkeypatch) -> None:
 
 def test_decline_invitation_not_found(client, monkeypatch) -> None:
     app.dependency_overrides[get_db] = lambda: iter([object()])
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1")
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1", verification_complete=True)
     monkeypatch.setattr(
         InviteService,
         "decline_invitation",
@@ -98,7 +98,7 @@ def test_get_or_create_join_link_requires_auth(client) -> None:
 
 def test_get_or_create_join_link_success(client, monkeypatch) -> None:
     app.dependency_overrides[get_db] = lambda: iter([object()])
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1")
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1", verification_complete=True)
     monkeypatch.setattr(
         InviteService,
         "get_or_create_join_link",
@@ -118,7 +118,7 @@ def test_get_or_create_join_link_success(client, monkeypatch) -> None:
 
 def test_set_join_link_expiration_success(client, monkeypatch) -> None:
     app.dependency_overrides[get_db] = lambda: iter([object()])
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1")
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1", verification_complete=True)
     monkeypatch.setattr(
         InviteService,
         "set_join_link_expiration",
@@ -137,7 +137,7 @@ def test_hub_contact_invite_success(client, monkeypatch) -> None:
 
     reset_hub_contact_invite_limits_for_tests()
     app.dependency_overrides[get_db] = lambda: iter([object()])
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1")
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1", verification_complete=True)
     monkeypatch.setattr(
         InviteService,
         "send_contact_invite",
@@ -159,7 +159,7 @@ def test_hub_contact_invite_rate_limited(client, monkeypatch) -> None:
 
     rate_limit.reset_hub_contact_invite_limits_for_tests()
     app.dependency_overrides[get_db] = lambda: iter([object()])
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1")
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1", verification_complete=True)
     monkeypatch.setattr(
         InviteService,
         "send_contact_invite",

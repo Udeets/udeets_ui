@@ -7,10 +7,11 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { UdeetsBrandLockup } from "@/components/brand-logo";
+import { CredentialAuthForm } from "@/components/auth/CredentialAuthForm";
 
-import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import { signInWithGoogle } from "@/services/auth/signInWithGoogle";
 import { useAuthSession } from "@/services/auth/useAuthSession";
+import { buildPostAuthPath } from "@/lib/auth/verification-routes";
 import { readPostAuthRedirect } from "@/lib/services/hubs/invite-landing-utils";
 
 type Mode = "signin" | "signup";
@@ -48,7 +49,7 @@ function AuthPageContent() {
   const queryError = searchParams.get("error") ?? "";
   const postAuthRedirect = readPostAuthRedirect(searchParams);
   const initialMode = searchParams.get("mode") === "signup" ? "signup" : "signin";
-  const { isAuthenticated } = useAuthSession();
+  const { isAuthenticated, status, user } = useAuthSession();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [error, setError] = useState("");
   const [dismissedQueryError, setDismissedQueryError] = useState<string | null>(null);
@@ -69,26 +70,15 @@ function AuthPageContent() {
   }, [searchParams, postAuthRedirect, router]);
 
   useEffect(() => {
-    let cancelled = false;
+    if (status !== "authenticated" || !user) return;
 
-    async function checkSession() {
-      try {
-        const session = await getCurrentSession();
-
-        if (!cancelled && session) {
-          router.replace(postAuthRedirect);
-        }
-      } catch {
-        // Keep the auth page usable even if session lookup fails.
-      }
+    if (!user.verificationComplete) {
+      router.replace(buildPostAuthPath(user, postAuthRedirect));
+      return;
     }
 
-    void checkSession();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [router, postAuthRedirect, searchParams]);
+    router.replace(postAuthRedirect);
+  }, [status, user, router, postAuthRedirect]);
 
   async function handleGoogleSignIn() {
     setDismissedQueryError(queryError);
@@ -181,8 +171,8 @@ function AuthPageContent() {
             </h1>
             <p className="mt-1 text-sm text-[var(--ud-text-secondary)]">
               {mode === "signup"
-                ? "Use Google to sign up — we'll save your name and email automatically."
-                : "Sign in with your Google account to continue."}
+                ? "Use Google or create a password — we'll verify your contact info before you get started."
+                : "Sign in with Google or your email/phone and password."}
             </p>
           </div>
 
@@ -200,6 +190,21 @@ function AuthPageContent() {
                   ? "Sign up with Google"
                   : "Continue with Google"}
             </button>
+
+            <div className="relative py-1">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-[var(--ud-border-subtle)]" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-[var(--ud-bg-card)] px-2 text-[var(--ud-text-muted)]">or</span>
+              </div>
+            </div>
+
+            <CredentialAuthForm
+              mode={mode}
+              onSuccess={(redirectTo) => router.replace(redirectTo)}
+              onError={setError}
+            />
 
             {visibleError ? <p className="text-sm text-red-600 text-center">{visibleError}</p> : null}
 

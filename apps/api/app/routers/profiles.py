@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Body, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.dependencies.auth import CurrentUser, get_current_user
+from app.dependencies.auth import CurrentUser, get_current_user, get_verified_user
 from app.dependencies.db import get_db
 from app.services.profile_media import ProfileMediaService
 from app.services.profiles import ProfilesService
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/profiles", tags=["profiles"])
 def search_profiles(
     q: str = Query(..., alias="query"),
     limit: int = Query(default=10),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     _ = current_user
@@ -33,7 +33,7 @@ def get_my_profile(
 @router.get("/bulk")
 def list_profiles_brief(
     ids: str = Query(default=""),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     _ = current_user
@@ -45,7 +45,7 @@ def list_profiles_brief(
 @router.get("/{user_id}/summary")
 def get_profile_summary(
     user_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ProfilesService(db)
@@ -56,7 +56,7 @@ def get_profile_summary(
 @router.post("/{profile_id}/likes/toggle")
 def toggle_profile_like(
     profile_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ProfilesService(db)
@@ -67,7 +67,7 @@ def toggle_profile_like(
 def list_profile_likers(
     profile_id: str,
     limit: int = Query(default=100),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ProfilesService(db)
@@ -80,7 +80,7 @@ def list_profile_likers(
 def list_profile_comments(
     profile_id: str,
     limit: int = Query(default=50),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ProfilesService(db)
@@ -93,7 +93,7 @@ def list_profile_comments(
 def add_profile_comment(
     profile_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ProfilesService(db)
@@ -108,7 +108,7 @@ def add_profile_comment(
 @router.delete("/comments/{comment_id}")
 def delete_profile_comment(
     comment_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ProfilesService(db)
@@ -119,7 +119,7 @@ def delete_profile_comment(
 def report_profile(
     profile_id: str,
     payload: dict = Body(...),
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ProfilesService(db)
@@ -185,7 +185,7 @@ def prepare_my_avatar_upload(
 @router.delete("/me/requests/{membership_id}")
 def cancel_my_pending_request(
     membership_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ProfilesService(db)
@@ -197,7 +197,7 @@ def cancel_my_pending_request(
 
 @router.get("/me/header-feed")
 def get_my_header_feed(
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
     service = ProfilesService(db)

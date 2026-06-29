@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { UdeetsFooter, UdeetsHeader } from "@/components/udeets-navigation";
 
 import { isUdeetsLogoSrc } from "@/lib/branding";
+import { isVerificationRequiredError } from "@/lib/api/client";
 import { listHubs } from "@/lib/services/hubs/list-hubs";
 import { getCurrentSession } from "@/services/auth/getCurrentSession";
 import type { Hub as HubRow } from "@/types/hub";
@@ -331,11 +332,13 @@ export default function DiscoverPageContent({ initialHubs }: { initialHubs?: Ini
               setDiscoverHubs(data.map((h) => toDiscoverHub(h)));
               setHubsLoadState("success");
             }
-          } catch {
-            if (!cancelled) {
-              setHubsLoadState("error");
-              setHubsLoadError("Could not refresh discover hubs.");
-            }
+          } catch (err) {
+            if (cancelled) return;
+            // Unverified accounts can't refresh the authed list — keep the
+            // public hubs already rendered instead of showing an error.
+            if (isVerificationRequiredError(err)) return;
+            setHubsLoadState("error");
+            setHubsLoadError("Could not refresh discover hubs.");
           }
         }
       })

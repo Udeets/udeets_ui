@@ -11,7 +11,7 @@ def test_toggle_like_requires_auth(client) -> None:
 
 
 def test_toggle_like_success(client, monkeypatch) -> None:
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1")
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1", verification_complete=True)
     monkeypatch.setattr(
         DeetInteractionsService,
         "toggle_like",
@@ -40,7 +40,7 @@ def test_like_status_requires_auth(client) -> None:
 
 
 def test_like_status_success(client, monkeypatch) -> None:
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1")
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1", verification_complete=True)
     monkeypatch.setattr(
         DeetInteractionsService,
         "like_status",
@@ -65,7 +65,7 @@ def test_create_comment_requires_auth(client) -> None:
 
 
 def test_create_comment_success(client, monkeypatch) -> None:
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1")
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1", verification_complete=True)
     monkeypatch.setattr(
         DeetInteractionsService,
         "add_comment",
@@ -106,7 +106,7 @@ def test_poll_vote_requires_auth(client) -> None:
 
 
 def test_poll_vote_success(client, monkeypatch) -> None:
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1")
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(user_id="user_1", verification_complete=True)
     monkeypatch.setattr(
         DeetInteractionsService,
         "cast_poll_vote",

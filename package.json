@@ -12,14 +12,16 @@
     "start:web": "npm --workspace apps/web run start",
     "dev:api": "npm --workspace apps/api run dev",
     "start:api": "npm --workspace apps/api run start",
-    "dev": "concurrently -n WEB,API -c auto \"npm run dev:web\" \"npm run dev:api\"",
+    "dev": "npm run dev:infra && concurrently -n WEB,API -c auto \"npm run dev:web\" \"npm run dev:api\"",
     "test:web": "npm --workspace apps/web run test",
     "test:api": "npm --workspace apps/api run test",
     "lint:api": "npm --workspace apps/api run lint",
     "migrate:api": "npm --workspace apps/api run migrate",
     "bootstrap": "python scripts/bootstrap.py",
+    "auth:reset-local": "python apps/api/scripts/reset_local_auth_users.py",
     "dev:infra": "docker compose -f docker-compose.dev.yml up -d",
-    "dev:infra:down": "docker compose -f docker-compose.dev.yml down"
+    "dev:infra:down": "docker compose -f docker-compose.dev.yml down",
+    "dev:postgres:reset": "python scripts/reset_local_postgres.py"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
